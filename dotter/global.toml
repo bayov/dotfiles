@@ -1,0 +1,10 @@
+[settings]
+default_target_type = "automatic"
+
+[helpers]
+
+[default]
+depends = ["jj"]
+
+[jj.files]
+"config/jj" = "~/.config/jj"

@@ -1,0 +1,5 @@
+[windows]
+depends = ["ahk"]
+
+[ahk.files]
+"config/ahk" = { target = "~/.config/ahk", type = "template" }

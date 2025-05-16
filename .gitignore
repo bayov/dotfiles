@@ -1,0 +1,15 @@
+# Vim
+*~
+*.swp
+*.swo
+
+# Backup files
+*.bk
+*.bak
+*.old
+
+# dotter
+.dotter/local.toml
+.dotter/cache.toml
+.dotter/cache
+
