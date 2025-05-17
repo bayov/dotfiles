@@ -2,6 +2,7 @@ Requirements
 ------------
 * **Linux requirements**
   * Rust & Cargo — https://www.rust-lang.org/tools/install — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
   * Jujustu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install jujutsu`
   * Fish — https://fishshell.com/
   * Starship — https://starship.rs/ — `curl -sS https://starship.rs/install.sh | sh`

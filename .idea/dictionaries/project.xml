@@ -2,6 +2,7 @@
   <dictionary name="project">
     <words>
       <w>nvim</w>
+      <w>ripgrep</w>
     </words>
   </dictionary>
 </component>

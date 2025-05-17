@@ -33,4 +33,4 @@ if [ -z "$OPERATION" ]; then
     exit 1
 fi
 
-./bin/dotter --global-config dotter/global.toml --local-config dotter/linux.local.toml "$OPERATION" $DRY_RUN $FORCE
+dotter --global-config dotter/global.toml --local-config dotter/linux.local.toml "$OPERATION" $DRY_RUN $FORCE
