@@ -1,6 +1,0 @@
-includes = ["dotter/windows.toml"]
-packages = ["default", "windows"]
-
-[files]
-
-[variables]

@@ -5,8 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="86ebdfe7-0752-4561-a731-e455b4ec1bff" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/dotter/wsl.local.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/run_linux.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotter/global.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dotter/global.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotter/windows.local.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dotter/linux.local.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotter/windows.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dotter/wsl.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_wsl.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_wsl.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,20 +43,26 @@
     "Shell Script.deploy_config.executor": "Run",
     "Shell Script.run_wsl.sh deploy --force.executor": "Run",
     "Shell Script.run_wsl.sh deploy.executor": "Run",
-    "git-widget-placeholder": "38e927de",
+    "git-widget-placeholder": "3a3a87ac",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "//wsl.localhost/Ubuntu/home/bayov/.dotfiles",
+    "last_opened_file_path": "//wsl.localhost/Ubuntu/home/bayov/.dotfiles/dotter",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "org.rust.first.attach.projects": "true",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "settings.editor.selected.configurable": "preferences.keymap",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="\\wsl.localhost\Ubuntu\home\bayov\.dotfiles\dotter" />
+      <recent name="\\wsl.localhost\Ubuntu\home\bayov\.dotfiles" />
+    </key>
+  </component>
   <component name="RunManager" selected="Shell Script.run_wsl.sh deploy">
     <configuration default="true" type="ShConfigurationType">
       <option name="SCRIPT_TEXT" value="" />
@@ -133,7 +144,7 @@
       <workItem from="1747500044997" duration="589000" />
       <workItem from="1747500649783" duration="1128000" />
       <workItem from="1747503176864" duration="42000" />
-      <workItem from="1747503225553" duration="1164000" />
+      <workItem from="1747503225553" duration="1986000" />
     </task>
     <servers />
   </component>
