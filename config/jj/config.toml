@@ -3,3 +3,6 @@
 [user]
 email = "hesosz@gmail.com"
 name = "Bayov"
+
+[ui]
+editor = "vim"

@@ -5,14 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="86ebdfe7-0752-4561-a731-e455b4ec1bff" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/config/eza/theme.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/fish/config.fish" beforeDir="false" afterPath="$PROJECT_DIR$/config/fish/config.fish" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/starship.toml" beforeDir="false" afterPath="$PROJECT_DIR$/config/starship.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/wezterm/helpers.lua" beforeDir="false" afterPath="$PROJECT_DIR$/config/wezterm/helpers.lua" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/wezterm/wezterm.lua" beforeDir="false" afterPath="$PROJECT_DIR$/config/wezterm/wezterm.lua" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotter/global.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dotter/global.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +37,7 @@
     "Shell Script.deploy_config.executor": "Run",
     "Shell Script.run_wsl.sh deploy --force.executor": "Run",
     "Shell Script.run_wsl.sh deploy.executor": "Run",
-    "git-widget-placeholder": "196096f2",
+    "git-widget-placeholder": "bdb3f3ce",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "//wsl.localhost/Ubuntu/home/bayov/.dotfiles/dotter",
@@ -145,7 +138,7 @@
       <workItem from="1747500044997" duration="589000" />
       <workItem from="1747500649783" duration="1128000" />
       <workItem from="1747503176864" duration="42000" />
-      <workItem from="1747503225553" duration="6811000" />
+      <workItem from="1747503225553" duration="8108000" />
     </task>
     <servers />
   </component>
