@@ -1,0 +1,36 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = '$cmd_duration$status$time$character'
+right_format = '$all'
+
+# Disable newline between commands
+add_newline = false
+
+# Make the prompt a single liner
+[line_break]
+disabled = true
+
+[time]
+disabled = false
+format = '[$time]($style) '
+style = 'bold white'
+
+[cmd_duration]
+format = '''[took $duration](white)
+'''
+
+[os]
+disabled = true
+
+[os.symbols]
+Windows = "on [Windows](#4276d1)"
+Ubuntu = "on [Ubuntu](#c65822)"
+
+[git_branch]
+symbol = ''
+
+[git_status]
+style = 'yellow'
+
+[rust]
+format = ''

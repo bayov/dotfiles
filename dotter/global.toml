@@ -4,11 +4,14 @@ default_target_type = "automatic"
 [helpers]
 
 [default]
-depends = ["jj", "fish"]
+depends = ["jj", "fish", "starship"]
 
 [jj.files]
 "config/jj" = "~/.config/jj"
 
 [fish.files]
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
+
+[starship.files]
+"config/starship.toml" = "~/.config/starship.toml"
 
