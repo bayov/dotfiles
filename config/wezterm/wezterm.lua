@@ -120,7 +120,7 @@ config.keys = {
     -- Misc
     {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
     {mods = "ALT", key = "r", action = act.ReloadConfiguration},
-    {mods = "ALT", key = "d", action = act.ShowDebugOverlay},
+    {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 
     -- Open URLs
     {
