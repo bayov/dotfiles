@@ -26,3 +26,8 @@ Run this **from within WSL**:
 ```sh
 ./run_wsl.sh deploy
 ```
+
+Useful tools
+------------
+* fdfind — https://github.com/sharkdp/fd — `sudo apt install fd-find`
+* ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`

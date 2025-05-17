@@ -1,3 +1,3 @@
 function ll --wraps eza
-    eza --long --all --icons=auto --git --time-style=long-iso
+    eza --long --all --icons=auto --git --time-style=long-iso $argv
 end
