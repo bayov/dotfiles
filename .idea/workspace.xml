@@ -5,11 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="86ebdfe7-0752-4561-a731-e455b4ec1bff" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/.dotfiles.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/wezterm/wezterm.lua" beforeDir="false" afterPath="$PROJECT_DIR$/config/wezterm/wezterm.lua" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/fish/config.fish" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config/fish/fish_variables" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotter/global.toml" beforeDir="false" afterPath="$PROJECT_DIR$/dotter/global.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_wsl.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_wsl.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +38,8 @@
     &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
     &quot;SHELLCHECK.PATH&quot;: &quot;C:\\Users\\hesos\\AppData\\Roaming\\JetBrains\\RustRover2025.1\\plugins\\Shell Script\\linux\\amd64\\shellcheck&quot;,
     &quot;Shell Script.Unnamed.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;81eb82d9&quot;,
+    &quot;Shell Script.deploy_config.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;//wsl.localhost/Ubuntu/home/bayov/.dotfiles&quot;,
@@ -48,11 +49,11 @@
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;org.rust.first.attach.projects&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Shell Script.run_wsl.sh deploy">
     <configuration default="true" type="ShConfigurationType">
       <option name="SCRIPT_TEXT" value="" />
       <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
@@ -68,7 +69,37 @@
       <envs />
       <method v="2" />
     </configuration>
-    <configuration name="deploy_config" type="ShConfigurationType">
+    <configuration name="run_wsl.sh deploy --dry-run" type="ShConfigurationType">
+      <option name="SCRIPT_TEXT" value="./run_wsl.sh deploy --dry-run" />
+      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+      <option name="SCRIPT_PATH" value="" />
+      <option name="SCRIPT_OPTIONS" value="" />
+      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />
+      <option name="INTERPRETER_PATH" value="$PROJECT_DIR$/../../../usr/bin/bash" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="EXECUTE_IN_TERMINAL" value="true" />
+      <option name="EXECUTE_SCRIPT_FILE" value="false" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_wsl.sh deploy --force" type="ShConfigurationType">
+      <option name="SCRIPT_TEXT" value="./run_wsl.sh deploy --force" />
+      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+      <option name="SCRIPT_PATH" value="" />
+      <option name="SCRIPT_OPTIONS" value="" />
+      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />
+      <option name="INTERPRETER_PATH" value="$PROJECT_DIR$/../../../usr/bin/bash" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="EXECUTE_IN_TERMINAL" value="true" />
+      <option name="EXECUTE_SCRIPT_FILE" value="false" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_wsl.sh deploy" type="ShConfigurationType">
       <option name="SCRIPT_TEXT" value="./run_wsl.sh deploy" />
       <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
       <option name="SCRIPT_PATH" value="" />
@@ -83,6 +114,11 @@
       <envs />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Shell Script.run_wsl.sh deploy" />
+      <item itemvalue="Shell Script.run_wsl.sh deploy --force" />
+      <item itemvalue="Shell Script.run_wsl.sh deploy --dry-run" />
+    </list>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$PROJECT_DIR$/../.cargo/bin" />
@@ -96,7 +132,9 @@
       <updated>1747499433121</updated>
       <workItem from="1747499434160" duration="593000" />
       <workItem from="1747500044997" duration="589000" />
-      <workItem from="1747500649783" duration="199000" />
+      <workItem from="1747500649783" duration="1128000" />
+      <workItem from="1747503176864" duration="42000" />
+      <workItem from="1747503225553" duration="212000" />
     </task>
     <servers />
   </component>
