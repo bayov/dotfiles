@@ -69,12 +69,6 @@ copy_with_status() {
         return 1 # Return an error code from the function
     fi
 
-    # Check if the destination already exists
-    if [ -e "$dest_item" ]; then
-        echo -e "${RED}Error:${NC} Destination '${MAGENTA}${dest_item}${NC}' already exists. Will not overwrite."
-        return 2 # Return a specific error code for existing destination
-    fi
-
     # Print the command being executed with colors
     echo -e "${CYAN}cp${NC} \"${MAGENTA}${source_item}${NC}\" \"${MAGENTA}${dest_item}${NC}\"${DRY_RUN:+ (dry run)}"
     
@@ -113,12 +107,6 @@ remove_with_status() {
     if [ -z "$target_file" ]; then
         echo -e "${RED}Error:${NC} Target file must be provided to remove_with_status function."
         return 1
-    fi
-
-    # Check if the file exists
-    if [ ! -e "$target_file" ]; then
-        echo -e "${RED}Error:${NC} Target file '${MAGENTA}${target_file}${NC}' does not exist."
-        return 2
     fi
 
     # Print the command being executed with colors
