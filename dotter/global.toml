@@ -4,7 +4,7 @@ default_target_type = "automatic"
 [helpers]
 
 [default]
-depends = ["jj", "fish", "starship"]
+depends = ["jj", "fish", "starship", "eza"]
 
 [jj.files]
 "config/jj" = "~/.config/jj"
@@ -14,4 +14,7 @@ depends = ["jj", "fish", "starship"]
 
 [starship.files]
 "config/starship.toml" = "~/.config/starship.toml"
+
+[eza.files]
+"config/eza" = "~/.config/eza"
 

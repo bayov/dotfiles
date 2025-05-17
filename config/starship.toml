@@ -13,10 +13,10 @@ disabled = true
 [time]
 disabled = false
 format = '[$time]($style) '
-style = 'bold white'
+style = '#666666'
 
 [cmd_duration]
-format = '''[took $duration](white)
+format = '''[took $duration](grey)
 '''
 
 [os]

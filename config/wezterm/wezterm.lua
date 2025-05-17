@@ -78,6 +78,7 @@ config.keys = {
     {mods = "CTRL", key = "DownArrow", action = act.ScrollToPrompt(1)},
     {mods = "CTRL", key = "Home", action = act.ScrollToTop},
     {mods = "CTRL", key = "End", action = act.ScrollToBottom},
+    {mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback},
     {
         mods = "CTRL|SHIFT|ALT",
         key = "l",

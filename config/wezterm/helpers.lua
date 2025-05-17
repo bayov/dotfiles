@@ -22,5 +22,30 @@ module.CloseAndClearSelection = act.Multiple({
     act.ClearSelection,
 })
 
+-- Clears the current pane's viewport while preserving its content in
+-- scrollback buffer. This is useful when you want to clear the screen
+-- but keep the ability to scroll up to see previous output.
+module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(function(window, pane)
+    -- avoid running in TUI programs
+    if pane:is_alt_screen_active() then
+      return
+    end
+
+    -- scroll to bottom
+    window:perform_action(wezterm.action.ScrollToBottom, pane)
+
+    -- get the current height of the viewport
+    local height = pane:get_dimensions().viewport_rows
+
+    -- build a string of new lines equal to the viewport height
+    local blank_viewport = string.rep("\r\n", height)
+
+    -- inject those new lines to push the viewport contents into the scrollback
+    pane:inject_output(blank_viewport)
+
+    -- send an escape sequence to clear the viewport (CTRL-L)
+    pane:send_text('\x0c')
+end)
+
 -- Export the module
 return module
