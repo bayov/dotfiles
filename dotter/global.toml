@@ -10,5 +10,5 @@ depends = ["jj", "fish"]
 "config/jj" = "~/.config/jj"
 
 [fish.files]
-"config/fish" = "~/.config/fish"
+"config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
 
