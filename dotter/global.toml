@@ -4,7 +4,11 @@ default_target_type = "automatic"
 [helpers]
 
 [default]
-depends = ["jj"]
+depends = ["jj", "fish"]
 
 [jj.files]
 "config/jj" = "~/.config/jj"
+
+[fish.files]
+"config/fish" = "~/.config/fish"
+
