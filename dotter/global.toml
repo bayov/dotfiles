@@ -4,7 +4,7 @@ default_target_type = "automatic"
 [helpers]
 
 [default]
-depends = ["jj", "fish", "starship", "eza"]
+depends = ["jj", "fish", "starship", "eza", "zellij"]
 
 [jj.files]
 "config/jj" = "~/.config/jj"
@@ -18,3 +18,5 @@ depends = ["jj", "fish", "starship", "eza"]
 [eza.files]
 "config/eza" = "~/.config/eza"
 
+[zellij.files]
+"config/zellij" = "~/.config/zellij"

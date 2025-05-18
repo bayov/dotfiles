@@ -6,6 +6,7 @@ Requirements
   * Jujustu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install jujutsu`
   * Fish — https://fishshell.com/
   * Starship — https://starship.rs/ — `curl -sS https://starship.rs/install.sh | sh`
+  * Zellij — https://zellij.dev/documentation/installation.html — `cargo install zellij`
   * Eza — https://github.com/eza-community/eza — `cargo install eza`
   * Batcat — https://github.com/sharkdp/bat — `sudo apt install bat`
 * **Windows requirements**

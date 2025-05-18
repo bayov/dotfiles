@@ -3,7 +3,7 @@ command -q jj || return
 
 function s
     jj log --no-pager
-    and echo -e "\e[90m🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄🞄\e[0m"
+    and echo -e "\e[90m---------------------\e[0m"
     and jj status --no-pager
 end
 function push-main --description "Updates bookmark `main` to track `@-` and pushes to remote"

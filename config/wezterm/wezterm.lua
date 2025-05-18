@@ -80,7 +80,7 @@ config.keys = {
     {mods = "CTRL", key = "End", action = act.ScrollToBottom},
     {mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback},
     {
-        mods = "CTRL|SHIFT|ALT",
+        mods = "CTRL|ALT",
         key = "l",
         action = act.Multiple({
             act.ClearScrollback("ScrollbackAndViewport"),
@@ -200,10 +200,11 @@ config.key_tables.search_mode = {
 }
 config.key_tables.pane = {
     {mods = "NONE", key = "Escape", action = act.PopKeyTable},
-    {mods = "NONE", key = "RightArrow", action = act.SplitHorizontal({})},
-    {mods = "NONE", key = "DownArrow", action = act.SplitVertical({})},
+    {mods = "ALT", key = "RightArrow", action = act.SplitHorizontal({})},
+    {mods = "ALT", key = "DownArrow", action = act.SplitVertical({})},
     {mods = "NONE", key = "s", action = act.PaneSelect},
     {mods = "NONE", key = "f", action = act.TogglePaneZoomState},
+    {mods = "NONE", key = "r", action = act.RotatePanes("Clockwise")},
     {mods = "NONE", key = "x", action = act.CloseCurrentTab({confirm = false})},
 }
 --------------------------------------------------------------------------------

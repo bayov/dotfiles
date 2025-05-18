@@ -32,7 +32,7 @@ module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(function(window
     end
 
     -- scroll to bottom
-    window:perform_action(wezterm.action.ScrollToBottom, pane)
+    window:perform_action(act.ScrollToBottom, pane)
 
     -- get the current height of the viewport
     local height = pane:get_dimensions().viewport_rows

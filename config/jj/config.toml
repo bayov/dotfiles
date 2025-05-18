@@ -5,4 +5,4 @@ email = "hesosz@gmail.com"
 name = "Bayov"
 
 [ui]
-editor = "vim"
+editor = "nvim"
