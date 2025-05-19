@@ -1,6 +1,9 @@
 # Jujutsu specific configuration, loaded only if Jujutsu is installed
 command -q jj || return
 
+# Also, avoid laoding when in Google (since we use hg instead)
+string match -r '.c.googlers.com$' (hostname) &>/dev/null && return
+
 function s
     jj log --no-pager
     and echo -e "\e[90m---------------------\e[0m"

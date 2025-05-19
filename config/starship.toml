@@ -1,10 +1,18 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
 format = '$cmd_duration$status$time$character'
-right_format = '$all'
+
+# At Google, this takes too long. Disable and use a custom prompt
+right_format = '${custom.google3_pwd}'
 
 # Disable newline between commands
 add_newline = false
+
+[custom.google3_pwd]
+command = 'prompt_pwd'
+when = true
+shell = ['/usr/bin/fish']
+style = '#666666'
 
 # Make the prompt a single liner
 [line_break]
@@ -16,6 +24,7 @@ format = '[$time]($style) '
 style = '#666666'
 
 [cmd_duration]
+min_time = 3_000
 format = '''[took $duration](grey)
 '''
 
@@ -34,3 +43,4 @@ style = 'yellow'
 
 [rust]
 format = ''
+
