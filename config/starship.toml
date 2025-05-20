@@ -1,18 +1,22 @@
-"$schema" = 'https://starship.rs/config-schema.json'
+"$schema" = "https://starship.rs/config-schema.json"
 
-format = '$cmd_duration$status$time$character'
+format = "$cmd_duration$status$time$character"
 
-# At Google, this takes too long. Disable and use a custom prompt
-right_format = '${custom.google3_pwd}'
+right_format = "$all"
 
 # Disable newline between commands
 add_newline = false
 
+# Used only in Google configuration.
+#
+# The run_linux.sh script modifies `right_format` from
+# "$all" to "${custom.google3_pwd}" when `--google` is
+# provided.
 [custom.google3_pwd]
-command = 'prompt_pwd'
+command = "prompt_pwd"
 when = true
-shell = ['/usr/bin/fish']
-style = '#666666'
+shell = ["/usr/bin/fish"]
+style = "#666666"
 
 # Make the prompt a single liner
 [line_break]
@@ -20,12 +24,12 @@ disabled = true
 
 [time]
 disabled = false
-format = '[$time]($style) '
-style = '#666666'
+format = "[$time]($style) "
+style = "#666666"
 
 [cmd_duration]
-min_time = 3_000
-format = '''[took $duration](grey)
+min_time = 5_000
+format = '''[took $duration](#666666)
 '''
 
 [os]
@@ -36,11 +40,11 @@ Windows = "on [Windows](#4276d1)"
 Ubuntu = "on [Ubuntu](#c65822)"
 
 [git_branch]
-symbol = ''
+symbol = ""
 
 [git_status]
-style = 'yellow'
+style = "yellow"
 
 [rust]
-format = ''
+format = ""
 

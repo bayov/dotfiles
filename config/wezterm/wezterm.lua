@@ -72,8 +72,8 @@ config.keys = {
     -- Scrolling & Scrollback
     {mods = "CTRL|SHIFT|ALT", key = "UpArrow", action = act.ScrollByLine(-1)},
     {mods = "CTRL|SHIFT|ALT", key = "DownArrow", action = act.ScrollByLine(1)},
-    {mods = "NONE", key = "PageUp", action = act.ScrollByPage(-0.5)},
-    {mods = "NONE", key = "PageDown", action = act.ScrollByPage(0.5)},
+    {mods = "CTRL", key = "PageUp", action = act.ScrollByPage(-0.5)},
+    {mods = "CTRL", key = "PageDown", action = act.ScrollByPage(0.5)},
     {mods = "CTRL", key = "UpArrow", action = act.ScrollToPrompt(-1)},
     {mods = "CTRL", key = "DownArrow", action = act.ScrollToPrompt(1)},
     {mods = "CTRL", key = "Home", action = act.ScrollToTop},

@@ -13,7 +13,9 @@ depends = ["jj", "fish", "starship", "eza", "zellij"]
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
 
 [starship.files]
-"config/starship.toml" = "~/.config/starship.toml"
+# Using template to force a copy, since we need to override right_prompt in
+# Google environment.
+"config/starship.toml" = { target = "~/.config/starship.toml", type = "template" }
 
 [eza.files]
 "config/eza" = "~/.config/eza"

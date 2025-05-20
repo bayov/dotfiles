@@ -13,6 +13,8 @@ function push-main --description "Updates bookmark `main` to track `@-` and push
     jj bookmark move main --to @-
     and jj git push
 end
+abbr -a new jj new
+abbr -a sync jj git fetch
 abbr -a d jj diff
 abbr -a e jj edit
 abbr -a c --set-cursor "jj commit -m \"%\""
