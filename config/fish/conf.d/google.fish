@@ -16,8 +16,7 @@ source_google_fish_package citc_prompt
 source_google_fish_package benchy
 source_google_fish_package banshee
 
-
-# hg aliases
+# hg abbreviations
 function s
     hg --pager=never xl
     and echo -e "\e[90m---------------------\e[0m"
@@ -30,3 +29,7 @@ abbr -a d hg diff
 abbr -a e hg checkout
 abbr -a c --set-cursor "hg commit -m \"%\""
 
+# misc abbreviations
+function prodspec --wraps=/google/bin/releases/rollouts/prodspec/prodspec
+    /google/bin/releases/rollouts/prodspec/prodspec $argv
+end
