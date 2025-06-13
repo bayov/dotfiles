@@ -1,11 +1,6 @@
 Requirements
 ------------
 * **Linux requirements**
-  * Pre-requisites
-    ```sh
-    sudo apt-get update
-    sudo apt-get install build-essential pkg-config libssl-dev
-    ```
   * Rust & Cargo — https://www.rust-lang.org/tools/install — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
   * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
   * Jujustu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install --bin jj jj-cli`
@@ -24,6 +19,30 @@ Linux
 If regular linux (not WSL), run the following:
 ```sh
 ./run_linux.sh deploy
+```
+
+For convenience, here are commands to install all requiements:
+```sh
+# general pre-requisites
+sudo apt-get update
+sudo apt install build-essential pkg-config libssl-dev
+
+# install linux tools
+sudo apt install fd-find ripgrep neovim
+
+# install fish
+sudo add-apt-repository ppa:fish-shell/release-4
+sudo apt update
+sudo apt install fish
+
+# install starship
+curl -sS https://starship.rs/install.sh | sh
+
+# install rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# install cargo tools
+cargo install dotter jj-cli zellij eza bat
 ```
 
 
