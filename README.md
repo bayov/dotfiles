@@ -35,6 +35,9 @@ sudo add-apt-repository ppa:fish-shell/release-4
 sudo apt update
 sudo apt install fish
 
+# set fish as default shell
+chsh -s $(which fish)
+
 # install starship
 curl -sS https://starship.rs/install.sh | sh
 
