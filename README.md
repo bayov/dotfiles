@@ -1,6 +1,11 @@
 Requirements
 ------------
 * **Linux requirements**
+  * Pre-requisites
+    ```sh
+    sudo apt-get update
+    sudo apt-get install build-essential pkg-config libssl-dev
+    ```
   * Rust & Cargo — https://www.rust-lang.org/tools/install — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
   * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
   * Jujustu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install jujutsu`
