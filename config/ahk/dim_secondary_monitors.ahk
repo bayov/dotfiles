@@ -41,12 +41,15 @@ Loop monitor_counter {
     height := bottom - top
 
     gui_obj := Gui("-DPIScale +AlwaysOnTop -Caption +Owner", "Dim")
-    gui_obj.BackColor := "Black"
+
     ; We can't register click on Gui object, only on GuiControl, so we create
     ; an invisible empty text object inside the Gui.
     gui_control := gui_obj.AddText("x0 y0 w" . width . " h" . height)
     gui_control.OnEvent("Click", on_click_close)
+
+    gui_obj.BackColor := "Black"
     gui_obj.Show("Hide x" . left . " y" . top . " w" . width . " h" . height)
+
     gui_obj.DefineProp("monitor_index", {Value: monitor_index})
     gui_by_monitor_index.Push(gui_obj)
     dim_by_monitor_index.Push(false)
@@ -78,7 +81,7 @@ on_click_close(gui_control, _info) {
     toggle_monitor_dimming(gui_control.Gui.monitor_index, true)
 }
 
-#PgUp:: {
+#[:: {
     global monitor_counter
     Loop monitor_counter {
         local monitor_index := A_Index
@@ -89,4 +92,14 @@ on_click_close(gui_control, _info) {
     }
 }
 
-#PgDn:: toggle_monitor_dimming(primary_monitor_index)
+#]:: toggle_monitor_dimming(primary_monitor_index)
+
+; Dimming for RGB (using OpenRGB)
+OpenRGBPath := "C:\Programs\OpenRGB\OpenRGB.exe"
+rgb_enabled := true
+#\:: {
+    global rgb_enabled
+    rgb_enabled := !rgb_enabled
+    profile := rgb_enabled ? "Bayov" : "Off"
+    Run(OpenRGBPath . " --profile " . profile)
+}

@@ -33,12 +33,3 @@ loop files, script_folder . "\*.ahk" {
     MsgBox("Reloading scripts")
     RunScript(A_ScriptFullPath)
 }
-
-OpenRGBPath := "C:\Programs\OpenRGB\OpenRGB.exe"
-
-#[:: {
-    Run(OpenRGBPath . " --profile Bayov")
-}
-#]:: {
-    Run(OpenRGBPath . " --profile Off")
-}
