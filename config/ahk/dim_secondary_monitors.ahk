@@ -56,9 +56,9 @@ toggle_monitor_dimming(monitor_index, flash := false) {
     global gui_by_monitor_index, dim_by_monitor_index
 
     dim_by_monitor_index[monitor_index] := !dim_by_monitor_index[monitor_index]
-    dim := dim_by_monitor_index[monitor_index]
+    local dim := dim_by_monitor_index[monitor_index]
 
-    gui_obj := gui_by_monitor_index[monitor_index]
+    local gui_obj := gui_by_monitor_index[monitor_index]
 
     if dim {
         gui_obj.Show()
@@ -81,7 +81,7 @@ on_click_close(gui_control, _info) {
 #PgUp:: {
     global monitor_counter
     Loop monitor_counter {
-        monitor_index := A_Index
+        local monitor_index := A_Index
         if monitor_index = primary_monitor_index {
             continue
         }
