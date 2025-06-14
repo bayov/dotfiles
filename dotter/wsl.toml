@@ -1,8 +1,5 @@
 [windows]
-depends = ["ahk", "wezterm"]
-
-[ahk.files]
-"config/ahk" = { target = "~/.config/ahk", type = "template" }
+depends = ["wezterm"]
 
 [wezterm.files]
 "config/wezterm" = { target = "/mnt/c/Users/hesos/.config/wezterm", type = "template" }
