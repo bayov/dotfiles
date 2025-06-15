@@ -28,7 +28,7 @@ sudo apt-get update
 sudo apt install build-essential pkg-config libssl-dev
 
 # install linux tools
-sudo apt install fd-find ripgrep neovim
+sudo apt install fd-find ripgrep fzf neovim
 
 # install fish
 sudo add-apt-repository ppa:fish-shell/release-4
@@ -58,5 +58,6 @@ Run this **from within WSL**:
 
 Useful tools
 ------------
+* fzf — https://github.com/junegunn/fzf — `sudo apt install fzf`
 * fdfind — https://github.com/sharkdp/fd — `sudo apt install fd-find`
 * ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`

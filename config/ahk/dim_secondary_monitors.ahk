@@ -95,11 +95,11 @@ on_click_close(gui_control, _info) {
 #]:: toggle_monitor_dimming(primary_monitor_index)
 
 ; Dimming for RGB (using OpenRGB)
-OpenRGBPath := "C:\Programs\OpenRGB\OpenRGB.exe"
+open_rgb_path := "C:\Programs\OpenRGB\OpenRGB.exe"
 rgb_enabled := true
 #\:: {
     global rgb_enabled
     rgb_enabled := !rgb_enabled
     profile := rgb_enabled ? "Bayov" : "Off"
-    Run(OpenRGBPath . " --profile " . profile)
+    Run(open_rgb_path . " --profile " . profile)
 }
