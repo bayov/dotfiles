@@ -10,11 +10,19 @@ hdr_cmd_path := "C:\Programs\HDRTray\HDRCmd.exe"
     gui_obj.SetFont("s10")
 
     ; Get current HDR status as text (e.g., "HDR is on", "HDR is off")
-    status := RunWaitOne(hdr_cmd_path . " status")
+    exit_code := RunWait(hdr_cmd_path . " status -m exitcode",, "Hide")
+    hdr_status := ""
+    if exit_code = 0 {
+        hdr_status := "HDR is on"
+    } else if exit_code = 1 {
+        hdr_status := "HDR is off"
+    } else {
+        hdr_status := "Error: Invalid HDR status"
+    }
 
-    gui_obj.Add("Text", "ReadOnly Center w250", status)
-    on_btn := gui_obj.Add("Button", "Center w250", "HDR ON")
-    off_btn := gui_obj.Add("Button", "Center w250", "HDR OFF")
+    gui_obj.Add("Text", "ReadOnly Center w250", hdr_status)
+    on_btn := gui_obj.Add("Button", "Center w250", "Turn HDR on")
+    off_btn := gui_obj.Add("Button", "Center w250", "Turn HDR off")
     close_btn := gui_obj.Add("Button", "Center w250", "Close")
 
     on_btn.OnEvent("Click", enable_hdr)
@@ -30,21 +38,12 @@ hdr_cmd_path := "C:\Programs\HDRTray\HDRCmd.exe"
 
 enable_hdr(btn, _info) {
     global hdr_cmd_path
-    Run(hdr_cmd_path . " on")
+    Run(hdr_cmd_path . " on",, "Hide")
     btn.Gui.Destroy()
 }
 
 disable_hdr(btn, _info) {
     global hdr_cmd_path
-    Run(hdr_cmd_path . " off")
+    Run(hdr_cmd_path . " off",, "Hide")
     btn.Gui.Destroy()
-}
-
-; Helper function to run a command and get its output
-RunWaitOne(command) {
-    shell := ComObject("WScript.Shell")
-    ; Execute a single command via cmd.exe
-    exec := shell.Exec(A_ComSpec " /C " command)
-    ; Read and return the command's output
-    return exec.StdOut.ReadAll()
 }
