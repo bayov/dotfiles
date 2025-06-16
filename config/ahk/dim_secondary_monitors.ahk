@@ -40,7 +40,7 @@ Loop monitor_counter {
     width := right - left
     height := bottom - top
 
-    gui_obj := Gui("-DPIScale +AlwaysOnTop -Caption +Owner", "Dim")
+    gui_obj := Gui("-DPIScale +AlwaysOnTop -Caption +Owner +ToolWindow", "Dim")
 
     ; We can't register click on Gui object, only on GuiControl, so we create
     ; an invisible empty text object inside the Gui.
@@ -64,7 +64,7 @@ toggle_monitor_dimming(monitor_index, flash := false) {
     local gui_obj := gui_by_monitor_index[monitor_index]
 
     if dim {
-        gui_obj.Show()
+        gui_obj.Show("NA")  ; Show window without stealing focus (NoActivate)
     } else {
         if flash {
             gui_obj.BackColor := "222222"
