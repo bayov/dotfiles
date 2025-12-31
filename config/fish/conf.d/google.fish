@@ -33,3 +33,6 @@ abbr -a c --set-cursor "hg commit -m \"%\""
 function prodspec --wraps=/google/bin/releases/rollouts/prodspec/prodspec
     /google/bin/releases/rollouts/prodspec/prodspec $argv
 end
+function gemini --wraps=/google/bin/releases/gemini-cli/tools/gemini
+    /google/bin/releases/gemini-cli/tools/gemini $argv
+end
