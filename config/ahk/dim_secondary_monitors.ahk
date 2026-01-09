@@ -4,6 +4,13 @@
 #MaxThreadsPerHotkey 2
 
 ;===================================
+; Configuration & Constants
+;===================================
+OPENRGB_PATH := "C:\Programs\OpenRGB\OpenRGB.exe"
+PROFILE_ON   := "Bayov"
+PROFILE_OFF  := "Off"
+
+;===================================
 ; Optional Initialization Delay
 ;===================================
 ; Introduce a 10-second delay only if the system has been up for less than 60 seconds
@@ -25,9 +32,10 @@ gui_by_monitor_index := []
 
 ; Array of dimming state by monitor index, where `true` means dimmed.
 dim_by_monitor_index := []
+rgb_enabled := true
 
 ;===================================
-; Initialization Code
+; Monitor Setup
 ;===================================
 ; Retrieve Monitor Information
 monitor_counter := MonitorGetCount()
@@ -81,6 +89,11 @@ on_click_close(gui_control, _info) {
     toggle_monitor_dimming(gui_control.Gui.monitor_index, true)
 }
 
+;===================================
+; Hotkeys
+;===================================
+
+; Dim Secondary Monitors
 #[:: {
     global monitor_counter
     Loop monitor_counter {
@@ -92,14 +105,17 @@ on_click_close(gui_control, _info) {
     }
 }
 
+; Dim Primary Monitor
 #]:: toggle_monitor_dimming(primary_monitor_index)
 
-; Dimming for RGB (using OpenRGB)
-open_rgb_path := "C:\Programs\OpenRGB\OpenRGB.exe"
-rgb_enabled := true
+; Toggle OpenRGB Profile
 #\:: {
     global rgb_enabled
     rgb_enabled := !rgb_enabled
-    profile := rgb_enabled ? "Bayov" : "Off"
-    Run(open_rgb_path . " --profile " . profile)
+
+    target_profile := rgb_enabled ? PROFILE_ON : PROFILE_OFF
+
+    ; Calls the executable with the profile flag.
+    ; Since your server is running, this acts as a client command.
+    Run(OPENRGB_PATH . " --profile " . target_profile, , "Hide")
 }
