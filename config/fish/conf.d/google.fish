@@ -17,6 +17,7 @@ source_google_fish_package benchy
 source_google_fish_package banshee
 
 # hg abbreviations
+alias hg=chg
 function s
     hg --pager=never xl
     and echo -e "\e[90m---------------------\e[0m"
