@@ -5,10 +5,10 @@ command -q jj || return
 string match -r '.c.googlers.com$' (hostname) &>/dev/null && return
 
 function s
-    jj log --no-pager
+    jj log --no-pager; or return
     and echo -e "\e[38;5;242m────────────────────────────\e[0m"
 
-    set -l diff_output (jj diff --summary --color always | string collect)
+    set -l diff_output (jj diff --summary --color always | string collect); opr return
     if test -n "$diff_output"
         echo -e "$diff_output"
     else
