@@ -13,7 +13,6 @@ depends = [
     "wezterm",
     "zellij",
     # single files
-    "AGENTS",
     "starship"
 ]
 
@@ -24,7 +23,9 @@ depends = [
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
 
 [gemini.files]
-"config/gemini" = "~/.gemini"
+"config/AGENTS.md" = "~/.gemini/AGENTS.md"
+"config/gemini/settings.json" = "~/.gemini/settings.json"
+"config/gemini/policies" = { target = "~/.gemini/policies", type = "symbolic", recurse = false }
 
 [jj.files]
 "config/jj" = "~/.config/jj"
@@ -34,9 +35,6 @@ depends = [
 
 [zellij.files]
 "config/zellij" = "~/.config/zellij"
-
-[AGENTS.files]
-"config/AGENTS.md" = "~/.gemini/AGENTS.md"
 
 [starship.files]
 # Using template to force a copy, since we need to override right_prompt in
