@@ -28,7 +28,7 @@ module.CloseAndClearSelection = act.Multiple({
 module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(function(window, pane)
     -- avoid running in TUI programs
     if pane:is_alt_screen_active() then
-      return
+        return
     end
 
     -- scroll to bottom

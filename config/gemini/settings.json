@@ -13,7 +13,8 @@
   },
   "general": {
     "previewFeatures": true,
-    "enablePromptCompletion": true
+    "enablePromptCompletion": true,
+    "vimMode": false
   },
   "ui": {
     "dynamicWindowTitle": false,
@@ -24,8 +25,11 @@
     "showMemoryUsage": true,
     "showCitations": true,
     "showModelInfoInChat": true,
-    "hideWindowTitle": true,
-    "hideTips": true
+    "hideWindowTitle": false,
+    "hideTips": true,
+    "useAlternateBuffer": true,
+    "incrementalRendering": true,
+    "hideFooter": false
   },
   "tools": {
     "sandbox": "docker",
