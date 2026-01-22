@@ -9,3 +9,8 @@ if status is-interactive
     # Initialize prompt
     starship init fish | source
 end
+
+# Aliases
+alias cat=batcat
+alias bat=batcat
+alias vim=nvim
