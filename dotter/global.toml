@@ -6,6 +6,7 @@ default_target_type = "automatic"
 [default]
 depends = [
     # directories
+    "claude",
     "eza",
     "fish",
     "gemini",
@@ -15,6 +16,10 @@ depends = [
     # single files
     "starship"
 ]
+
+[claude.files]
+"config/claude/CLAUDE.md" = "~/.claude/CLAUDE.md"
+"config/claude/settings.json" = "~/.claude/settings.json"
 
 [eza.files]
 "config/eza" = "~/.config/eza"
