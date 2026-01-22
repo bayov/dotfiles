@@ -6,6 +6,7 @@ if status is-interactive
     alias r=reload
     alias v=vim
     alias fd=fdfind
+    alias j=claude
     alias g=gemini
     alias z=zellij
 
