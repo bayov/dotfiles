@@ -8,7 +8,7 @@ function s
     jj log --no-pager; or return
     and echo -e "\e[38;5;242m────────────────────────────\e[0m"
 
-    set -l diff_output (jj diff --summary --color always | string collect); opr return
+    set -l diff_output (jj diff --summary --color always | string collect); or return
     if test -n "$diff_output"
         echo -e "$diff_output"
     else
