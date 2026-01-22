@@ -16,7 +16,7 @@ function s
     end
 end
 
-function push-main --description "Updates bookmark `main` to track `@-` and pushes to remote"
+function push --description "Updates bookmark `main` to track `@-` and pushes to remote"
     jj bookmark move main --to @-
     and jj git push
 end
