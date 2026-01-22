@@ -24,7 +24,8 @@
     "showMemoryUsage": true,
     "showCitations": true,
     "showModelInfoInChat": true,
-    "hideWindowTitle": true
+    "hideWindowTitle": true,
+    "hideTips": true
   },
   "tools": {
     "shell": {

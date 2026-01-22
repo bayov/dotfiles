@@ -14,3 +14,4 @@ end
 alias cat=batcat
 alias bat=batcat
 alias vim=nvim
+alias g=gemini
