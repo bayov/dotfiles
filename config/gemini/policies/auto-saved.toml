@@ -26,3 +26,9 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "ls", "cat", "head" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "mkdir", "echo" ]
