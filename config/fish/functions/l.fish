@@ -10,10 +10,10 @@ function l --description 'List directory contents or cat file based on input typ
 
     if test (count $positions) -eq 0
         # Default behavior: list current directory
-        ll . $argv
+        ls_with_default_args . $argv
     else if test -d "$positions[1]"
         # If the argument is a directory, use ll
-        ll $argv
+        ls_with_default_args $argv
     else
         # If the argument is a file (or anything else), use cat
         cat $argv
