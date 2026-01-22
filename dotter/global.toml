@@ -4,13 +4,16 @@ default_target_type = "automatic"
 [helpers]
 
 [default]
-depends = ["jj", "fish", "starship", "eza", "zellij"]
+depends = ["jj", "fish", "gemini", "starship", "eza", "zellij"]
 
 [jj.files]
 "config/jj" = "~/.config/jj"
 
 [fish.files]
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
+
+[gemini.files]
+"config/gemini" = "~/.gemini"
 
 [starship.files]
 # Using template to force a copy, since we need to override right_prompt in

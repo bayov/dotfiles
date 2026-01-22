@@ -1,0 +1,35 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    },
+    "enablePermanentToolApproval": true,
+    "folderTrust": {
+      "enabled": true
+    }
+  },
+  "general": {
+    "previewFeatures": true,
+    "enablePromptCompletion": true
+  },
+  "ui": {
+    "dynamicWindowTitle": false,
+    "hideBanner": true,
+    "footer": {
+      "hideContextPercentage": false
+    },
+    "showMemoryUsage": true,
+    "showCitations": true,
+    "showModelInfoInChat": true,
+    "hideWindowTitle": true
+  },
+  "tools": {
+    "shell": {
+      "showColor": true
+    },
+    "autoAccept": true
+  },
+  "experimental": {
+    "skills": true
+  }
+}
