@@ -1,17 +1,19 @@
 if status is-interactive
     # Abbreviations
-    abbr -a r reload
     abbr -a !! --position anywhere --function last_history_item
-    abbr -a v vim
-    abbr -a fd fdfind
-    abbr -a z zellij
+
+    # Aliases
+    alias r=reload
+    alias v=vim
+    alias fd=fdfind
+    alias g=gemini
+    alias z=zellij
 
     # Initialize prompt
     starship init fish | source
 end
 
-# Aliases
+# Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
 alias vim=nvim
-alias g=gemini

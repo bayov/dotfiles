@@ -28,6 +28,7 @@
     "hideTips": true
   },
   "tools": {
+    "sandbox": "docker",
     "shell": {
       "showColor": true
     },
