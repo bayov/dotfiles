@@ -23,7 +23,8 @@
     "dynamicWindowTitle": false,
     "hideBanner": true,
     "footer": {
-      "hideContextPercentage": false
+      "hideContextPercentage": false,
+      "hideSandboxStatus": true
     },
     "showMemoryUsage": true,
     "showCitations": true,
