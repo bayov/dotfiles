@@ -16,6 +16,35 @@ function s
     end
 end
 
+function cm --description "Generates AI commit for the current commit based on its diff"
+    # get current commit git diff
+    set -l diff (jj diff --git | string collect)
+    test -z "$diff"; and echo "No changes found."; and return 1
+
+
+    # Get last 50 commits to use as example
+    set -l log (jj log -r '~@' -n 50 --no-graph --template 'description ++ "--------------------------\n"' | string collect)
+
+    # Strict prompt: raw text only, no tools
+    set -l prompt "Task: Write a commit message for the provided diff.
+Use the recent log for style reference.
+Output ONLY the message text. No tools. No chatter.
+
+Recent log:
+--------------------------
+$log
+
+Git diff:
+$diff"
+
+    echo $prompt
+    set -l msg (echo $prompt | gemini --model gemini-3-flash-preview)
+    test -z "$msg"; and return 1
+
+    jj describe -m "$msg"
+    jj show
+end
+
 function p --description "Updates bookmark `main` to track `@-` and pushes to remote"
     # Ensure this is a `jj` project and find its root directory.
     set -l root (jj root --color=always); or return 1
