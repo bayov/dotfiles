@@ -32,7 +32,6 @@
     "hideFooter": false
   },
   "tools": {
-    "sandbox": "docker",
     "shell": {
       "showColor": true
     },
