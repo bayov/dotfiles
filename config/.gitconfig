@@ -2,6 +2,9 @@
     name = Hagai Akibayov
     email = hesosz@gmail.com
 
+[diff]
+    colorMoved = default
+
 [core]
     pager = delta
     autocrlf = true

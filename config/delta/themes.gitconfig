@@ -61,6 +61,12 @@
     plus-emph-style = syntax "#2d694a"
     plus-non-emph-style = syntax auto
     whitespace-error-style = "#793838" reverse
+    # Map git "moved blocks" colors (https://dandavison.github.io/delta/color-moved-support.html)
+    map-styles = \
+       bold purple => syntax "#3c2944", \
+       bold blue => syntax "#292f44", \
+       bold cyan => syntax "#293c44", \
+       bold yellow => syntax "#404429"
     # Commit hash
     commit-decoration-style = normal box
     commit-style = "#ffffff" bold
