@@ -45,7 +45,7 @@ curl -sS https://starship.rs/install.sh | sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
-cargo install dotter jj-cli zellij eza bat
+cargo install dotter jj-cli zellij eza bat git-delta
 ```
 
 

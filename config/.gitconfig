@@ -1,0 +1,24 @@
+[user]
+    name = Hagai Akibayov
+    email = hesosz@gmail.com
+
+[core]
+    pager = delta
+    autocrlf = true
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    features = bayov
+    navigate = true  # use n and N to move between diff sections
+    line-numbers = true
+    hyperlinks = true
+
+[include]
+    path = ~/.config/delta/themes.gitconfig
+
+[merge]
+    conflictStyle = zdiff3
+
+

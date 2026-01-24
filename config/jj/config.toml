@@ -6,3 +6,5 @@ name = "Bayov"
 
 [ui]
 editor = "nvim"
+pager = "delta"
+diff-formatter = ":git"
