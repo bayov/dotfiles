@@ -11,6 +11,7 @@ depends = [
     "fish",
     "gemini",
     "jj",
+    "nvim",
     "wezterm",
     "zellij",
     # single files
@@ -34,6 +35,9 @@ depends = [
 
 [jj.files]
 "config/jj" = "~/.config/jj"
+
+[nvim.files]
+"config/nvim" = "~/.config/nvim"
 
 [wezterm.files]
 "config/wezterm" = { target = "/mnt/c/Users/hesos/.config/wezterm", type = "template" }
