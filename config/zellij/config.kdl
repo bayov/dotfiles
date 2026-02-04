@@ -16,8 +16,8 @@ keybinds clear-defaults=true {
         // Scrolling & Scrollback
         bind "Ctrl Shift Alt up" { ScrollUp; }
         bind "Ctrl Shift Alt down" { ScrollDown; }
-        bind "PageUp" { HalfPageScrollUp; }
-        bind "PageDown" { HalfPageScrollDown; } 
+        bind "Ctrl PageUp" { HalfPageScrollUp; }
+        bind "Ctrl PageDown" { HalfPageScrollDown; } 
         bind "Ctrl Home" { ScrollToTop; }
         bind "Ctrl End" { ScrollToBottom; }
         bind "Ctrl Alt l" { Clear; }
