@@ -37,7 +37,6 @@ $log
 Git diff:
 $diff"
 
-    echo $prompt
     set -l msg (echo $prompt | gemini --model gemini-3-flash-preview)
     test -z "$msg"; and return 1
 
