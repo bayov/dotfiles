@@ -91,3 +91,20 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "mkdir", "mv", "rm" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "node" ]
+
+[[rule]]
+toolName = "activate_skill"
+decision = "allow"
+priority = 100
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "python3" ]
