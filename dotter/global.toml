@@ -35,7 +35,7 @@ depends = [
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
 
 [gemini.files]
-"config/AGENTS.md" = "~/.gemini/AGENTS.md"
+"config/gemini/AGENTS.md" = "~/.gemini/AGENTS.md"
 "config/gemini/settings.json" = "~/.gemini/settings.json"
 "config/gemini/policies" = { target = "~/.gemini/policies", type = "symbolic", recurse = false }
 
