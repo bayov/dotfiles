@@ -8,6 +8,7 @@ if status is-interactive
     alias fd=fdfind
     alias j=claude
     alias g=gemini
+    alias oc=opencode
     alias z=zellij
 
     # Initialize prompt
@@ -25,3 +26,6 @@ if not string match -q -- $PNPM_HOME $PATH
   set -gx PATH "$PNPM_HOME" $PATH
 end
 # pnpm end
+
+# opencode
+fish_add_path /home/bayov/.opencode/bin

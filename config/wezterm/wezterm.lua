@@ -38,6 +38,9 @@ config.window_padding = {
     top = "0.5cell",
     bottom = "0.5cell",
 }
+-- Cursor
+config.cursor_blink_rate = 0
+config.default_cursor_style = 'SteadyBlock'
 -- Misc
 config.max_fps = 120
 config.disable_default_quick_select_patterns = true
@@ -125,6 +128,9 @@ config.keys = {
     {mods = "ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 
+    -- Support Shift+Enter for CLI tools
+    {mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u")},
+
     -- Open URLs
     {
         mods = "ALT",
@@ -209,6 +215,7 @@ config.key_tables.pane = {
     {mods = "NONE", key = "r", action = act.RotatePanes("Clockwise")},
     {mods = "NONE", key = "x", action = act.CloseCurrentTab({confirm = false})},
 }
+
 --------------------------------------------------------------------------------
 -- Mouse bindings
 --------------------------------------------------------------------------------
