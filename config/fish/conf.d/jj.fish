@@ -60,6 +60,11 @@ $diff"
     echo -e "\e[38;5;242m─────────────────────────────\e[0m"
 end
 
+function cm --description "Generates AI description for the current commit and starts a new change"
+    desc; or return
+    jj new
+end
+
 function p --description "Updates bookmark `main` to track `@-` and pushes to remote"
     # Ensure this is a `jj` project and find its root directory.
     set -l root (jj root --color=always); or return 1
