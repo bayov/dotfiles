@@ -37,7 +37,7 @@ if [ -z "$OPERATION" ]; then
     exit 1
 fi
 
-dotter --global-config dotter/global.toml --local-config dotter/linux.local.toml "$OPERATION" $DRY_RUN $FORCE
+dotter --verbose --global-config dotter/global.toml --local-config dotter/linux.local.toml "$OPERATION" $DRY_RUN $FORCE
 
 if [ -n "$GOOGLE" ]; then
     starship_config="$HOME/.config/starship.toml"

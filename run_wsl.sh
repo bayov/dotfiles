@@ -33,5 +33,5 @@ if [ -z "$OPERATION" ]; then
     exit 1
 fi
 
-dotter --global-config dotter/global.toml --local-config dotter/wsl.local.toml "$OPERATION" $DRY_RUN $FORCE
+dotter --verbose --global-config dotter/global.toml --local-config dotter/wsl.local.toml "$OPERATION" $DRY_RUN $FORCE
 ./scripts/deploy_windows_shortcuts.sh "$OPERATION" $DRY_RUN
