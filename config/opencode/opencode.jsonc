@@ -3,6 +3,19 @@
   "plugin": ["opencode-gemini-auth@latest"],
   "theme": "opencode",
   "keybinds": {
-    "leader": "ctrl+x"
+    "leader": "ctrl+x",
+    "app_exit": "ctrl+d",
+    // window management
+    "sidebar_toggle": "ctrl+b",
+    "status_view": "ctrl+g",
+    // scrolling
+    "messages_page_up": "pageup",
+    "messages_page_down": "pagedown",
+    "messages_line_up": "alt+up",
+    "messages_line_down": "alt+down",
+    "messages_first": "alt+home",
+    "messages_last": "alt+end",
+    // misc
+    "tool_details": "<leader>v"
   }
 }

@@ -75,15 +75,15 @@ config.keys = {
     {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
-    {mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollByLine(-1)},
-    {mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollByLine(1)},
-    {mods = "CTRL", key = "PageUp", action = act.ScrollByPage(-0.5)},
-    {mods = "CTRL", key = "PageDown", action = act.ScrollByPage(0.5)},
-    {mods = "CTRL", key = "UpArrow", action = act.ScrollToPrompt(-1)},
-    {mods = "CTRL", key = "DownArrow", action = act.ScrollToPrompt(1)},
-    {mods = "CTRL", key = "Home", action = act.ScrollToTop},
-    {mods = "CTRL", key = "End", action = act.ScrollToBottom},
-    {mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback},
+    {mods = "ALT", key = "PageUp", action = act.ScrollByPage(-0.5)},
+    {mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5)},
+    {mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)},
+    {mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)},
+    {mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)},
+    {mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)},
+    {mods = "ALT", key = "Home", action = act.ScrollToTop},
+    {mods = "ALT", key = "End", action = act.ScrollToBottom},
+    {mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback},
     {
         mods = "CTRL|ALT",
         key = "l",
@@ -105,7 +105,7 @@ config.keys = {
     {mods = "ALT", key = "0", action = zoom.ResetZoom},
 
     -- Tab-management
-    {mods = "CTRL", key = "t", action = act.SpawnTab("DefaultDomain")},
+    {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},
     {mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1)},
     {mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1)},
     {mods = "ALT", key = "[", action = act.MoveTabRelative(-1)},
