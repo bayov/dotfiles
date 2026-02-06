@@ -6,7 +6,7 @@ string match -r '.c.googlers.com$' (hostname) &>/dev/null && return
 
 function s
     jj log --no-pager; or return
-    and echo -e "\e[38;5;242m────────────────────────────\e[0m"
+    and echo -e "\e[38;5;242m─────────────────────────────\e[0m"
 
     set -l diff_output (jj diff --summary --color always | string collect); or return
     if test -n "$diff_output"
@@ -16,11 +16,23 @@ function s
     end
 end
 
-function cm --description "Generates AI commit for the current commit based on its diff"
+function desc --description "Generates AI description for the current commit based on its diff"
     # get current commit git diff
     set -l diff (jj diff --git | string collect)
     test -z "$diff"; and echo "No changes found."; and return 1
 
+    # Warn if description already exists
+    set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string collect | string trim)
+    if test -n "$current_desc"
+        echo -e "\e[33mCurrent description:\e[0m"
+        echo -e "\e[38;5;242m─────────────────────────────\e[0m"
+        echo "$current_desc"
+        echo -e "\e[38;5;242m─────────────────────────────\e[0m"
+        read -l -P "Override? [Y/n] " confirm
+        if test "$confirm" = n -o "$confirm" = N
+            return 1
+        end
+    end
 
     # Get last 50 commits to use as example
     set -l log (jj log -r '~@' -n 50 --no-graph --template 'description ++ "--------------------------\n"' | string collect)
@@ -37,11 +49,15 @@ $log
 Git diff:
 $diff"
 
+    echo -e "\e[34mGenerating commit message...\e[0m"
     set -l msg (echo $prompt | gemini --model gemini-3-flash-preview)
     test -z "$msg"; and return 1
 
     jj describe -m "$msg"
-    jj show
+    echo -e "\e[32mGenerated commit description:\e[0m"
+    echo -e "\e[38;5;242m─────────────────────────────\e[0m"
+    echo "$msg"
+    echo -e "\e[38;5;242m─────────────────────────────\e[0m"
 end
 
 function p --description "Updates bookmark `main` to track `@-` and pushes to remote"
