@@ -28,6 +28,7 @@ module.CloseAndClearSelection = act.Multiple({
 module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(function(window, pane)
     -- avoid running in TUI programs
     if pane:is_alt_screen_active() then
+        window:perform_action(act.SendKey{ mods="ALT", key="l" }, pane)
         return
     end
 
@@ -46,6 +47,27 @@ module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(function(window
     -- send an escape sequence to clear the viewport (CTRL-L)
     pane:send_text('\x0c')
 end)
+
+-- Wraps a WezTerm `key_bind` (provided as `{mods, key, action}`) and returns
+-- a new keybind where `action` is performed only when the current pane is not
+-- a TUI. When the pane is a TUI, sends the key as is instead.
+module.KeyUnlessTui = function(key_bind)
+    local mods = key_bind.mods
+    local key = key_bind.key
+    local action = key_bind.action
+
+    return {
+        mods = mods,
+        key = key,
+        action = wezterm.action_callback(function(window, pane)
+            if not pane:is_alt_screen_active() then
+                window:perform_action(action, pane)
+            else
+                window:perform_action(act.SendKey { key = key, mods = mods }, pane)
+            end
+        end),
+    }
+end
 
 -- Export the module
 return module

@@ -75,23 +75,23 @@ config.keys = {
     {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
-    {mods = "ALT", key = "PageUp", action = act.ScrollByPage(-0.5)},
-    {mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5)},
-    {mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)},
-    {mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)},
-    {mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)},
-    {mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)},
-    {mods = "ALT", key = "Home", action = act.ScrollToTop},
-    {mods = "ALT", key = "End", action = act.ScrollToBottom},
-    {mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback},
-    {
+    helpers.KeyUnlessTui({mods = "NONE", key = "PageUp", action = act.ScrollByPage(-0.5)}),
+    helpers.KeyUnlessTui({mods = "NONE", key = "PageDown", action = act.ScrollByPage(0.5)}),
+    helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
+    helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
+    helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
+    helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
+    helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
+    helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
+    helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
+    helpers.KeyUnlessTui({
         mods = "CTRL|ALT",
         key = "l",
         action = act.Multiple({
             act.ClearScrollback("ScrollbackAndViewport"),
             act.SendKey({mods="CTRL", key="L"}),
-        })
-    },
+        }),
+    }),
 
     -- Search/QuickSelect/Copy modes
     {mods = "CTRL", key = "f", action = act.Search({CaseInSensitiveString = ""})},
@@ -124,8 +124,8 @@ config.keys = {
     {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
 
     -- Misc
-    {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
-    {mods = "ALT", key = "r", action = act.ReloadConfiguration},
+    {mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette},
+    {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 
     -- Support Shift+Enter for CLI tools
