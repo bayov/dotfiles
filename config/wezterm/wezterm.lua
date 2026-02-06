@@ -13,7 +13,7 @@ local config = wezterm.config_builder()
 -- Scrollback
 --------------------------------------------------------------------------------
 config.scrollback_lines = 50000
-config.enable_scroll_bar = true
+config.enable_scroll_bar = false
 
 --------------------------------------------------------------------------------
 -- Theme & Appearance
@@ -72,8 +72,8 @@ config.keys = {
     {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
-    {mods = "CTRL|SHIFT|ALT", key = "UpArrow", action = act.ScrollByLine(-1)},
-    {mods = "CTRL|SHIFT|ALT", key = "DownArrow", action = act.ScrollByLine(1)},
+    {mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollByLine(-1)},
+    {mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollByLine(1)},
     {mods = "CTRL", key = "PageUp", action = act.ScrollByPage(-0.5)},
     {mods = "CTRL", key = "PageDown", action = act.ScrollByPage(0.5)},
     {mods = "CTRL", key = "UpArrow", action = act.ScrollToPrompt(-1)},
