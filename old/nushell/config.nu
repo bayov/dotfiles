@@ -1,1 +1,0 @@
-/mnt/c/Users/hesos/Config/Nushell/config.nu
