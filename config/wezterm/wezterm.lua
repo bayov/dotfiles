@@ -4,6 +4,7 @@ local act = wezterm.action
 local helpers = require("helpers")
 local bayov_color_scheme = require("bayov_color_scheme")
 local tabline = require("tabline")
+local zoom = require("zoom")
 
 -- This will hold the configuration we export.
 local config = wezterm.config_builder()
@@ -19,6 +20,7 @@ config.enable_scroll_bar = true
 --------------------------------------------------------------------------------
 -- Font
 config.font_size = 11
+wezterm.GLOBAL.base_font_size = config.font_size
 config.harfbuzz_features = {"calt=0", "clig=0", "liga=0"} -- disable ligatures
 -- Colors
 bayov_color_scheme.apply_to_config(config)
@@ -95,9 +97,9 @@ config.keys = {
 
     -- Presentation
     {mods = "ALT", key = "\\", action = act.ToggleFullScreen},
-    {mods = "ALT", key = "-", action = act.DecreaseFontSize},
-    {mods = "ALT", key = "=", action = act.IncreaseFontSize},
-    {mods = "ALT|SHIFT", key = "_", action = act.ResetFontSize},
+    {mods = "ALT", key = "-", action = zoom.ZoomOut},
+    {mods = "ALT", key = "=", action = zoom.ZoomIn},
+    {mods = "ALT", key = "0", action = zoom.ResetZoom},
 
     -- Tab-management
     {mods = "CTRL", key = "t", action = act.SpawnTab("DefaultDomain")},

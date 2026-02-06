@@ -5,6 +5,8 @@
       <w>hwnd</w>
       <w>nvim</w>
       <w>ripgrep</w>
+      <w>tabline</w>
+      <w>wezterm</w>
     </words>
   </dictionary>
 </component>

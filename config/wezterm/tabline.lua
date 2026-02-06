@@ -1,4 +1,5 @@
 ﻿local wezterm = require("wezterm")
+local zoom = require("zoom")
 
 -- This will hold the module we export.
 local module = {}
@@ -65,6 +66,7 @@ module.plugin.setup({
     tab_inactive = { "index", { "process", padding = { left = 0, right = 1 } } },
     tabline_x = {
         active_key_table,
+        zoom.tabline_component,
         -- "ram",
     },
     tabline_y = {
