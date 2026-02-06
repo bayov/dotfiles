@@ -10,6 +10,9 @@ end
 # Run gcert when less than 60m remain in long sessions
 source_google_fish_package autogcert
 
+# Default to DBIP with Blaze
+set -gx REPLACE_BLAZE_WITH_DBIP 1
+
 # Autocompletion for the following
 source_google_fish_package hi
 source_google_fish_package citc_prompt
