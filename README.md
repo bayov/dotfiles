@@ -2,16 +2,31 @@ Requirements
 ------------
 * **Linux requirements**
   * Rust & Cargo — https://www.rust-lang.org/tools/install — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  * uv — https://docs.astral.sh/uv/ — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  * pnpm — https://pnpm.io/ — `curl -fsSL https://get.pnpm.io/install.sh | sh -`
   * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
-  * Jujustu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install --bin jj jj-cli`
+  * Jujutsu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install --bin jj jj-cli`
   * Fish — https://fishshell.com/
   * Starship — https://starship.rs/ — `curl -sS https://starship.rs/install.sh | sh`
   * Zellij — https://zellij.dev/documentation/installation.html — `cargo install zellij`
   * Eza — https://github.com/eza-community/eza — `cargo install eza`
   * Batcat — https://github.com/sharkdp/bat — `sudo apt install bat`
+  * Neovim — https://neovim.io/ — `sudo apt install neovim`
+  * Git Delta — https://github.com/dandavison/delta — `cargo install git-delta`
+  * fzf — https://github.com/junegunn/fzf — `sudo apt install fzf`
+  * fd — https://github.com/sharkdp/fd — `sudo apt install fd-find`
+  * Ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`
+  * Fisher — https://github.com/jorgebucaran/fisher — `curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher`
+  * btop — https://github.com/aristocratos/btop — `sudo apt install btop`
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html
+
+AI Tools
+--------
+* Claude Code — https://docs.anthropic.com/en/docs/claude-code — `pnpm add -g @anthropic-ai/claude-code`
+* Gemini CLI — https://github.com/google-gemini/gemini-cli — `pnpm add -g @google/gemini-cli`
+* OpenCode — https://github.com/opencode-ai/opencode — `pnpm add -g opencode-ai`
 
 
 Linux
@@ -21,14 +36,14 @@ If regular linux (not WSL), run the following:
 ./run_linux.sh deploy
 ```
 
-For convenience, here are commands to install all requiements:
+For convenience, here are commands to install all requirements:
 ```sh
 # general pre-requisites
 sudo apt-get update
 sudo apt install build-essential pkg-config libssl-dev
 
 # install linux tools
-sudo apt install fd-find ripgrep fzf neovim
+sudo apt install fd-find ripgrep fzf neovim btop
 
 # install fish
 sudo add-apt-repository ppa:fish-shell/release-4
@@ -46,6 +61,18 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
 cargo install dotter jj-cli zellij eza bat git-delta
+
+# install fisher (fish plugin manager)
+fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
+
+# install pnpm
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+
+# install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# install node-based tools
+pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
 ```
 
 
@@ -55,9 +82,3 @@ Run this **from within WSL**:
 ```sh
 ./run_wsl.sh deploy
 ```
-
-Useful tools
-------------
-* fzf — https://github.com/junegunn/fzf — `sudo apt install fzf`
-* fdfind — https://github.com/sharkdp/fd — `sudo apt install fd-find`
-* ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`
