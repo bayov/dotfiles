@@ -24,6 +24,7 @@ depends = [
 [claude.files]
 "config/claude/CLAUDE.md" = "~/.claude/CLAUDE.md"
 "config/claude/settings.json" = "~/.claude/settings.json"
+"config/claude/statusline.py" = "~/.claude/statusline.py"
 
 [delta.files]
 "config/delta" = "~/.config/delta"
