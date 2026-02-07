@@ -1,0 +1,15 @@
+description = "Codifies insights by using the codify-insights skill"
+prompt = """
+Codify all pending insights using the `codify-insights` skill.
+Follow the workflow defined in the skill:
+1. Discover all pending insights.
+2. For each group of insights (by target path):
+    a. Survey existing documentation at the target path.
+    b. Classify each insight's audience (human-relevant vs
+       agent-only) and formulate updates.
+    c. Apply human-relevant insights to README.md and
+       source-code docs; apply agent-only insights to
+       AGENTS.md.
+    d. Remove the processed raw insight files.
+3. Summarize the changes made.
+"""

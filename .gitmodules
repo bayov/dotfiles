@@ -1,0 +1,3 @@
+[submodule ".agents/pensieve"]
+	path = .agents/pensieve
+	url = git@github.com:bayov/pensieve.git

@@ -1,0 +1,16 @@
+description = "Records all worthwhile insights from the current session."
+prompt = """
+Analyze the current session and identify all worthwhile \
+insights (discoveries, conventions, hidden dependencies, \
+tricky bugs, architectural constraints, etc.) that should be \
+recorded for future developers and agents.
+
+{{#if args}}
+The user has provided the following specific instructions or \
+scope for recording insights:
+{{args}}
+{{/if}}
+
+For each identified insight, use the `record-insight` skill \
+to save it. Be proactive and thorough.
+"""

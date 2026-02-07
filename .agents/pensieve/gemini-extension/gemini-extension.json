@@ -1,0 +1,10 @@
+{
+  "name": "pensieve",
+  "version": "1.0.0",
+  "description": "Codebase knowledge management for Gemini Agents.",
+  "contextFileName": "GEMINI.md",
+  "skills": [
+    "skills/record-insight",
+    "skills/codify-insights"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "pensieve",
+  "version": "1.0.0",
+  "description": "Codebase knowledge management; automatically records and codifies hard-won insights for future agent sessions.",
+  "author": {
+    "name": "Bayov",
+    "email": "hesosz@gmail.com"
+  },
+  "keywords": [
+    "knowledge-management",
+    "insights",
+    "documentation",
+    "agents"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+    "name": "pensieve-marketplace",
+    "owner": {
+        "name": "Bayov"
+    },
+    "plugins": [
+        {
+            "name": "pensieve",
+            "source": "./"
+        }
+    ]
+}
