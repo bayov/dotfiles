@@ -50,7 +50,7 @@ Git diff:
 $diff"
 
     echo -e "\e[34mGenerating commit message...\e[0m"
-    set -l msg (echo $prompt | env OPENCODE_DISABLE_DEFAULT_PLUGINS=true OPENCODE_DISABLE_CLAUDE_CODE=true opencode run --model opencode/glm-4.7-free --format json | jq -r 'select(.type == "text") | .part.text' | string collect)
+    set -l msg (echo $prompt | env OPENCODE_DISABLE_DEFAULT_PLUGINS=true OPENCODE_DISABLE_CLAUDE_CODE=true opencode run --model opencode/trinity-large-preview-free --format json | jq -r 'select(.type == "text") | .part.text' | string collect)
     test -z "$msg"; and return 1
 
     jj describe -m "$msg"
