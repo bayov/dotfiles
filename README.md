@@ -3,6 +3,8 @@ Requirements
 * **Linux requirements**
   * Rust & Cargo — https://www.rust-lang.org/tools/install — `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
   * uv — https://docs.astral.sh/uv/ — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  * fnm (for Node.js) — https://fnm.vercel.app — `curl -o- https://fnm.vercel.app/install | bash`
+  * node (using fnm) — https://nodejs.org/en/download — `fnm install 24`
   * pnpm — https://pnpm.io/ — `curl -fsSL https://get.pnpm.io/install.sh | sh -`
   * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
   * Jujutsu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install --bin jj jj-cli`
@@ -40,7 +42,7 @@ For convenience, here are commands to install all requirements:
 ```sh
 # general pre-requisites
 sudo apt-get update
-sudo apt install build-essential pkg-config libssl-dev
+sudo apt install build-essential pkg-config libssl-dev unzip
 
 # install linux tools
 sudo apt install fd-find ripgrep fzf neovim btop
@@ -64,6 +66,10 @@ cargo install dotter jj-cli zellij eza bat git-delta
 
 # install fisher (fish plugin manager)
 fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
+
+# install fnm & Node.js
+curl -o- https://fnm.vercel.app/install | bash
+fnm install 24 # Node.js 24
 
 # install pnpm
 curl -fsSL https://get.pnpm.io/install.sh | sh -
