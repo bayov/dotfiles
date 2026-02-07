@@ -30,5 +30,6 @@ set -gx PNPM_HOME "/home/bayov/.local/share/pnpm"
 fish_add_path ~/.local/bin
 fish_add_path /snap/bin
 fish_add_path ~/.cargo/bin
+fish_add_path ~/.nvm/versions/node/v24.13.0/bin
 fish_add_path ~/.local/share/pnpm
 fish_add_path ~/.opencode/bin

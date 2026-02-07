@@ -18,6 +18,7 @@ depends = [
     "zellij",
     # single files
     "gitconfig",
+    "srt-settings",
     "starship",
 ]
 
@@ -59,6 +60,9 @@ depends = [
 
 [gitconfig.files]
 "config/.gitconfig" = "~/.gitconfig"
+
+[srt-settings.files]
+"config/.srt-settings.json" = "~/.srt-settings.json"
 
 [starship.files]
 # Using template to force a copy, since we need to override right_prompt in
