@@ -94,8 +94,8 @@ config.keys = {
     }),
 
     -- Search/QuickSelect/Copy modes
-    {mods = "CTRL", key = "f", action = act.Search({CaseInSensitiveString = ""})},
-    {mods = "ALT", key = "f", action = act.QuickSelect},
+    {mods = "ALT", key = "f", action = act.Search({CaseInSensitiveString = ""})},
+    {mods = "ALT", key = "v", action = act.QuickSelect},
     {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
     -- Presentation
@@ -200,7 +200,7 @@ config.key_tables.copy_mode = {
 }
 config.key_tables.search_mode = {
     {mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection},
-    {mods = "CTRL", key = "f", action = act.CopyMode("CycleMatchType")},
+    {mods = "ALT", key = "f", action = act.CopyMode("CycleMatchType")},
     {mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch")},
     {mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch")},
     {mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch")},
