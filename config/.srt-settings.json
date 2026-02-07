@@ -63,6 +63,7 @@
             "169.254.169.254",
             "metadata.google.internal"
         ],
+        "allowAllUnixSockets": true,
         "allowLocalBinding": true
     },
     "filesystem": {
@@ -74,7 +75,10 @@
             "secrets.json"
         ],
         "allowWrite": [
-            "."
+            ".",
+            "~/.local/share/opencode",
+            "~/.config/opencode",
+            "~/.cache/opencode"
         ],
         "denyWrite": [
             ".jj",
