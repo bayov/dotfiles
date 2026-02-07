@@ -7,6 +7,11 @@
   "keybinds": {
     "leader": "ctrl+x",
     "app_exit": "ctrl+d",
+    // toggle thinking display
+    "display_thinking": "ctrl+t",
+    // model selection
+    "model_cycle_favorite": "ctrl+t",
+    "variant_cycle": "ctrl+shift+t",
     // window management
     "command_list": "alt+a",
     "sidebar_toggle": "ctrl+b",
