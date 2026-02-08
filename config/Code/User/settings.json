@@ -205,6 +205,8 @@
     "rust-analyzer.testExplorer": true,
     "rust-analyzer.assist.emitMustUse": true,
     "rust-analyzer.assist.preferSelf": true,
+    "rust-analyzer.references.excludeImports": true,
+    "rust-analyzer.imports.granularity.group": "item", // match rustfmt
     "rust-analyzer.inlayHints.typeHints.enable": false,
     "rust-analyzer.inlayHints.parameterHints.enable": false,
     "rust-analyzer.inlayHints.genericParameterHints.const.enable": false,

@@ -1163,12 +1163,12 @@
         "when": "activeAuxiliary != 'workbench.view.extension.claude-sidebar-secondary'"
     },
     {
-        "key": "shift+alt+'",
+        "key": "alt+/",
         "command": "workbench.view.extensions",
         "when": "activeAuxiliary != 'workbench.view.extensions'"
     },
     {
-        "key": "shift+alt+'",
+        "key": "alt+/",
         "command": "workbench.action.closeAuxiliaryBar",
         "when": "activeAuxiliary == 'workbench.view.extensions'"
     },
@@ -1422,5 +1422,13 @@
         "key": "ctrl+u",
         "command": "-java.action.navigateToSuperImplementation",
         "when": "editorTextFocus && java:serverMode == 'Standard'"
+    },
+    {
+        "key": "shift+alt+;",
+        "command": "workbench.action.openGlobalKeybindingsFile"
+    },
+    {
+        "key": "shift+alt+'",
+        "command": "workbench.action.openSettingsJson"
     }
 ]
