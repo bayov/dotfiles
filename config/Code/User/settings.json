@@ -1,10 +1,26 @@
 {
-    "window.enableMenuBarMnemonics": false,
+    //--------------------------------------------------------------------------
+    // Usage
+    //--------------------------------------------------------------------------
     "editor.formatOnSave": true,
     "files.autoSave": "onFocusChange",
-    "explorer.decorations.badges": false,
-    "python.analysis.typeCheckingMode": "standard",
-    "jjk.enableAnnotations": false,
+    "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
+    //--------------------------------------------------------------------------
+    // Files & Explorer
+    //--------------------------------------------------------------------------
+    "explorer.confirmDragAndDrop": false,
+    "explorer.decorations.badges": false, // Disable A/M/etc badges in explorer
+    "explorer.excludeGitIgnore": true, // Hide .gitignore'ed files in explorer
+    //--------------------------------------------------------------------------
+    // Appearance
+    //--------------------------------------------------------------------------
+    "window.density.editorTabHeight": "compact",
+    "editor.minimap.enabled": false,
+    "editor.rulers": [
+        80
+    ],
+    "editor.scrollbar.horizontalScrollbarSize": 8,
+    "editor.scrollbar.verticalScrollbarSize": 10,
     // color theme
     "workbench.colorTheme": "IntelliJ IDEA Islands Dark",
     "workbench.colorCustomizations": {
@@ -37,6 +53,7 @@
         "list.inactiveSelectionBackground": "#2e3c58aa",
         "list.hoverBackground": "#37393c66",
     },
+    // syntax highlighting
     "editor.semanticTokenColorCustomizations": {
         "rules": {
             // Make comments a bit dimmer
@@ -47,34 +64,28 @@
             "attributeBracket": "#B3AE60",
         }
     },
-    "window.density.editorTabHeight": "compact",
-    "explorer.confirmDragAndDrop": false,
-    "editor.rulers": [
-        80
-    ],
-    "remote.autoForwardPortsSource": "hybrid",
-    "explorer.excludeGitIgnore": true,
-    "editor.scrollbar.horizontalScrollbarSize": 8,
-    "editor.scrollbar.verticalScrollbarSize": 10,
+    //--------------------------------------------------------------------------
+    // Language-specific
+    //--------------------------------------------------------------------------
+    // Python
+    "python.analysis.typeCheckingMode": "standard", // standard type checking rules
+    // Rust
     "rust-analyzer.inlayHints.typeHints.enable": false,
     "rust-analyzer.restartServerOnConfigChange": true,
     "rust-analyzer.testExplorer": true,
-    "editor.minimap.enabled": false,
-    "rust-analyzer.statusBar.showStatusBar": {
-        "documentSelector": [
-            {
-                "language": "rust"
-            },
-            {
-                "pattern": "**/Cargo.toml"
-            },
-            {
-                "pattern": "**/Cargo.lock"
-            },
-            {
-                "scheme": "output",
-                "pattern": "extension-output-rust-lang.rust-analyzer*"
-            }
-        ]
-    },
+    //--------------------------------------------------------------------------
+    // Misc
+    //--------------------------------------------------------------------------
+    // Jujutsu VCS
+    "jjk.enableAnnotations": false, // hide blame annotations on current line
+    "git.enabled": false, // Hide Git changes (we use jj instead)
+    // Remote dev (e.g., WSL)
+    "remote.autoForwardPortsSource": "hybrid",
+    // Whether column selection is enabled (why is this a persistent setting?)
+    "editor.columnSelection": false
+    //--------------------------------------------------------------------------
+    // Uncategorized
+    //  > VS Code appends new settings after this comment block, so I can
+    //  > identify and categorize them
+    //--------------------------------------------------------------------------
 }
