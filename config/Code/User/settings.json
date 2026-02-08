@@ -21,6 +21,10 @@
     ],
     "editor.scrollbar.horizontalScrollbarSize": 8,
     "editor.scrollbar.verticalScrollbarSize": 10,
+    "editor.bracketPairColorization.enabled": false,
+    // inlay hints
+    "editor.inlayHints.padding": true,
+    "editor.inlayHints.fontSize": 12,
     // color theme
     "workbench.colorTheme": "IntelliJ IDEA Islands Dark",
     "workbench.colorCustomizations": {
@@ -52,17 +56,144 @@
         "list.focusBackground": "#37393caa",
         "list.inactiveSelectionBackground": "#2e3c58aa",
         "list.hoverBackground": "#37393c66",
+        // inlay hints
+        "editorInlayHint.foreground": "#96969666",
+        "editorInlayHint.background": "#0000",
     },
     // syntax highlighting
     "editor.semanticTokenColorCustomizations": {
-        "rules": {
-            // Make comments a bit dimmer
-            "comment": "#7a7e85bb",
-            // Color documentation comments differently
-            "*.documentation": "#74847a",
-            // Color the `#` in Rust
-            "attributeBracket": "#B3AE60",
-        }
+        "[IntelliJ IDEA Islands Dark]": {
+            "rules": {
+                // --- Global Modifiers ---
+                // Force italics on mutable items
+                "*.mutable": {
+                    "italic": true
+                },
+                // Disable italics on mutable operators
+                "operator.mutable": {
+                    "italic": false
+                },
+                // --- Comments & Documentation ---
+                // Standard comments (dimmed)
+                "comment": "#686b71",
+                // Doc comments
+                "*.documentation": {
+                    "foreground": "#74847a",
+                    "italic": false
+                },
+                // --- Keywords & Control Flow ---
+                "keyword": "#cf8e6d",
+                // Rust `?` operator
+                "operator.controlFlow": "#cf8e6d",
+                // --- Strings & Formatting ---
+                "string": "#6aab73",
+                "escapeSequence": "#b8bd5a",
+                // e.g. "{interpolated}"
+                "formatSpecifier": "#bcbec4",
+                // --- Modules & Attributes ---
+                // Module paths/Crate roots
+                "namespace": "#b2a897",
+                "namespace.crateRoot": "#b2a897",
+                // #[derive(...)] etc
+                "*.attribute": "#b3ae60",
+                // --- Functions & Methods ---
+                // General functions
+                "function": "#6aa2d7",
+                "function:rust": "#6aa2d7",
+                "function.declaration": "#6aa2d7",
+                "function.declaration:rust": "#6aa2d7",
+                "function.defaultLibrary": "#6aa2d7",
+                "function.defaultLibrary:rust": "#6aa2d7",
+                // Static functions (disable default italics)
+                "function.static": {
+                    "foreground": "#6aa2d7",
+                    "italic": false
+                },
+                "function.static:rust": {
+                    "foreground": "#6aa2d7",
+                    "italic": false
+                },
+                // Methods
+                "method": "#6aa2d7",
+                "method:rust": "#6aa2d7",
+                "method.declaration": "#6aa2d7",
+                "method.declaration:rust": "#6aa2d7",
+                "method.static": "#6aa2d7",
+                "method.static:rust": "#6aa2d7",
+                "method.defaultLibrary": "#6aa2d7",
+                "method.defaultLibrary:rust": "#6aa2d7",
+                // Treat rust macro calls as functions
+                "macro:rust": "#6aa2d7",
+                // --- Types (Structs, Enums) ---
+                "type": "#86985d",
+                "struct": "#86985d",
+                "struct:rust": "#86985d",
+                // Enums (disable default italics)
+                "enum": {
+                    "foreground": "#86985d",
+                    "italic": false
+                },
+                "enum:rust": {
+                    "foreground": "#86985d",
+                    "italic": false
+                },
+                "enumMember": {
+                    "foreground": "#86985d",
+                    "italic": false
+                },
+                // --- Traits (Interfaces) ---
+                "interface": "#9699d4",
+                "interface:rust": "#9699d4",
+                // --- Constants & Statics ---
+                // Const (disable default italics)
+                "const": {
+                    "foreground": "#a482b7",
+                    "italic": false
+                },
+                "const:rust": {
+                    "foreground": "#a482b7",
+                    "italic": false
+                },
+                "static": "#a482b7",
+                "static:rust": "#a482b7",
+                // --- Variables & Parameters ---
+                "variable": "#bcbec4",
+                "variable:rust": "#bcbec4",
+                "property": "#bcbec4",
+                "property:rust": "#bcbec4",
+                "parameter": "#c79cb2",
+                "parameter:rust": "#c79cb2",
+                "selfKeyword": "#c79cb2",
+                "selfKeyword:rust": "#c79cb2",
+                // --- Generics ---
+                "typeParameter": "#20999d",
+                "typeParameter:rust": "#20999d",
+                "constParameter": "#20999d",
+                "constParameter:rust": "#20999d"
+            }
+        },
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                // I'd add `variable.other.metavariable.name.rust` here, but
+                // it only colors macro_rules! metavariable name definition, not
+                // usages, which ends up looking weird.
+                "scope": "entity.name.function, entity.name.function.rust",
+                "settings": {
+                    "foreground": "#6aa2d7"
+                }
+            },
+            {
+                // I'd add `variable.other.metavariable.name.rust` here, but
+                // it only colors macro_rules! metavariable name definition, not
+                // usages, which ends up looking weird.
+                "scope": "keyword.operator.macro.dollar.rust, variable.other.metavariable.specifier.rust",
+                "settings": {
+                    "foreground": "#c77dbb"
+                }
+            }
+        ]
     },
     //--------------------------------------------------------------------------
     // Language-specific
@@ -70,9 +201,14 @@
     // Python
     "python.analysis.typeCheckingMode": "standard", // standard type checking rules
     // Rust
-    "rust-analyzer.inlayHints.typeHints.enable": false,
     "rust-analyzer.restartServerOnConfigChange": true,
     "rust-analyzer.testExplorer": true,
+    "rust-analyzer.assist.emitMustUse": true,
+    "rust-analyzer.assist.preferSelf": true,
+    "rust-analyzer.inlayHints.typeHints.enable": false,
+    "rust-analyzer.inlayHints.parameterHints.enable": false,
+    "rust-analyzer.inlayHints.genericParameterHints.const.enable": false,
+    "rust-analyzer.inlayHints.closingBraceHints.minLines": 35,
     //--------------------------------------------------------------------------
     // Misc
     //--------------------------------------------------------------------------

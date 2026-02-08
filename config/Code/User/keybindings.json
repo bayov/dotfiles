@@ -1407,5 +1407,20 @@
         "key": "ctrl+k shift+enter",
         "command": "-workbench.action.unpinEditor",
         "when": "activeEditorIsPinned"
+    },
+    {
+        "key": "ctrl+u",
+        "command": "-dart.goToSuper",
+        "when": "editorTextFocus && editorLangId == 'dart'"
+    },
+    {
+        "key": "ctrl+u",
+        "command": "-java.action.navigateToSuperImplementation",
+        "when": "editorHasImplementationProvider && editorTextFocus && javaLSReady && !isInEmbeddedEditor && editorLangId == 'java'"
+    },
+    {
+        "key": "ctrl+u",
+        "command": "-java.action.navigateToSuperImplementation",
+        "when": "editorTextFocus && java:serverMode == 'Standard'"
     }
 ]
