@@ -81,11 +81,12 @@
     "git.enabled": false, // Hide Git changes (we use jj instead)
     // Remote dev (e.g., WSL)
     "remote.autoForwardPortsSource": "hybrid",
-    // Whether column selection is enabled (why is this a persistent setting?)
-    "editor.columnSelection": false
     //--------------------------------------------------------------------------
     // Uncategorized
-    //  > VS Code appends new settings after this comment block, so I can
-    //  > identify and categorize them
+    //  | VS Code appends new settings after the last setting so I'm keeping
+    //  | `editor.columnSelection` intentionally under this comment block so
+    //  | that all newly added settings are collected under it, allowing me to
+    //  | review and categorize each new setting.
     //--------------------------------------------------------------------------
+    "editor.columnSelection": false,
 }
