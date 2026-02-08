@@ -1,0 +1,80 @@
+{
+    "window.enableMenuBarMnemonics": false,
+    "editor.formatOnSave": true,
+    "files.autoSave": "onFocusChange",
+    "explorer.decorations.badges": false,
+    "python.analysis.typeCheckingMode": "standard",
+    "jjk.enableAnnotations": false,
+    // color theme
+    "workbench.colorTheme": "IntelliJ IDEA Islands Dark",
+    "workbench.colorCustomizations": {
+        // highlight of word under caret
+        "editor.wordHighlightBackground": "#fff1",
+        "editor.wordHighlightStrongBackground": "#fff1",
+        // emphasis of where the word under caret is defined
+        "editor.wordHighlightStrongBorder": "#fff6",
+        // word being hovered (cursor / editor.action.showHover)
+        "editor.hoverHighlightBackground": "#fff3",
+        // highlight of text similar to current selection
+        "editor.selectionHighlightBackground": "#fff2",
+        "editor.selectionHighlightBorder": "#0000",
+        // selections
+        "editor.selectionBackground": "#26498f",
+        // find matches (Ctrl+F)
+        "editor.findMatchBackground": "#cc631340",
+        "editor.findMatchBorder": "#ffb47aa1",
+        "editor.findMatchHighlightBackground": "#cc631340",
+        // tabs
+        "tab.activeForeground": "#c8d6d5",
+        "tab.activeBackground": "#2e3c58aa",
+        "tab.unfocusedActiveForeground": "#c8d6d577",
+        "tab.unfocusedActiveBackground": "#37393c66",
+        "tab.hoverForeground": "#c8d6d5ff",
+        "tab.hoverBackground": "#37393c66",
+        // explorer file list
+        "list.activeSelectionBackground": "#2e3c58aa",
+        "list.focusBackground": "#37393caa",
+        "list.inactiveSelectionBackground": "#2e3c58aa",
+        "list.hoverBackground": "#37393c66",
+    },
+    "editor.semanticTokenColorCustomizations": {
+        "rules": {
+            // Make comments a bit dimmer
+            "comment": "#7a7e85bb",
+            // Color documentation comments differently
+            "*.documentation": "#74847a",
+            // Color the `#` in Rust
+            "attributeBracket": "#B3AE60",
+        }
+    },
+    "window.density.editorTabHeight": "compact",
+    "explorer.confirmDragAndDrop": false,
+    "editor.rulers": [
+        80
+    ],
+    "remote.autoForwardPortsSource": "hybrid",
+    "explorer.excludeGitIgnore": true,
+    "editor.scrollbar.horizontalScrollbarSize": 8,
+    "editor.scrollbar.verticalScrollbarSize": 10,
+    "rust-analyzer.inlayHints.typeHints.enable": false,
+    "rust-analyzer.restartServerOnConfigChange": true,
+    "rust-analyzer.testExplorer": true,
+    "editor.minimap.enabled": false,
+    "rust-analyzer.statusBar.showStatusBar": {
+        "documentSelector": [
+            {
+                "language": "rust"
+            },
+            {
+                "pattern": "**/Cargo.toml"
+            },
+            {
+                "pattern": "**/Cargo.lock"
+            },
+            {
+                "scheme": "output",
+                "pattern": "extension-output-rust-lang.rust-analyzer*"
+            }
+        ]
+    },
+}

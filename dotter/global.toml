@@ -7,6 +7,7 @@ default_target_type = "automatic"
 depends = [
     # directories
     "claude",
+    "Code",
     "delta",
     "eza",
     "fish",
@@ -27,6 +28,10 @@ depends = [
 "config/claude/settings.json" = "~/.claude/settings.json"
 "config/claude/keybindings.json" = "~/.claude/keybindings.json"
 "config/claude/statusline.py" = "~/.claude/statusline.py"
+
+[Code.files]
+"config/Code/User/settings.json" = "~/.vscode-server/data/Machine/settings.json"
+"config/Code/User/keybindings.json" = "~/.vscode-server/data/Machine/keybindings.json"
 
 [delta.files]
 "config/delta" = "~/.config/delta"
