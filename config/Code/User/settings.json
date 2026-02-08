@@ -219,6 +219,9 @@
     "git.enabled": false, // Hide Git changes (we use jj instead)
     // Remote dev (e.g., WSL)
     "remote.autoForwardPortsSource": "hybrid",
+    // Dependi
+    "dependi.decoration.compatible.template": "✓",
+    "dependi.decoration.patchAvailable.template": "⇢ ${version}",
     //--------------------------------------------------------------------------
     // Uncategorized
     //  | VS Code appends new settings after the last setting so I'm keeping
