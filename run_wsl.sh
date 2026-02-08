@@ -35,3 +35,4 @@ fi
 
 dotter --verbose --global-config dotter/global.toml --local-config dotter/wsl.local.toml "$OPERATION" $DRY_RUN $FORCE
 ./scripts/deploy_windows_shortcuts.sh "$OPERATION" $DRY_RUN
+./scripts/deploy_vscode_settings.sh "$OPERATION" $DRY_RUN $FORCE
