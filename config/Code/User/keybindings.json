@@ -9,10 +9,6 @@
         "when": "!inDebugMode && !terminalFocus"
     },
     {
-        "command": "workbench.view.debug",
-        "key": "alt+r shift+d"
-    },
-    {
         "command": "workbench.action.closeActiveEditor",
         "key": "ctrl+f4"
     },
@@ -34,11 +30,6 @@
         "command": "editor.foldRecursively",
         "key": "ctrl+alt+numpad_subtract",
         "when": "editorTextFocus && foldingEnabled"
-    },
-    {
-        "command": "workbench.action.debug.run",
-        "key": "alt+r d",
-        "when": "debuggersAvailable && !inDebugMode && !terminalFocus"
     },
     {
         "command": "editor.action.copyLinesDownAction",
@@ -165,11 +156,6 @@
         "command": "workbench.action.debug.continue",
         "key": "f8",
         "when": "inDebugMode"
-    },
-    {
-        "command": "workbench.action.tasks.reRunTask",
-        "key": "alt+r r",
-        "when": "taskCommandsRegistered && !terminalFocus"
     },
     {
         "command": "editor.debug.action.runToCursor",
@@ -572,10 +558,6 @@
         "command": "editor.action.quickFix",
         "key": "alt+enter",
         "when": "editorHasCodeActionsProvider && editorTextFocus && !editorReadonly"
-    },
-    {
-        "command": "workbench.action.tasks.configureTaskRunner",
-        "key": "shift+ctrl+alt+s"
     },
     {
         "command": "editor.debug.action.toggleBreakpoint",
@@ -1430,5 +1412,70 @@
     {
         "key": "shift+alt+'",
         "command": "workbench.action.openSettingsJson"
-    }
+    },
+    {
+        "key": "alt+r d",
+        "command": "workbench.action.debug.start",
+        "when": "debuggersAvailable && debugState == 'inactive'"
+    },
+    {
+        "key": "f5",
+        "command": "-workbench.action.debug.start",
+        "when": "debuggersAvailable && debugState == 'inactive'"
+    },
+    {
+        "key": "alt+r shift+d",
+        "command": "workbench.action.debug.selectandstart"
+    },
+    {
+        "key": "alt+r shift+r",
+        "command": "workbench.action.tasks.runTask"
+    },
+    {
+        "key": "shift+alt+f10",
+        "command": "-workbench.action.tasks.runTask",
+        "when": "taskCommandsRegistered && !terminalFocus"
+    },
+    {
+        "key": "alt+r r",
+        "command": "workbench.action.tasks.reRunTask"
+    },
+    {
+        "key": "alt+r s",
+        "command": "workbench.action.tasks.terminate"
+    },
+    {
+        "key": "alt+r t",
+        "command": "testing.reRunLastRun"
+    },
+    {
+        "key": "ctrl+; l",
+        "command": "-testing.reRunLastRun"
+    },
+    {
+        "key": "ctrl+; ctrl+l",
+        "command": "-testing.debugLastRun"
+    },
+    {
+        "key": "ctrl+; ctrl+shift+l",
+        "command": "-testing.coverageLastRun"
+    },
+    {
+        "key": "alt+r f",
+        "command": "testing.runCurrentFile",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+; f",
+        "command": "-testing.runCurrentFile",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "alt+r shift+t",
+        "command": "testing.runAll"
+    },
+    {
+        "key": "ctrl+; a",
+        "command": "-testing.runAll"
+    },
 ]
