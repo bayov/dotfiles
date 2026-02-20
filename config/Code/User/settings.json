@@ -10,6 +10,7 @@
     // Files & Explorer
     //--------------------------------------------------------------------------
     "explorer.confirmDragAndDrop": false,
+    "explorer.autoReveal": false,
     "explorer.decorations.badges": false, // Disable A/M/etc badges in explorer
     "explorer.excludeGitIgnore": true, // Hide .gitignore'ed files in explorer
     //--------------------------------------------------------------------------

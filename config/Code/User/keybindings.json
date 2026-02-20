@@ -1723,4 +1723,12 @@
         "command": "-workbench.action.chat.openagent",
         "when": "config.chat.agent.enabled && !chatSetupDisabled && !chatSetupHidden"
     },
+    {
+        "key": "shift+alt+1",
+        "command": "workbench.files.action.showActiveFileInExplorer"
+    },
+    {
+        "key": "shift+alt+1",
+        "command": "-workbench.action.moveEditorToFirstGroup"
+    },
 ]
