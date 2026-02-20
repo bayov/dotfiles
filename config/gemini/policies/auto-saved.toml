@@ -131,3 +131,9 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "openspec" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "bean-query" ]
