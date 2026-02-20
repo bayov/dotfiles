@@ -9,16 +9,15 @@
       "WebSearch"
     ]
   },
-  "model": "sonnet",
   "statusLine": {
     "type": "command",
     "command": "python3 ~/.claude/statusline.py"
   },
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true
+  },
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true
-  },
-  "enabledPlugins": {
-    "rust-analyzer-lsp@claude-plugins-official": true
   }
 }

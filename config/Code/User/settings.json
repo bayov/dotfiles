@@ -5,6 +5,7 @@
     "editor.formatOnSave": true,
     "files.autoSave": "onFocusChange",
     "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
+    "window.customMenuBarAltFocus": false, // Disable Alt key focusing the menu
     //--------------------------------------------------------------------------
     // Files & Explorer
     //--------------------------------------------------------------------------
@@ -64,6 +65,8 @@
         "list.focusBackground": "#37393caa",
         "list.inactiveSelectionBackground": "#2e3c58aa",
         "list.hoverBackground": "#37393c66",
+        "gitDecoration.modifiedResourceForeground": "#6aa2d7",
+        "jjDecoration.modifiedResourceForeground": "#6aa2d7",
         // inlay hints
         "editorInlayHint.foreground": "#96969666",
         "editorInlayHint.background": "#0000",
