@@ -15,6 +15,10 @@
     // Appearance
     //--------------------------------------------------------------------------
     "window.density.editorTabHeight": "compact",
+    // By hiding commandCenter and layoutControl from top menu bar, entering
+    // full-screen mode will completely hide the top-bar.
+    "window.commandCenter": false,
+    "workbench.layoutControl.enabled": false,
     "editor.minimap.enabled": false,
     "editor.rulers": [
         80

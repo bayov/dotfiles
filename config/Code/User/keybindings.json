@@ -464,11 +464,6 @@
         "when": "canNavigateForward"
     },
     {
-        "command": "git.pushTo",
-        "key": "ctrl+alt+k",
-        "when": "!inDebugMode && !terminalFocus"
-    },
-    {
         "command": "workbench.action.gotoLine",
         "key": "ctrl+g"
     },
@@ -1477,5 +1472,66 @@
     {
         "key": "ctrl+; a",
         "command": "-testing.runAll"
+    },
+    {
+        "key": "ctrl+alt+k",
+        "command": "-claude-code.insertAtMentioned",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "alt+1",
+        "command": "-workbench.action.openEditorAtIndex1"
+    },
+    {
+        "key": "alt+2",
+        "command": "-workbench.action.openEditorAtIndex2"
+    },
+    {
+        "key": "alt+3",
+        "command": "-workbench.action.openEditorAtIndex3"
+    },
+    {
+        "key": "alt+4",
+        "command": "-workbench.action.openEditorAtIndex4"
+    },
+    {
+        "key": "alt+6",
+        "command": "-workbench.action.openEditorAtIndex6"
+    },
+    {
+        "key": "alt+5",
+        "command": "-workbench.action.openEditorAtIndex5"
+    },
+    {
+        "key": "alt+7",
+        "command": "-workbench.action.openEditorAtIndex7"
+    },
+    {
+        "key": "alt+8",
+        "command": "-workbench.action.openEditorAtIndex8"
+    },
+    {
+        "key": "alt+9",
+        "command": "-workbench.action.openEditorAtIndex9"
+    },
+    {
+        "key": "alt+2",
+        "command": "workbench.action.toggleSidebarVisibility",
+        "when": "activeViewlet == 'workbench.view.scm'"
+    },
+    {
+        "key": "alt+numpad9",
+        "command": "-workbench.action.toggleSidebarVisibility",
+        "when": "activeViewlet == 'workbench.view.scm'"
+    },
+    {
+        "key": "alt+2",
+        "command": "workbench.view.scm",
+        "when": "workbench.scm.active && activeViewlet != 'workbench.view.scm'"
+    },
+    {
+        "key": "alt+numpad9",
+        "command": "-workbench.view.scm",
+        "when": "workbench.scm.active && activeViewlet != 'workbench.view.scm'"
     },
 ]
