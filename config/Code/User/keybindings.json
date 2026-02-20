@@ -1534,4 +1534,179 @@
         "command": "-workbench.view.scm",
         "when": "workbench.scm.active && activeViewlet != 'workbench.view.scm'"
     },
+    {
+        "key": "alt+s f",
+        "command": "workbench.action.toggleEditorWidths"
+    },
+    {
+        "key": "alt+s s",
+        "command": "workbench.action.evenEditorWidths"
+    },
+    {
+        "key": "ctrl+alt+numpad6",
+        "command": "workbench.action.decreaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+right",
+        "command": "-workbench.action.decreaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad6",
+        "command": "workbench.action.decreaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+right",
+        "command": "-workbench.action.decreaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad6",
+        "command": "workbench.action.increaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+right",
+        "command": "-workbench.action.increaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad6",
+        "command": "workbench.action.increaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+right",
+        "command": "-workbench.action.increaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad8",
+        "command": "workbench.action.increaseViewSize",
+        "when": "panelFocus && !isAuxiliaryWindowFocusedContext"
+    },
+    {
+        "key": "ctrl+shift+alt+up",
+        "command": "-workbench.action.increaseViewSize",
+        "when": "panelFocus && !isAuxiliaryWindowFocusedContext"
+    },
+    {
+        "key": "ctrl+alt+numpad2",
+        "command": "workbench.action.decreaseViewSize",
+        "when": "panelFocus && !isAuxiliaryWindowFocusedContext"
+    },
+    {
+        "key": "ctrl+shift+alt+down",
+        "command": "-workbench.action.decreaseViewSize",
+        "when": "panelFocus && !isAuxiliaryWindowFocusedContext"
+    },
+    {
+        "key": "ctrl+alt+numpad4",
+        "command": "workbench.action.decreaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+left",
+        "command": "-workbench.action.decreaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad4",
+        "command": "workbench.action.decreaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+left",
+        "command": "-workbench.action.decreaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad4",
+        "command": "workbench.action.increaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+left",
+        "command": "-workbench.action.increaseViewSize",
+        "when": "auxiliaryBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location != 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad4",
+        "command": "workbench.action.increaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+shift+alt+left",
+        "command": "-workbench.action.increaseViewSize",
+        "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
+    },
+    {
+        "key": "ctrl+alt+numpad3",
+        "command": "workbench.action.increaseViewWidth",
+        "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus"
+    },
+    {
+        "key": "ctrl+alt+numpad1",
+        "command": "workbench.action.decreaseViewWidth",
+        "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus"
+    },
+    {
+        "key": "ctrl+alt+numpad7",
+        "command": "workbench.action.decreaseViewHeight",
+        "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus"
+    },
+    {
+        "key": "ctrl+alt+numpad9",
+        "command": "workbench.action.increaseViewHeight",
+        "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus"
+    },
+    {
+        "key": "alt+-",
+        "command": "workbench.action.toggleStatusbarVisibility"
+    },
+    {
+        "key": "alt+-",
+        "command": "-decreaseSearchEditorContextLines",
+        "when": "inSearchEditor"
+    },
+    {
+        "key": "alt+0",
+        "command": "workbench.action.toggleActivityBarVisibility"
+    },
+    {
+        "key": "alt+0",
+        "command": "-workbench.actions.view.problems",
+        "when": "workbench.panel.markers.view.active"
+    },
+    {
+        "key": "alt+0",
+        "command": "-workbench.action.lastEditorInGroup"
+    },
+    {
+        "key": "alt+3",
+        "command": "-workbench.action.toggleSidebarVisibility",
+        "when": "searchViewletVisible"
+    },
+    {
+        "key": "alt+3",
+        "command": "workbench.action.togglePanel",
+        "when": "searchViewletFocus"
+    },
+    {
+        "key": "shift+escape",
+        "command": "-workbench.action.togglePanel",
+        "when": "panelFocus"
+    },
+    {
+        "key": "alt+3",
+        "command": "workbench.view.search",
+        "when": "!searchViewletFocus"
+    },
+    {
+        "key": "alt+3",
+        "command": "-workbench.view.search",
+        "when": "workbench.view.search.active && !searchViewletVisible"
+    },
 ]

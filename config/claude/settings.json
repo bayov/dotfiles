@@ -9,7 +9,7 @@
       "WebSearch"
     ]
   },
-  "model": "opus",
+  "model": "sonnet",
   "statusLine": {
     "type": "command",
     "command": "python3 ~/.claude/statusline.py"
