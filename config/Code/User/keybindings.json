@@ -282,7 +282,7 @@
     },
     {
         "command": "copyFilePath",
-        "key": "shift+ctrl+c",
+        "key": "ctrl+k ctrl+shift+c",
         "when": "!editorFocus && !terminalFocus"
     },
     {
@@ -1730,5 +1730,30 @@
     {
         "key": "shift+alt+1",
         "command": "-workbench.action.moveEditorToFirstGroup"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "-copyFilePath",
+        "when": "!editorFocus && !terminalFocus"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "-workbench.action.terminal.openNativeConsole",
+        "when": "!terminalFocus"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "copyRelativeFilePath",
+        "when": "editorFocus || explorerViewletFocus"
+    },
+    {
+        "key": "ctrl+k ctrl+shift+c",
+        "command": "-copyRelativeFilePath",
+        "when": "editorFocus"
+    },
+    {
+        "key": "ctrl+k ctrl+shift+c",
+        "command": "-copyRelativeFilePath",
+        "when": "!editorFocus"
     },
 ]
