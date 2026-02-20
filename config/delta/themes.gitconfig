@@ -56,10 +56,10 @@
     inline-hint-style = syntax
     minus-style = syntax "#442929"
     minus-emph-style = syntax "#793838"
-    minus-non-emph-style = syntax auto
+    minus-non-emph-style = syntax "#442929"
     plus-style = syntax "#294436"
     plus-emph-style = syntax "#2d694a"
-    plus-non-emph-style = syntax auto
+    plus-non-emph-style = syntax "#294436"
     whitespace-error-style = "#793838" reverse
     # Map git "moved blocks" colors (https://dandavison.github.io/delta/color-moved-support.html)
     map-styles = \
