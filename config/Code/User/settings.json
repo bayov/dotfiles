@@ -14,6 +14,8 @@
     "explorer.autoReveal": false,
     "explorer.decorations.badges": false, // Disable A/M/etc badges in explorer
     "explorer.excludeGitIgnore": true, // Hide .gitignore'ed files in explorer
+    "workbench.tree.indent": 14,
+    "workbench.tree.renderIndentGuides": "always",
     //--------------------------------------------------------------------------
     // Appearance
     //--------------------------------------------------------------------------
@@ -63,6 +65,8 @@
         "tab.hoverForeground": "#c8d6d5ff",
         "tab.hoverBackground": "#37393c66",
         // explorer file list
+        "tree.inactiveIndentGuidesStroke": "#4d545f6c",
+        "tree.indentGuidesStroke": "#7e92b370",
         "list.activeSelectionBackground": "#2e3c58aa",
         "list.focusBackground": "#37393caa",
         "list.inactiveSelectionBackground": "#2e3c58aa",
