@@ -71,6 +71,7 @@
         "list.focusBackground": "#37393caa",
         "list.inactiveSelectionBackground": "#2e3c58aa",
         "list.hoverBackground": "#37393c66",
+        "list.warningForeground": "#D2B571",
         "gitDecoration.modifiedResourceForeground": "#6aa2d7",
         "jjDecoration.modifiedResourceForeground": "#6aa2d7",
         // inlay hints
