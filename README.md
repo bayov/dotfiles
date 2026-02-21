@@ -20,6 +20,7 @@ Requirements
   * Ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`
   * Fisher — https://github.com/jorgebucaran/fisher — `curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher`
   * btop — https://github.com/aristocratos/btop — `sudo apt install btop`
+  * cargo-binstall — https://github.com/cargo-bins/cargo-binstall — `curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash`
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html
@@ -63,6 +64,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
 cargo install dotter jj-cli zellij eza bat git-delta
+
+# install cargo-binstall
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
 # install fisher (fish plugin manager)
 fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
