@@ -4,6 +4,7 @@ if status is-interactive
 
     # Aliases
     alias r=reload
+    alias hm="history merge"
     alias v=vim
     alias fd=fdfind
     alias cl=claude
