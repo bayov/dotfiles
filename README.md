@@ -68,6 +68,9 @@ cargo install dotter jj-cli zellij eza bat git-delta
 # install cargo-binstall
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
+# install cargo-nextest
+cargo binstall cargo-nextest --secure
+
 # install fisher (fish plugin manager)
 fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
 
