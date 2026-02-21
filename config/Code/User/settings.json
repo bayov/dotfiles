@@ -235,6 +235,15 @@
     //--------------------------------------------------------------------------
     // Misc
     //--------------------------------------------------------------------------
+    // JSON schema validation
+    "json.schemaDownload.trustedDomains": {
+        "https://schemastore.azurewebsites.net/": true,
+        "https://raw.githubusercontent.com/": true,
+        "https://www.schemastore.org/": true,
+        "https://json.schemastore.org/": true,
+        "https://json-schema.org/": true,
+        "https://biomejs.dev": true
+    },
     // Jujutsu VCS
     "jjk.enableAnnotations": false, // hide blame annotations on current line
     "git.enabled": false, // Hide Git changes (we use jj instead)
