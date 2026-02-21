@@ -1,8 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "opencode-gemini-auth@latest"
-  ],
   "theme": "opencode",
   "keybinds": {
     "leader": "ctrl+x",
@@ -34,8 +31,5 @@
     "input_delete": "delete,shift+delete",
     // misc
     "tool_details": "<leader>v"
-  },
-  "server": {
-    "port": 4096
   }
 }

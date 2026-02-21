@@ -39,6 +39,7 @@
     // inlay hints
     "editor.inlayHints.padding": true,
     "editor.inlayHints.fontSize": 12,
+    "editor.codeLens": false,
     // color theme
     "workbench.colorTheme": "IntelliJ IDEA Islands Dark",
     "workbench.colorCustomizations": {
