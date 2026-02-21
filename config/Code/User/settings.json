@@ -10,6 +10,7 @@
     // Files & Explorer
     //--------------------------------------------------------------------------
     "workbench.list.openMode": "doubleClick",
+    "workbench.editor.revealIfOpen": true,
     "explorer.confirmDragAndDrop": false,
     "explorer.autoReveal": false,
     "explorer.decorations.badges": false, // Disable A/M/etc badges in explorer
