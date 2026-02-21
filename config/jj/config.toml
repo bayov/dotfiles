@@ -9,6 +9,3 @@ editor = "nvim"
 pager = "delta"
 diff-formatter = ":git"
 
-[aliases]
-push = ["util", "exec", "--", "uvx", "jj-pre-push", "--checker", "prek", "push"]
-
