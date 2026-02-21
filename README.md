@@ -23,7 +23,6 @@ Requirements
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html
-  * prek — https://prek.j178.dev/installation/ — `uv tool install prek`
 
 AI Tools
 --------
@@ -77,9 +76,6 @@ curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 # install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# install tools using uv
-uv tool install prek
 
 # install node-based tools
 pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
