@@ -1,9 +1,5 @@
 [
     {
-        "command": "editor.action.clipboardPasteAction",
-        "key": "ctrl+v"
-    },
-    {
         "command": "git.commitAll",
         "key": "alt+c c",
         "when": "!inDebugMode && !terminalFocus"
@@ -1756,4 +1752,13 @@
         "command": "-copyRelativeFilePath",
         "when": "!editorFocus"
     },
+    {
+        "key": "ctrl+v",
+        "command": "editor.action.clipboardPasteAction",
+        "when": "editorFocus"
+    },
+    {
+        "key": "ctrl+v",
+        "command": "-editor.action.clipboardPasteAction"
+    }
 ]
