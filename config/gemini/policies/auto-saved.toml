@@ -149,3 +149,9 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "cd", "cargo" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "head", "tail" ]

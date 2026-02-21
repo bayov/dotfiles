@@ -1360,10 +1360,6 @@
         "when": "!activeEditorIsPinned"
     },
     {
-        "key": "alt+s d",
-        "command": "workbench.action.closeEditorsInGroup"
-    },
-    {
         "key": "ctrl+k w",
         "command": "-workbench.action.closeEditorsInGroup"
     },
@@ -1844,5 +1840,9 @@
     {
         "key": "ctrl+j",
         "command": "-workbench.action.togglePanel"
+    },
+    {
+        "key": "alt+s d",
+        "command": "workbench.action.closeOtherEditors"
     }
 ]
