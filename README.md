@@ -21,6 +21,7 @@ Requirements
   * Fisher — https://github.com/jorgebucaran/fisher — `curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher`
   * btop — https://github.com/aristocratos/btop — `sudo apt install btop`
   * cargo-binstall — https://github.com/cargo-bins/cargo-binstall — `curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash`
+  * dprint — https://dprint.dev/ — `uv tool install dprint-py`
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html
@@ -83,6 +84,9 @@ curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 # install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# install uv tools
+uv tool install dprint-py
 
 # install node-based tools
 pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
