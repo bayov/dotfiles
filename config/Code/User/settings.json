@@ -3,6 +3,7 @@
     // Usage
     //--------------------------------------------------------------------------
     "editor.formatOnSave": true,
+    "editor.defaultFormatter": "dprint.dprint",
     "files.autoSave": "onFocusChange",
     "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
     "window.customMenuBarAltFocus": false, // Disable Alt key focusing the menu
@@ -242,7 +243,8 @@
         "https://www.schemastore.org/": true,
         "https://json.schemastore.org/": true,
         "https://json-schema.org/": true,
-        "https://biomejs.dev": true
+        "https://biomejs.dev": true,
+        "https://plugins.dprint.dev": true
     },
     // Jujutsu VCS
     "jjk.enableAnnotations": false, // hide blame annotations on current line
