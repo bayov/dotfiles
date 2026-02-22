@@ -2,8 +2,6 @@
     //--------------------------------------------------------------------------
     // Usage
     //--------------------------------------------------------------------------
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "dprint.dprint",
     "files.autoSave": "onFocusChange",
     "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
     "window.customMenuBarAltFocus": false, // Disable Alt key focusing the menu
@@ -19,6 +17,17 @@
     "workbench.tree.indent": 14,
     "workbench.tree.renderIndentGuides": "always",
     //--------------------------------------------------------------------------
+    // Formatting
+    //--------------------------------------------------------------------------
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "dprint.dprint",
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "[beancount]": {
+        "editor.defaultFormatter": "dongfg.vscode-beancount-formatter"
+    },
+    //--------------------------------------------------------------------------
     // Appearance
     //--------------------------------------------------------------------------
     "window.density.editorTabHeight": "compact",
@@ -29,7 +38,7 @@
     // Activity bar is toggleable (Alt+0), so this setting might change.
     "workbench.activityBar.location": "hidden",
     // Status bar is toggleable (Alt+-), so this setting might change.
-    "workbench.statusBar.visible": false,
+    "workbench.statusBar.visible": true,
     "editor.minimap.enabled": false,
     "editor.rulers": [
         80
