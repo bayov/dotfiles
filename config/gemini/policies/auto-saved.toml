@@ -155,3 +155,9 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "head", "tail" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "bean-format" ]
