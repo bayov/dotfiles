@@ -257,7 +257,7 @@
     },
     // Jujutsu VCS
     "jjk.enableAnnotations": false, // hide blame annotations on current line
-    "git.enabled": false, // Hide Git changes (we use jj instead)
+    "git.enabled": true, // Hide Git changes (we use jj instead)
     // Remote dev (e.g., WSL)
     "remote.autoForwardPortsSource": "hybrid",
     // Dependi

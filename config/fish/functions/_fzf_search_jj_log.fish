@@ -1,6 +1,6 @@
 function _fzf_search_jj_log --description "Search the output of jj log and preview commits. Replace the current token with the selected commit hash."
     if not jj root >/dev/null 2>&1
-        echo '_fzf_search_jj_log: Not in a jujutsu repository.' >&2
+        echo There is no jj repo in (pwd) >&2
     else
         if not set --query fzf_jj_log_template
             set -f fzf_jj_log_template 'change_id.short() ++ " " ++ committer.timestamp().format("%Y-%m-%d") ++ " " ++ description.first_line() ++ "\n"'
