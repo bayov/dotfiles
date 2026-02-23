@@ -19,7 +19,7 @@ config.enable_scroll_bar = false
 -- Theme & Appearance
 --------------------------------------------------------------------------------
 -- Font
-config.font_size = 11
+config.font_size = 10
 wezterm.GLOBAL.base_font_size = config.font_size
 config.harfbuzz_features = {"calt=0", "clig=0", "liga=0"} -- disable ligatures
 -- Colors
