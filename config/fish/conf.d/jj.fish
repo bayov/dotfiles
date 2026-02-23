@@ -17,6 +17,8 @@ function s
 end
 
 function desc --description "Generates AI description for the current commit based on its diff"
+    format_personal_project
+
     # get current commit git diff
     set -l diff (jj diff --git | string collect)
     test -z "$diff"; and echo "No changes found."; and return 1
@@ -49,7 +51,7 @@ $log
 Git diff:
 $diff"
 
-    echo -e "\e[34mGenerating commit message...\e[0m"
+    echo -e "\e[35mGenerating commit message...\e[0m"
     set -l msg (echo $prompt | env OPENCODE_DISABLE_DEFAULT_PLUGINS=true OPENCODE_DISABLE_CLAUDE_CODE=true opencode run --model opencode/trinity-large-preview-free --format json | jq -r 'select(.type == "text") | .part.text' | string collect)
     test -z "$msg"; and return 1
 
@@ -80,7 +82,8 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
     end
 end
 
-abbr -a new jj new
+abbr -a desc "format_personal_project && jj desc"
+abbr -a new jj "format_personal_project && new"
 abbr -a sync jj git fetch
 abbr -a d jj diff
 abbr -a e jj edit
