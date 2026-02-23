@@ -25,6 +25,9 @@ if status is-interactive
 
     # Options for directory search fzf (Alt+F)
     set -g fzf_fd_opts --hidden --follow
+
+    # Command to use when fzf previews a directory's contents
+    set -g fzf_preview_dir_cmd "ls_with_default_args --color=always"
 end
 
 # Global aliases (even if shell is not interactive)
