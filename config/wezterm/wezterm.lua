@@ -98,7 +98,7 @@ config.keys = {
     }),
 
     -- Search/QuickSelect/Copy modes
-    {mods = "ALT", key = "f", action = act.Search({CaseInSensitiveString = ""})},
+    {mods = "CTRL|ALT", key = "f", action = act.Search({CaseInSensitiveString = ""})},
     {mods = "ALT", key = "v", action = act.QuickSelect},
     {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
@@ -128,7 +128,7 @@ config.keys = {
     {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
 
     -- Misc
-    {mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette},
+    {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
     {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 
@@ -170,6 +170,15 @@ config.key_tables.copy_mode = {
             act.CopyMode("Close"),
         }),
     },
+    {
+        mods = "NONE",
+        key = "y",
+        action = act.Multiple({
+            act.CopyTo("Clipboard"),
+            act.ClearSelection,
+            act.CopyMode("Close"),
+        }),
+    },
     -- Enter selection mode
     {mods = "NONE", key = "v", action = act.CopyMode({SetSelectionMode = "Cell"})},
     {mods = "SHIFT", key = "v", action = act.CopyMode({SetSelectionMode = "Line"})},
@@ -204,7 +213,7 @@ config.key_tables.copy_mode = {
 }
 config.key_tables.search_mode = {
     {mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection},
-    {mods = "ALT", key = "f", action = act.CopyMode("CycleMatchType")},
+    {mods = "CTRL|ALT", key = "f", action = act.CopyMode("CycleMatchType")},
     {mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch")},
     {mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch")},
     {mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch")},

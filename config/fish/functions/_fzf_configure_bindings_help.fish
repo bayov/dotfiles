@@ -11,7 +11,7 @@ DESCRIPTION
     By default, commands are bound to a mnemonic key sequence, shown below. Each command's binding
     can be configured using a namesake corresponding option:
         COMMAND            |  DEFAULT KEY SEQUENCE         |  CORRESPONDING OPTION
-        Search Directory   |  Ctrl+Alt+F (F for file)      |  --directory
+        Search Directory   |  Alt+F (F for file)           |  --directory
         Search Git Log     |  Ctrl+Alt+L (L for log)       |  --git_log
         Search Git Status  |  Ctrl+Alt+S (S for status)    |  --git_status
         Search History     |  Ctrl+R     (R for reverse)   |  --history
