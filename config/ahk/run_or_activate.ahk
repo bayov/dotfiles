@@ -3,8 +3,8 @@
 #NoTrayIcon
 
 #`:: run_or_focus("wezterm-gui.exe", "ahk_exe wezterm-gui.exe")
-#1:: run_or_focus_file_explorer()
-#2:: run_or_focus("rustrover64.exe", "ahk_exe rustrover64.exe")
+#1:: run_or_focus("C:\Programs\VS Code\Code.exe", "ahk_exe Code.exe")  ; VS Code
+#2:: run_or_focus_file_explorer()
 
 ; Runs the given `target` if the given `window_title` doesn't exist. Otherwise,
 ; activates the given window, or minimizes it if it's currently active.
@@ -16,6 +16,9 @@ run_or_focus(target, window_title) {
     } else {
         try {
             Run(target)
+            ; After running, wait at most 0.5 seconds and activate window
+            if WinWait(window_title, , 0.5)
+                WinActivate(window_title)
         } catch Error as e {
             MsgBox("Error running: " . target . "`n" . e.Message, "Program Launch Error", "Icon!")
         }
