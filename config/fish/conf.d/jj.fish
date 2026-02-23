@@ -73,7 +73,7 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
     if test -f "$root/.bayov-personal-project"
         jj bookmark move main --to @-
         and jj git push
-        and git checkout main --quiet > /dev/null
+        and git checkout main --quiet
     else
         echo "Error: not personal a project (missing $root/.bayov-personal-project)"
         return 1
