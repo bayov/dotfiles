@@ -24,7 +24,8 @@ alias vim=nvim
 # Environment Variables
 set -gx EDITOR nvim
 set -gx fish_greeting  # Silence fish shell greeting
-set -g fzf_project_paths ~/projects
+set -g fzf_project_paths ~/dotfiles
+set -g fzf_project_search_paths ~/projects
 set -gx fzf_fd_opts --hidden --follow
 set -gx PNPM_HOME "/home/bayov/.local/share/pnpm"
 
