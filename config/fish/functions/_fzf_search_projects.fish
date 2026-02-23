@@ -40,7 +40,7 @@ function _fzf_search_projects --description "Search projects in defined director
             if test -n "$valid_search"
                 $fd_cmd --max-depth 1 --min-depth 1 --type d . $valid_search
             end
-        end | string replace --regex "^$HOME" "~" | sort -u | _fzf_wrapper --prompt="Project> " --preview="_fzf_preview_file (string replace --regex '^~' $HOME {})")
+        end | string replace --regex "^$HOME" "~" | sort -u | _fzf_wrapper --prompt="Project> " --ansi --preview="ls_with_default_args --color=always (string replace --regex '^~' $HOME {})")
 
     if test $status -eq 0 && test -n "$project_selected"
         # Expand ~ back to $HOME before cd
