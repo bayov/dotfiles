@@ -71,7 +71,7 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
 
     # If it's a personal project, push parent commit as main git branch
     if test -f "$root/.bayov-personal-project"
-        jj bookmark move main --to @-
+        jj bookmark move main --to @- --quiet
         and jj git push
         and git checkout main --quiet
     else
