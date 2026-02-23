@@ -24,6 +24,10 @@ wezterm.GLOBAL.base_font_size = config.font_size
 config.harfbuzz_features = {"calt=0", "clig=0", "liga=0"} -- disable ligatures
 -- Colors
 bayov_color_scheme.apply_to_config(config)
+config.inactive_pane_hsb = {
+    saturation = 0.9,
+    brightness = 0.8,
+}
 -- Tabs
 tabline.plugin.apply_to_config(config)
 config.use_fancy_tab_bar = false
