@@ -98,7 +98,22 @@ config.keys = {
     }),
 
     -- Search/QuickSelect/Copy modes
-    {mods = "CTRL|ALT", key = "f", action = act.Search({CaseInSensitiveString = ""})},
+    {
+        mods = "CTRL|SHIFT",
+        key = "f",
+        action = wezterm.action_callback(function(window, pane)
+            window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
+            window:perform_action(act.Search("CurrentSelectionOrEmptyString"), pane)
+            window:perform_action(
+                act.Multiple({
+                    act.CopyMode("ClearPattern"),
+                    act.CopyMode("ClearSelectionMode"),
+                    act.CopyMode("MoveToScrollbackBottom"),
+                }),
+                pane
+            )
+        end)
+    },
     {mods = "ALT", key = "v", action = act.QuickSelect},
     {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
@@ -213,11 +228,23 @@ config.key_tables.copy_mode = {
 }
 config.key_tables.search_mode = {
     {mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection},
-    {mods = "CTRL|ALT", key = "f", action = act.CopyMode("CycleMatchType")},
+    {mods = "CTRL|SHIFT", key = "f", action = helpers.CloseAndClearSelection},
+    {mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType")},
+    {mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType")},
     {mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch")},
     {mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch")},
     {mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch")},
     {mods = "NONE", key = "DownArrow", action = act.CopyMode("NextMatch")},
+    -- Perform copy (and then close)
+    {
+        mods = "CTRL",
+        key = "c",
+        action = act.Multiple({
+            act.CopyTo("Clipboard"),
+            act.ClearSelection,
+            act.CopyMode("Close"),
+        }),
+    },
 }
 config.key_tables.pane = {
     {mods = "NONE", key = "Escape", action = act.PopKeyTable},
