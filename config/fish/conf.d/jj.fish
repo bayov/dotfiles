@@ -62,7 +62,7 @@ end
 
 function cm --description "Generates AI description for the current commit and starts a new change"
     desc; or return
-    jj new
+    jj new --quiet
 end
 
 function p --description "Updates bookmark `main` to track `@-` and pushes to remote"
