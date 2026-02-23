@@ -44,7 +44,7 @@ config.window_padding = {
 }
 -- Cursor
 config.cursor_blink_rate = 0
-config.default_cursor_style = 'SteadyBlock'
+config.default_cursor_style = "SteadyBlock"
 -- Misc
 config.max_fps = 120
 config.disable_default_quick_select_patterns = true
@@ -129,6 +129,19 @@ config.keys = {
     {mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1)},
     {mods = "ALT", key = "[", action = act.MoveTabRelative(-1)},
     {mods = "ALT", key = "]", action = act.MoveTabRelative(1)},
+    {
+        mods = "NONE",
+        key = "F2",
+        action = act.PromptInputLine {
+            description = "Rename tab: ",
+            initial_value = "",
+            action = wezterm.action_callback(function(window, pane, line)
+                if line then
+                    window:active_tab():set_title(line)
+                end
+            end),
+        },
+    },
 
     -- Pane-management
     {mods = "ALT", key = "s", action = act.ActivateKeyTable({name = "pane"})},
@@ -161,7 +174,7 @@ config.keys = {
             },
             action = wezterm.action_callback(function(window, pane)
               local url = window:get_selection_text_for_pane(pane)
-              wezterm.log_info('opening: ' .. url)
+              wezterm.log_info("opening: " .. url)
               wezterm.open_with(url)
             end),
         }),
@@ -275,7 +288,7 @@ config.mouse_bindings = {
 --------------------------------------------------------------------------------
 -- OS-specific settings
 --------------------------------------------------------------------------------
-config.default_domain = 'WSL:Ubuntu'
+config.default_domain = "WSL:Ubuntu"
 
 --------------------------------------------------------------------------------
 -- Fiddle
