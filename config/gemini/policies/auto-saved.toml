@@ -161,3 +161,9 @@ toolName = "run_shell_command"
 decision = "allow"
 priority = 100
 commandPrefix = [ "bean-format" ]
+
+[[rule]]
+toolName = "run_shell_command"
+decision = "allow"
+priority = 100
+commandPrefix = [ "fdfind", "head" ]
