@@ -125,7 +125,7 @@
     },
     {
         "command": "workbench.action.openRecent",
-        "key": "alt+c w",
+        "key": "alt+w",
         "when": "!inQuickOpen"
     },
     {
@@ -1924,5 +1924,45 @@
         "key": "alt+r",
         "command": "-toggleSearchEditorRegex",
         "when": "inSearchEditor && searchInputBoxFocus"
+    },
+    {
+        "key": "alt+u",
+        "command": "toggleSearchEditorWholeWord",
+        "when": "inSearchEditor && searchInputBoxFocus"
+    },
+    {
+        "key": "alt+w",
+        "command": "-toggleSearchEditorWholeWord",
+        "when": "inSearchEditor && searchInputBoxFocus"
+    },
+    {
+        "key": "alt+u",
+        "command": "workbench.action.terminal.toggleFindWholeWord",
+        "when": "terminalFindVisible && terminalHasBeenCreated || terminalFindVisible && terminalProcessSupported"
+    },
+    {
+        "key": "alt+w",
+        "command": "-workbench.action.terminal.toggleFindWholeWord",
+        "when": "terminalFindVisible && terminalHasBeenCreated || terminalFindVisible && terminalProcessSupported"
+    },
+    {
+        "key": "alt+u",
+        "command": "toggleFindWholeWord",
+        "when": "editorFocus"
+    },
+    {
+        "key": "alt+w",
+        "command": "-toggleFindWholeWord",
+        "when": "editorFocus"
+    },
+    {
+        "key": "alt+u",
+        "command": "toggleSearchWholeWord",
+        "when": "searchViewletFocus"
+    },
+    {
+        "key": "alt+w",
+        "command": "-toggleSearchWholeWord",
+        "when": "searchViewletFocus"
     }
 ]
