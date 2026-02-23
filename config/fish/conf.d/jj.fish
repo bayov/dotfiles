@@ -53,7 +53,7 @@ $diff"
     set -l msg (echo $prompt | env OPENCODE_DISABLE_DEFAULT_PLUGINS=true OPENCODE_DISABLE_CLAUDE_CODE=true opencode run --model opencode/trinity-large-preview-free --format json | jq -r 'select(.type == "text") | .part.text' | string collect)
     test -z "$msg"; and return 1
 
-    jj describe -m "$msg"
+    jj describe -m "$msg" --quiet
     echo -e "\e[32mGenerated commit description:\e[0m"
     echo -e "\e[38;5;242m─────────────────────────────\e[0m"
     echo "$msg"
