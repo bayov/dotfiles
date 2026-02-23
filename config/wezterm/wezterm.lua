@@ -134,7 +134,6 @@ config.keys = {
         key = "F2",
         action = act.PromptInputLine {
             description = "Rename tab: ",
-            initial_value = "",
             action = wezterm.action_callback(function(window, pane, line)
                 if line then
                     window:active_tab():set_title(line)
