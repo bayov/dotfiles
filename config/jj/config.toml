@@ -9,3 +9,25 @@ editor = "nvim"
 pager = "delta"
 diff-formatter = ":git"
 
+[template-aliases]
+# for fzf
+one_line_no_graph = """
+if(
+  root,
+  format_root_commit(self),
+  separate(" ",
+    committer.timestamp().format("%Y-%m-%d"),
+    format_short_change_id(change_id),
+    bookmarks,
+    if(git_head, label("git_head", "git_head()")),
+    if(mine, "", label("author", author.email())),
+    if(conflict, label("conflict", "conflict")),
+    if(empty, label("empty", "(empty)")),
+    if(
+      description,
+      description.first_line(),
+      label(if(empty, "empty"), description_placeholder),
+    ),
+  )
+) ++ "\n"
+"""

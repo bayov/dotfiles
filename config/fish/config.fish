@@ -17,17 +17,20 @@ if status is-interactive
     starship init fish | source
     
     # Silence fish shell greeting
-    set -gx fish_greeting  
+    set -gx fish_greeting
 
+    # fzf settings
+    # ------------
+    # Differ in previews
+    set -g fzf_diff_highlighter delta --paging=never
     # Project locations for project search fzf (Alt+W)
     set -g fzf_project_paths ~/dotfiles
     set -g fzf_project_search_paths ~/projects
-
     # Options for directory search fzf (Alt+F)
     set -g fzf_fd_opts --hidden --follow
-
-    # Command to use when fzf previews a directory's contents
     set -g fzf_preview_dir_cmd "ls_with_default_args --color=always"
+    # Options for jj log search fzf (Ctl+Alt+J)
+    set -g fzf_jj_log_template "one_line_no_graph"
 end
 
 # Global aliases (even if shell is not interactive)
