@@ -16,6 +16,10 @@ if status is-interactive
     # Initialize prompt
     starship init fish | source
 
+    # Up/Down do a prefix reverse search
+    bind \e\[A history-prefix-search-backward
+    bind \e\[B history-prefix-search-forward
+
     # Silence fish shell greeting
     set -gx fish_greeting
 
@@ -31,6 +35,18 @@ if status is-interactive
     set -g fzf_preview_dir_cmd "ls_with_default_args --color=always"
     # Options for jj log search fzf (Ctl+Alt+J)
     set -g fzf_jj_log_template "one_line_no_graph"
+
+    # gum settings
+    # ------------
+    # confirm
+    set -gx GUM_CONFIRM_UNSELECTED_BACKGROUND "#0f0f12"
+    set -gx GUM_CONFIRM_SELECTED_BACKGROUND 4
+    set -gx GUM_CONFIRM_SELECTED_FOREGROUND 16
+    set -gx GUM_CONFIRM_PROMPT_FOREGROUND 4
+    # spin
+    set -gx GUM_SPIN_SPINNER points
+    set -gx GUM_SPIN_SPINNER_FOREGROUND 4
+    set -gx GUM_SPIN_PADDING "0 1"
 end
 
 # Global aliases (even if shell is not interactive)
