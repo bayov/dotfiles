@@ -87,7 +87,7 @@ curl -fsSL https://get.pnpm.io/install.sh | sh -
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # install uv tools
-uv tool install dprint-py rich-cli
+uv tool install dprint-py
 
 # install node-based tools
 pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
