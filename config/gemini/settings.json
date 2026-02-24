@@ -17,7 +17,12 @@
     "checkpointing": {
       "enabled": true
     },
-    "vimMode": false
+    "vimMode": false,
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "30d",
+      "warningAcknowledged": true
+    }
   },
   "ui": {
     "dynamicWindowTitle": false,
