@@ -1,5 +1,5 @@
 # Run this configuration only in Google
-string match -r '.c.googlers.com$' (hostname) &>/dev/null || return
+test "$use_google_config" = "true" || return
 
 # Run gcert on login if less than 60m remain
 if status --is-interactive
@@ -18,10 +18,12 @@ source_google_fish_package hi
 source_google_fish_package citc_prompt
 source_google_fish_package benchy
 source_google_fish_package banshee
+source_google_fish_package jj
 
 # hg abbreviations
 alias hg=chg
-function s
+# `hg` aliases disabled, trying out `jj` (conf.d/jj.fish)
+function hgs
     hg --pager=never xl
     and echo -e "\e[90m---------------------\e[0m"
     and hg --pager=never status
@@ -29,9 +31,8 @@ end
 abbr -a sync hg sync
 abbr -a am hg am
 abbr -a uc hg uc
-abbr -a d hg diff
-abbr -a e hg checkout
-abbr -a c --set-cursor "hg commit -m \"%\""
+abbr -a hge hg checkout
+abbr -a hgc --set-cursor "hg commit -m \"%\""
 
 # misc abbreviations
 function prodspec --wraps=/google/bin/releases/rollouts/prodspec/prodspec

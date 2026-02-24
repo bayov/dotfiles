@@ -1,9 +1,6 @@
 # Jujutsu specific configuration, loaded only if Jujutsu is installed
 command -q jj || return
 
-# Also, avoid loading when in Google (since we use hg instead)
-string match -r '.c.googlers.com$' (hostname) &>/dev/null && return
-
 function s
     jj log --no-pager; or return
     and echo -e "\e[38;5;242m─────────────────────────────\e[0m"
@@ -84,7 +81,6 @@ end
 
 abbr -a desc "format_personal_project && jj desc"
 abbr -a new jj "format_personal_project && new"
-abbr -a sync jj git fetch
 abbr -a d jj diff
 abbr -a e jj edit
 abbr -a c --set-cursor "jj commit -m \"%\""
