@@ -87,6 +87,7 @@ config.keys = {
     helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
     helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
     helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
+    helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
     helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
     helpers.KeyUnlessTui({
         mods = "CTRL|ALT",
