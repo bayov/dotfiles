@@ -45,6 +45,7 @@ if status is-interactive
     set -gx GUM_CONFIRM_PROMPT_FOREGROUND 4
     # spin
     set -gx GUM_SPIN_SPINNER points
+    set -gx GUM_SPIN_TITLE_FOREGROUND 4
     set -gx GUM_SPIN_SPINNER_FOREGROUND 4
     set -gx GUM_SPIN_PADDING "0 1"
 end
