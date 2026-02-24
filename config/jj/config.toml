@@ -19,7 +19,6 @@ if(
     committer.timestamp().format("%Y-%m-%d"),
     format_short_change_id(change_id),
     bookmarks,
-    if(self.contained_in('first_parent(@)'), label("git_head", "git_head()")),
     if(mine, "", label("author", author.email())),
     if(conflict, label("conflict", "conflict")),
     if(empty, label("empty", "(empty)")),
