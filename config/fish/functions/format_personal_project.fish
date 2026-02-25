@@ -1,4 +1,8 @@
 function format_personal_project
+    if test "$use_google_config" = "true"
+        jj fix
+	return
+    end
     set -l jj_root (jj root 2>/dev/null)
     test -n "$jj_root" || return
 
