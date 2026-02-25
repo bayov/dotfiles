@@ -66,10 +66,3 @@ fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/pnpm
 fish_add_path ~/.opencode/bin
 
-# Google-specific settings
-if string match -qr '.c.googlers.com$' (hostname)
-    set -g use_google_config true
-else
-    set -g use_google_config false
-end
-

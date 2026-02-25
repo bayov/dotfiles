@@ -1,11 +1,18 @@
+if string match -qr '.c.googlers.com$' (hostname)
+    set -g use_google_config true
+else
+    set -g use_google_config false
+end
+
 # Run this configuration only in Google
+echo google.fish
 test "$use_google_config" = "true" || return
 
 # Run gcert on login if less than 60m remain
-if status --is-interactive
-  gcertstatus --check_remaining=60m >/dev/null 2>&1
-  or gcert -s
-end
+#if status --is-interactive
+#  gcertstatus --check_remaining=60m >/dev/null 2>&1
+#  or gcert -s
+#end
 
 # Run gcert when less than 60m remain in long sessions
 source_google_fish_package autogcert
