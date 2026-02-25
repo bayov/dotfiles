@@ -23,6 +23,7 @@ Requirements
   * cargo-binstall — https://github.com/cargo-bins/cargo-binstall — `curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash`
   * dprint — https://dprint.dev/ — `uv tool install dprint-py`
   * gum — https://github.com/charmbracelet/gum
+
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html

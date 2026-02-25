@@ -12,7 +12,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
         return
     end
 
-    set -f preview_cmd 'jj diff --color=always -- (string sub --start 3 {})'
+    set -f preview_cmd 'jj diff --color=always -- (_fzf_parse_jj_diff_path {})'
     if set --query fzf_diff_highlighter
         set preview_cmd "$preview_cmd | $fzf_diff_highlighter"
     end
@@ -31,7 +31,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
     if test $status -eq 0
         set -f cleaned_paths
         for path in $selected_paths
-            set --append cleaned_paths (string sub --start 3 $path)
+            set --append cleaned_paths (_fzf_parse_jj_diff_path $path)
         end
 
         commandline --current-token --replace -- (string escape -- $cleaned_paths | string join ' ')
