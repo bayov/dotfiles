@@ -5,7 +5,6 @@ else
 end
 
 # Run this configuration only in Google
-echo google.fish
 test "$use_google_config" = "true" || return
 
 # Run gcert on login if less than 60m remain
