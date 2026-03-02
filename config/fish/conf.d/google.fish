@@ -26,6 +26,10 @@ source_google_fish_package benchy
 source_google_fish_package banshee
 source_google_fish_package jj
 
+# jj abbreviations
+abbr -a sync jj sync
+abbr -a u jj upload
+
 # hg abbreviations
 alias hg=chg
 # `hg` aliases disabled, trying out `jj` (conf.d/jj.fish)
@@ -34,9 +38,9 @@ function hgs
     and echo -e "\e[90m---------------------\e[0m"
     and hg --pager=never status
 end
-abbr -a sync hg sync
-abbr -a am hg am
-abbr -a uc hg uc
+abbr -a hgsync hg sync
+abbr -a hgam hg am
+abbr -a hguc hg uc
 abbr -a hge hg checkout
 abbr -a hgc --set-cursor "hg commit -m \"%\""
 
