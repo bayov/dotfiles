@@ -29,6 +29,9 @@ source_google_fish_package jj
 # jj abbreviations
 abbr -a sync jj sync
 abbr -a u jj upload
+function sfu
+    jj squash && jj fix && jj upload && jj edit @-
+end
 
 # hg abbreviations
 alias hg=chg
