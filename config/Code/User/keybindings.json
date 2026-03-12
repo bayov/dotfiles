@@ -1964,5 +1964,13 @@
         "key": "alt+w",
         "command": "-toggleSearchWholeWord",
         "when": "searchViewletFocus"
+    },
+    {
+        "key": "shift+alt+x",
+        "command": "workbench.action.reopenClosedEditor"
+    },
+    {
+        "key": "ctrl+shift+t",
+        "command": "-workbench.action.reopenClosedEditor"
     }
 ]
