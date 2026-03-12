@@ -1,4 +1,5 @@
 ﻿local wezterm = require("wezterm")
+local mux = wezterm.mux
 local act = wezterm.action
 
 local helpers = require("helpers")
@@ -47,6 +48,7 @@ config.cursor_blink_rate = 0
 config.default_cursor_style = "SteadyBlock"
 -- Misc
 config.max_fps = 120
+config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
 config.quick_select_patterns = {
     "[0-9a-f]{7,40}",
@@ -61,10 +63,13 @@ config.quick_select_patterns = {
 config.quick_select_alphabet = "qwerasdzxcv"
 
 -- Start in full-screen
-wezterm.on("gui-startup", function (window)
-    local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
-    local gui_window = window:gui_window();
-    gui_window:perform_action(act.ToggleFullScreen, pane)
+wezterm.on("gui-attached", function (window, pane)
+    local workspace = mux.get_active_workspace()
+    for _, window in ipairs(mux.all_windows()) do
+        if window:get_workspace() == workspace then
+            window:gui_window():toggle_fullscreen()
+        end
+    end
 end)
 
 --------------------------------------------------------------------------------
@@ -156,6 +161,7 @@ config.keys = {
     {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
 
     -- Misc
+    {mods = "ALT", key = "z", action = act.QuitApplication},
     {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
     {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
@@ -288,7 +294,12 @@ config.mouse_bindings = {
 --------------------------------------------------------------------------------
 -- OS-specific settings
 --------------------------------------------------------------------------------
-config.default_domain = "WSL:Ubuntu"
+config.unix_domains = {
+    { name = 'unix' },
+}
+config.default_prog = { 'wsl', '~' }
+config.default_gui_startup_args = { 'connect', 'unix' }
+-- config.default_domain = "WSL:Ubuntu"
 
 --------------------------------------------------------------------------------
 -- Fiddle
