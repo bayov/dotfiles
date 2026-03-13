@@ -5,16 +5,19 @@ function _fzf_search_history --description "Search command history. Replace the 
         builtin history merge
     end
 
-    set -f fzf_history_time_format (set_color 666)"%Y-%m-%d %H:%M │ "(set_color normal)
+    set -fx fzf_history_time_format (set_color 666)"%Y-%m-%d %H:%M │ "(set_color normal)
     set -f fzf_history_header "[Shift+Del] Remove entry"
 
     # Delinate time from command in history entries using the vertical box drawing char (U+2502).
     # Then, to get raw command from history entries, delete everything up to it. The ? on regex is
     # necessary to make regex non-greedy so it won't match into commands containing the char.
     set -f time_prefix_regex '^.*? │ '
+
+    set -fx fzf_history_command builtin history --null --show-time='$fzf_history_time_format'
+
     # Delinate commands throughout pipeline using null rather than newlines because commands can be multi-line
     set -f commands_selected (
-        builtin history --null --show-time="$fzf_history_time_format" |
+        eval "$fzf_history_command" |
         _fzf_wrapper \
             --prompt="History ❯ " \
             --header="$fzf_history_header" \
@@ -25,7 +28,7 @@ function _fzf_search_history --description "Search command history. Replace the 
             --query=(commandline) \
             --preview="string replace --regex '$time_prefix_regex' '' -- {} | fish_indent --ansi" \
             --preview-window="bottom:3:wrap" \
-            --bind="shift-delete:execute-silent(printf '%s\n' {} | fish -c fzf_history_delete)+reload(fish -c 'builtin history --null --show-time=\$fzf_history_time_format')" \
+            --bind="shift-delete:execute-silent(printf '%s\n' {} | fish -c fzf_history_delete)+reload(fish -c '$fzf_history_command')" \
             --ansi |
         string split0 |
         # remove timestamps from commands selected

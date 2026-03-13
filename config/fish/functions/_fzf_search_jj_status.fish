@@ -17,15 +17,23 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
         set preview_cmd "$preview_cmd | $fzf_diff_highlighter"
     end
 
+    set -fx fzf_jj_status_command jj diff --summary --color=always
+
+    set -f fzf_directory_header "[Ctrl+R] Restore file"
+
     set -f selected_paths (
-        jj diff --summary --color=always |
-        _fzf_wrapper --ansi \
+        eval "$fzf_jj_status_command" |
+        _fzf_wrapper \
+            --header="$fzf_directory_header" \
+            --ansi \
             --multi \
-            --prompt="JJ Status> " \
+            --prompt="JJ Status ❯ " \
             --query=(commandline --current-token) \
             --preview=$preview_cmd \
             --preview-window bottom:80% \
             --nth="2.." \
+            --height=100% \
+            --bind="ctrl-r:execute(echo {} | awk '{print \$2}' | xargs jj restore)+reload(fish -c '$fzf_jj_status_command')" \
             $fzf_jj_status_opts
     )
     if test $status -eq 0

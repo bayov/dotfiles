@@ -19,7 +19,7 @@ function _fzf_search_jj_log --description "Search the output of jj log and previ
         _fzf_wrapper --ansi \
             --multi \
             --scheme=history \
-            --prompt="JJ Log> " \
+            --prompt="JJ Log ❯ " \
             --preview=$preview_cmd \
             --query=(commandline --current-token) \
             $fzf_jj_log_opts
