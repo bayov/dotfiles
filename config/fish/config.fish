@@ -29,15 +29,15 @@ if status is-interactive
     # fzf settings
     # ------------
     # Differ in previews
-    set -g fzf_diff_highlighter delta --paging=never
+    set -gx fzf_diff_highlighter delta --paging=never
     # Project locations for project search fzf (Alt+W)
-    set -g fzf_project_paths ~/dotfiles
-    set -g fzf_project_search_paths ~/projects
+    set -gx fzf_project_paths ~/dotfiles
+    set -gx fzf_project_search_paths ~/projects
     # Options for directory search fzf (Alt+F)
-    set -g fzf_fd_opts --hidden --follow
-    set -g fzf_preview_dir_cmd "ls_with_default_args --color=always"
+    set -gx fzf_fd_opts --hidden --follow
+    set -gx fzf_preview_dir_cmd "ls_with_default_args --color=always"
     # Options for jj log search fzf (Ctl+Alt+J)
-    set -g fzf_jj_log_template "one_line_no_graph"
+    set -gx fzf_jj_log_template "one_line_no_graph"
 
     # gum settings
     # ------------

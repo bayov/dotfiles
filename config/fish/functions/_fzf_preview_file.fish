@@ -21,14 +21,7 @@ function _fzf_preview_file --description "Print a preview for the given file bas
             bat --style=numbers --color=always "$file_path"
         end
     else if test -d "$file_path" # directory
-        if set --query fzf_preview_dir_cmd
-            # see above
-            eval "$fzf_preview_dir_cmd '$file_path'"
-        else
-            # -A list hidden files as well, except for . and ..
-            # -F helps classify files by appending symbols after the file name
-            command ls -A -F "$file_path"
-        end
+        eval "$fzf_preview_dir_cmd '$file_path'"
     else if test -c "$file_path"
         _fzf_report_file_type "$file_path" "character device file"
     else if test -b "$file_path"
