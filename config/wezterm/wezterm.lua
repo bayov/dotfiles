@@ -147,9 +147,9 @@ config.keys = {
 
     -- Presentation
     {mods = "ALT", key = "\\", action = act.ToggleFullScreen},
-    {mods = "ALT", key = "-", action = zoom.ZoomOut},
-    {mods = "ALT", key = "=", action = zoom.ZoomIn},
-    {mods = "ALT", key = "0", action = zoom.ResetZoom},
+    {mods = "CTRL", key = "-", action = zoom.ZoomOut},
+    {mods = "CTRL", key = "=", action = zoom.ZoomIn},
+    {mods = "CTRL", key = "0", action = zoom.ResetZoom},
 
     -- Tab-management
     -- {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},

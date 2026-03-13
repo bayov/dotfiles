@@ -4,7 +4,8 @@
       80
     ],
     "show_menu_bar": false,
-    "show_tab_bar": false
+    "show_tab_bar": false,
+    "show_status_bar": false
   },
   "theme": "dark",
   "file_explorer": {
@@ -42,6 +43,39 @@
         "alt"
       ],
       "action": "open_settings"
+    },
+    {
+      "key": "1",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_file_explorer",
+      "when": "file_explorer"
+    },
+    {
+      "key": "1",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "noop",
+      "when": "normal"
+    },
+    {
+      "key": "F7",
+      "modifiers": [
+        "alt",
+        "shift"
+      ],
+      "action": "noop",
+      "when": "normal"
+    },
+    {
+      "key": "1",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_file_explorer",
+      "when": "normal"
     }
   ]
 }
