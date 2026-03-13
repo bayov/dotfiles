@@ -21,6 +21,7 @@ Requirements
   * Fisher — https://github.com/jorgebucaran/fisher — `curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher`
   * btop — https://github.com/aristocratos/btop — `sudo apt install btop`
   * cargo-binstall — https://github.com/cargo-bins/cargo-binstall — `curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash`
+  * cargo-update — https://github.com/nabijaczleweli/cargo-update — cargo install cargo-update`
   * dprint — https://dprint.dev/ — `uv tool install dprint-py`
   * gum — https://github.com/charmbracelet/gum
 
@@ -73,6 +74,9 @@ curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-
 
 # install cargo-nextest
 cargo binstall cargo-nextest --secure
+
+# install cargo updater
+cargo install cargo-update
 
 # install fisher (fish plugin manager)
 fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
