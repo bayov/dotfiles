@@ -74,12 +74,14 @@ keybinds clear-defaults=true {
         bind "Alt Shift down" { MoveFocus "down"; }
         bind "Alt Shift left" { MoveFocus "left"; }
         bind "Alt Shift right" { MoveFocus "right"; }
+        bind "Alt {" { MovePane "left"; }
+        bind "Alt }" { MovePane "right"; }
         // Resize using `Alt r` resize mode.
         bind "Alt x" { CloseFocus; }
 
         // Floating-panes
-        // bind "Alt w" { ToggleFloatingPanes; }
-        bind "Alt Shift w" { NewPane; }
+        bind "Alt q" { ToggleFloatingPanes; }
+        bind "Alt Shift q" { NewPane; }
         bind "Alt p" { TogglePanePinned; }
 
         // Misc
@@ -114,14 +116,24 @@ keybinds clear-defaults=true {
         bind "f" { ToggleFocusFullscreen; SwitchToMode "normal"; }
         bind "w" { TogglePaneEmbedOrFloating; }
         bind "x" { CloseTab; SwitchToMode "normal"; }
+        // Focusing other panes
+        bind "left" { MoveFocus "left"; }
+        bind "down" { MoveFocus "down"; }
+        bind "up" { MoveFocus "up"; }
+        bind "right" { MoveFocus "right"; }
         // Moving panes
-        bind "Shift left" "Shift h" { MovePane "left"; }
-        bind "Shift down" "Shift j" { MovePane "down"; }
-        bind "Shift up" "Shift k" { MovePane "up"; }
-        bind "Shift right" "Shift l" { MovePane "right"; }
+        bind "Shift left" { MovePane "left"; }
+        bind "Shift down" { MovePane "down"; }
+        bind "Shift up" { MovePane "up"; }
+        bind "Shift right" { MovePane "right"; }
+        // Increase size
+        bind "8" { Resize "Increase up"; }
+        bind "2" { Resize "Increase down"; }
+        bind "4" { Resize "Increase left"; }
+        bind "6" { Resize "Increase right"; }
         // Move panes between tabs
-        //   bind "Ctrl Shift left" { BreakPaneLeft; }
-        //   bind "Ctrl Shift right" { BreakPaneRight; }
+        bind "[" { BreakPaneLeft; }
+        bind "]" { BreakPaneRight; }
     }
     renamepane {
         // Cancel
