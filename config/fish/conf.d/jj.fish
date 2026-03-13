@@ -79,8 +79,6 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
         jj bookmark move main --to @- --quiet
         and jj git push --quiet
         and echo (set_color green) ✓ pushed main(set_color normal)
-        and echo -e "\e[38;5;242m─────────────────────────────\e[0m"
-        and s
         and git checkout main --quiet
     else
         echo "Error: not personal a project (missing $root/.bayov-personal-project)"
