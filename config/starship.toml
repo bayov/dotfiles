@@ -2,7 +2,7 @@
 
 format = "$cmd_duration$status$time$character"
 
-right_format = "$all"
+right_format = "$directory$custom"
 
 # Disable newline between commands
 add_newline = false
@@ -49,7 +49,3 @@ disabled = true
 when = "jj-starship detect"
 command = "jj-starship --jj-symbol ''"
 format = "$output "
-
-[rust]
-format = ""
-
