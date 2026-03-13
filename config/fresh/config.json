@@ -76,6 +76,13 @@
       ],
       "action": "toggle_file_explorer",
       "when": "normal"
+    },
+    {
+      "key": "-",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_tab_bar"
     }
   ]
 }
