@@ -11,6 +11,7 @@ depends = [
     "delta",
     "eza",
     "fish",
+    "fresh",
     "gemini",
     "jj",
     "nvim",
@@ -41,6 +42,9 @@ depends = [
 
 [fish.files]
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
+
+[fresh.files]
+"config/fresh" = "~/.config/fresh"
 
 [gemini.files]
 "config/gemini/AGENTS.md" = "~/.gemini/AGENTS.md"
