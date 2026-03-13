@@ -1,13 +1,15 @@
 {
+  "version": 1,
+  "theme": "dark",
   "editor": {
-    "rulers": [
-      80
-    ],
+    "cursor_style": "blinking_bar",
     "show_menu_bar": false,
     "show_tab_bar": false,
-    "show_status_bar": false
+    "show_status_bar": true,
+    "rulers": [
+      80
+    ]
   },
-  "theme": "dark",
   "file_explorer": {
     "show_hidden": true
   },
@@ -83,6 +85,51 @@
         "alt"
       ],
       "action": "toggle_tab_bar"
+    },
+    {
+      "key": "F7",
+      "modifiers": [
+        "alt",
+        "shift"
+      ],
+      "action": "menu_open",
+      "when": "global"
+    },
+    {
+      "key": "v",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "add_cursor_next_match",
+      "when": "normal"
+    },
+    {
+      "key": "F7",
+      "modifiers": [
+        "alt",
+        "shift"
+      ],
+      "action": "add_cursor_next_match",
+      "when": "normal"
+    },
+    {
+      "key": "PageDown",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "find_next",
+      "when": "normal"
+    },
+    {
+      "key": "PageUp",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "find_previous",
+      "when": "normal"
     }
   ]
 }

@@ -8,7 +8,7 @@ keybinds clear-defaults=true {
     // Global keybinds
     shared_except "locked" {
         // Switch modes
-        bind "Ctrl f" { SwitchToMode "entersearch"; SearchInput 0; }
+        bind "Ctrl Alt f" { SwitchToMode "entersearch"; SearchInput 0; }
         bind "Alt c" { EditScrollback; SwitchToMode "normal"; }
         bind "Alt s" { SwitchToMode "pane"; }
         bind "Alt r" { SwitchToMode "resize"; }
@@ -101,6 +101,7 @@ keybinds clear-defaults=true {
         bind "Esc" { SwitchToMode "normal"; }
         bind "Ctrl c" { SwitchToMode "normal"; }
         bind "Ctrl f" { SwitchToMode "normal"; }
+        bind "Ctrl Alt f" { SwitchToMode "normal"; }
         bind "Alt i" { SearchToggleOption "CaseSensitivity"; }
         bind "Alt u" { SearchToggleOption "WholeWord"; }
         bind "Alt y" { SearchToggleOption "Wrap"; }  // What is this?
