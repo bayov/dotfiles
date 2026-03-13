@@ -35,4 +35,3 @@ set -gx fzf_history_opts --ansi  # To add support of ansi color escape codes
 
 # Allow shift-delete to remove history entries
 set -gx fzf_history_deleted_backup_file ~/.deleted-history.txt
-set -a fzf_history_opts --bind "shift-delete:execute-silent(printf '%s\n' {} | fish -c fzf_history_delete)+reload(fish -c 'builtin history --null --show-time=\$fzf_history_time_format')"

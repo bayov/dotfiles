@@ -25,6 +25,7 @@ function _fzf_search_history --description "Search command history. Replace the 
             --query=(commandline) \
             --preview="string replace --regex '$time_prefix_regex' '' -- {} | fish_indent --ansi" \
             --preview-window="bottom:3:wrap" \
+            --bind "shift-delete:execute-silent(printf '%s\n' {} | fish -c fzf_history_delete)+reload(fish -c 'builtin history --null --show-time=\$fzf_history_time_format')" \
             $fzf_history_opts |
         string split0 |
         # remove timestamps from commands selected
