@@ -1,17 +1,20 @@
 if status is-interactive
     # Abbreviations
     abbr -a !! --position anywhere --function last_history_item
+    abbr -a r reload
+    abbr -a v fresh
+    abbr -a z zellij
+    abbr -a fd fdfind
+    abbr -a cl claude
+    abbr -a g gemini
+    abbr -a oc opencode
+    abbr -a ll l
 
     # Aliases
-    alias r=reload
+    alias za="zellij attach default --create"
+    alias zl="zellij list-sessions"
+    alias zka="zellij kill-all-sessions"
     alias hm="history merge"
-    alias v=fresh
-    alias fd=fdfind
-    alias cl=claude
-    alias g=gemini
-    alias oc=opencode
-    alias z=zellij
-    alias ll=l
 
     # Initialize prompt
     starship init fish | source
