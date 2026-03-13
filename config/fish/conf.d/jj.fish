@@ -51,7 +51,7 @@ $diff"
     echo -e $prompt > /tmp/generate-commit-desc-prompt
 
     # show loader while `__generate_commit_message` is running
-    set -l msg (gum spin --title "Generating commit message" -- fish -c "quick_prompt (cat /tmp/generate-commit-desc-prompt)")
+    set -l msg (gum spin --title "generating commit message" -- fish -c "quick_prompt (cat /tmp/generate-commit-desc-prompt)")
     test -z "$msg" && return 1
 
     jj describe -m "$msg" --quiet
@@ -72,7 +72,8 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
     if test -f "$root/.bayov-personal-project"
         jj bookmark move main --to @- --quiet
         and jj git push --quiet
-        and echo (set_color green)pushed main(set_color normal)
+        and echo (set_color green) ✔ pushed main(set_color normal)
+        and echo -e "\e[38;5;242m─────────────────────────────\e[0m"
         and s
         and git checkout main --quiet
     else
