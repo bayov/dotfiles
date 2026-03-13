@@ -51,7 +51,7 @@ $diff"
     echo -e $prompt > /tmp/generate-commit-desc-prompt
 
     # show loader while `__generate_commit_message` is running
-    set -l msg (gum spin --title "generating commit message" -- fish -c "quick_prompt (cat /tmp/generate-commit-desc-prompt)")
+    set -l msg (gum spin --title "Generating commit message" -- fish -c "quick_prompt (cat /tmp/generate-commit-desc-prompt)")
     test -z "$msg" && return 1
 
     jj describe -m "$msg" --quiet
