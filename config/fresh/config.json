@@ -37,14 +37,16 @@
       "modifiers": [
         "alt"
       ],
-      "action": "open_keybinding_editor"
+      "action": "open_keybinding_editor",
+      "when": "global"
     },
     {
       "key": "'",
       "modifiers": [
         "alt"
       ],
-      "action": "open_settings"
+      "action": "open_settings",
+      "when": "global"
     },
     {
       "key": "1",
@@ -98,11 +100,10 @@
     {
       "key": "v",
       "modifiers": [
-        "ctrl",
         "alt"
       ],
       "action": "add_cursor_next_match",
-      "when": "normal"
+      "when": "global"
     },
     {
       "key": "F7",
@@ -223,6 +224,77 @@
       ],
       "action": "toggle_search_regex",
       "when": "prompt"
+    },
+    {
+      "key": "g",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "lsp_goto_definition",
+      "when": "global"
+    },
+    {
+      "key": "e",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "focus_editor",
+      "when": "global"
+    },
+    {
+      "key": "x",
+      "modifiers": [
+        "ctrl"
+      ],
+      "action": "delete_line"
+    },
+    {
+      "key": "t",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "sort_lines"
+    },
+    {
+      "key": "Down",
+      "modifiers": [
+        "ctrl",
+        "shift"
+      ],
+      "action": "move_line_down",
+      "when": "normal"
+    },
+    {
+      "key": "Up",
+      "modifiers": [
+        "ctrl",
+        "shift"
+      ],
+      "action": "move_line_up",
+      "when": "normal"
+    },
+    {
+      "key": "d",
+      "modifiers": [
+        "ctrl"
+      ],
+      "action": "duplicate_line"
+    },
+    {
+      "key": "d",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "format_buffer"
+    },
+    {
+      "key": "Enter",
+      "modifiers": [
+        "shift"
+      ],
+      "action": "file_explorer_open",
+      "when": "file_explorer"
     }
   ]
 }
