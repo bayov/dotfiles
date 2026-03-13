@@ -15,7 +15,7 @@ Requirements
   * Batcat — https://github.com/sharkdp/bat — `sudo apt install bat`
   * Neovim — https://neovim.io/ — `sudo apt install neovim`
   * Git Delta — https://github.com/dandavison/delta — `cargo install git-delta`
-  * fzf — https://github.com/junegunn/fzf — `sudo apt install fzf`
+  * fzf — https://github.com/junegunn/fzf — `git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install`
   * fd — https://github.com/sharkdp/fd — `sudo apt install fd-find`
   * Ripgrep — https://github.com/BurntSushi/ripgrep — `sudo apt install ripgrep`
   * Fisher — https://github.com/jorgebucaran/fisher — `curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher`
@@ -51,7 +51,10 @@ sudo apt-get update
 sudo apt install build-essential pkg-config libssl-dev unzip
 
 # install linux tools
-sudo apt install fd-find ripgrep fzf neovim btop
+sudo apt install fd-find ripgrep neovim btop
+
+# install fzf
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install
 
 # install fish
 sudo add-apt-repository ppa:fish-shell/release-4
