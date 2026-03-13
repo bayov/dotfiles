@@ -47,7 +47,7 @@ disabled = true
 
 [custom.jj]
 when = "jj-starship detect"
-command = "jj-starship"
+command = "jj-starship --jj-symbol ''"
 format = "$output "
 
 [rust]
