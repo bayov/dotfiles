@@ -48,7 +48,7 @@ themes {
         // line.
         table_title {
             base "#fff"
-            background "#f00"  // expected to be unused
+            background "#333"
             emphasis_0 "#d8a657"
             emphasis_1 "#c17fca"
             emphasis_2 "#7f95b8"

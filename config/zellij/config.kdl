@@ -12,9 +12,39 @@ keybinds clear-defaults=true {
         bind "Alt c" { EditScrollback; SwitchToMode "normal"; }
         bind "Alt s" { SwitchToMode "pane"; }
         bind "Alt r" { SwitchToMode "resize"; }
-        bind "Alt q" { SwitchToMode "session"; }
         bind "Alt z" { Detach; }
 
+        // General tools / windows / plugins
+        bind "Alt /" {
+            LaunchOrFocusPlugin "plugin-manager" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "normal"
+        }
+        bind "Ctrl Alt w" {
+            LaunchOrFocusPlugin "session-manager" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "normal"
+        }
+        bind "Alt ?" {
+            LaunchOrFocusPlugin "zellij:about" {
+                floating true
+                move_to_focused_tab true
+            }
+            SwitchToMode "normal"
+        }
+        // The configuration mode is pretty useless with custom keybinds
+        // bind "Alt '" {
+        //     LaunchOrFocusPlugin "configuration" {
+        //         floating true
+        //         move_to_focused_tab true
+        //     }
+        //     SwitchToMode "normal"
+        // }
+        
         // Copy & paste
         // Not working...
         // For now using `EditScrollback` mode and `copy_on_select`.
@@ -121,37 +151,6 @@ keybinds clear-defaults=true {
         bind "Shift down" "Shift j" { Resize "Decrease down"; }
         bind "Shift left" "Shift h" { Resize "Decrease left"; }
         bind "Shift right" "Shift l" { Resize "Decrease right"; }
-    }
-    session {
-        bind "Alt q" { SwitchToMode "normal"; }
-        bind "a" {
-            LaunchOrFocusPlugin "zellij:about" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "normal"
-        }
-        bind "c" {
-            LaunchOrFocusPlugin "configuration" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "normal"
-        }
-        bind "p" {
-            LaunchOrFocusPlugin "plugin-manager" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "normal"
-        }
-        bind "s" {
-            LaunchOrFocusPlugin "session-manager" {
-                floating true
-                move_to_focused_tab true
-            }
-            SwitchToMode "normal"
-        }
     }
 }
 
