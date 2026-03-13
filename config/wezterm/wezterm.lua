@@ -4,7 +4,6 @@ local act = wezterm.action
 
 local helpers = require("helpers")
 local bayov_color_scheme = require("bayov_color_scheme")
-local tabline = require("tabline")
 local zoom = require("zoom")
 
 -- This will hold the configuration we export.
@@ -29,20 +28,28 @@ config.inactive_pane_hsb = {
     saturation = 0.9,
     brightness = 0.8,
 }
--- Tabs
-tabline.plugin.apply_to_config(config)
-config.use_fancy_tab_bar = false
-config.tab_bar_at_bottom = true
-config.window_decorations = "TITLE|RESIZE"
 -- Window
+config.window_decorations = "TITLE|RESIZE"
 config.initial_cols = 120
 config.initial_rows = 28
+-- Window padding disabled, to leave more screen space to Zellij TUI.
+--
+-- Recommended padding otherwise:
+-- ```
+-- config.window_padding = {
+--     left = "1cell",
+--     right = "1cell",
+--     top = "0.5cell",
+--     bottom = "0",
+-- }
+-- ```
 config.window_padding = {
-    left = "1cell",
-    right = "1cell",
-    top = "0.5cell",
-    bottom = "0",
+    left = 0,
+    right = 0,
+    top = 0,
+    bottom = 0,
 }
+
 -- Cursor
 config.cursor_blink_rate = 0
 config.default_cursor_style = "SteadyBlock"
@@ -72,56 +79,70 @@ wezterm.on("gui-attached", function (window, pane)
     end
 end)
 
+-- Tabs (and panes) are disabled, using Zellij instead for multiplexing and
+-- window management.
+--
+-- Here is the configuration I used to have if I ever want to go back to
+-- WezTerm for this functionality:
+-- ```
+-- local tabline = require("tabline")
+-- tabline.plugin.apply_to_config(config)
+-- config.use_fancy_tab_bar = false
+-- config.tab_bar_at_bottom = true
+-- ```
+config.enable_tab_bar = false
+
 --------------------------------------------------------------------------------
 -- Keyboard bindings
 --------------------------------------------------------------------------------
+-- Most keybinds are commented out as I've moved to Zellij.
 config.disable_default_key_bindings = true
 config.keys = {
     -- Copy & Paste
-    {mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt},
-    {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
-    {mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard")},
-    {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
+    -- {mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt},
+    -- {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
+    -- {mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard")},
+    -- {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
-    helpers.KeyUnlessTui({mods = "NONE", key = "PageUp", action = act.ScrollByPage(-0.5)}),
-    helpers.KeyUnlessTui({mods = "NONE", key = "PageDown", action = act.ScrollByPage(0.5)}),
-    helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
-    helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
-    helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
-    helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
-    helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
-    helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
-    helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    helpers.KeyUnlessTui({
-        mods = "CTRL|ALT",
-        key = "l",
-        action = act.Multiple({
-            act.ClearScrollback("ScrollbackAndViewport"),
-            act.SendKey({mods="CTRL", key="L"}),
-        }),
-    }),
+    -- helpers.KeyUnlessTui({mods = "NONE", key = "PageUp", action = act.ScrollByPage(-0.5)}),
+    -- helpers.KeyUnlessTui({mods = "NONE", key = "PageDown", action = act.ScrollByPage(0.5)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
+    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
+    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
+    -- helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
+    -- helpers.KeyUnlessTui({
+    --     mods = "CTRL|ALT",
+    --     key = "l",
+    --     action = act.Multiple({
+    --         act.ClearScrollback("ScrollbackAndViewport"),
+    --         act.SendKey({mods="CTRL", key="L"}),
+    --     }),
+    -- }),
 
     -- Search/QuickSelect/Copy modes
-    {
-        mods = "CTRL|SHIFT",
-        key = "f",
-        action = wezterm.action_callback(function(window, pane)
-            window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
-            window:perform_action(act.Search("CurrentSelectionOrEmptyString"), pane)
-            window:perform_action(
-                act.Multiple({
-                    act.CopyMode("ClearPattern"),
-                    act.CopyMode("ClearSelectionMode"),
-                    act.CopyMode("MoveToScrollbackBottom"),
-                }),
-                pane
-            )
-        end)
-    },
-    {mods = "ALT", key = "v", action = act.QuickSelect},
-    {mods = "ALT", key = "c", action = act.ActivateCopyMode},
+    -- {
+    --     mods = "CTRL|SHIFT",
+    --     key = "f",
+    --     action = wezterm.action_callback(function(window, pane)
+    --         window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
+    --         window:perform_action(act.Search("CurrentSelectionOrEmptyString"), pane)
+    --         window:perform_action(
+    --             act.Multiple({
+    --                 act.CopyMode("ClearPattern"),
+    --                 act.CopyMode("ClearSelectionMode"),
+    --                 act.CopyMode("MoveToScrollbackBottom"),
+    --             }),
+    --             pane
+    --         )
+    --     end)
+    -- },
+    -- {mods = "ALT", key = "v", action = act.QuickSelect},
+    -- {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
     -- Presentation
     {mods = "ALT", key = "\\", action = act.ToggleFullScreen},
@@ -130,39 +151,39 @@ config.keys = {
     {mods = "ALT", key = "0", action = zoom.ResetZoom},
 
     -- Tab-management
-    {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},
-    {mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1)},
-    {mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1)},
-    {mods = "ALT", key = "[", action = act.MoveTabRelative(-1)},
-    {mods = "ALT", key = "]", action = act.MoveTabRelative(1)},
-    {
-        mods = "NONE",
-        key = "F2",
-        action = act.PromptInputLine {
-            description = "Rename tab: ",
-            action = wezterm.action_callback(function(window, pane, line)
-                if line then
-                    window:active_tab():set_title(line)
-                end
-            end),
-        },
-    },
+    -- {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},
+    -- {mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1)},
+    -- {mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1)},
+    -- {mods = "ALT", key = "[", action = act.MoveTabRelative(-1)},
+    -- {mods = "ALT", key = "]", action = act.MoveTabRelative(1)},
+    -- {
+    --     mods = "NONE",
+    --     key = "F2",
+    --     action = act.PromptInputLine {
+    --         description = "Rename tab: ",
+    --         action = wezterm.action_callback(function(window, pane, line)
+    --             if line then
+    --                 window:active_tab():set_title(line)
+    --             end
+    --         end),
+    --     },
+    -- },
 
     -- Pane-management
-    {mods = "ALT", key = "s", action = act.ActivateKeyTable({name = "pane"})},
-    {mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up")},
-    {mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down")},
-    {mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left")},
-    {mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right")},
-    {mods = "CTRL|ALT", key = "Numpad8", action = act.AdjustPaneSize({"Up", 4})},
-    {mods = "CTRL|ALT", key = "Numpad2", action = act.AdjustPaneSize({"Down", 4})},
-    {mods = "CTRL|ALT", key = "Numpad4", action = act.AdjustPaneSize({"Left", 4})},
-    {mods = "CTRL|ALT", key = "Numpad6", action = act.AdjustPaneSize({"Right", 4})},
-    {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
+    -- {mods = "ALT", key = "s", action = act.ActivateKeyTable({name = "pane"})},
+    -- {mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up")},
+    -- {mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down")},
+    -- {mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left")},
+    -- {mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right")},
+    -- {mods = "CTRL|ALT", key = "Numpad8", action = act.AdjustPaneSize({"Up", 4})},
+    -- {mods = "CTRL|ALT", key = "Numpad2", action = act.AdjustPaneSize({"Down", 4})},
+    -- {mods = "CTRL|ALT", key = "Numpad4", action = act.AdjustPaneSize({"Left", 4})},
+    -- {mods = "CTRL|ALT", key = "Numpad6", action = act.AdjustPaneSize({"Right", 4})},
+    -- {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
 
     -- Misc
-    {mods = "ALT", key = "z", action = act.QuitApplication},
-    {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
+    -- {mods = "ALT", key = "z", action = act.QuitApplication},
+    -- {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
     {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 
@@ -170,21 +191,21 @@ config.keys = {
     {mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u")},
 
     -- Open URLs
-    {
-        mods = "ALT",
-        key = "o",
-        action = act.QuickSelectArgs({
-            label = "open url",
-            patterns = {
-              "(https?://\\S+)¶",
-            },
-            action = wezterm.action_callback(function(window, pane)
-              local url = window:get_selection_text_for_pane(pane)
-              wezterm.log_info("opening: " .. url)
-              wezterm.open_with(url)
-            end),
-        }),
-    },
+    -- {
+    --     mods = "ALT",
+    --     key = "o",
+    --     action = act.QuickSelectArgs({
+    --         label = "open url",
+    --         patterns = {
+    --           "(https?://\\S+)¶",
+    --         },
+    --         action = wezterm.action_callback(function(window, pane)
+    --           local url = window:get_selection_text_for_pane(pane)
+    --           wezterm.log_info("opening: " .. url)
+    --           wezterm.open_with(url)
+    --         end),
+    --     }),
+    -- },
 }
 --------------------------------------------------------------------------------
 -- Keyboard bindings for specific modes (key tables)
@@ -292,18 +313,22 @@ config.mouse_bindings = {
 }
 
 --------------------------------------------------------------------------------
--- OS-specific settings
+-- Multiplexing
 --------------------------------------------------------------------------------
-config.unix_domains = {
-    { name = 'unix' },
-}
-config.default_prog = { 'wsl', '~' }
-config.default_gui_startup_args = { 'connect', 'unix' }
--- config.default_domain = "WSL:Ubuntu"
+-- Multiplexing disabled as I've moved to Zellij
+-- config.unix_domains = {
+--     { name = 'unix' },
+-- }
+-- config.default_prog = { 'wsl', '~' }
+-- config.default_gui_startup_args = { 'connect', 'unix' }
 
 --------------------------------------------------------------------------------
--- Fiddle
+-- OS-specific settings
 --------------------------------------------------------------------------------
+
+if wezterm.target_triple:find("windows") then
+    config.default_domain = "WSL:Ubuntu"
+end
 
 -- Export the configuration
 return config
