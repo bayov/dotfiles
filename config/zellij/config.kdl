@@ -47,7 +47,7 @@ keybinds clear-defaults=true {
         
         // Copy & paste
         // Not working...
-        // For now using `EditScrollback` mode and `copy_on_select`.
+        // For now using `EditScrollback` mode and `copy_on_select true`.
         // bind "Ctrl c" { Copy; }
     
         // Scrolling & Scrollback
@@ -61,7 +61,7 @@ keybinds clear-defaults=true {
 
         // Tab-management
         bind "f2" { SwitchToMode "renametab"; TabNameInput 0; }
-        bind "Ctrl t" { NewTab; }
+        bind "Alt t" { NewTab; }
         bind "Alt left" { GoToPreviousTab; }
         bind "Alt right" { GoToNextTab; }
         bind "Alt [" { MoveTab "left"; }
@@ -74,7 +74,7 @@ keybinds clear-defaults=true {
         bind "Alt Shift down" { MoveFocus "down"; }
         bind "Alt Shift left" { MoveFocus "left"; }
         bind "Alt Shift right" { MoveFocus "right"; }
-        // AdjustPaneSize not available
+        // Resize using `Alt r` resize mode.
         bind "Alt x" { CloseFocus; }
 
         // Floating-panes
@@ -142,15 +142,15 @@ keybinds clear-defaults=true {
     resize {
         bind "Alt r" { SwitchToMode "normal"; }
         // Increase size
-        bind "up" "k" { Resize "Increase up"; }
-        bind "down" "j" { Resize "Increase down"; }
-        bind "left" "h" { Resize "Increase left"; }
-        bind "right" "l" { Resize "Increase right"; }
+        bind "up" { Resize "Increase up"; }
+        bind "down" { Resize "Increase down"; }
+        bind "left" { Resize "Increase left"; }
+        bind "right" { Resize "Increase right"; }
         // Decrease size
-        bind "Shift up" "Shift k" { Resize "Decrease up"; }
-        bind "Shift down" "Shift j" { Resize "Decrease down"; }
-        bind "Shift left" "Shift h" { Resize "Decrease left"; }
-        bind "Shift right" "Shift l" { Resize "Decrease right"; }
+        bind "Shift up" { Resize "Decrease up"; }
+        bind "Shift down" { Resize "Decrease down"; }
+        bind "Shift left" { Resize "Decrease left"; }
+        bind "Shift right" { Resize "Decrease right"; }
     }
 }
 
