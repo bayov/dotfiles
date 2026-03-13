@@ -3,7 +3,8 @@
     "rulers": [
       80
     ],
-    "show_menu_bar": false
+    "show_menu_bar": false,
+    "show_tab_bar": false
   },
   "theme": "dark",
   "file_explorer": {
@@ -11,5 +12,36 @@
   },
   "file_browser": {
     "show_hidden": true
-  }
+  },
+  "keybindings": [
+    {
+      "key": "w",
+      "modifiers": [
+        "ctrl"
+      ],
+      "action": "expand_selection"
+    },
+    {
+      "key": "a",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "quick_open",
+      "when": "global"
+    },
+    {
+      "key": ";",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "open_keybinding_editor"
+    },
+    {
+      "key": "'",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "open_settings"
+    }
+  ]
 }

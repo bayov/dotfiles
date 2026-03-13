@@ -44,7 +44,7 @@ depends = [
 "config/fish" = { target = "~/.config/fish", type = "symbolic", recurse = false }
 
 [fresh.files]
-"config/fresh" = "~/.config/fresh"
+"config/fresh" = { target = "~/.config/fresh", type = "symbolic", recurse = false }
 
 [gemini.files]
 "config/gemini/AGENTS.md" = "~/.gemini/AGENTS.md"
