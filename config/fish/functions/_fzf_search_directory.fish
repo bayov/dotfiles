@@ -5,7 +5,15 @@ function _fzf_search_directory --description "Search the current directory. Repl
     set -f fd_cmd (command -v fdfind || command -v fd  || echo "fd")
     set -f --append fd_cmd --color=always $fzf_fd_opts
 
-    set -f fzf_arguments --multi --ansi $fzf_directory_opts
+    set -f fzf_directory_header "[Ctrl+E] Edit file"
+
+    set -f fzf_arguments \
+        --header="$fzf_directory_header" \
+        --multi \
+        --ansi \
+        --bind="ctrl-e:execute($EDITOR {})+abort" \
+        $fzf_directory_opts
+
     set -f token (commandline --current-token)
     # expand any variables or leading tilde (~) in the token
     set -f expanded_token (eval echo -- $token)
@@ -17,10 +25,10 @@ function _fzf_search_directory --description "Search the current directory. Repl
     if string match --quiet -- "*/" $unescaped_exp_token && test -d "$unescaped_exp_token"
         set --append fd_cmd --base-directory=$unescaped_exp_token
         # use the directory name as fzf's prompt to indicate the search is limited to that directory
-        set --prepend fzf_arguments --prompt="Directory $unescaped_exp_token> " --preview="_fzf_preview_file $expanded_token{}"
+        set --prepend fzf_arguments --prompt="Directory $unescaped_exp_token ❯ " --preview="_fzf_preview_file $expanded_token{}"
         set -f file_paths_selected $unescaped_exp_token($fd_cmd 2>/dev/null | _fzf_wrapper $fzf_arguments)
     else
-        set --prepend fzf_arguments --prompt="Directory> " --query="$unescaped_exp_token" --preview='_fzf_preview_file {}'
+        set --prepend fzf_arguments --prompt="Directory ❯ " --query="$unescaped_exp_token" --preview='_fzf_preview_file {}'
         set -f file_paths_selected ($fd_cmd 2>/dev/null | _fzf_wrapper $fzf_arguments)
     end
 
