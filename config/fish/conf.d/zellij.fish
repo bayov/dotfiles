@@ -26,21 +26,10 @@ function zellij_scrollback_paths --description "Prints all paths that exist in t
         | command sort --unique
 end
 
-function zellij_scrollback_dirs --description "Prints all dirs that exist in the current Zellij pane's scrollback."
-    zellij_scrollback_paths | while read p
-        test -d $p; and echo $p
-    end
-end
-
-function zellij_scrollback_files --description "Prints all files that exist in the current Zellij pane's scrollback."
-    zellij_scrollback_paths | while read p
-        test -f $p; and echo $p
-    end
-end
-
 function zellij_scrollback_urls --description "Prints all URLs that exist in the current Zellij pane's scrollback."
     set -l regexp "(https?://[^\s\"^]+)"
     __zellij_scrollback_dump \
         | string match --regex --all --groups-only $regexp \
-        | awk '!x[$0]++'  # remove duplicates
+        | tac \
+        | awk '!x[$0]++'  # dedupe
 end

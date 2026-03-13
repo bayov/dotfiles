@@ -10,16 +10,18 @@ DESCRIPTION
 
     By default, commands are bound to a mnemonic key sequence, shown below. Each command's binding
     can be configured using a namesake corresponding option:
-        COMMAND            |  DEFAULT KEY SEQUENCE         |  CORRESPONDING OPTION
-        Search Directory   |  Alt+F      (F for file)      |  --directory
-        Search Git Log     |  Ctrl+Alt+L (L for log)       |  --git_log
-        Search Git Status  |  Ctrl+Alt+S (S for status)    |  --git_status
-        Search JJ Log      |  Alt+2      (Same as VSCode)  |  --jj_log
-        Search JJ Status   |  Alt+D      (D for Diff)      |  --jj_status
-        Search History     |  Ctrl+R     (R for reverse)   |  --history
-        Search Processes   |  Ctrl+Alt+P (P for process)   |  --processes
-        Search Variables   |  Ctrl+Alt+E (E for env)       |  --variables
-        Search Projects    |  Alt+W      (W for workspace) |  --projects
+        COMMAND            |  DEFAULT KEY SEQUENCE          |  CORRESPONDING OPTION
+        Search Directory   |  Alt+F       (F for file)      |  --directory
+        Search Git Log     |  Ctrl+Alt+L  (L for log)       |  --git_log
+        Search Git Status  |  Ctrl+Alt+S  (S for status)    |  --git_status
+        Search JJ Log      |  Alt+2       (Same as VSCode)  |  --jj_log
+        Search JJ Status   |  Alt+D       (D for Diff)      |  --jj_status
+        Search History     |  Ctrl+R      (R for reverse)   |  --history
+        Search Processes   |  Ctrl+Alt+P  (P for process)   |  --processes
+        Search Variables   |  Ctrl+Alt+E  (E for env)       |  --variables
+        Search Projects    |  Alt+W       (W for workspace) |  --projects
+        Search Zellij Paths|  Alt+Shift+F (F for files)     |  --zellij_paths
+        Search Zellij URLs |  Alt+U       (U for urls)      |  --zellij_urls
     Override a command's binding by specifying its corresponding option with the desired key
     sequence. Disable a command's binding by specifying its corresponding option with no value.
 
