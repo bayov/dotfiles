@@ -182,6 +182,47 @@
       ],
       "action": "noop",
       "when": "normal"
+    },
+    {
+      "key": "x",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "close_tab",
+      "when": "normal"
+    },
+    {
+      "key": "i",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_search_case_sensitive",
+      "when": "prompt"
+    },
+    {
+      "key": "l",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_search_confirm_each",
+      "when": "prompt"
+    },
+    {
+      "key": "u",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_search_whole_word",
+      "when": "prompt"
+    },
+    {
+      "key": "y",
+      "modifiers": [
+        "alt"
+      ],
+      "action": "toggle_search_regex",
+      "when": "prompt"
     }
   ]
 }

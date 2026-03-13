@@ -1886,7 +1886,7 @@
         "when": "terminalFindVisible && terminalHasBeenCreated || terminalFindVisible && terminalProcessSupported"
     },
     {
-        "key": "shift+alt+8",
+        "key": "alt+y",
         "command": "toggleSearchRegex",
         "when": "searchViewletFocus"
     },
@@ -1896,7 +1896,7 @@
         "when": "searchViewletFocus"
     },
     {
-        "key": "shift+alt+8",
+        "key": "alt+y",
         "command": "toggleFindRegex",
         "when": "editorFocus"
     },
@@ -1906,7 +1906,7 @@
         "when": "editorFocus"
     },
     {
-        "key": "shift+alt+8",
+        "key": "alt+y",
         "command": "workbench.action.terminal.toggleFindRegex",
         "when": "terminalFindVisible && terminalHasBeenCreated || terminalFindVisible && terminalProcessSupported"
     },
@@ -1916,7 +1916,7 @@
         "when": "terminalFindVisible && terminalHasBeenCreated || terminalFindVisible && terminalProcessSupported"
     },
     {
-        "key": "shift+alt+8",
+        "key": "alt+y",
         "command": "toggleSearchEditorRegex",
         "when": "inSearchEditor && searchInputBoxFocus"
     },
