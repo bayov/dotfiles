@@ -70,6 +70,12 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
 
     # If it's a personal project, push parent commit as main git branch
     if test -f "$root/.bayov-personal-project"
+        set -f push_revset "remote_bookmarks(remote=origin)..@"
+        if test -z (jj log -r "$PUSH_REVSET" -T '1' --no-graph)
+            echo (set_color yellow)Warning: (set_color normal)Nothing to push.
+            return 1
+        end
+
         jj bookmark move main --to @- --quiet
         and jj git push --quiet
         and echo (set_color green) ✔ pushed main(set_color normal)
