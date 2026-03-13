@@ -130,6 +130,58 @@
       ],
       "action": "find_previous",
       "when": "normal"
+    },
+    {
+      "key": "Left",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "prev_buffer",
+      "when": "normal"
+    },
+    {
+      "key": "Right",
+      "modifiers": [
+        "ctrl",
+        "alt"
+      ],
+      "action": "next_buffer",
+      "when": "normal"
+    },
+    {
+      "key": "b",
+      "modifiers": [
+        "ctrl"
+      ],
+      "action": "goto_matching_bracket",
+      "when": "normal"
+    },
+    {
+      "key": "F7",
+      "modifiers": [
+        "alt",
+        "shift"
+      ],
+      "action": "toggle_file_explorer",
+      "when": "file_explorer"
+    },
+    {
+      "key": "F7",
+      "modifiers": [
+        "alt",
+        "shift"
+      ],
+      "action": "toggle_file_explorer",
+      "when": "normal"
+    },
+    {
+      "key": "]",
+      "modifiers": [
+        "ctrl"
+      ],
+      "action": "noop",
+      "when": "normal"
     }
   ]
 }
