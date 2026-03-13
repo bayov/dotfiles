@@ -5,7 +5,7 @@ if status is-interactive
     # Aliases
     alias r=reload
     alias hm="history merge"
-    alias v=vim
+    alias v=fresh
     alias fd=fdfind
     alias cl=claude
     alias g=gemini
@@ -56,7 +56,7 @@ alias bat=batcat
 alias vim=nvim
 
 # Environment Variables
-set -gx EDITOR nvim
+set -gx EDITOR fresh
 set -gx PNPM_HOME "/home/bayov/.local/share/pnpm"
 
 # $PATH
