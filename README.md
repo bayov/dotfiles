@@ -24,6 +24,7 @@ Requirements
   * cargo-update — https://github.com/nabijaczleweli/cargo-update — cargo install cargo-update`
   * dprint — https://dprint.dev/ — `uv tool install dprint-py`
   * gum — https://github.com/charmbracelet/gum
+  * Fresh editor — https://getfresh.dev/ — `cargo install fresh-editor`
 
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
@@ -67,16 +68,13 @@ curl -sS https://starship.rs/install.sh | sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
-cargo install dotter jj-cli zellij eza bat git-delta
+cargo install dotter jj-cli zellij eza bat git-delta cargo-update fresh
 
 # install cargo-binstall
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
 # install cargo-nextest
 cargo binstall cargo-nextest --secure
-
-# install cargo updater
-cargo install cargo-update
 
 # install fisher (fish plugin manager)
 fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"

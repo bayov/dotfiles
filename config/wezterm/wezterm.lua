@@ -51,10 +51,11 @@ config.window_padding = {
 }
 
 -- Cursor
-config.cursor_blink_rate = 0
-config.default_cursor_style = "SteadyBlock"
+config.default_cursor_style = "BlinkingBlock"
+config.cursor_blink_rate = 500
 -- Misc
 config.max_fps = 120
+config.animation_fps = 120
 config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
 config.quick_select_patterns = {
@@ -98,32 +99,6 @@ config.enable_tab_bar = false
 -- Most keybinds are commented out as I've moved to Zellij.
 config.disable_default_key_bindings = true
 config.keys = {
-    -- Copy & Paste
-    -- {mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt},
-    -- {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
-    -- {mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard")},
-    -- {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
-
-    -- Scrolling & Scrollback
-    -- helpers.KeyUnlessTui({mods = "NONE", key = "PageUp", action = act.ScrollByPage(-0.5)}),
-    -- helpers.KeyUnlessTui({mods = "NONE", key = "PageDown", action = act.ScrollByPage(0.5)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
-    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
-    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
-    -- helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    -- helpers.KeyUnlessTui({
-    --     mods = "CTRL|ALT",
-    --     key = "l",
-    --     action = act.Multiple({
-    --         act.ClearScrollback("ScrollbackAndViewport"),
-    --         act.SendKey({mods="CTRL", key="L"}),
-    --     }),
-    -- }),
-
     -- Search/QuickSelect/Copy modes
     -- {
     --     mods = "CTRL|SHIFT",
@@ -143,6 +118,32 @@ config.keys = {
     -- },
     -- {mods = "ALT", key = "v", action = act.QuickSelect},
     -- {mods = "ALT", key = "c", action = act.ActivateCopyMode},
+
+    -- Copy & Paste
+    {mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt},
+    -- {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
+    {mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard")},
+    -- {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
+
+    -- Scrolling & Scrollback
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "PageUp", action = act.ScrollByPage(-0.5)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5)}),
+    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
+    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
+    -- helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
+    -- helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
+    -- helpers.KeyUnlessTui({
+    --     mods = "CTRL|ALT",
+    --     key = "l",
+    --     action = act.Multiple({
+    --         act.ClearScrollback("ScrollbackAndViewport"),
+    --         act.SendKey({mods="CTRL", key="L"}),
+    --     }),
+    -- }),
 
     -- Presentation
     {mods = "ALT", key = "\\", action = act.ToggleFullScreen},
@@ -300,16 +301,37 @@ config.key_tables.pane = {
 -- Mouse bindings
 --------------------------------------------------------------------------------
 config.mouse_bindings = {
-  {
-    mods = "NONE",
-    event = { Down = { streak = 3, button = "Left" } },
-    action = wezterm.action.SelectTextAtMouseCursor "Line",
-  },
-  {
-    mods = "CTRL",
-    event = { Down = { streak = 1, button = "Left" } },
-    action = wezterm.action.SelectTextAtMouseCursor "SemanticZone",
-  },
+    {
+        mods = "NONE",
+        event = { Down = { streak = 3, button = "Left" } },
+        action = wezterm.action.SelectTextAtMouseCursor "Line",
+    },
+    {
+        mods = "CTRL",
+        event = { Down = { streak = 1, button = "Left" } },
+        action = wezterm.action.SelectTextAtMouseCursor "SemanticZone",
+    },
+    -- Disable copy on selection
+    -- (disabled to match Zellij which doesn't support Copy action).
+    -- {
+    --     mods = "NONE",
+    --     event = { Up = { streak = 1, button = "Left" } },
+    --     action = wezterm.action.Nop,
+    -- },
+    -- Paste with right-click (or copy if text is selected):
+    {
+        mods = "NONE",
+        event = { Down = { streak = 1, button = "Right" } },
+        action = wezterm.action_callback(function(window, pane)
+            local has_selection = window:get_selection_text_for_pane(pane) ~= ""
+            if has_selection then
+                window:perform_action(act.CopyTo("ClipboardAndPrimarySelection"), pane)
+                window:perform_action(act.ClearSelection, pane)
+            else
+                window:perform_action(act({ PasteFrom = "Clipboard" }), pane)
+            end
+        end),
+    },
 }
 
 --------------------------------------------------------------------------------

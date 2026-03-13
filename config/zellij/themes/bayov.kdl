@@ -1,93 +1,132 @@
 themes {
     bayov {
+        // This component refers to the bare text parts of the Zellij UI (for
+        // example, the Ctrl or Alt modifier indications in the status-bar).
         text_unselected {
-            base 220 215 186
-            background 22 22 29
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+            base "#ccc"
+            background "#16161d"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
+        // This component refers to the bare text parts of the Zellij UI when
+        // they need to indicate selection (eg. when paging through search
+        // results). This is often done by providing them a different color
+        // background than their unselected counterparts.
         text_selected {
-            base 22 22 29
-            background 118 148 106
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+            base "#fff"
+            background "#26498f"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
-        ribbon_selected {
-            base 22 22 29
-            background 118 148 106
-            emphasis_0 195 64 67
-            emphasis_1 255 160 102
-            emphasis_2 149 127 184
-            emphasis_3 126 156 216
-        }
+        // Ribbons are used often in the Zellij UI, examples are the tabs and
+        // the keybinding modes in the status bar.
         ribbon_unselected {
-            base 139 137 123
-            background 38 39 43
-            emphasis_0 195 64 67
-            emphasis_1 50 52 57
-            emphasis_2 126 156 216
-            emphasis_3 149 127 184
+            base "#aaacb2"
+            background "#16161d"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#16161d"  // some inactive tabs use this color
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
+        // Selected ribbons are often indicated with a different color than
+        // their unselected counterparts (eg. the focused tab, or the active
+        // keybinding mode in the status bar).
+        ribbon_selected {
+            base "#c8d6d5"
+            background "#273143"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
+        }
+        // The table UI component has a different style applied to its title
+        // line than the rest of the table. This is what differentiates this
+        // line.
         table_title {
-            base 118 148 106
-            background 0
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+            base "#fff"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
-        table_cell_selected {
-            base 22 22 29
-            background 118 148 106
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
-        }
+        // The style of an unselected cell in a table. Cells can be specified as
+        // selected or unselected individually, but it is often the case that a
+        // full table line is specified to have selected or unselected cells.
         table_cell_unselected {
-            base 220 215 186
-            background 22 22 29
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+            base "#ccc"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
-        list_selected {
-            base 22 22 29
-            background 118 148 106
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+        // Often differentiated from its unselected counterpart by changing its
+        // background color.
+        table_cell_selected {
+            base "#ccc"
+            background "#333"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
+        // A line item in a nested list, it can be arbitrarily indented. Its
+        // indentation indication is not included in the item specification.
         list_unselected {
-            base 220 215 186
-            background 22 22 29
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 118 148 106
-            emphasis_3 149 127 184
+            base "#ccc"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
         }
+        // Often differentiated from its unselected counterpart with a different
+        // background color.
+        list_selected {
+            base "#ccc"
+            background "#333"
+            emphasis_0 "#d8a657"
+            emphasis_1 "#c17fca"
+            emphasis_2 "#7f95b8"
+            emphasis_3 "#76946a"
+        }
+        // The frame around the other non-focused panes.
+        frame_unselected {
+            base "#4c4c4c"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#f00"  // expected to be unused
+            emphasis_1 "#f00"  // expected to be unused
+            emphasis_2 "#f00"  // expected to be unused
+            emphasis_3 "#f00"  // expected to be unused
+        }
+        // The frame around the focused pane.
         frame_selected {
-            base 118 148 106
-            background 0
-            emphasis_0 255 160 102
-            emphasis_1 127 180 202
-            emphasis_2 149 127 184
-            emphasis_3 0
+            base "#7e868f"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#f00"  // expected to be unused
+            emphasis_1 "#f00"  // expected to be unused
+            emphasis_2 "#f00"  // expected to be unused
+            emphasis_3 "#f00"  // expected to be unused
         }
+        // This is the frame around the focused pane when the user enters a mode
+        // other than the base mode (eg. PANE or TAB mode).
         frame_highlight {
-            base 255 160 102
-            background 0
-            emphasis_0 149 127 184
-            emphasis_1 255 160 102
-            emphasis_2 255 160 102
-            emphasis_3 255 160 102
+            base "#d8a657"
+            background "#f00"  // expected to be unused
+            emphasis_0 "#f00"  // expected to be unused
+            emphasis_1 "#f00"  // expected to be unused
+            emphasis_2 "#f00"  // expected to be unused
+            emphasis_3 "#f00"  // expected to be unused
         }
+        // The color of the exit code indication (here, only the base part of
+        // the specification is used, the rest are reserved for future use).
+        // These can be seen in command panes (eg. when using zellij run) after
+        // the command exited successfully.
         exit_code_success {
             base 118 148 106
             background 0
@@ -96,6 +135,10 @@ themes {
             emphasis_2 149 127 184
             emphasis_3 126 156 216
         }
+        // The color of the exit code indication (here, only the base part of
+        // the specification is used, the rest are reserved for future use).
+        // These can be seen in command panes (eg. when using zellij run) after
+        // the command exited with an error.
         exit_code_error {
             base 195 64 67
             background 0
@@ -104,6 +147,9 @@ themes {
             emphasis_2 0
             emphasis_3 0
         }
+        // Each player represents the color given to a user joining (attaching)
+        // to an active session. These colors appear the same to all users and
+        // are given by order of attaching.
         multiplayer_user_colors {
             player_1 149 127 184
             player_2 126 156 216

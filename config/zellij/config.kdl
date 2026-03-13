@@ -1,26 +1,33 @@
-keybinds clear-defaults=true {
+keybinds clear-defaults=true {   
     // Return to normal mode when pressing Enter or Ctrl+C
-    shared_except "normal" "locked" "renamepane" "renametab" "entersearch" {
+    shared_except "normal" "renamepane" "renametab" "entersearch" {
         bind "Enter" { SwitchToMode "normal"; }
         bind "Esc" { SwitchToMode "normal"; }
         bind "Ctrl c" { SwitchToMode "normal"; }
     }
     // Global keybinds
     shared_except "locked" {
-        // Copy & paste -- For now using EditScrollback (vim)
-        //   bind "Ctrl c" { Copy; }
-        //   bind "Ctrl Shift c" { Copy; }
-        //   bind "Ctrl v" { Paste; }
-        //   bind "Ctrl Shift v" { Paste; }
+        // Switch modes
+        bind "Ctrl f" { SwitchToMode "entersearch"; SearchInput 0; }
+        bind "Alt c" { EditScrollback; SwitchToMode "normal"; }
+        bind "Alt s" { SwitchToMode "pane"; }
+        bind "Alt r" { SwitchToMode "resize"; }
+        bind "Alt q" { SwitchToMode "session"; }
+        bind "Alt z" { Detach; }
+
+        // Copy & paste
+        // Not working...
+        // For now using `EditScrollback` mode and `copy_on_select`.
+        // bind "Ctrl c" { Copy; }
     
         // Scrolling & Scrollback
-        bind "Ctrl Shift Alt up" { ScrollUp; }
-        bind "Ctrl Shift Alt down" { ScrollDown; }
-        bind "Ctrl PageUp" { HalfPageScrollUp; }
-        bind "Ctrl PageDown" { HalfPageScrollDown; } 
-        bind "Ctrl Home" { ScrollToTop; }
-        bind "Ctrl End" { ScrollToBottom; }
-        bind "Ctrl Alt l" { Clear; }
+        bind "Alt up" { ScrollUp; }
+        bind "Alt down" { ScrollDown; }
+        bind "Alt PageUp" { HalfPageScrollUp; }
+        bind "Alt PageDown" { HalfPageScrollDown; } 
+        bind "Alt Home" { ScrollToTop; }
+        bind "Alt End" { ScrollToBottom; }
+        bind "Ctrl Alt l" { Clear; Write 12; }
 
         // Tab-management
         bind "f2" { SwitchToMode "renametab"; TabNameInput 0; }
@@ -41,7 +48,7 @@ keybinds clear-defaults=true {
         bind "Alt x" { CloseFocus; }
 
         // Floating-panes
-        bind "Alt w" { ToggleFloatingPanes; }
+        // bind "Alt w" { ToggleFloatingPanes; }
         bind "Alt Shift w" { NewPane; }
         bind "Alt p" { TogglePanePinned; }
 
@@ -51,24 +58,20 @@ keybinds clear-defaults=true {
         // Reload config available?
         // Debug overlay available?
         // URL handling not available?
-
-        // Switch modes
-        bind "Alt g" { SwitchToMode "locked"; }
-        bind "Ctrl f" { SwitchToMode "entersearch"; SearchInput 0; }
-        bind "Alt c" { EditScrollback; SwitchToMode "normal"; }
-        bind "Alt s" { SwitchToMode "pane"; }
-        bind "Alt r" { SwitchToMode "resize"; }
-        bind "Alt q" { SwitchToMode "session"; }
-        bind "Alt z" { Detach; }
     }
     locked {
         bind "Alt g" { SwitchToMode "normal"; }
     }
     entersearch {
+        // Not using `search` mode at all, we simply stay in `entersearch` mode
+        // and always able to edit the search string. Selecting occurences will
+        // be done using Enter/Arrow keys.
         bind "Esc" { SwitchToMode "normal"; }
         bind "Ctrl c" { SwitchToMode "normal"; }
-        bind "Ctrl f" "Ctrl i" { SearchToggleOption "CaseSensitivity"; }
-        bind "Ctrl o" { SearchToggleOption "WholeWord"; }
+        bind "Ctrl f" { SwitchToMode "normal"; }
+        bind "Alt i" { SearchToggleOption "CaseSensitivity"; }
+        bind "Alt u" { SearchToggleOption "WholeWord"; }
+        bind "Alt y" { SearchToggleOption "Wrap"; }  // What is this?
         bind "Shift Enter" "Up" { Search "up"; }
         bind "Enter" "Down" { Search "down"; }
     }
@@ -152,6 +155,13 @@ keybinds clear-defaults=true {
     }
 }
 
+ui {
+    pane_frames {
+        // Hides the session name (randomly generated or otherwise) from the UI.
+        hide_session_name false
+    }
+}
+
 // Plugin aliases - can be used to change the implementation of Zellij
 // changing these requires a restart to take effect
 plugins {
@@ -187,6 +197,8 @@ simplified_ui true
 // Choose the theme that is specified in the themes section.
 // Default: default
 // 
+// Note, theme file changes do not hot-reload, so touch config.kdl to force a
+// reload
 theme "bayov"
  
 // Choose the base input mode of zellij.
@@ -216,7 +228,7 @@ default_layout "compact"
 // The folder in which Zellij will look for themes
 // (Requires restart)
 // 
-// theme_dir "/tmp"
+// theme_dir "$HOME/.config/zellij/themes/"
  
 // Toggle enabling the mouse mode.
 // On certain configurations, or terminals this could
@@ -232,7 +244,7 @@ default_layout "compact"
 //   - true (default, enabled)
 //   - false
 // 
-// pane_frames false
+pane_frames true
  
 // When attaching to an existing session with other users,
 // should the session be mirrored (true)
@@ -284,11 +296,12 @@ default_layout "compact"
 // Enable automatic copying (and clearing) of selection when releasing mouse
 // Default: true
 // 
-// copy_on_select true
+copy_on_select true
  
 // Path to the default editor to use to edit pane scrollbuffer
 // Default: $EDITOR or $VISUAL
- scrollback_editor "nvim"
+//
+// scrollback_editor "nvim"
  
 // A fixed name to always give the Zellij session.
 // Consider also setting `attach_to_session true,`
@@ -368,3 +381,8 @@ show_startup_tips false
 // Default: true
 // 
 // show_release_notes false
+
+// Whether to enable mouse hover effects and multiple select functionality (pane grouping).
+// Default: true
+//
+advanced_mouse_actions false
