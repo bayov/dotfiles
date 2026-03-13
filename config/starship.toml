@@ -40,10 +40,15 @@ Windows = "on [Windows](#4276d1)"
 Ubuntu = "on [Ubuntu](#c65822)"
 
 [git_branch]
-symbol = ""
+disabled = true
 
 [git_status]
-style = "yellow"
+disabled = true
+
+[custom.jj]
+when = "jj-starship detect"
+command = "jj-starship"
+format = "$output "
 
 [rust]
 format = ""
