@@ -10,7 +10,25 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                 echo "Usage: ws add <workspace_name>"
                 return 1
             end
-            jj workspace add "$base_dir/$name"
+
+            set -l workspace_dir "$base_dir/$name"
+            if jj workspace add "$workspace_dir"
+                if set -q ZELLIJ
+                    set -l layout_file "/tmp/ws-zellij-layout.$name.kdl"
+                    begin
+                        echo "layout {"
+                        echo "    pane split_direction=\"vertical\" {"
+                        echo "        pane cwd=\"$workspace_dir\""
+                        echo "        pane cwd=\"$workspace_dir\""
+                        echo "    }"
+                        echo "    pane size=1 borderless=true {"
+                        echo "        plugin location=\"zellij:compact-bar\""
+                        echo "    }"
+                        echo "}"
+                    end > "$layout_file"
+                    # zellij action new-tab --name "$name" --layout "$layout_file"
+                end
+            end
 
         case list
             jj workspace list
