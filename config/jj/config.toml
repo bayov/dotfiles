@@ -5,7 +5,6 @@ email = "hesosz@gmail.com"
 name = "Bayov"
 
 [ui]
-editor = "nvim"
 pager = "delta"
 diff-formatter = ":git"
 
