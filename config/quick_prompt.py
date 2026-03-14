@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+import bisect
 import fcntl
 import json
 import math
@@ -30,7 +31,10 @@ MODEL_POOL: List[str] = [
 STATS_ROLLING_WINDOW_SIZE = 100
 
 # How many samples to use when calculating model weight.
-MODEL_WEIGHT_SAMPLE_COUNT = 3
+MODEL_WEIGHT_SAMPLE_COUNT = 10
+
+# Timeout for detached model runs
+TIMEOUT_DURATION = 60
 
 # Global state for verbosity
 VERBOSE: bool = False
@@ -68,14 +72,15 @@ def get_histogram_bucket(duration: float) -> str:
 
 
 def update_aggregated_stats(
-    selected_models: List[str],
-    winner: Optional[str],
+    model: str,
     duration: float,
-    failed_models: Set[str],
+    start_timestamp: str,
+    end_timestamp: str,
+    error: Optional[str] = None,
 ) -> None:
     """
-    Updates the global aggregated statistics file with thread/process safety via file locking.
-    Tracks wins, fails, and duration distributions for each model.
+    Updates the global aggregated statistics file for a single model run.
+    Tracks performance and results in a rolling window.
     """
     AGGREGATED_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
@@ -93,77 +98,82 @@ def update_aggregated_stats(
             except json.JSONDecodeError:
                 data = {}
 
-            # Update stats for every model involved in the race
-            for m in selected_models:
-                stats = data.setdefault(
-                    m,
-                    {
-                        "runs": 0,
-                        "wins": 0,
-                        "fails": 0,
-                        "durations": [],
-                        "outcomes": [],  # FIFO: [True, True, False]
-                        "avg": 0,
-                        "min": None,
-                        "max": 0,
-                        "median": 0,
-                        "histogram": {},
-                    },
-                )
+            stats = data.setdefault(
+                model,
+                {
+                    "runs": 0,
+                    "wins": 0,
+                    "fails": 0,
+                    "last_run_results": [],  # FIFO: [{start, end, duration, error}, ...]
+                    "avg": 0,
+                    "min": None,
+                    "max": 0,
+                    "histogram": {},
+                },
+            )
 
-                # Ensure 'outcomes' exists for backwards compatibility
-                if "outcomes" not in stats:
-                    stats["outcomes"] = []
-
-                stats["runs"] += 1
-
-                # Update outcomes (True for success, False for explicit failure)
-                # Note: Cancelled runs aren't added to outcomes to avoid diluting data.
-                if m == winner:
-                    stats["outcomes"].append(True)
-                elif m in failed_models:
-                    stats["outcomes"].append(False)
-
-                if len(stats["outcomes"]) > STATS_ROLLING_WINDOW_SIZE:
-                    stats["outcomes"].pop(0)
-
-                if m == winner:
-                    stats["wins"] += 1
-                    d = duration
-                    stats["durations"].append(d)
-
-                    # Keep only the last N samples
-                    if len(stats["durations"]) > STATS_ROLLING_WINDOW_SIZE:
-                        stats["durations"].pop(0)
-
-                    # Update historical min/max
-                    if stats["min"] is None or d < stats["min"]:
-                        stats["min"] = d
-                    stats["max"] = max(stats["max"], d)
-
-                    # Recalculate rolling average from window
-                    stats["avg"] = round(
-                        sum(stats["durations"]) / len(stats["durations"]), 3
-                    )
-
-                    # Calculate Median from window
-                    sorted_win = sorted(stats["durations"])
-                    mid = len(sorted_win) // 2
-                    if len(sorted_win) % 2 == 0:
-                        stats["median"] = round(
-                            (sorted_win[mid - 1] + sorted_win[mid]) / 2, 3
+            # Backward compatibility / Consolidation
+            if "last_run_results" not in stats:
+                stats["last_run_results"] = []
+                # Migrating from old 'history' if it exists: [duration, success]
+                if "history" in stats:
+                    for d, success in stats["history"]:
+                        stats["last_run_results"].append(
+                            {
+                                "duration": d,
+                                "error": None if success else "Legacy Error",
+                                "start_timestamp": None,
+                                "end_timestamp": None,
+                            }
                         )
-                    else:
-                        stats["median"] = round(sorted_win[mid], 3)
 
-                    # Update Histogram (historical/all-time)
-                    bucket = get_histogram_bucket(d)
-                    stats["histogram"][bucket] = (
-                        stats["histogram"].get(bucket, 0) + 1
+            # Remove old fields
+            stats.pop("outcomes", None)
+            stats.pop("history", None)
+            stats.pop("durations", None)
+            stats.pop("last_run", None)
+            stats.pop("median", None)
+
+            entry = {
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp,
+                "duration": duration,
+                "error": error,
+            }
+
+            stats["runs"] += 1
+            stats["last_run_results"].append(entry)
+
+            if len(stats["last_run_results"]) > STATS_ROLLING_WINDOW_SIZE:
+                stats["last_run_results"].pop(0)
+
+            if error is None:
+                stats["wins"] += 1
+                d = duration
+
+                # Update historical min/max
+                if stats["min"] is None or d < stats["min"]:
+                    stats["min"] = d
+                stats["max"] = max(stats["max"], d)
+
+                # Recalculate rolling average from window
+                win_durations = [
+                    r["duration"]
+                    for r in stats["last_run_results"]
+                    if r["error"] is None
+                ]
+                if win_durations:
+                    stats["avg"] = round(
+                        sum(win_durations) / len(win_durations), 3
                     )
 
-                if m in failed_models:
-                    stats["fails"] += 1
+                # Update Histogram (historical/all-time)
+                bucket = get_histogram_bucket(d)
+                stats["histogram"][bucket] = (
+                    stats["histogram"].get(bucket, 0) + 1
+                )
+            else:
+                stats["fails"] += 1
 
             # Save updated data back to file
             f.seek(0)
@@ -176,43 +186,58 @@ def update_aggregated_stats(
 
 
 def log_stats(
-    selected_models: List[str],
-    winner: Optional[str],
+    model: str,
     duration: float,
-    failed_models: Set[str],
+    success: bool,
+    start_timestamp: str,
+    end_timestamp: str,
+    error: Optional[str] = None,
 ) -> None:
     """
-    Logs individual race results to a daily JSON file and updates global aggregates.
+    Logs individual model results to a daily JSON file and updates global aggregates.
+    Uses file locking to prevent corruption from concurrent worker writes.
     """
     DAILY_STATS_DIR.mkdir(parents=True, exist_ok=True)
     today = date.today().isoformat()
     daily_file = DAILY_STATS_DIR / f"{today}.json"
 
     entry = {
-        "timestamp": datetime.now().isoformat(),
-        "models": selected_models,
-        "winner": winner,
+        "start_timestamp": start_timestamp,
+        "end_timestamp": end_timestamp,
+        "model": model,
         "duration": duration,
-        "failures": list(failed_models),
+        "error": error,
     }
 
-    # Log to daily file (load, append, save)
-    # Note: Daily logs don't use locking as they are less critical and
-    # usually sequential in normal usage, but it could be added if needed.
-    stats = []
-    if daily_file.exists():
-        with open(daily_file, "r") as f:
-            try:
-                stats = json.load(f)
-            except json.JSONDecodeError:
-                stats = []
+    # Ensure the file exists before attempting to lock it
+    if not daily_file.exists():
+        with open(daily_file, "w") as f:
+            json.dump([], f)
 
-    stats.append(entry)
-    with open(daily_file, "w") as f:
-        json.dump(stats, f, indent=2)
+    with open(daily_file, "r+") as f:
+        try:
+            # Exclusive lock for writing to daily stats
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                data: List[Dict[str, Any]] = json.load(f)
+            except json.JSONDecodeError:
+                data = []
+
+            data.append(entry)
+            f.seek(0)
+            f.truncate()
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        except Exception as e:
+            debug(f"Failed to log to daily stats: {e}")
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
     # Update global aggregates with robust locking
-    update_aggregated_stats(selected_models, winner, duration, failed_models)
+    update_aggregated_stats(
+        model, duration, start_timestamp, end_timestamp, error
+    )
 
 
 def print_stats() -> None:
@@ -245,42 +270,131 @@ def print_stats() -> None:
         key=lambda item: item[1]["avg"] if item[1]["wins"] > 0 else 1e9,
     )
 
+    # Colors
+    model_color = "\033[36m"  # Cyan
+    reset = "\033[0m"
+    gray = "\033[90m"  # Gray for borders and timestamps
+
     # Header
+    print(f"{gray}┌" + "─" * 37 + "┬" + "─" * 9 + "┬" + "─" * 92 + f"┐{reset}")
     print(
-        f"\033[1m{'Model':<35} | {'Avg':>7} | {'Med':>7} | {'Win Rate':>10} | {'Fails':>5} | {'Min/Max':>13}\033[0m"
+        f"{gray}│{reset} \033[1m{'Model':<35}\033[0m {gray}│{reset} "
+        f"\033[1m{'Avg':>7}\033[0m {gray}│{reset} "
+        f"\033[1m{'History':<90}\033[0m {gray}│{reset}"
     )
-    print("-" * 92)
+    print(f"{gray}├" + "─" * 37 + "┼" + "─" * 9 + "┼" + "─" * 92 + f"┤{reset}")
 
-    for model, stats in sorted_items:
-        runs = stats.get("runs", 0)
-        wins = stats.get("wins", 0)
-        fails = stats.get("fails", 0)
+    # Collect all successful durations across all models for global percentile comparison
+    all_durations = []
+    for m, s in data.items():
+        for res in s.get("last_run_results", []):
+            if res.get("error") is None:
+                all_durations.append(res["duration"])
+    all_durations.sort()
+    global_n = len(all_durations)
+
+    for i, (model, stats) in enumerate(sorted_items):
+        results = stats.get("last_run_results", [])
+        wins = len([r for r in results if r.get("error") is None])
         avg = stats.get("avg", 0)
-        median = stats.get("median", 0)
-        min_val = stats.get("min", 0)
-        max_val = stats.get("max", 0)
-
-        win_rate = f"{wins}/{runs}"
 
         # Formatting values
         avg_str = f"{avg:.3f}s" if wins > 0 else "N/A"
-        med_str = f"{median:.3f}s" if wins > 0 else "N/A"
-        min_max_str = f"{min_val:.2f}s/{max_val:.2f}s" if wins > 0 else "N/A"
 
         # Colors
-        model_color = "\033[36m"  # Cyan
         avg_color = "\033[32m" if wins > 0 else "\033[90m"  # Green / Gray
-        fail_color = "\033[31m" if fails > 0 else ""  # Red if > 0
-        reset = "\033[0m"
+
+        # History graph and timestamps
+        history_graph = ""
+        num_symbols = 0
+        first_ts = " " * 19
+        last_ts = " " * 19
+
+        if results:
+            recent = results[-50:]
+            num_symbols = len(recent)
+
+            # Extract timestamps for the window
+            def format_ts(raw):
+                if not raw:
+                    return " " * 19
+                try:
+                    dt = datetime.fromisoformat(raw)
+                    return dt.strftime("%Y-%m-%d %H:%M:%S")
+                except (ValueError, TypeError):
+                    return str(raw)[:19].replace("T", " ").ljust(19)
+
+            first_ts = format_ts(
+                recent[0].get("end_timestamp")
+                or recent[0].get("start_timestamp")
+            )
+            last_ts = format_ts(
+                recent[-1].get("end_timestamp")
+                or recent[-1].get("start_timestamp")
+            )
+
+            if global_n > 0:
+                symbols = ["▂", "▃", "▄", "▅", "▆", "▇", "█"]
+                colors = [
+                    "\033[32m",  # Green
+                    "\033[32m",
+                    "\033[92m",  # Light Green
+                    "\033[93m",  # Light Yellow
+                    "\033[33m",  # Yellow
+                    "\033[33m",
+                    "\033[33m",
+                ]
+
+                for res in recent:
+                    if res.get("error") is not None:
+                        history_graph += "\033[31m█\033[0m"
+                    else:
+                        d = res["duration"]
+                        # Find rank in global distribution
+                        rank = bisect.bisect_left(all_durations, d)
+                        # Percentile rank (0 to 100)
+                        percentile = (rank / global_n) * 100
+                        # Bucket index (0 to 6)
+                        bucket = min(int(percentile // (100 / 7)), 6)
+                        history_graph += (
+                            f"{colors[bucket]}{symbols[bucket]}\033[0m"
+                        )
+            else:
+                # All fails in recent history
+                for res in recent:
+                    if res.get("error") is not None:
+                        history_graph += "\033[31m█\033[0m"
+
+        # Pad history graph to 50 spaces
+        padding = " " * (50 - num_symbols)
+        combined_history = f"{gray}{first_ts}{reset} {history_graph}{padding} {gray}{last_ts}{reset}"
 
         print(
-            f"{model_color}{model:<35}{reset} | "
-            f"{avg_color}{avg_str:>7}{reset} | "
-            f"{med_str:>7} | "
-            f"{win_rate:>10} | "
-            f"{fail_color}{fails:>5}{reset} | "
-            f"{min_max_str:>13}"
+            f"{gray}│{reset} {model_color}{model:<35}{reset} {gray}│{reset} "
+            f"{avg_color}{avg_str:>7}{reset} {gray}│{reset} "
+            f"{combined_history} {gray}│{reset}"
         )
+
+        if i < len(sorted_items) - 1:
+            print(
+                f"{gray}├"
+                + "─" * 37
+                + "┼"
+                + "─" * 9
+                + "┼"
+                + "─" * 92
+                + f"┤{reset}"
+            )
+        else:
+            print(
+                f"{gray}└"
+                + "─" * 37
+                + "┴"
+                + "─" * 9
+                + "┴"
+                + "─" * 92
+                + f"┘{reset}"
+            )
 
 
 # --- Core Logic ---
@@ -293,6 +407,7 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
     """
     debug(f"Starting model: {model}")
     start_time = time.perf_counter()
+    start_timestamp = datetime.now().isoformat()
 
     # Environment setup to minimize overhead and disable interactive features
     env = os.environ.copy()
@@ -320,9 +435,12 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
     )
 
     try:
-        # Send prompt and wait for result
-        stdout, stderr = await proc.communicate(input=prompt.encode())
+        # Send prompt and wait for result with timeout
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(input=prompt.encode()), timeout=TIMEOUT_DURATION
+        )
         duration = time.perf_counter() - start_time
+        end_timestamp = datetime.now().isoformat()
         debug(
             f"Model {model} finished in {duration:.3f}s with exit code {proc.returncode}"
         )
@@ -335,6 +453,9 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
                 "model": model,
                 "code": proc.returncode,
                 "success": False,
+                "duration": round(duration, 3),
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp,
             }
 
         # Parse NDJSON output (multiple JSON objects, one per line)
@@ -355,7 +476,14 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
 
         if error_msg and not res_text:
             debug(f"Model {model} returned logic error: {error_msg}")
-            return {"error": error_msg, "model": model, "success": False}
+            return {
+                "error": error_msg,
+                "model": model,
+                "success": False,
+                "duration": round(duration, 3),
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp,
+            }
 
         debug(f"Model {model} successfully produced {len(res_text)} chars")
         return {
@@ -364,23 +492,71 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
             "duration": round(duration, 3),
             "start_time": start_time,
             "success": True,
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
         }
-    except asyncio.CancelledError:
-        debug(f"Model {model} was cancelled")
+    except asyncio.TimeoutError:
+        end_timestamp = datetime.now().isoformat()
+        debug(f"Model {model} timed out after {TIMEOUT_DURATION}s")
         if proc.returncode is None:
             try:
                 proc.kill()
             except ProcessLookupError:
                 pass
-        raise
+        return {
+            "error": "Timeout",
+            "model": model,
+            "success": False,
+            "duration": TIMEOUT_DURATION,
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+        }
     except Exception as e:
+        end_timestamp = datetime.now().isoformat()
         debug(f"Model {model} raised exception: {e}")
         if proc.returncode is None:
             try:
                 proc.kill()
             except ProcessLookupError:
                 pass
-        return {"error": str(e), "model": model, "success": False}
+        return {
+            "error": str(e),
+            "model": model,
+            "success": False,
+            "duration": round(time.perf_counter() - start_time, 3),
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+        }
+
+
+async def run_worker(model: str, prompt: str) -> None:
+    """
+    Entry point for internal worker process. Runs model, updates stats,
+    and outputs result if successful.
+    """
+    try:
+        result = await run_model(model, prompt)
+
+        # Log results independently (even if we lost the race in the parent)
+        log_stats(
+            model,
+            result["duration"],
+            result["success"],
+            result["start_timestamp"],
+            result["end_timestamp"],
+            result.get("error"),
+        )
+
+        if result["success"]:
+            # Print text for parent to capture. Use try/except to ignore BrokenPipeError
+            # if the parent has already exited.
+            try:
+                print(result["text"])
+                sys.stdout.flush()
+            except BrokenPipeError:
+                pass
+    except Exception as e:
+        debug(f"Worker for {model} failed: {e}")
 
 
 def get_model_weights() -> Dict[str, float]:
@@ -417,7 +593,10 @@ def get_model_weights() -> Dict[str, float]:
         stats = stats_data.get(model, {})
         avg = (
             stats.get("avg", default_duration)
-            if stats.get("wins", 0) > 0
+            if any(
+                r.get("error") is None
+                for r in stats.get("last_run_results", [])
+            )
             else default_duration
         )
 
@@ -426,9 +605,12 @@ def get_model_weights() -> Dict[str, float]:
 
         # Penalize recent failures (last N samples)
         # If the last N samples for a model are failures, heavily penalize it.
-        outcomes = stats.get("outcomes", [])
-        if outcomes:
-            recent_outcomes = outcomes[-MODEL_WEIGHT_SAMPLE_COUNT:]
+        results = stats.get("last_run_results", [])
+        if results:
+            recent_outcomes = [
+                r.get("error") is None
+                for r in results[-MODEL_WEIGHT_SAMPLE_COUNT:]
+            ]
             if len(recent_outcomes) >= MODEL_WEIGHT_SAMPLE_COUNT and not any(
                 recent_outcomes
             ):
@@ -446,8 +628,8 @@ def get_model_weights() -> Dict[str, float]:
 
 async def race_models(prompt: str) -> None:
     """
-    Races multiple models in parallel. The first one to return a successful
-    response wins. All other tasks are cancelled immediately.
+    Races multiple models in parallel using detached internal worker processes.
+    The first one to return a successful response wins.
     """
     # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick 2 weighted random ones.
     override = os.getenv("QUICK_PROMPT_MODEL")
@@ -478,73 +660,64 @@ async def race_models(prompt: str) -> None:
 
     debug(f"Selected models for race: {selected_models}")
 
-    # 2. Start parallel tasks
-    tasks = [asyncio.create_task(run_model(m, prompt)) for m in selected_models]
-    failed_models: Set[str] = set()
+    # 2. Start workers as detached processes
+    # We use start_new_session=True so they outlive the parent script.
+    # They communicate their result via stdout.
+    worker_tasks = []
+    for model in selected_models:
+        cmd = [sys.executable, __file__, "--internal-worker", model]
+        if VERBOSE:
+            cmd.append("--verbose")
 
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        # Send prompt immediately
+        proc.stdin.write(prompt.encode())
+        await proc.stdin.drain()
+        proc.stdin.close()
+
+        # Capture output from worker
+        worker_tasks.append(asyncio.create_task(proc.stdout.read(), name=model))
+
+    # 3. Wait for the first worker to produce output
     try:
-        while tasks:
-            debug("Waiting for first model to complete...")
+        while worker_tasks:
             done, pending = await asyncio.wait(
-                tasks, return_when=asyncio.FIRST_COMPLETED
+                worker_tasks, return_when=asyncio.FIRST_COMPLETED
             )
 
-            for winner_task in done:
-                result = winner_task.result()
+            for task in done:
+                res_text = task.result().decode().strip()
+                model = task.get_name()
 
-                if result.get("success"):
-                    # We found a winner! Cancel remaining models.
-                    for task in pending:
-                        task.cancel()
-
-                    # Output the winning response
-                    print(result["text"])
-
-                    # Log telemetry
-                    debug(
-                        f"Logging telemetry for winner: {result['model']} ({result['duration']:.3f}s)"
-                    )
-                    log_stats(
-                        selected_models,
-                        result["model"],
-                        result["duration"],
-                        failed_models,
-                    )
-
-                    # Flush and exit immediately to prevent any delayed output from other tasks
+                if res_text:
+                    # Winner!
+                    print(res_text)
+                    debug(f"Model {model} won the race.")
+                    # Flush and exit. Detached workers will finish on their own.
                     sys.stdout.flush()
                     sys.stderr.flush()
                     os._exit(0)
-
                 else:
-                    # Fail fast: if any model fails, cancel all others and exit.
-                    # This ensures we don't wait for a slow model if one has already failed.
-                    failed_models.add(result["model"])
-                    debug(
-                        f"Model {result['model']} failed: {result.get('error')}. Failing fast..."
-                    )
-                    for task in pending:
-                        task.cancel()
+                    # This worker failed or returned empty.
+                    debug(f"Model {model} failed or returned no text.")
+                    worker_tasks.remove(task)
 
-                    print(
-                        f"Error from {result['model']}: {result.get('error')}",
-                        file=sys.stderr,
-                    )
-
-                    # Log the failure
-                    log_stats(selected_models, None, 0, failed_models)
-
-                    sys.stdout.flush()
-                    sys.stderr.flush()
-                    os._exit(1)
+        # If we get here, all workers failed
+        print(
+            "Error: All models failed to produce a response.", file=sys.stderr
+        )
+        os._exit(1)
 
     except Exception as e:
         debug(f"Race implementation failed: {e}")
         print(f"Race failed: {e}", file=sys.stderr)
-        # Clean up remaining tasks
-        for task in tasks:
-            task.cancel()
-        sys.exit(1)
+        os._exit(1)
 
 
 async def verify_models() -> None:
@@ -596,11 +769,21 @@ def main() -> None:
         action="store_true",
         help="Print aggregated model statistics.",
     )
+    parser.add_argument(
+        "--internal-worker",
+        help=argparse.SUPPRESS,  # Hidden internal flag
+    )
 
     args = parser.parse_args()
 
     global VERBOSE
     VERBOSE = args.verbose
+
+    if args.internal_worker:
+        # Run as a worker. Prompt is provided via stdin.
+        prompt = sys.stdin.read().strip()
+        asyncio.run(run_worker(args.internal_worker, prompt))
+        sys.exit(0)
 
     if args.ping_models:
         asyncio.run(verify_models())
