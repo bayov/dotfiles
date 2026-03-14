@@ -23,7 +23,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
 
     set -f selected_paths (
         eval "$fzf_jj_status_command" |
-        _fzf_wrapper \
+        fzf \
             --header="$fzf_directory_header" \
             --ansi \
             --multi \

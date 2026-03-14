@@ -27,7 +27,16 @@ if status is-interactive
     set -gx fish_greeting
 
     # fzf settings
-    # ------------
+    # ------------    
+    set -gx FZF_DEFAULT_OPTS '
+        --cycle
+        --style=full
+        --layout=reverse
+        --height=90%
+        --preview-window=wrap
+        --bind="ctrl-alt-c:execute-silent(printf '%s' {+} | clip)"
+        --bind="ctrl-y:execute-silent(printf '%s' {+} | clip)"
+    '
     # Differ in previews
     set -gx fzf_diff_highlighter delta --paging=never
     # Project locations for project search fzf (Alt+W)

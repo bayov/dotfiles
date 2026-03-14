@@ -14,7 +14,7 @@ function _fzf_search_git_log --description "Search the output of git log and pre
 
         set -f selected_log_lines (
             git log --no-show-signature --color=always --format=format:$fzf_git_log_format --date=short | \
-            _fzf_wrapper --ansi \
+            fzf --ansi \
                 --multi \
                 --scheme=history \
                 --prompt="Git Log> " \

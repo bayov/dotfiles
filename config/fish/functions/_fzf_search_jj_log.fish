@@ -16,7 +16,7 @@ function _fzf_search_jj_log --description "Search the output of jj log and previ
 
     set -f selected_log_lines (
         jj log -r 'all()' --color=always -T $fzf_jj_log_template | \
-        _fzf_wrapper --ansi \
+        fzf --ansi \
             --multi \
             --scheme=history \
             --prompt="JJ Log ❯ " \

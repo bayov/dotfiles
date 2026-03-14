@@ -14,7 +14,7 @@ function _fzf_search_zellij_paths --description "Search paths in Zellij scrollba
         --preview='_fzf_preview_file {}' \
         --bind="ctrl-e:execute($EDITOR {})+abort"
 
-    set -f selected_paths (zellij_scrollback_paths | _fzf_wrapper $fzf_arguments)
+    set -f selected_paths (zellij_scrollback_paths | fzf $fzf_arguments)
 
     if test $status -eq 0
         commandline --current-token --replace -- (string escape -- $selected_paths | string join ' ')

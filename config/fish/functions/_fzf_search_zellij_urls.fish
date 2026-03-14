@@ -13,7 +13,7 @@ function _fzf_search_zellij_urls --description "Search URLs in Zellij scrollback
         --prompt="Zellij URLs ❯ " \
         --expect=ctrl-o
 
-    set -f fzf_output (zellij_scrollback_urls | _fzf_wrapper $fzf_arguments)
+    set -f fzf_output (zellij_scrollback_urls | fzf $fzf_arguments)
 
     if test $status -eq 0
         set -f key $fzf_output[1]

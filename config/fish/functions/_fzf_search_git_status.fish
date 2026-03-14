@@ -10,7 +10,7 @@ function _fzf_search_git_status --description "Search the output of git status. 
         set -f selected_paths (
             # Pass configuration color.status=always to force status to use colors even though output is sent to a pipe
             git -c color.status=always status --short |
-            _fzf_wrapper --ansi \
+            fzf --ansi \
                 --multi \
                 --prompt="Git Status> " \
                 --query=(commandline --current-token) \

@@ -7,7 +7,7 @@ function _fzf_search_processes --description "Search all running processes. Repl
     set -f ps_preview_fmt (string join ',' 'pid' 'ppid=PARENT' 'user' '%cpu' 'rss=RSS_IN_KB' 'start=START_TIME' 'command')
     set -f processes_selected (
         $ps_cmd -A -opid,command | \
-        _fzf_wrapper --multi \
+        fzf --multi \
                     --prompt="Processes> " \
                     --query (commandline --current-token) \
                     --ansi \
