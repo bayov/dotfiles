@@ -8,6 +8,10 @@ name = "Bayov"
 pager = "delta"
 diff-formatter = ":git"
 
+[gg.ui]
+theme-override = "dark"
+recent-workspaces = ["/home/bayov/projects/accounting"]
+
 [template-aliases]
 # for fzf
 one_line_no_graph = """
@@ -29,7 +33,3 @@ if(
   )
 ) ++ "\n"
 """
-
-[gg.ui]
-theme-override = "dark"
-recent-workspaces = ["/home/bayov/projects/accounting"]
