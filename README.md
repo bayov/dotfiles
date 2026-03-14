@@ -74,7 +74,11 @@ curl -sS https://starship.rs/install.sh | sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
-cargo install dotter jj-cli jj-starship gg-cli zellij eza bat git-delta cargo-update fresh
+cargo install dotter jj-cli jj-starship zellij eza bat git-delta cargo-update fresh
+
+# install gg-cli
+sudo apt install libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
+cargo install gg-cli
 
 # install cargo-binstall
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
