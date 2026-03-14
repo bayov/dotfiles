@@ -42,7 +42,7 @@ function gm --description "Generates AI description for the current commit based
     echo -e $prompt > /tmp/generate-commit-desc-prompt
 
     # show loader while `__generate_commit_message` is running
-    set -l msg (gum spin --title "generating commit message" -- fish -c "cat /tmp/generate-commit-desc-prompt | quick_prompt" | string collect | string trim)
+    set -l msg (gum spin --title "generating commit message" -- fish -c "cat /tmp/generate-commit-desc-prompt | quick_prompt" | string trim)
     test -z "$msg" && return 1
 
     jj describe -m "$msg" --quiet
