@@ -70,6 +70,7 @@ end
 alias cat=batcat
 alias bat=batcat
 alias vim=nvim
+alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 
 # Environment Variables
 set -gx EDITOR fresh

@@ -430,11 +430,17 @@ def main() -> None:
         asyncio.run(verify_models())
         sys.exit(0)
 
-    if not args.prompt:
+    if args.prompt:
+        user_prompt = " ".join(args.prompt)
+    elif not sys.stdin.isatty():
+        user_prompt = sys.stdin.read().strip()
+    else:
         parser.print_help()
         sys.exit(1)
 
-    user_prompt = " ".join(args.prompt)
+    if not user_prompt:
+        print("Error: No prompt provided.", file=sys.stderr)
+        sys.exit(1)
 
     debug("Script initialized, starting race...")
     asyncio.run(race_models(user_prompt))
