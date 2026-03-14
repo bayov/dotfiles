@@ -188,7 +188,7 @@ config.keys = {
 
     -- Misc
     -- {mods = "ALT", key = "z", action = act.QuitApplication},
-    -- {mods = "ALT", key = "a", action = act.ActivateCommandPalette},
+    {mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette},
     {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
     {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
 

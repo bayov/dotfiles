@@ -11,6 +11,14 @@ function module.apply_to_config(config)
 --     local color_scheme = wezterm.color.get_builtin_schemes()["X::DotShare (terminal.sexy)"]
 --     local color_scheme = wezterm.color.get_builtin_schemes()["Ocean Dark (Gogh)"]
     local color_scheme = wezterm.color.get_builtin_schemes()["Tomorrow (dark) (terminal.sexy)"]
+
+    -- change ANSI 8 (Bright Black / Gray):
+    --
+    -- Note:
+    --  - ANSI 0-7 are in 'ansi'
+    --  - ANSI 8-15 are in 'brights'
+    color_scheme.brights[1] = "#666666"
+
     --color_scheme.background = "#1f2023"
     color_scheme.cursor_bg = "#ced0d6"
     color_scheme.cursor_fg = "black"
