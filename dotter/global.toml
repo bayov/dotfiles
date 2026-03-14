@@ -21,6 +21,7 @@ depends = [
     # single files
     "gitconfig",
     "srt-settings",
+    "quick_prompt",
     "starship",
 ]
 
@@ -72,6 +73,9 @@ depends = [
 
 [srt-settings.files]
 "config/.srt-settings.json" = "~/.srt-settings.json"
+
+[quick_prompt.files]
+"config/quick_prompt.py" = "~/.local/share/quick_prompt/quick_prompt.py"
 
 [starship.files]
 # Using template to force a copy, since we need to override right_prompt in
