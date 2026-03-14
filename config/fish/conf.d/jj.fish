@@ -22,7 +22,7 @@ function gm --description "Generates AI description for the current commit based
     format_personal_project
 
     # Warn if description already exists
-    set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string collect | string trim)
+    set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
     if test -n "$current_desc"
         echo_box "$current_desc" --title="Existing commit description:" # --title-color=3
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
@@ -42,7 +42,7 @@ function gm --description "Generates AI description for the current commit based
     echo -e $prompt > /tmp/generate-commit-desc-prompt
 
     # show loader while `__generate_commit_message` is running
-    set -l msg (gum spin --title "generating commit message" -- fish -c "cat /tmp/generate-commit-desc-prompt | quick_prompt" | string trim)
+    set -l msg (gum spin --title "generating commit message" -- fish -c "cat /tmp/generate-commit-desc-prompt | quick_prompt" | string trim | string collect)
     test -z "$msg" && return 1
 
     jj describe -m "$msg" --quiet
