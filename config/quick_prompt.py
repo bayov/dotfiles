@@ -361,18 +361,81 @@ async def run_model(model: str, prompt: str) -> Dict[str, Any]:
         return {"error": str(e), "model": model, "success": False}
 
 
+def get_model_weights() -> Dict[str, float]:
+    """
+    Calculates weights for each model in MODEL_POOL based on historical average duration.
+    Weight = 1 / (avg_duration^2). Models without stats get a default weight.
+    """
+    stats_data = {}
+    if AGGREGATED_STATS_FILE.exists():
+        with open(AGGREGATED_STATS_FILE, "r") as f:
+            try:
+                # Shared lock
+                fcntl.flock(f, fcntl.LOCK_SH)
+                stats_data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+
+    weights = {}
+    # Use existing averages to determine a baseline for new models
+    known_averages = [
+        s["avg"] for s in stats_data.values() if s.get("wins", 0) > 0
+    ]
+    # Default to 4.5s if no stats exist, otherwise use the average of averages
+    default_duration = (
+        sum(known_averages) / len(known_averages) if known_averages else 4.5
+    )
+
+    # Cap the default duration to keep it competitive but not dominant
+    default_duration = max(3.0, min(7.0, default_duration))
+
+    for model in MODEL_POOL:
+        stats = stats_data.get(model, {})
+        avg = (
+            stats.get("avg", default_duration)
+            if stats.get("wins", 0) > 0
+            else default_duration
+        )
+        # Weight follows inverse square law: 2x faster = 4x more likely
+        weights[model] = 1.0 / (max(0.1, avg) ** 2)
+
+    return weights
+
+
 async def race_models(prompt: str) -> None:
     """
     Races multiple models in parallel. The first one to return a successful
     response wins. All other tasks are cancelled immediately.
     """
-    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick 2 random ones.
+    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick 2 weighted random ones.
     override = os.getenv("QUICK_PROMPT_MODEL")
-    selected_models = (
-        [override]
-        if override
-        else random.sample(MODEL_POOL, min(len(MODEL_POOL), 2))
-    )
+    if override:
+        selected_models = [override]
+    else:
+        weights_dict = get_model_weights()
+        models = list(weights_dict.keys())
+        weights = [weights_dict[m] for m in models]
+
+        if VERBOSE:
+            debug("Model weights for selection:")
+            for m, w in weights_dict.items():
+                debug(f"  {m}: {w:.4f}")
+
+        # Weighted sampling without replacement
+        selected_models = []
+        target_count = min(len(MODEL_POOL), 2)
+        temp_models = models[:]
+        temp_weights = weights[:]
+
+        while len(selected_models) < target_count and temp_models:
+            choice = random.choices(temp_models, weights=temp_weights, k=1)[0]
+            selected_models.append(choice)
+            idx = temp_models.index(choice)
+            temp_models.pop(idx)
+            temp_weights.pop(idx)
+
     debug(f"Selected models for race: {selected_models}")
 
     # 2. Start parallel tasks
