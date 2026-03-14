@@ -29,3 +29,7 @@ if(
   )
 ) ++ "\n"
 """
+
+[gg.ui]
+theme-override = "dark"
+recent-workspaces = ["/home/bayov/projects/accounting"]
