@@ -26,7 +26,7 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                         echo "    }"
                         echo "}"
                     end > "$layout_file"
-                    # zellij action new-tab --name "$name" --layout "$layout_file"
+                    zellij action new-tab --name "$name" --layout "$layout_file"
                 end
             end
 
@@ -53,8 +53,27 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                 end
             end
 
+        case rm-current
+            set -l real_base (realpath $base_dir)
+            set -l real_pwd (realpath (pwd))
+
+            if string match -q "$real_base/*" "$real_pwd"
+                set -l rel_path (string replace "$real_base/" "" "$real_pwd")
+                set -l ws_name (string split -m 1 / "$rel_path")[1]
+
+                if test -n "$ws_name"
+                    ws remove "$ws_name"
+                    if set -q ZELLIJ
+                        zellij action close-tab
+                    end
+                end
+            else
+                echo "Current directory is not within $base_dir"
+                return 1
+            end
+
         case '*'
-            echo "Usage: ws {add|list|remove} [name]"
+            echo "Usage: ws {add|list|remove|rm-current} [name]"
             return 1
     end
 end
@@ -67,6 +86,7 @@ complete -c ws -f
 complete -c ws -n "__fish_use_subcommand" -a add -d "Add a new workspace"
 complete -c ws -n "__fish_use_subcommand" -a list -d "List all workspaces"
 complete -c ws -n "__fish_use_subcommand" -a "remove rm" -d "Forget and archive a workspace"
+complete -c ws -n "__fish_use_subcommand" -a rm-current -d "Remove current workspace and close Zellij tab"
 
 # Dynamic completion for 'remove' (shows existing workspaces)
 # This assumes 'jj workspace list' output format is 'name: path'
