@@ -47,7 +47,7 @@ function gm --description "Generates AI description for the current commit based
 
     jj describe -m "$msg" --quiet
     
-    echo_box "$msg" --title="Generated commit description:" # --title-color=2
+    echo_box "$msg" --title="Generated commit description:" --width 100 # --title-color=2
 end
 
 function cm --description "Generates AI description for the current commit and starts a new change"
