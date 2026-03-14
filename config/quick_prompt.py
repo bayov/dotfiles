@@ -30,6 +30,9 @@ MODEL_POOL: List[str] = [
 # to select for best latency.
 STATS_ROLLING_WINDOW_SIZE = 100
 
+# How many samples of recent history to display in the stats table.
+STATS_HISTORY_COUNT = 30
+
 # How many samples to use when calculating model weight.
 MODEL_WEIGHT_SAMPLE_COUNT = 10
 
@@ -275,14 +278,33 @@ def print_stats() -> None:
     reset = "\033[0m"
     gray = "\033[90m"  # Gray for borders and timestamps
 
+    history_col_width = 40 + STATS_HISTORY_COUNT
+    history_sep_width = history_col_width + 2
+
     # Header
-    print(f"{gray}┌" + "─" * 37 + "┬" + "─" * 9 + "┬" + "─" * 92 + f"┐{reset}")
+    print(
+        f"{gray}┌"
+        + "─" * 37
+        + "┬"
+        + "─" * 9
+        + "┬"
+        + "─" * history_sep_width
+        + f"┐{reset}"
+    )
     print(
         f"{gray}│{reset} \033[1m{'Model':<35}\033[0m {gray}│{reset} "
         f"\033[1m{'Avg':>7}\033[0m {gray}│{reset} "
-        f"\033[1m{'History':<90}\033[0m {gray}│{reset}"
+        f"\033[1m{'History':<{history_col_width}}\033[0m {gray}│{reset}"
     )
-    print(f"{gray}├" + "─" * 37 + "┼" + "─" * 9 + "┼" + "─" * 92 + f"┤{reset}")
+    print(
+        f"{gray}├"
+        + "─" * 37
+        + "┼"
+        + "─" * 9
+        + "┼"
+        + "─" * history_sep_width
+        + f"┤{reset}"
+    )
 
     # Collect all successful durations across all models for global percentile comparison
     all_durations = []
@@ -311,7 +333,7 @@ def print_stats() -> None:
         last_ts = " " * 19
 
         if results:
-            recent = results[-50:]
+            recent = results[-STATS_HISTORY_COUNT:]
             num_symbols = len(recent)
 
             # Extract timestamps for the window
@@ -365,8 +387,8 @@ def print_stats() -> None:
                     if res.get("error") is not None:
                         history_graph += "\033[31m█\033[0m"
 
-        # Pad history graph to 50 spaces
-        padding = " " * (50 - num_symbols)
+        # Pad history graph to STATS_HISTORY_COUNT spaces
+        padding = " " * (STATS_HISTORY_COUNT - num_symbols)
         combined_history = f"{gray}{first_ts}{reset} {history_graph}{padding} {gray}{last_ts}{reset}"
 
         print(
@@ -382,7 +404,7 @@ def print_stats() -> None:
                 + "┼"
                 + "─" * 9
                 + "┼"
-                + "─" * 92
+                + "─" * history_sep_width
                 + f"┤{reset}"
             )
         else:
@@ -392,7 +414,7 @@ def print_stats() -> None:
                 + "┴"
                 + "─" * 9
                 + "┴"
-                + "─" * 92
+                + "─" * history_sep_width
                 + f"┘{reset}"
             )
 
