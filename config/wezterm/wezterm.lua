@@ -58,8 +58,11 @@ config.max_fps = 120
 config.animation_fps = 120
 config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
+local url_regex = "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"
 config.quick_select_patterns = {
-    "[0-9a-f]{7,40}",
+    url_regex,
+    -- Base16 IDs
+    "[0-9a-f]{8,40}",
     -- Jujustu change IDs
     --
     -- Note:
@@ -116,7 +119,6 @@ config.keys = {
     --         )
     --     end)
     -- },
-    -- {mods = "ALT", key = "v", action = act.QuickSelect},
     -- {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
     -- Copy & Paste
@@ -191,22 +193,21 @@ config.keys = {
     -- Support Shift+Enter for CLI tools
     {mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u")},
 
-    -- Open URLs
-    -- {
-    --     mods = "ALT",
-    --     key = "o",
-    --     action = act.QuickSelectArgs({
-    --         label = "open url",
-    --         patterns = {
-    --           "(https?://\\S+)¶",
-    --         },
-    --         action = wezterm.action_callback(function(window, pane)
-    --           local url = window:get_selection_text_for_pane(pane)
-    --           wezterm.log_info("opening: " .. url)
-    --           wezterm.open_with(url)
-    --         end),
-    --     }),
-    -- },
+    -- QuickSelect
+    {mods = "ALT", key = "k", action = act.QuickSelect},
+    {
+        mods = "ALT",
+        key = "o",
+        action = act.QuickSelectArgs({
+            label = "open url",
+            patterns = {url_regex},
+            action = wezterm.action_callback(function(window, pane)
+              local url = window:get_selection_text_for_pane(pane)
+              wezterm.log_info("opening: " .. url)
+              wezterm.open_with(url)
+            end),
+        }),
+    },
 }
 --------------------------------------------------------------------------------
 -- Keyboard bindings for specific modes (key tables)
