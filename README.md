@@ -30,6 +30,7 @@ Requirements
 * **Windows requirements**
   * AutoHotKey 2.0 — https://www.autohotkey.com/
   * WezTerm — https://wezterm.org/install/windows.html
+  * JetBrains Mono — https://www.jetbrains.com/lp/mono/
 
 AI Tools
 --------
