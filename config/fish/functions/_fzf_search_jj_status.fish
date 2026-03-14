@@ -12,7 +12,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
         return
     end
 
-    set -f preview_cmd 'jj diff --color=always -- (_fzf_parse_jj_diff_path {})'
+    set -f preview_cmd 'jj diff -w --color=always -- (_fzf_parse_jj_diff_path {})'
     if set --query fzf_diff_highlighter
         set preview_cmd "$preview_cmd | $fzf_diff_highlighter"
     end
