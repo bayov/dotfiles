@@ -74,7 +74,8 @@ alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 
 # Environment Variables
 set -gx EDITOR fresh
-set -gx PNPM_HOME "/home/bayov/.local/share/pnpm"
+set -gx PNPM_HOME "$HOME/.local/share/pnpm"
+set -gx generate_commit_message_template "$HOME/.config/resources/generate_commit_template.md"
 
 # $PATH
 fish_add_path ~/.local/bin
