@@ -90,7 +90,7 @@ end
 abbr -a desc jj desc
 abbr -a new jj new
 abbr -a sq jj squash
-abbr -a d jj diff
+abbr -a d jj diff -w
 abbr -a e jj edit
 abbr -a rebase jj rebase
 abbr -a c --set-cursor "jj commit -m \"%\""
