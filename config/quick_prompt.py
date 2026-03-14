@@ -25,6 +25,13 @@ MODEL_POOL: List[str] = [
     "opencode/nemotron-3-super-free",
 ]
 
+# Rolling window of results for invoking models. Used to determine which models
+# to select for best latency.
+STATS_ROLLING_WINDOW_SIZE = 100
+
+# How many samples to use when calculating model weight.
+MODEL_WEIGHT_SAMPLE_COUNT = 3
+
 # Global state for verbosity
 VERBOSE: bool = False
 
@@ -95,6 +102,7 @@ def update_aggregated_stats(
                         "wins": 0,
                         "fails": 0,
                         "durations": [],
+                        "outcomes": [],  # FIFO: [True, True, False]
                         "avg": 0,
                         "min": None,
                         "max": 0,
@@ -103,38 +111,52 @@ def update_aggregated_stats(
                     },
                 )
 
+                # Ensure 'outcomes' exists for backwards compatibility
+                if "outcomes" not in stats:
+                    stats["outcomes"] = []
+
                 stats["runs"] += 1
+
+                # Update outcomes (True for success, False for explicit failure)
+                # Note: Cancelled runs aren't added to outcomes to avoid diluting data.
+                if m == winner:
+                    stats["outcomes"].append(True)
+                elif m in failed_models:
+                    stats["outcomes"].append(False)
+
+                if len(stats["outcomes"]) > STATS_ROLLING_WINDOW_SIZE:
+                    stats["outcomes"].pop(0)
+
                 if m == winner:
                     stats["wins"] += 1
                     d = duration
                     stats["durations"].append(d)
-                    stats["durations"].sort()
 
-                    # Update min/max/avg
+                    # Keep only the last N samples
+                    if len(stats["durations"]) > STATS_ROLLING_WINDOW_SIZE:
+                        stats["durations"].pop(0)
+
+                    # Update historical min/max
                     if stats["min"] is None or d < stats["min"]:
                         stats["min"] = d
                     stats["max"] = max(stats["max"], d)
-                    stats["avg"] = sum(stats["durations"]) / len(
-                        stats["durations"]
+
+                    # Recalculate rolling average from window
+                    stats["avg"] = round(
+                        sum(stats["durations"]) / len(stats["durations"]), 3
                     )
 
-                    # Calculate Median
-                    mid = len(stats["durations"]) // 2
-                    if len(stats["durations"]) % 2 == 0:
+                    # Calculate Median from window
+                    sorted_win = sorted(stats["durations"])
+                    mid = len(sorted_win) // 2
+                    if len(sorted_win) % 2 == 0:
                         stats["median"] = round(
-                            (
-                                stats["durations"][mid - 1]
-                                + stats["durations"][mid]
-                            )
-                            / 2,
-                            3,
+                            (sorted_win[mid - 1] + sorted_win[mid]) / 2, 3
                         )
                     else:
-                        stats["median"] = round(stats["durations"][mid], 3)
+                        stats["median"] = round(sorted_win[mid], 3)
 
-                    stats["avg"] = round(stats["avg"], 3)
-
-                    # Update Histogram
+                    # Update Histogram (historical/all-time)
                     bucket = get_histogram_bucket(d)
                     stats["histogram"][bucket] = (
                         stats["histogram"].get(bucket, 0) + 1
@@ -398,8 +420,26 @@ def get_model_weights() -> Dict[str, float]:
             if stats.get("wins", 0) > 0
             else default_duration
         )
+
         # Weight follows inverse square law: 2x faster = 4x more likely
-        weights[model] = 1.0 / (max(0.1, avg) ** 2)
+        weight = 1.0 / (max(0.1, avg) ** 2)
+
+        # Penalize recent failures (last N samples)
+        # If the last N samples for a model are failures, heavily penalize it.
+        outcomes = stats.get("outcomes", [])
+        if outcomes:
+            recent_outcomes = outcomes[-MODEL_WEIGHT_SAMPLE_COUNT:]
+            if len(recent_outcomes) >= MODEL_WEIGHT_SAMPLE_COUNT and not any(
+                recent_outcomes
+            ):
+                # All of the last N failed! Heavy penalty.
+                weight *= 0.01
+            elif any(o is False for o in recent_outcomes):
+                # At least one failure in the recent window.
+                fail_rate = recent_outcomes.count(False) / len(recent_outcomes)
+                weight *= 1.0 - (0.5 * fail_rate)
+
+        weights[model] = weight
 
     return weights
 
