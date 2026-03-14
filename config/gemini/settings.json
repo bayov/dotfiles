@@ -1,55 +1,35 @@
 {
-  "context": {
-    "fileName": "AGENTS.md"
-  },
-  "model": {
-      "name": "gemini-3-flash-preview"
-  },
-  "security": {
-    "auth": {
-      "selectedType": "oauth-personal"
+    "context": { "fileName": "AGENTS.md" },
+    "model": { "name": "gemini-3-flash-preview" },
+    "security": {
+        "auth": { "selectedType": "oauth-personal" },
+        "enablePermanentToolApproval": true,
+        "folderTrust": { "enabled": true }
     },
-    "enablePermanentToolApproval": true,
-    "folderTrust": {
-      "enabled": true
-    }
-  },
-  "general": {
-    "previewFeatures": true,
-    "enablePromptCompletion": true,
-    "checkpointing": {
-      "enabled": true
+    "general": {
+        "previewFeatures": true,
+        "enablePromptCompletion": true,
+        "checkpointing": { "enabled": true },
+        "vimMode": false,
+        "sessionRetention": {
+            "enabled": true,
+            "maxAge": "30d",
+            "warningAcknowledged": true
+        }
     },
-    "vimMode": false,
-    "sessionRetention": {
-      "enabled": true,
-      "maxAge": "30d",
-      "warningAcknowledged": true
-    }
-  },
-  "ui": {
-    "dynamicWindowTitle": false,
-    "hideBanner": true,
-    "footer": {
-      "hideContextPercentage": false,
-      "hideSandboxStatus": true
+    "ui": {
+        "dynamicWindowTitle": false,
+        "hideBanner": true,
+        "footer": { "hideContextPercentage": false, "hideSandboxStatus": true },
+        "showMemoryUsage": true,
+        "showCitations": true,
+        "showModelInfoInChat": true,
+        "hideWindowTitle": false,
+        "hideTips": true,
+        "useAlternateBuffer": true,
+        "incrementalRendering": true,
+        "hideFooter": false
     },
-    "showMemoryUsage": true,
-    "showCitations": true,
-    "showModelInfoInChat": true,
-    "hideWindowTitle": false,
-    "hideTips": true,
-    "useAlternateBuffer": true,
-    "incrementalRendering": true,
-    "hideFooter": false
-  },
-  "tools": {
-    "shell": {
-      "showColor": true
-    },
-    "autoAccept": true
-  },
-  "experimental": {
-    "skills": true
-  }
+    "tools": { "shell": { "showColor": true }, "autoAccept": true },
+    "experimental": { "skills": true }
 }

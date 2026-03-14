@@ -2,7 +2,7 @@
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "ls" ]
+commandPrefix = ["ls"]
 
 [[rule]]
 toolName = "write_file"
@@ -13,49 +13,49 @@ priority = 100
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "gemini" ]
+commandPrefix = ["gemini"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "date" ]
+commandPrefix = ["date"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "ls", "cat", "head" ]
+commandPrefix = ["ls", "cat", "head"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "mkdir", "echo" ]
+commandPrefix = ["mkdir", "echo"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "printf" ]
+commandPrefix = ["printf"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "cargo" ]
+commandPrefix = ["cargo"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "cargo", "bean-check" ]
+commandPrefix = ["cargo", "bean-check"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "rm" ]
+commandPrefix = ["rm"]
 
 [[rule]]
 toolName = "replace"
@@ -66,37 +66,37 @@ priority = 100
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "grep", "head" ]
+commandPrefix = ["grep", "head"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "uv" ]
+commandPrefix = ["uv"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "uv" ]
+commandPrefix = ["uv"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "cat" ]
+commandPrefix = ["cat"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "mkdir", "mv", "rm" ]
+commandPrefix = ["mkdir", "mv", "rm"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "node" ]
+commandPrefix = ["node"]
 
 [[rule]]
 toolName = "activate_skill"
@@ -107,13 +107,13 @@ priority = 100
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "python3" ]
+commandPrefix = ["python3"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "mv", "rmdir" ]
+commandPrefix = ["mv", "rmdir"]
 
 [[rule]]
 toolName = "web_fetch"
@@ -124,46 +124,46 @@ priority = 100
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "diff", "true" ]
+commandPrefix = ["diff", "true"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "openspec" ]
+commandPrefix = ["openspec"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "bean-query" ]
+commandPrefix = ["bean-query"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "find" ]
+commandPrefix = ["find"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "cd", "cargo" ]
+commandPrefix = ["cd", "cargo"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "head", "tail" ]
+commandPrefix = ["head", "tail"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "bean-format" ]
+commandPrefix = ["bean-format"]
 
 [[rule]]
 toolName = "run_shell_command"
 decision = "allow"
 priority = 100
-commandPrefix = [ "fdfind", "head" ]
+commandPrefix = ["fdfind", "head"]

@@ -1,0 +1,27 @@
+{
+    "$schema": "https://plugins.dprint.dev/g-plane/pretty_yaml/v0.6.0/schema.json",
+    "lineWidth": 80,
+    "useTabs": false,
+    "indentWidth": 4,
+    "newLineKind": "lf",
+    "typescript": {},
+    "json": { "preferSingleLine": true },
+    "markdown": {
+        "textWrap": "always",
+        "emphasisKind": "underscores",
+        "strongKind": "asterisks",
+        "headingKind": "setext"
+    },
+    "toml": {},
+    "ruff": { "lineLength": 80 },
+    "yaml": {},
+    "plugins": [
+        "https://plugins.dprint.dev/typescript-0.95.15.wasm",
+        "https://plugins.dprint.dev/json-0.21.1.wasm",
+        "https://plugins.dprint.dev/markdown-0.21.1.wasm",
+        "https://plugins.dprint.dev/toml-0.7.0.wasm",
+        "https://plugins.dprint.dev/ruff-0.7.2.wasm",
+        "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.6.0.wasm"
+    ],
+    "excludes": ["uv.lock"]
+}

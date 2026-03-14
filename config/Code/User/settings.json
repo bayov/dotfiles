@@ -1,13 +1,13 @@
 {
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Usage
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     "files.autoSave": "onFocusChange",
     "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
     "window.customMenuBarAltFocus": false, // Disable Alt key focusing the menu
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Files & Explorer
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     "workbench.list.openMode": "doubleClick",
     "workbench.editor.revealIfOpen": true,
     "explorer.confirmDragAndDrop": false,
@@ -16,20 +16,18 @@
     "explorer.excludeGitIgnore": true, // Hide .gitignore'ed files in explorer
     "workbench.tree.indent": 14,
     "workbench.tree.renderIndentGuides": "always",
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Formatting
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "dprint.dprint",
-    "[rust]": {
-        "editor.defaultFormatter": "rust-lang.rust-analyzer"
-    },
+    "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
     "[beancount]": {
         "editor.defaultFormatter": "dongfg.vscode-beancount-formatter"
     },
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Appearance
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     "window.density.editorTabHeight": "compact",
     // Font
     "editor.fontFamily": "JetBrains Mono NL, Arial",
@@ -46,9 +44,7 @@
     // Status bar is toggleable (Alt+-), so this setting might change.
     "workbench.statusBar.visible": true,
     "editor.minimap.enabled": false,
-    "editor.rulers": [
-        80
-    ],
+    "editor.rulers": [80],
     "editor.scrollbar.horizontalScrollbarSize": 8,
     "editor.scrollbar.verticalScrollbarSize": 10,
     "editor.bracketPairColorization.enabled": false,
@@ -93,7 +89,7 @@
         "jjDecoration.modifiedResourceForeground": "#6aa2d7",
         // inlay hints
         "editorInlayHint.foreground": "#96969666",
-        "editorInlayHint.background": "#0000",
+        "editorInlayHint.background": "#0000"
     },
     // syntax highlighting
     "editor.semanticTokenColorCustomizations": {
@@ -101,21 +97,14 @@
             "rules": {
                 // --- Global Modifiers ---
                 // Force italics on mutable items
-                "*.mutable": {
-                    "italic": true
-                },
+                "*.mutable": { "italic": true },
                 // Disable italics on mutable operators
-                "operator.mutable": {
-                    "italic": false
-                },
+                "operator.mutable": { "italic": false },
                 // --- Comments & Documentation ---
                 // Standard comments (dimmed)
                 "comment": "#686b71",
                 // Doc comments
-                "*.documentation": {
-                    "foreground": "#74847a",
-                    "italic": false
-                },
+                "*.documentation": { "foreground": "#74847a", "italic": false },
                 // --- Keywords & Control Flow ---
                 "keyword": "#cf8e6d",
                 // Rust `?` operator
@@ -140,10 +129,7 @@
                 "function.defaultLibrary": "#6aa2d7",
                 "function.defaultLibrary:rust": "#6aa2d7",
                 // Static functions (disable default italics)
-                "function.static": {
-                    "foreground": "#6aa2d7",
-                    "italic": false
-                },
+                "function.static": { "foreground": "#6aa2d7", "italic": false },
                 "function.static:rust": {
                     "foreground": "#6aa2d7",
                     "italic": false
@@ -164,31 +150,16 @@
                 "struct": "#86985d",
                 "struct:rust": "#86985d",
                 // Enums (disable default italics)
-                "enum": {
-                    "foreground": "#86985d",
-                    "italic": false
-                },
-                "enum:rust": {
-                    "foreground": "#86985d",
-                    "italic": false
-                },
-                "enumMember": {
-                    "foreground": "#86985d",
-                    "italic": false
-                },
+                "enum": { "foreground": "#86985d", "italic": false },
+                "enum:rust": { "foreground": "#86985d", "italic": false },
+                "enumMember": { "foreground": "#86985d", "italic": false },
                 // --- Traits (Interfaces) ---
                 "interface": "#9699d4",
                 "interface:rust": "#9699d4",
                 // --- Constants & Statics ---
                 // Const (disable default italics)
-                "const": {
-                    "foreground": "#a482b7",
-                    "italic": false
-                },
-                "const:rust": {
-                    "foreground": "#a482b7",
-                    "italic": false
-                },
+                "const": { "foreground": "#a482b7", "italic": false },
+                "const:rust": { "foreground": "#a482b7", "italic": false },
                 "static": "#a482b7",
                 "static:rust": "#a482b7",
                 // --- Variables & Parameters ---
@@ -206,33 +177,26 @@
                 "constParameter": "#20999d",
                 "constParameter:rust": "#20999d"
             }
-        },
+        }
     },
     "editor.tokenColorCustomizations": {
-        "textMateRules": [
-            {
-                // I'd add `variable.other.metavariable.name.rust` here, but
-                // it only colors macro_rules! metavariable name definition, not
-                // usages, which ends up looking weird.
-                "scope": "entity.name.function, entity.name.function.rust",
-                "settings": {
-                    "foreground": "#6aa2d7"
-                }
-            },
-            {
-                // I'd add `variable.other.metavariable.name.rust` here, but
-                // it only colors macro_rules! metavariable name definition, not
-                // usages, which ends up looking weird.
-                "scope": "keyword.operator.macro.dollar.rust, variable.other.metavariable.specifier.rust",
-                "settings": {
-                    "foreground": "#c77dbb"
-                }
-            }
-        ]
+        "textMateRules": [{
+            // I'd add `variable.other.metavariable.name.rust` here, but
+            // it only colors macro_rules! metavariable name definition, not
+            // usages, which ends up looking weird.
+            "scope": "entity.name.function, entity.name.function.rust",
+            "settings": { "foreground": "#6aa2d7" }
+        }, {
+            // I'd add `variable.other.metavariable.name.rust` here, but
+            // it only colors macro_rules! metavariable name definition, not
+            // usages, which ends up looking weird.
+            "scope": "keyword.operator.macro.dollar.rust, variable.other.metavariable.specifier.rust",
+            "settings": { "foreground": "#c77dbb" }
+        }]
     },
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Language-specific
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Python
     "python.analysis.typeCheckingMode": "standard", // standard type checking rules
     // Rust
@@ -247,9 +211,9 @@
     "rust-analyzer.inlayHints.parameterHints.enable": false,
     "rust-analyzer.inlayHints.genericParameterHints.const.enable": false,
     "rust-analyzer.inlayHints.closingBraceHints.minLines": 35,
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Misc
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // JSON schema validation
     "json.schemaDownload.trustedDomains": {
         "https://schemastore.azurewebsites.net/": true,
@@ -268,12 +232,12 @@
     // Dependi
     "dependi.decoration.compatible.template": "✓",
     "dependi.decoration.patchAvailable.template": "⇢ ${version}",
-    //--------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
     // Uncategorized
     //  | VS Code appends new settings after the last setting so I'm keeping
     //  | `editor.columnSelection` intentionally under this comment block so
     //  | that all newly added settings are collected under it, allowing me to
     //  | review and categorize each new setting.
-    //--------------------------------------------------------------------------
-    "editor.columnSelection": false,
+    // --------------------------------------------------------------------------
+    "editor.columnSelection": false
 }

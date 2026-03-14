@@ -3,6 +3,7 @@ import sys
 import json
 import os
 
+
 def get_status_line():
     try:
         data = json.load(sys.stdin)
@@ -45,6 +46,7 @@ def get_status_line():
     cost_part = f"{GREY}${cost:.2f}{RESET}"
 
     return f"{cwd_part}  {model_part} {bar_part} {GREY}|{RESET} {cost_part}"
+
 
 if __name__ == "__main__":
     print(get_status_line())

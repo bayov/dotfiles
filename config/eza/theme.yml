@@ -1,14 +1,14 @@
 perms:
-  user_read: {foreground: DarkGray}
-  user_write: {foreground: DarkGray}
-  user_executable_file: {foreground: DarkGray}
-  user_execute_other: {foreground: DarkGray}
-  group_read: {foreground: DarkGray}
-  group_write: {foreground: DarkGray}
-  group_execute: {foreground: DarkGray}
-  other_read: {foreground: DarkGray}
-  other_write: {foreground: DarkGray}
-  other_execute: {foreground: DarkGray}
-  special_user_file: {foreground: DarkGray}
-  special_other: {foreground: DarkGray}
-  attribute: {foreground: DarkGray}
+    user_read: { foreground: DarkGray }
+    user_write: { foreground: DarkGray }
+    user_executable_file: { foreground: DarkGray }
+    user_execute_other: { foreground: DarkGray }
+    group_read: { foreground: DarkGray }
+    group_write: { foreground: DarkGray }
+    group_execute: { foreground: DarkGray }
+    other_read: { foreground: DarkGray }
+    other_write: { foreground: DarkGray }
+    other_execute: { foreground: DarkGray }
+    special_user_file: { foreground: DarkGray }
+    special_other: { foreground: DarkGray }
+    attribute: { foreground: DarkGray }

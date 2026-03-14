@@ -1,300 +1,189 @@
 {
-  "version": 1,
-  "theme": "dark",
-  "editor": {
-    "cursor_style": "blinking_bar",
-    "show_menu_bar": false,
-    "show_tab_bar": false,
-    "show_status_bar": true,
-    "rulers": [
-      80
+    "version": 1,
+    "theme": "dark",
+    "editor": {
+        "cursor_style": "blinking_bar",
+        "show_menu_bar": false,
+        "show_tab_bar": false,
+        "show_status_bar": true,
+        "rulers": [80]
+    },
+    "file_explorer": { "show_hidden": true },
+    "file_browser": { "show_hidden": true },
+    "keybindings": [
+        { "key": "w", "modifiers": ["ctrl"], "action": "expand_selection" },
+        {
+            "key": "a",
+            "modifiers": ["alt"],
+            "action": "quick_open",
+            "when": "global"
+        },
+        {
+            "key": ";",
+            "modifiers": ["alt"],
+            "action": "open_keybinding_editor",
+            "when": "global"
+        },
+        {
+            "key": "'",
+            "modifiers": ["alt"],
+            "action": "open_settings",
+            "when": "global"
+        },
+        {
+            "key": "1",
+            "modifiers": ["alt"],
+            "action": "toggle_file_explorer",
+            "when": "file_explorer"
+        },
+        {
+            "key": "1",
+            "modifiers": ["alt"],
+            "action": "noop",
+            "when": "normal"
+        },
+        {
+            "key": "F7",
+            "modifiers": ["alt", "shift"],
+            "action": "noop",
+            "when": "normal"
+        },
+        {
+            "key": "1",
+            "modifiers": ["alt"],
+            "action": "toggle_file_explorer",
+            "when": "normal"
+        },
+        { "key": "-", "modifiers": ["alt"], "action": "toggle_tab_bar" },
+        {
+            "key": "F7",
+            "modifiers": ["alt", "shift"],
+            "action": "menu_open",
+            "when": "global"
+        },
+        {
+            "key": "v",
+            "modifiers": ["alt"],
+            "action": "add_cursor_next_match",
+            "when": "global"
+        },
+        {
+            "key": "F7",
+            "modifiers": ["alt", "shift"],
+            "action": "add_cursor_next_match",
+            "when": "normal"
+        },
+        {
+            "key": "PageDown",
+            "modifiers": ["ctrl", "alt"],
+            "action": "find_next",
+            "when": "normal"
+        },
+        {
+            "key": "PageUp",
+            "modifiers": ["ctrl", "alt"],
+            "action": "find_previous",
+            "when": "normal"
+        },
+        {
+            "key": "Left",
+            "modifiers": ["ctrl", "alt"],
+            "action": "prev_buffer",
+            "when": "normal"
+        },
+        {
+            "key": "Right",
+            "modifiers": ["ctrl", "alt"],
+            "action": "next_buffer",
+            "when": "normal"
+        },
+        {
+            "key": "b",
+            "modifiers": ["ctrl"],
+            "action": "goto_matching_bracket",
+            "when": "normal"
+        },
+        {
+            "key": "F7",
+            "modifiers": ["alt", "shift"],
+            "action": "toggle_file_explorer",
+            "when": "file_explorer"
+        },
+        {
+            "key": "F7",
+            "modifiers": ["alt", "shift"],
+            "action": "toggle_file_explorer",
+            "when": "normal"
+        },
+        {
+            "key": "]",
+            "modifiers": ["ctrl"],
+            "action": "noop",
+            "when": "normal"
+        },
+        {
+            "key": "x",
+            "modifiers": ["ctrl", "alt"],
+            "action": "close_tab",
+            "when": "normal"
+        },
+        {
+            "key": "i",
+            "modifiers": ["alt"],
+            "action": "toggle_search_case_sensitive",
+            "when": "prompt"
+        },
+        {
+            "key": "l",
+            "modifiers": ["alt"],
+            "action": "toggle_search_confirm_each",
+            "when": "prompt"
+        },
+        {
+            "key": "u",
+            "modifiers": ["alt"],
+            "action": "toggle_search_whole_word",
+            "when": "prompt"
+        },
+        {
+            "key": "y",
+            "modifiers": ["alt"],
+            "action": "toggle_search_regex",
+            "when": "prompt"
+        },
+        {
+            "key": "g",
+            "modifiers": ["alt"],
+            "action": "lsp_goto_definition",
+            "when": "global"
+        },
+        {
+            "key": "e",
+            "modifiers": ["alt"],
+            "action": "focus_editor",
+            "when": "global"
+        },
+        { "key": "x", "modifiers": ["ctrl"], "action": "delete_line" },
+        { "key": "t", "modifiers": ["ctrl", "alt"], "action": "sort_lines" },
+        {
+            "key": "Down",
+            "modifiers": ["ctrl", "shift"],
+            "action": "move_line_down",
+            "when": "normal"
+        },
+        {
+            "key": "Up",
+            "modifiers": ["ctrl", "shift"],
+            "action": "move_line_up",
+            "when": "normal"
+        },
+        { "key": "d", "modifiers": ["ctrl"], "action": "duplicate_line" },
+        { "key": "d", "modifiers": ["alt"], "action": "format_buffer" },
+        {
+            "key": "Enter",
+            "modifiers": ["shift"],
+            "action": "file_explorer_open",
+            "when": "file_explorer"
+        }
     ]
-  },
-  "file_explorer": {
-    "show_hidden": true
-  },
-  "file_browser": {
-    "show_hidden": true
-  },
-  "keybindings": [
-    {
-      "key": "w",
-      "modifiers": [
-        "ctrl"
-      ],
-      "action": "expand_selection"
-    },
-    {
-      "key": "a",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "quick_open",
-      "when": "global"
-    },
-    {
-      "key": ";",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "open_keybinding_editor",
-      "when": "global"
-    },
-    {
-      "key": "'",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "open_settings",
-      "when": "global"
-    },
-    {
-      "key": "1",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_file_explorer",
-      "when": "file_explorer"
-    },
-    {
-      "key": "1",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "noop",
-      "when": "normal"
-    },
-    {
-      "key": "F7",
-      "modifiers": [
-        "alt",
-        "shift"
-      ],
-      "action": "noop",
-      "when": "normal"
-    },
-    {
-      "key": "1",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_file_explorer",
-      "when": "normal"
-    },
-    {
-      "key": "-",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_tab_bar"
-    },
-    {
-      "key": "F7",
-      "modifiers": [
-        "alt",
-        "shift"
-      ],
-      "action": "menu_open",
-      "when": "global"
-    },
-    {
-      "key": "v",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "add_cursor_next_match",
-      "when": "global"
-    },
-    {
-      "key": "F7",
-      "modifiers": [
-        "alt",
-        "shift"
-      ],
-      "action": "add_cursor_next_match",
-      "when": "normal"
-    },
-    {
-      "key": "PageDown",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "find_next",
-      "when": "normal"
-    },
-    {
-      "key": "PageUp",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "find_previous",
-      "when": "normal"
-    },
-    {
-      "key": "Left",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "prev_buffer",
-      "when": "normal"
-    },
-    {
-      "key": "Right",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "next_buffer",
-      "when": "normal"
-    },
-    {
-      "key": "b",
-      "modifiers": [
-        "ctrl"
-      ],
-      "action": "goto_matching_bracket",
-      "when": "normal"
-    },
-    {
-      "key": "F7",
-      "modifiers": [
-        "alt",
-        "shift"
-      ],
-      "action": "toggle_file_explorer",
-      "when": "file_explorer"
-    },
-    {
-      "key": "F7",
-      "modifiers": [
-        "alt",
-        "shift"
-      ],
-      "action": "toggle_file_explorer",
-      "when": "normal"
-    },
-    {
-      "key": "]",
-      "modifiers": [
-        "ctrl"
-      ],
-      "action": "noop",
-      "when": "normal"
-    },
-    {
-      "key": "x",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "close_tab",
-      "when": "normal"
-    },
-    {
-      "key": "i",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_search_case_sensitive",
-      "when": "prompt"
-    },
-    {
-      "key": "l",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_search_confirm_each",
-      "when": "prompt"
-    },
-    {
-      "key": "u",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_search_whole_word",
-      "when": "prompt"
-    },
-    {
-      "key": "y",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "toggle_search_regex",
-      "when": "prompt"
-    },
-    {
-      "key": "g",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "lsp_goto_definition",
-      "when": "global"
-    },
-    {
-      "key": "e",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "focus_editor",
-      "when": "global"
-    },
-    {
-      "key": "x",
-      "modifiers": [
-        "ctrl"
-      ],
-      "action": "delete_line"
-    },
-    {
-      "key": "t",
-      "modifiers": [
-        "ctrl",
-        "alt"
-      ],
-      "action": "sort_lines"
-    },
-    {
-      "key": "Down",
-      "modifiers": [
-        "ctrl",
-        "shift"
-      ],
-      "action": "move_line_down",
-      "when": "normal"
-    },
-    {
-      "key": "Up",
-      "modifiers": [
-        "ctrl",
-        "shift"
-      ],
-      "action": "move_line_up",
-      "when": "normal"
-    },
-    {
-      "key": "d",
-      "modifiers": [
-        "ctrl"
-      ],
-      "action": "duplicate_line"
-    },
-    {
-      "key": "d",
-      "modifiers": [
-        "alt"
-      ],
-      "action": "format_buffer"
-    },
-    {
-      "key": "Enter",
-      "modifiers": [
-        "shift"
-      ],
-      "action": "file_explorer_open",
-      "when": "file_explorer"
-    }
-  ]
 }

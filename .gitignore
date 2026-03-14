@@ -18,3 +18,12 @@
 .dotter/local.toml
 .dotter/cache.toml
 .dotter/cache
+
+# Compiled Python
+__pycache__
+*.pyc
+
+# Python venv
+.venv/
+venv/
+wsl_venv/

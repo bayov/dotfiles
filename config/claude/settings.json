@@ -1,23 +1,11 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
-  "permissions": {
-    "allow": [
-      "WebSearch"
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "python3 ~/.claude/statusline.py"
-  },
-  "enabledPlugins": {
-    "rust-analyzer-lsp@claude-plugins-official": true
-  },
-  "sandbox": {
-    "enabled": true,
-    "autoAllowBashIfSandboxed": true
-  }
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+    "attribution": { "commit": "", "pr": "" },
+    "permissions": { "allow": ["WebSearch"] },
+    "statusLine": {
+        "type": "command",
+        "command": "python3 ~/.claude/statusline.py"
+    },
+    "enabledPlugins": { "rust-analyzer-lsp@claude-plugins-official": true },
+    "sandbox": { "enabled": true, "autoAllowBashIfSandboxed": true }
 }
