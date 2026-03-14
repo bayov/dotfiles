@@ -34,6 +34,10 @@ if status is-interactive
         --layout=reverse
         --height=90%
         --preview-window=wrap
+        --bind="ctrl-up:preview-up+preview-up"
+        --bind="ctrl-down:preview-down+preview-down"
+        --bind="ctrl-page-up:preview-half-page-up"
+        --bind="ctrl-page-down:preview-half-page-down"
         --bind="ctrl-alt-c:execute-silent(printf '%s' {+} | clip)"
         --bind="ctrl-y:execute-silent(printf '%s' {+} | clip)"
     '
