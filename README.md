@@ -9,6 +9,7 @@ Requirements
   * Dotter — https://github.com/SuperCuber/dotter — `cargo install dotter`
   * Jujutsu — https://jj-vcs.github.io/jj/latest/install-and-setup/ — `cargo install --bin jj jj-cli`
   * jj-starship — https://github.com/dmmulroy/jj-starship — `cargo install jj-starship`
+  * gg — https://github.com/gulbanana/gg — `cargo install gg-cli`
   * Fish — https://fishshell.com/
   * Starship — https://starship.rs/ — `curl -sS https://starship.rs/install.sh | sh`
   * Zellij — https://zellij.dev/documentation/installation.html — `cargo install zellij`
@@ -73,7 +74,7 @@ curl -sS https://starship.rs/install.sh | sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install cargo tools
-cargo install dotter jj-cli jj-starship zellij eza bat git-delta cargo-update fresh
+cargo install dotter jj-cli jj-starship gg-cli zellij eza bat git-delta cargo-update fresh
 
 # install cargo-binstall
 curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
