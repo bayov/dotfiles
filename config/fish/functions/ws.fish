@@ -26,7 +26,7 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                         echo "    }"
                         echo "}"
                     end > "$layout_file"
-                    zellij action new-tab --name "$name" --layout "$layout_file"
+                    zellij action new-tab --name "ws/$name" --layout "$layout_file"
                 end
             end
 
