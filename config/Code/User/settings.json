@@ -35,6 +35,7 @@
     "editor.fontFamily": "JetBrains Mono NL, Arial",
     "editor.fontLigatures": false,
     "editor.fontSize": 13,
+    "editor.lineHeight": 1.4,
     "editor.inlayHints.fontSize": 11,
     // By hiding commandCenter and layoutControl from top menu bar, entering
     // full-screen mode will completely hide the top-bar.
