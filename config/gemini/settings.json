@@ -28,7 +28,8 @@
         "hideTips": true,
         "useAlternateBuffer": true,
         "incrementalRendering": true,
-        "hideFooter": false
+        "hideFooter": false,
+        "theme": "Atom One"
     },
     "tools": { "shell": { "showColor": true }, "autoAccept": true },
     "experimental": { "skills": true }
