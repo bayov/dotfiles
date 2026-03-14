@@ -193,6 +193,74 @@ def log_stats(
     update_aggregated_stats(selected_models, winner, duration, failed_models)
 
 
+def print_stats() -> None:
+    """
+    Prints aggregated statistics for all models in a pretty, colorized table.
+    """
+    if not AGGREGATED_STATS_FILE.exists():
+        print("No statistics found.")
+        return
+
+    with open(AGGREGATED_STATS_FILE, "r") as f:
+        try:
+            # Shared lock for reading
+            fcntl.flock(f, fcntl.LOCK_SH)
+            data: Dict[str, Any] = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            print("Error: Could not read statistics.")
+            return
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+    if not data:
+        print("No statistics recorded yet.")
+        return
+
+    # Sort models by average duration (fastest first)
+    # Models with no wins are placed at the end
+    sorted_items = sorted(
+        data.items(),
+        key=lambda item: item[1]["avg"] if item[1]["wins"] > 0 else 1e9,
+    )
+
+    # Header
+    print(
+        f"\033[1m{'Model':<35} | {'Avg':>7} | {'Med':>7} | {'Win Rate':>10} | {'Fails':>5} | {'Min/Max':>13}\033[0m"
+    )
+    print("-" * 92)
+
+    for model, stats in sorted_items:
+        runs = stats.get("runs", 0)
+        wins = stats.get("wins", 0)
+        fails = stats.get("fails", 0)
+        avg = stats.get("avg", 0)
+        median = stats.get("median", 0)
+        min_val = stats.get("min", 0)
+        max_val = stats.get("max", 0)
+
+        win_rate = f"{wins}/{runs}"
+
+        # Formatting values
+        avg_str = f"{avg:.3f}s" if wins > 0 else "N/A"
+        med_str = f"{median:.3f}s" if wins > 0 else "N/A"
+        min_max_str = f"{min_val:.2f}s/{max_val:.2f}s" if wins > 0 else "N/A"
+
+        # Colors
+        model_color = "\033[36m"  # Cyan
+        avg_color = "\033[32m" if wins > 0 else "\033[90m"  # Green / Gray
+        fail_color = "\033[31m" if fails > 0 else ""  # Red if > 0
+        reset = "\033[0m"
+
+        print(
+            f"{model_color}{model:<35}{reset} | "
+            f"{avg_color}{avg_str:>7}{reset} | "
+            f"{med_str:>7} | "
+            f"{win_rate:>10} | "
+            f"{fail_color}{fails:>5}{reset} | "
+            f"{min_max_str:>13}"
+        )
+
+
 # --- Core Logic ---
 
 
@@ -420,6 +488,11 @@ def main() -> None:
         action="store_true",
         help="Ping all models in the pool to verify functionality.",
     )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Print aggregated model statistics.",
+    )
 
     args = parser.parse_args()
 
@@ -428,6 +501,10 @@ def main() -> None:
 
     if args.ping_models:
         asyncio.run(verify_models())
+        sys.exit(0)
+
+    if args.stats:
+        print_stats()
         sys.exit(0)
 
     if args.prompt:
