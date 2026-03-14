@@ -80,7 +80,11 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
         and jj git push --quiet
         and echo (set_color green) ✓ pushed main(set_color normal)
         and echo
-        and git checkout main --quiet
+        and begin
+            if command git rev-parse --is-inside-work-tree >/dev/null 2>&1
+                git checkout main --quiet
+            end
+        end
     else
         echo "Error: not personal a project (missing $root/.bayov-personal-project)"
         return 1
