@@ -61,6 +61,8 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
 
     # If it's a personal project, push parent commit as main git branch
     if test -f "$root/.bayov-personal-project"
+        test_personal_project || return $status
+
         # Check if `main` bookmark is already at parent (`@-`)
         if not test -z (jj log -r "main & @-" -T 1 --no-graph)
             echo (set_color yellow)Warning: (set_color normal)Nothing to push
