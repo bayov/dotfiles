@@ -4,6 +4,15 @@ Write a commit message for the following git diff:
 {{diff}}
 </git-diff>
 
+Important: Don't wrap your response in triple backticks or xml tags. Example
+response (without `<example-response>` tags):
+
+<example-response>
+feat(lang): add Polish language
+</example-response>
+
+---
+
 Follow the Conventional Commits specification:
 
 The Conventional Commits specification is a lightweight convention on top of
