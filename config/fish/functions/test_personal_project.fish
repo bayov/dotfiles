@@ -9,7 +9,7 @@ function test_personal_project
     if test -f "$marker"; and test -f "$test_script"
         echo -e "\e[35mTesting...\e[0m"
         uv run "$test_script" --quiet
-        set -l result=$status
+        set -l result $status
         echo
         return $result
     end
