@@ -19,7 +19,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
 
     set -fx fzf_jj_status_command jj diff --summary --color=always
 
-    set -f fzf_directory_header "[Ctrl+R] Restore file"
+    set -f fzf_directory_header "[Ctrl+E] Edit file · [Ctrl+R] Restore file"
 
     set -f selected_paths (
         eval "$fzf_jj_status_command" |
@@ -33,7 +33,8 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
             --preview-window bottom:80% \
             --nth="2.." \
             --height=100% \
-            --bind="ctrl-r:execute(echo {} | awk '{print \$2}' | xargs jj restore)+reload(fish -c '$fzf_jj_status_command')" \
+            --bind="ctrl-e:execute($EDITOR (_fzf_parse_jj_diff_path {}))+abort" \
+            --bind="ctrl-r:execute(jj restore (_fzf_parse_jj_diff_path {}))+reload(fish -c '$fzf_jj_status_command')" \
             $fzf_jj_status_opts
     )
     if test $status -eq 0
