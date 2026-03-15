@@ -13,6 +13,7 @@ function format_personal_project
     if test -f "$marker"; and test -f "$format_script"
         echo -e "\e[35mFormatting...\e[0m"
         uv run "$format_script" --all-tracked --log MODIFIED --log SUMMARY
+        return $status
     end
 
     return 0
