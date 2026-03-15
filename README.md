@@ -4,6 +4,8 @@ Requirements
 - **Linux requirements**
   - Rust & Cargo — https://www.rust-lang.org/tools/install —
     `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  - sccache — https://github.com/mozilla/sccache —
+    `cargo install sccache --features=all`
   - uv — https://docs.astral.sh/uv/ —
     `curl -LsSf https://astral.sh/uv/install.sh | sh`
   - fnm (for Node.js) — https://fnm.vercel.app —
@@ -89,6 +91,9 @@ curl -sS https://starship.rs/install.sh | sh
 
 # install rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# install sccache
+cargo install sccache --features=all
 
 # install cargo tools
 cargo install dotter jj-cli jj-starship zellij eza bat git-delta cargo-update fresh-editor

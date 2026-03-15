@@ -75,6 +75,9 @@ alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 # Environment Variables
 set -gx EDITOR fresh
 set -gx PNPM_HOME "$HOME/.local/share/pnpm"
+set -gx RUSTC_WRAPPER sccache
+set -fx SCCACHE_DIR "$HOME/.cache/sccache"
+set -gx SCCACHE_CACHE_SIZE "25GB"
 set -gx generate_commit_message_template "$HOME/.config/resources/generate_commit_template.md"
 
 # $PATH
@@ -84,4 +87,3 @@ fish_add_path /snap/bin
 fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/pnpm
 fish_add_path ~/.opencode/bin
-
