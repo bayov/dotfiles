@@ -36,8 +36,7 @@ Requirements
   - btop — https://github.com/aristocratos/btop — `sudo apt install btop`
   - cargo-binstall — https://github.com/cargo-bins/cargo-binstall —
     `curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash`
-  - cargo-update — https://github.com/nabijaczleweli/cargo-update — cargo
-    install cargo-update`
+  - cargo-update — https://github.com/nabijaczleweli/cargo-update — `cargo install cargo-update`
   - dprint — https://dprint.dev/ — `uv tool install dprint-py`
   - gum — https://github.com/charmbracelet/gum
   - Fresh editor — https://getfresh.dev/ — `cargo install fresh-editor`
