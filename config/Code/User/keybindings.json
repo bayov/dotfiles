@@ -1349,5 +1349,12 @@
         "when": "searchViewletFocus"
     },
     { "key": "shift+alt+x", "command": "workbench.action.reopenClosedEditor" },
-    { "key": "ctrl+shift+t", "command": "-workbench.action.reopenClosedEditor" }
+    {
+        "key": "ctrl+shift+t",
+        "command": "-workbench.action.reopenClosedEditor"
+    },
+    { "key": "ctrl+shift+r", "command": "rifler.openReplace" },
+    { "key": "ctrl+alt+r", "command": "-rifler.openReplace" },
+    { "key": "ctrl+shift+f", "command": "rifler.open" },
+    { "key": "ctrl+alt+f", "command": "-rifler.open" }
 ]

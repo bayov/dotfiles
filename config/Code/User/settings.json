@@ -214,6 +214,10 @@
     // --------------------------------------------------------------------------
     // Misc
     // --------------------------------------------------------------------------
+    "diffEditor.renderSideBySide": false,
+    // Rifler (project text search)
+    "rifler.panelLocation": "window",
+    "rifler.searchHistory.maxEntries": 20,
     // JSON schema validation
     "json.schemaDownload.trustedDomains": {
         "https://schemastore.azurewebsites.net/": true,

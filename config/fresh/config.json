@@ -184,6 +184,13 @@
             "modifiers": ["shift"],
             "action": "file_explorer_open",
             "when": "file_explorer"
+        },
+        { "key": "x", "modifiers": ["ctrl"], "action": "cut" },
+        {
+            "key": "x",
+            "modifiers": ["ctrl"],
+            "action": "noop",
+            "when": "prompt"
         }
     ]
 }
