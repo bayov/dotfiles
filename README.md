@@ -125,7 +125,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install dprint-py
 
 # install node-based tools
-pnpm add -g @anthropic-ai/claude-code @anthropic-ai/sandbox-runtime @google/gemini-cli opencode-ai
+pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
 pnpm approve-builds --global --all
 
 # install gum

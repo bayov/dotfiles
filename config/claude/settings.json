@@ -10,7 +10,9 @@
     "sandbox": {
         "enabled": true,
         "autoAllowBashIfSandboxed": true,
-        "filesystem": { "allowWrite": ["~/.cache"] }
+        "network": { "allowedDomains": ["*"] },
+        "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
+        "excludedCommands": ["cargo:*", "sccache:*"]
     },
     "skipDangerousModePermissionPrompt": true
 }

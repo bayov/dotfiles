@@ -19,7 +19,7 @@ function gm --description "Generates AI description for the current commit based
     test -z "$diff" && echo "No changes found." && return 1
 
     # Run my personal formatter
-    format_personal_project
+    format_personal_project || return $status
 
     # Warn if description already exists
     set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
