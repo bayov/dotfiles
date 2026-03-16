@@ -10,7 +10,7 @@
     "sandbox": {
         "enabled": true,
         "autoAllowBashIfSandboxed": true,
-        "filesystem": { "denyWrite": ["~"], "allowWrite": [".claude"] }
+        "filesystem": {}
     },
     "skipDangerousModePermissionPrompt": true
 }
