@@ -10,7 +10,7 @@
     "sandbox": {
         "enabled": true,
         "autoAllowBashIfSandboxed": true,
-        "filesystem": {}
+        "filesystem": { "allowWrite": ["~/.cache"] }
     },
     "skipDangerousModePermissionPrompt": true
 }
