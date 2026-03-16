@@ -5,7 +5,7 @@ if status is-interactive
     abbr -a v fresh
     abbr -a z zellij
     abbr -a fd fdfind
-    abbr -a cl claude --dangerously-skip-permissions
+    abbr -a c claude
     abbr -a g gemini --yolo
     abbr -a oc opencode
     abbr -a ll l

@@ -7,5 +7,10 @@
         "command": "python3 ~/.claude/statusline.py"
     },
     "enabledPlugins": { "rust-analyzer-lsp@claude-plugins-official": true },
-    "sandbox": { "enabled": true, "autoAllowBashIfSandboxed": true }
+    "sandbox": {
+        "enabled": true,
+        "autoAllowBashIfSandboxed": true,
+        "filesystem": { "denyWrite": ["~"], "allowWrite": ".claude" }
+    },
+    "skipDangerousModePermissionPrompt": true
 }
