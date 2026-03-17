@@ -45,6 +45,4 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
 
         commandline --current-token --replace -- (string escape -- $cleaned_paths | string join ' ')
     end
-
-    commandline --function repaint
 end
