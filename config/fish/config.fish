@@ -15,6 +15,7 @@ if status is-interactive
     alias zl="zellij list-sessions"
     alias zka="zellij kill-all-sessions"
     alias hm="history merge"
+    alias ide="/mnt/c/Programs/VS\ Code/Code.exe"
 
     # Initialize prompt
     starship init fish | source
