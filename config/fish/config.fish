@@ -3,12 +3,12 @@ if status is-interactive
     abbr -a !! --position anywhere --function last_history_item
     abbr -a r reload
     abbr -a v fresh
+    abbr -a ll l
     abbr -a z zellij
     abbr -a fd fdfind
     abbr -a c claude --dangerously-skip-permissions
     abbr -a g gemini --yolo
     abbr -a oc opencode
-    abbr -a ll l
 
     # Aliases
     alias za="zellij attach default --create"
