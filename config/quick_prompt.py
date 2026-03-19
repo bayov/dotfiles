@@ -20,11 +20,10 @@ AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
 MODELS_CONFIG_FILE: Path = Path.home() / ".config/quick_prompt_models.json"
 
 
-def load_model_pool() -> List[str]:
-    """Loads the model pool from the configuration file."""
+def get_model_config() -> List[Dict[str, Any]]:
+    """Loads the model configuration from the configuration file."""
     # Priority: ~/.config/quick_prompt_models.json (deployed)
     # Then: same directory as script (local repo)
-    # Then: fallback defaults
     search_paths = [
         MODELS_CONFIG_FILE,
         Path(__file__).parent / "quick_prompt_models.json",
@@ -32,21 +31,35 @@ def load_model_pool() -> List[str]:
 
     config_file = next((p for p in search_paths if p.exists()), None)
 
-    if config_file:
-        try:
-            with open(config_file, "r") as f:
-                config = json.load(f)
-                return [m["model"] for m in config if m.get("enabled", True)]
-        except (json.JSONDecodeError, IOError, KeyError):
-            pass
+    if not config_file:
+        print(
+            f"Error: Configuration file not found in: {[str(p) for p in search_paths]}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    return [
-        "opencode/big-pickle",
-        "opencode/gpt-5-nano",
-        "opencode/mimo-v2-flash-free",
-        "opencode/minimax-m2.5-free",
-        "opencode/nemotron-3-super-free",
-    ]
+    try:
+        with open(config_file, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(
+            f"Error: Failed to load configuration from {config_file}: {e}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def load_model_pool() -> List[str]:
+    """Loads the model pool from the configuration file."""
+    config = get_model_config()
+    pool = [m["model"] for m in config if m.get("enabled", True)]
+    if not pool:
+        print(
+            "Error: No models are enabled in the configuration.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return pool
 
 
 MODEL_POOL: List[str] = load_model_pool()
@@ -291,6 +304,27 @@ def print_stats() -> None:
         print("No statistics recorded yet.")
         return
 
+    # Get all configured models to ensure they are represented in the table
+    model_config = get_model_config()
+    enabled_models = {
+        m["model"] for m in model_config if m.get("enabled", True)
+    }
+
+    # Ensure all configured models are in data, even if they haven't run yet
+    for m_info in model_config:
+        model_name = m_info["model"]
+        if model_name not in data:
+            data[model_name] = {
+                "runs": 0,
+                "wins": 0,
+                "fails": 0,
+                "last_run_results": [],
+                "avg": 0,
+                "min": None,
+                "max": 0,
+                "histogram": {},
+            }
+
     # Sort models by average duration in the rolling window (fastest first)
     # Models with no wins in the window are placed at the end
     def get_window_avg(stats):
@@ -312,29 +346,42 @@ def print_stats() -> None:
     reset = "\033[0m"
     gray = "\033[90m"  # Gray for borders and timestamps
 
-    history_col_width = 40 + STATS_HISTORY_COUNT
+    # Calculate column widths
+    model_names = [m["model"] for m in model_config]
+    any_disabled = any(not m.get("enabled", True) for m in model_config)
+    model_col_width = max(
+        max(len(name) for name in model_names) + (11 if any_disabled else 0),
+        len("Model"),
+    )
+    avg_col_width = 7  # Sufficient for "12.345s"
+    history_col_width = (
+        19 + 1 + STATS_HISTORY_COUNT + 1 + 19
+    )  # timestamps (19) + spaces (1) + symbols
+
+    model_sep_width = model_col_width + 2
+    avg_sep_width = avg_col_width + 2
     history_sep_width = history_col_width + 2
 
     # Header
     print(
         f"{gray}┌"
-        + "─" * 37
+        + "─" * model_sep_width
         + "┬"
-        + "─" * 9
+        + "─" * avg_sep_width
         + "┬"
         + "─" * history_sep_width
         + f"┐{reset}"
     )
     print(
-        f"{gray}│{reset} \033[1m{'Model':<35}\033[0m {gray}│{reset} "
-        f"\033[1m{'Avg':>7}\033[0m {gray}│{reset} "
+        f"{gray}│{reset} \033[1m{'Model':<{model_col_width}}\033[0m {gray}│{reset} "
+        f"\033[1m{'Avg':>{avg_col_width}}\033[0m {gray}│{reset} "
         f"\033[1m{'History':<{history_col_width}}\033[0m {gray}│{reset}"
     )
     print(
         f"{gray}├"
-        + "─" * 37
+        + "─" * model_sep_width
         + "┼"
-        + "─" * 9
+        + "─" * avg_sep_width
         + "┼"
         + "─" * history_sep_width
         + f"┤{reset}"
@@ -430,18 +477,26 @@ def print_stats() -> None:
         padding = " " * (STATS_HISTORY_COUNT - num_symbols)
         combined_history = f"{gray}{first_ts}{reset} {history_graph}{padding} {gray}{last_ts}{reset}"
 
+        # Model display name and color (gray if disabled)
+        is_enabled = model in enabled_models
+        display_name = model
+        name_color = model_color
+        if not is_enabled:
+            display_name = f"{model} (disabled)"
+            name_color = gray
+
         print(
-            f"{gray}│{reset} {model_color}{model:<35}{reset} {gray}│{reset} "
-            f"{avg_color}{avg_str:>7}{reset} {gray}│{reset} "
+            f"{gray}│{reset} {name_color}{display_name:<{model_col_width}}{reset} {gray}│{reset} "
+            f"{avg_color}{avg_str:>{avg_col_width}}{reset} {gray}│{reset} "
             f"{combined_history} {gray}│{reset}"
         )
 
         if i < len(sorted_items) - 1:
             print(
                 f"{gray}├"
-                + "─" * 37
+                + "─" * model_sep_width
                 + "┼"
-                + "─" * 9
+                + "─" * avg_sep_width
                 + "┼"
                 + "─" * history_sep_width
                 + f"┤{reset}"
@@ -449,9 +504,9 @@ def print_stats() -> None:
         else:
             print(
                 f"{gray}└"
-                + "─" * 37
+                + "─" * model_sep_width
                 + "┴"
-                + "─" * 9
+                + "─" * avg_sep_width
                 + "┴"
                 + "─" * history_sep_width
                 + f"┘{reset}"
