@@ -347,10 +347,8 @@ def print_stats() -> None:
     gray = "\033[90m"  # Gray for borders and timestamps
 
     # Gradient colors (RGB)
-    # 0th percentile (Warm Green)
-    G0_R, G0_G, G0_B = 197, 206, 114
-    # 100th percentile (Warm Yellow)
-    G100_R, G100_G, G100_B = 255, 210, 124
+    G0_R, G0_G, G0_B = 131, 206, 56  # 0th percentile (Warm Green)
+    G100_R, G100_G, G100_B = 255, 210, 124  # 100th percentile (Warm Yellow)
 
     # Calculate column widths
     model_names = [m["model"] for m in model_config]
@@ -393,14 +391,26 @@ def print_stats() -> None:
         + f"┤{reset}"
     )
 
-    # Collect all successful durations across all models for global percentile comparison
+    # Collect all successful durations across all models for global percentile comparison (History graph)
     all_durations = []
+    # Also collect all non-zero averages for a separate Avg distribution
+    all_averages = []
+
     for m, s in data.items():
-        for res in s.get("last_run_results", []):
-            if res.get("error") is None:
-                all_durations.append(res["duration"])
+        results = s.get("last_run_results", [])
+        win_durations = [
+            r["duration"] for r in results if r.get("error") is None
+        ]
+        if win_durations:
+            avg = sum(win_durations) / len(win_durations)
+            all_averages.append(avg)
+            all_durations.extend(win_durations)
+
     all_durations.sort()
     global_n = len(all_durations)
+
+    all_averages.sort()
+    avg_n = len(all_averages)
 
     for i, (model, stats) in enumerate(sorted_items):
         results = stats.get("last_run_results", [])
@@ -414,9 +424,21 @@ def print_stats() -> None:
         avg_str = f"{avg:.3f}s" if wins_in_window > 0 else "N/A"
 
         # Colors
-        avg_color = (
-            "\033[32m" if wins_in_window > 0 else "\033[90m"
-        )  # Green / Gray
+        if wins_in_window > 0 and avg_n > 0:
+            # Color Avg using its own separate distribution
+            avg_rank = bisect.bisect_right(all_averages, avg)
+            if avg_n > 1:
+                avg_percentile = ((avg_rank - 1) / (avg_n - 1)) * 100
+            else:
+                avg_percentile = 0
+
+            avg_ratio = avg_percentile / 100
+            avg_r = int(G0_R + (G100_R - G0_R) * avg_ratio)
+            avg_g = int(G0_G + (G100_G - G0_G) * avg_ratio)
+            avg_b = int(G0_B + (G100_B - G0_B) * avg_ratio)
+            avg_color = f"\033[38;2;{avg_r};{avg_g};{avg_b}m"
+        else:
+            avg_color = gray  # Gray for N/A or no successes
 
         # History graph and timestamps
         history_graph = ""
@@ -461,8 +483,8 @@ def print_stats() -> None:
                         rank = bisect.bisect_right(all_durations, d)
 
                         # Percentile rank (0 to 100) mapped such that:
-                        # Fastest success is 0% (Warm Green)
-                        # Slowest success is 100% (Warm Red)
+                        # Fastest success is 0%
+                        # Slowest success is 100%
                         if global_n > 1:
                             percentile = ((rank - 1) / (global_n - 1)) * 100
                         else:
@@ -471,8 +493,7 @@ def print_stats() -> None:
                         # Bucket index (0 to 6) for symbol selection
                         bucket = min(int(percentile // (100 / 7)), 6)
 
-                        # Gradient from Warm Green (G0) to Warm Orange (G100)
-                        # This makes the 100th percentile color what the 50th was previously.
+                        # Gradient from 0th percentile to 100th percentile RGB
                         ratio = percentile / 100
                         r = int(G0_R + (G100_R - G0_R) * ratio)
                         g = int(G0_G + (G100_G - G0_G) * ratio)
