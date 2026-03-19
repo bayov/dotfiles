@@ -218,6 +218,7 @@
     // Rifler (project text search)
     "rifler.panelLocation": "window",
     "rifler.searchHistory.maxEntries": 20,
+    "telemetry.telemetryLevel": "off",
     // JSON schema validation
     "json.schemaDownload.trustedDomains": {
         "https://schemastore.azurewebsites.net/": true,
