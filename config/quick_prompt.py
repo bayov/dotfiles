@@ -346,6 +346,12 @@ def print_stats() -> None:
     reset = "\033[0m"
     gray = "\033[90m"  # Gray for borders and timestamps
 
+    # Gradient colors (RGB)
+    # 0th percentile (Warm Green)
+    G0_R, G0_G, G0_B = 197, 206, 114
+    # 100th percentile (Warm Yellow)
+    G100_R, G100_G, G100_B = 255, 210, 124
+
     # Calculate column widths
     model_names = [m["model"] for m in model_config]
     any_disabled = any(not m.get("enabled", True) for m in model_config)
@@ -443,35 +449,42 @@ def print_stats() -> None:
 
             if global_n > 0:
                 symbols = ["▂", "▃", "▄", "▅", "▆", "▇", "█"]
-                colors = [
-                    "\033[32m",  # Green
-                    "\033[32m",
-                    "\033[92m",  # Light Green
-                    "\033[93m",  # Light Yellow
-                    "\033[33m",  # Yellow
-                    "\033[33m",
-                    "\033[33m",
-                ]
 
                 for res in recent:
                     if res.get("error") is not None:
-                        history_graph += "\033[31m█\033[0m"
+                        # Red 'x' for failure (True Color 255, 0, 0)
+                        history_graph += "\033[38;2;222;112;112m█\033[0m"
                     else:
                         d = res["duration"]
-                        # Find rank in global distribution
-                        rank = bisect.bisect_left(all_durations, d)
-                        # Percentile rank (0 to 100)
-                        percentile = (rank / global_n) * 100
-                        # Bucket index (0 to 6)
+                        # Find rank in global distribution using bisect_right to ensure
+                        # identical max values all reach the 100th percentile.
+                        rank = bisect.bisect_right(all_durations, d)
+
+                        # Percentile rank (0 to 100) mapped such that:
+                        # Fastest success is 0% (Warm Green)
+                        # Slowest success is 100% (Warm Red)
+                        if global_n > 1:
+                            percentile = ((rank - 1) / (global_n - 1)) * 100
+                        else:
+                            percentile = 0
+
+                        # Bucket index (0 to 6) for symbol selection
                         bucket = min(int(percentile // (100 / 7)), 6)
-                        history_graph += (
-                            f"{colors[bucket]}{symbols[bucket]}\033[0m"
-                        )
+
+                        # Gradient from Warm Green (G0) to Warm Orange (G100)
+                        # This makes the 100th percentile color what the 50th was previously.
+                        ratio = percentile / 100
+                        r = int(G0_R + (G100_R - G0_R) * ratio)
+                        g = int(G0_G + (G100_G - G0_G) * ratio)
+                        b = int(G0_B + (G100_B - G0_B) * ratio)
+                        color = f"\033[38;2;{r};{g};{b}m"
+
+                        history_graph += f"{color}{symbols[bucket]}\033[0m"
             else:
                 # All fails in recent history
                 for res in recent:
                     if res.get("error") is not None:
-                        history_graph += "\033[31m█\033[0m"
+                        history_graph += "\033[38;2;255;0;0mx\033[0m"
 
         # Pad history graph to STATS_HISTORY_COUNT spaces
         padding = " " * (STATS_HISTORY_COUNT - num_symbols)
