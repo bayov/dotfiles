@@ -19,9 +19,13 @@ if status is-interactive
     # Initialize prompt
     starship init fish | source
 
-    # Up/Down do a prefix reverse search
-    bind \e\[A history-prefix-search-backward
-    bind \e\[B history-prefix-search-forward
+    # Keybinds
+    bind up             up-or-search
+    bind down           down-or-search
+    bind ctrl-h         backward-kill-word  # ctrl+h == ctrl+backspace
+    bind ctrl-delete    kill-word
+    bind alt-backspace  backward-kill-line
+    bind alt-delete     kill-line
 
     # Silence fish shell greeting
     set -gx fish_greeting
