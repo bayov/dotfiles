@@ -150,6 +150,17 @@ def update_aggregated_stats(
             if len(stats["last_run_results"]) > STATS_ROLLING_WINDOW_SIZE:
                 stats["last_run_results"].pop(0)
 
+            # Recalculate rolling average from window
+            win_durations = [
+                r["duration"]
+                for r in stats["last_run_results"]
+                if r["error"] is None
+            ]
+            if win_durations:
+                stats["avg"] = round(sum(win_durations) / len(win_durations), 3)
+            else:
+                stats["avg"] = 0
+
             if error is None:
                 stats["wins"] += 1
                 d = duration
@@ -158,17 +169,6 @@ def update_aggregated_stats(
                 if stats["min"] is None or d < stats["min"]:
                     stats["min"] = d
                 stats["max"] = max(stats["max"], d)
-
-                # Recalculate rolling average from window
-                win_durations = [
-                    r["duration"]
-                    for r in stats["last_run_results"]
-                    if r["error"] is None
-                ]
-                if win_durations:
-                    stats["avg"] = round(
-                        sum(win_durations) / len(win_durations), 3
-                    )
 
                 # Update Histogram (historical/all-time)
                 bucket = get_histogram_bucket(d)
@@ -266,11 +266,20 @@ def print_stats() -> None:
         print("No statistics recorded yet.")
         return
 
-    # Sort models by average duration (fastest first)
-    # Models with no wins are placed at the end
+    # Sort models by average duration in the rolling window (fastest first)
+    # Models with no wins in the window are placed at the end
+    def get_window_avg(stats):
+        results = stats.get("last_run_results", [])
+        win_durations = [
+            r["duration"] for r in results if r.get("error") is None
+        ]
+        if not win_durations:
+            return 1e9
+        return sum(win_durations) / len(win_durations)
+
     sorted_items = sorted(
         data.items(),
-        key=lambda item: item[1]["avg"] if item[1]["wins"] > 0 else 1e9,
+        key=lambda item: get_window_avg(item[1]),
     )
 
     # Colors
@@ -317,14 +326,19 @@ def print_stats() -> None:
 
     for i, (model, stats) in enumerate(sorted_items):
         results = stats.get("last_run_results", [])
-        wins = len([r for r in results if r.get("error") is None])
-        avg = stats.get("avg", 0)
+        win_durations = [
+            r["duration"] for r in results if r.get("error") is None
+        ]
+        wins_in_window = len(win_durations)
+        avg = sum(win_durations) / wins_in_window if wins_in_window > 0 else 0
 
         # Formatting values
-        avg_str = f"{avg:.3f}s" if wins > 0 else "N/A"
+        avg_str = f"{avg:.3f}s" if wins_in_window > 0 else "N/A"
 
         # Colors
-        avg_color = "\033[32m" if wins > 0 else "\033[90m"  # Green / Gray
+        avg_color = (
+            "\033[32m" if wins_in_window > 0 else "\033[90m"
+        )  # Green / Gray
 
         # History graph and timestamps
         history_graph = ""
