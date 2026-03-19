@@ -1,7 +1,7 @@
 [
     { "model": "opencode/big-pickle", "enabled": true },
     { "model": "opencode/gpt-5-nano", "enabled": true },
-    { "model": "opencode/mimo-v2-flash-free", "enabled": true },
     { "model": "opencode/minimax-m2.5-free", "enabled": true },
-    { "model": "opencode/nemotron-3-super-free", "enabled": true }
+    { "model": "opencode/mimo-v2-flash-free", "enabled": false },
+    { "model": "opencode/nemotron-3-super-free", "enabled": false }
 ]
