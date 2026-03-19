@@ -4,12 +4,13 @@ Write a commit message for the following git diff:
 {{diff}}
 </git-diff>
 
-Important: Don't wrap your response in triple backticks or xml tags. Example
-response (without `<example-response>` tags):
+**IMPORTANT:** Wrap your response in <commit-message> tags. Example:
 
-<example-response>
+```
+<commit-message>
 feat(lang): add Polish language
-</example-response>
+</commit-message>
+```
 
 ---
 
@@ -67,46 +68,59 @@ Examples
 ### Commit message with description and breaking change footer
 
 ```
+<commit-message>
 feat: allow provided config object to extend other configs
 
 BREAKING CHANGE: `extends` key in config file is now used for extending other config files
+</commit-message>
 ```
 
 ### Commit message with `!` to draw attention to breaking change
 
 ```
+<commit-message>
 feat!: send an email to the customer when a product is shipped
+</commit-message>
 ```
 
 ### Commit message with scope and `!` to draw attention to breaking change
 
 ```
+<commit-message>
 feat(api)!: send an email to the customer when a product is shipped
+</commit-message>
 ```
 
 ### Commit message with both `!` and BREAKING CHANGE footer
 
 ```
+</commit-message>
 feat!: drop support for Node 6
 
 BREAKING CHANGE: use JavaScript features not available in Node 6.
+<commit-message>
 ```
 
 ### Commit message with no body
 
 ```
+<commit-message>
 docs: correct spelling of CHANGELOG
+</commit-message>
 ```
 
 ### Commit message with scope
 
 ```
+<commit-message>
 feat(lang): add Polish language
+</commit-message>
 ```
 
 ### Commit message with multi-paragraph body and multiple footers
 
 ```
+<commit-message>
 fix: prevent racing of requests
 
 Introduce a request id and a reference to latest request. Dismiss
@@ -117,6 +131,7 @@ obsolete now.
 
 Reviewed-by: Z
 Refs: #123
+</commit-message>
 ```
 
 Specification
@@ -260,7 +275,9 @@ One recommendation is to use the `revert` type, and a footer that references the
 commit SHAs that are being reverted:
 
 ```
+<commit-message>
 revert: let us never again speak of the noodle incident
 
 Refs: 676104e, a215868
+</commit-message>
 ```

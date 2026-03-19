@@ -34,16 +34,30 @@ function gm --description "Generates AI description for the current commit based
     # Load prompt from template
     set -l prompt (cat "$generate_commit_message_template" | string replace "{{diff}}" "$diff" | string collect)
 
-    # Write prompt to a temporary file because `gum spin` executes its command
-    # in a subshell, and we invoke `fish -c ...`, and passing the $prompt there
-    # will be hard without escaping all `fish` syntax elements.
-    #
-    # This is also good for debugging (can see the last sent prompt).
-    echo -e $prompt > /tmp/generate-commit-desc-prompt
+    set -l temp_dir "/tmp/generate-commit-message"
+    mkdir -p $temp_dir
+    set -l ts (date "+%Y-%m-%d.%H-%M-%S")
+    set -l rid (random)
+    set -l input_file "$temp_dir/$ts.$rid.prompt_input.txt"
+    set -l output_file "$temp_dir/$ts.$rid.prompt_output.txt"
 
-    # show loader while `__generate_commit_message` is running
-    set -l msg (gum spin --title "generating commit message" -- fish -c "cat /tmp/generate-commit-desc-prompt | quick_prompt" | string trim | string collect)
-    test -z "$msg" && return 1
+    # This is also good for debugging (can see the last sent prompt).
+    echo -e $prompt > $input_file
+
+    # show loader while `quick_prompt` is running
+    gum spin --title "generating commit message" -- fish -c "cat $input_file | quick_prompt > $output_file"
+    if test $status -ne 0; or not test -s "$output_file"
+        return 1
+    end
+
+    set -l msg (cat $output_file | perl -0777 -ne 'if (/^.*?<commit-message>\s*(.*?)\s*<\/commit-message>.*?$/s) { print $1; exit 0 } else { exit 1 }' | string trim | string collect)
+
+    if test $status -ne 0
+        echo -e (set_color red)" ✘ Failed to extract commit message prompt output."(set_color normal) >&2
+        echo -e (set_color brblack)"   To debug, see raw prompt output: "(set_color cyan)"$output_file"(set_color normal) >&2
+        echo
+        return 1
+    end
 
     jj describe -m "$msg" --quiet
     
