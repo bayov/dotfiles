@@ -12,8 +12,6 @@ DESCRIPTION
     can be configured using a namesake corresponding option:
         COMMAND            |  DEFAULT KEY SEQUENCE          |  CORRESPONDING OPTION
         Search Directory   |  Alt+F       (F for file)      |  --directory
-        Search Git Log     |  Ctrl+Alt+L  (L for log)       |  --git_log
-        Search Git Status  |  Ctrl+Alt+S  (S for status)    |  --git_status
         Search JJ Log      |  Alt+2       (Same as VSCode)  |  --jj_log
         Search JJ Status   |  Alt+D       (D for Diff)      |  --jj_status
         Search History     |  Ctrl+R      (R for reverse)   |  --history

@@ -14,12 +14,12 @@ function s
 end
 
 function gm --description "Generates AI description for the current commit based on its diff"
+    # Run my personal formatter
+    format_personal_project || return $status
+
     # Get current commit git diff
     set -l diff (jj diff --git | string collect)
     test -z "$diff" && echo "No changes found." && return 1
-
-    # Run my personal formatter
-    format_personal_project || return $status
 
     # Warn if description already exists
     set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
@@ -42,7 +42,7 @@ function gm --description "Generates AI description for the current commit based
     set -l output_file "$temp_dir/$ts.$rid.prompt_output.txt"
 
     # This is also good for debugging (can see the last sent prompt).
-    echo -e $prompt > $input_file
+    echo $prompt > $input_file
 
     # show loader while `quick_prompt` is running
     gum spin --title "generating commit message" -- fish -c "cat $input_file | quick_prompt > $output_file"
@@ -54,7 +54,8 @@ function gm --description "Generates AI description for the current commit based
 
     if test $status -ne 0
         echo -e (set_color red)" ✘ Failed to extract commit message prompt output."(set_color normal) >&2
-        echo -e (set_color brblack)"   To debug, see raw prompt output: "(set_color cyan)"$output_file"(set_color normal) >&2
+        echo -e (set_color brblack)"   Prompt input:  "(set_color cyan)"$input_file"(set_color normal) >&2
+        echo -e (set_color brblack)"   Prompt output: "(set_color cyan)"$output_file"(set_color normal) >&2
         echo
         return 1
     end
