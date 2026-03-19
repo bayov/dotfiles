@@ -80,6 +80,7 @@ depends = [
 
 [quick_prompt.files]
 "config/quick_prompt.py" = "~/.local/share/quick_prompt/quick_prompt.py"
+"config/quick_prompt_models.json" = "~/.config/quick_prompt_models.json"
 
 [starship.files]
 # Using template to force a copy, since we need to override right_prompt in

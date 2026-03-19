@@ -17,14 +17,39 @@ from typing import Any, Dict, List, Optional, Set
 STATS_DIR: Path = Path.home() / ".local/share/quick_prompt"
 DAILY_STATS_DIR: Path = STATS_DIR / "daily"
 AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
+MODELS_CONFIG_FILE: Path = Path.home() / ".config/quick_prompt_models.json"
 
-MODEL_POOL: List[str] = [
-    "opencode/big-pickle",
-    "opencode/gpt-5-nano",
-    "opencode/mimo-v2-flash-free",
-    "opencode/minimax-m2.5-free",
-    "opencode/nemotron-3-super-free",
-]
+
+def load_model_pool() -> List[str]:
+    """Loads the model pool from the configuration file."""
+    # Priority: ~/.config/quick_prompt_models.json (deployed)
+    # Then: same directory as script (local repo)
+    # Then: fallback defaults
+    search_paths = [
+        MODELS_CONFIG_FILE,
+        Path(__file__).parent / "quick_prompt_models.json",
+    ]
+
+    config_file = next((p for p in search_paths if p.exists()), None)
+
+    if config_file:
+        try:
+            with open(config_file, "r") as f:
+                config = json.load(f)
+                return [m["model"] for m in config if m.get("enabled", True)]
+        except (json.JSONDecodeError, IOError, KeyError):
+            pass
+
+    return [
+        "opencode/big-pickle",
+        "opencode/gpt-5-nano",
+        "opencode/mimo-v2-flash-free",
+        "opencode/minimax-m2.5-free",
+        "opencode/nemotron-3-super-free",
+    ]
+
+
+MODEL_POOL: List[str] = load_model_pool()
 
 # Rolling window of results for invoking models. Used to determine which models
 # to select for best latency.
