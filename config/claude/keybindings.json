@@ -7,6 +7,7 @@
             "bindings": {
                 "ctrl+t": "app:toggleTodos",
                 "ctrl+o": "app:toggleTranscript",
+                "ctrl+shift+b": "app:toggleBrief",
                 "ctrl+shift+o": "app:toggleTeammatePreview",
                 "ctrl+r": "history:search"
             }
@@ -15,17 +16,21 @@
             "context": "Chat",
             "bindings": {
                 "escape": "chat:cancel",
+                "ctrl+f": "chat:killAgents",
                 "shift+tab": "chat:cycleMode",
                 "meta+p": "chat:modelPicker",
+                "meta+o": "chat:fastMode",
                 "meta+t": "chat:thinkingToggle",
                 "enter": "chat:submit",
                 "up": "history:previous",
                 "down": "history:next",
                 "ctrl+_": "chat:undo",
                 "ctrl+shift+-": "chat:undo",
-                "ctrl+g": "chat:externalEditor",
+                "alt+e": "chat:externalEditor",
+                "ctrl+g": null,
                 "ctrl+s": "chat:stash",
-                "ctrl+v": "chat:imagePaste"
+                "ctrl+v": "chat:imagePaste",
+                "space": "voice:pushToTalk"
             }
         },
         {
@@ -47,8 +52,8 @@
                 "j": "select:next",
                 "ctrl+p": "select:previous",
                 "ctrl+n": "select:next",
-                "enter": "select:accept",
                 "space": "select:accept",
+                "enter": "settings:close",
                 "/": "settings:search",
                 "r": "settings:retry"
             }
@@ -81,7 +86,8 @@
             "context": "Transcript",
             "bindings": {
                 "ctrl+e": "transcript:toggleShowAll",
-                "escape": "transcript:exit"
+                "escape": "transcript:exit",
+                "q": "transcript:exit"
             }
         },
         {
@@ -90,7 +96,8 @@
                 "ctrl+r": "historySearch:next",
                 "escape": "historySearch:accept",
                 "tab": "historySearch:accept",
-                "enter": "historySearch:execute"
+                "enter": "historySearch:execute",
+                "up": "historySearch:navUp"
             }
         },
         { "context": "Task", "bindings": { "ctrl+b": "task:background" } },
@@ -107,6 +114,7 @@
                 "backspace": "attachments:remove",
                 "delete": "attachments:remove",
                 "down": "attachments:exit",
+                "up": "attachments:toMessages",
                 "escape": "attachments:exit"
             }
         },
@@ -126,6 +134,8 @@
                 "down": "messageSelector:down",
                 "k": "messageSelector:up",
                 "j": "messageSelector:down",
+                "ctrl+p": "messageSelector:up",
+                "ctrl+n": "messageSelector:down",
                 "ctrl+up": "messageSelector:top",
                 "shift+up": "messageSelector:top",
                 "meta+up": "messageSelector:top",
