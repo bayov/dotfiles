@@ -16,9 +16,7 @@
         {
             "context": "Chat",
             "bindings": {
-                "enter": null,
                 "shift+enter": "chat:newline",
-                "ctrl+enter": "chat:submit",
                 "escape": "chat:cancel",
                 "ctrl+f": "chat:killAgents",
                 "shift+tab": "chat:cycleMode",
