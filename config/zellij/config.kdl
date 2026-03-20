@@ -110,8 +110,10 @@ keybinds clear-defaults=true {
     }
     pane {
         bind "Alt s" { SwitchToMode "normal"; }
-        bind "Alt right" { NewPane "right"; SwitchToMode "normal"; }
+        bind "Alt left" { NewPane "left"; SwitchToMode "normal"; }
         bind "Alt down" { NewPane "down"; SwitchToMode "normal"; }
+        bind "Alt up" { NewPane "up"; SwitchToMode "normal"; }
+        bind "Alt right" { NewPane "right"; SwitchToMode "normal"; }
         // Rename
         bind "f2" { SwitchToMode "renamepane"; PaneNameInput 0; }
         bind "f" { ToggleFocusFullscreen; SwitchToMode "normal"; }
