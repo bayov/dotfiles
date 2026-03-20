@@ -6,13 +6,13 @@ function _fzf_search_zellij_paths --description "Search paths in Zellij scrollba
     end
 
     set -f fzf_arguments \
-        --header="[Ctrl+E] Edit file" \
+        --header="[Alt+E] Edit file" \
         --multi \
         --ansi \
         --height=50% \
         --prompt="Zellij Paths ❯ " \
         --preview='_fzf_preview_file {}' \
-        --bind="ctrl-e:execute($EDITOR {})+abort"
+        --bind="alt-e:execute($EDITOR {})+abort"
 
     set -f selected_paths (zellij_scrollback_paths | fzf $fzf_arguments)
 

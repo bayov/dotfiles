@@ -5,13 +5,13 @@ function _fzf_search_directory --description "Search the current directory. Repl
     set -f fd_cmd (command -v fdfind || command -v fd  || echo "fd")
     set -f --append fd_cmd --color=always $fzf_fd_opts
 
-    set -f fzf_directory_header "[Ctrl+E] Edit file"
+    set -f fzf_directory_header "[Alt+E] Edit file"
 
     set -f fzf_arguments \
         --header="$fzf_directory_header" \
         --multi \
         --ansi \
-        --bind="ctrl-e:execute($EDITOR {})+abort" \
+        --bind="alt-e:execute($EDITOR {})+abort" \
         $fzf_directory_opts
 
     set -f token (commandline --current-token)
