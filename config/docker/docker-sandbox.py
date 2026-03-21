@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import shlex
+import argparse
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -57,6 +58,15 @@ OPTIONAL_MOUNTS = [
         "/home/sandbox/.local/share/quick_prompt",
         read_only=False,
     ),
+]
+
+# Environment variables to forward from host to container
+ENV_VARS_TO_FORWARD = [
+    "TERM",
+    "COLORTERM",
+    "LANG",
+    "LC_ALL",
+    "FORCE_COLOR",
 ]
 
 # ==============================================================================
@@ -151,43 +161,66 @@ def get_mount_args():
     return args
 
 
-def get_env_args():
+def get_env_and_ssh_args(with_ssh=False):
     args = []
-    ssh_auth_sock = os.environ.get("SSH_AUTH_SOCK")
-    if ssh_auth_sock:
-        args.extend(["--volume", f"{ssh_auth_sock}:/tmp/ssh-agent.sock"])
-        args.extend(["--env", "SSH_AUTH_SOCK=/tmp/ssh-agent.sock"])
+
+    # Pass configured environment variables
+    for env_var in ENV_VARS_TO_FORWARD:
+        val = os.environ.get(env_var)
+        if val:
+            args.extend(["--env", f"{env_var}={val}"])
+
+    if with_ssh:
+        ssh_auth_sock = os.environ.get("SSH_AUTH_SOCK")
+        if ssh_auth_sock:
+            args.extend(["--volume", f"{ssh_auth_sock}:/tmp/ssh-agent.sock"])
+            args.extend(["--env", "SSH_AUTH_SOCK=/tmp/ssh-agent.sock"])
+        else:
+            print(
+                "\033[33mWarning: --with-ssh was provided but SSH_AUTH_SOCK is not set.\033[0m"
+            )
+
     return args
 
 
 def main():
-    rebuild = False
-    sandbox_args = []
+    parser = argparse.ArgumentParser(
+        description="Run a command or shell in a general-purpose Docker sandbox."
+    )
+    parser.add_argument(
+        "--rebuild", action="store_true", help="Rebuild the sandbox image"
+    )
+    parser.add_argument(
+        "--with-ssh",
+        action="store_true",
+        help="Enable SSH agent forwarding (allows git push from within sandbox)",
+    )
+    parser.add_argument(
+        "command",
+        nargs="*",
+        help="Command to run in the sandbox (default: fish shell)",
+    )
 
-    for arg in sys.argv[1:]:
-        if arg == "--rebuild":
-            rebuild = True
-        else:
-            sandbox_args.append(arg)
+    args = parser.parse_args()
 
     try:
-        build_image(rebuild)
+        build_image(args.rebuild)
     except subprocess.CalledProcessError:
         sys.exit(1)
 
     mount_args = get_mount_args()
-    env_args = get_env_args()
+    env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
     cmd = (
         ["docker", "run", "-it", "--rm"]
         + mount_args
-        + env_args
+        + env_and_ssh_args
         + ["--workdir", "/workspace", IMAGE_TAG]
     )
 
-    if sandbox_args:
+    if args.command:
         # Quote and join the arguments, as we pass them to fish -i -c
-        cmd_str = " ".join(shlex.quote(a) for a in sandbox_args)
+        cmd_str = " ".join(shlex.quote(a) for a in args.command)
         cmd.extend(["/usr/bin/fish", "-i", "-c", cmd_str])
 
     # Run the container, replacing current process
