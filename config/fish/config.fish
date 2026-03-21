@@ -1,5 +1,4 @@
 if status is-interactive
-    # Abbreviations
     abbr -a !! --position anywhere --function last_history_item
     abbr -a r reload
     abbr -a v fresh
@@ -68,6 +67,21 @@ if status is-interactive
     set -gx GUM_SPIN_TITLE_FOREGROUND 4
     set -gx GUM_SPIN_SPINNER_FOREGROUND 4
     set -gx GUM_SPIN_PADDING "0 1"
+
+    if set -q DOCKER_SANDBOX
+        # Disable frequent history syncing in sandbox to avoid lag on shared volumes
+        # (This is especially slow between keystrokes)
+        set -g fish_history_sync_on_keystroke 0
+        set -g fish_handle_history_sync 0
+
+        # Disable slow features to keep the prompt snappy during typing
+        function fish_right_prompt
+            set_color red
+            echo "[SANDBOX]"
+            set_color normal
+        end
+        function fish_title; end
+    end
 end
 
 # Global aliases (even if shell is not interactive)

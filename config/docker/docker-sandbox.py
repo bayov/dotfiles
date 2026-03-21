@@ -91,28 +91,6 @@ def expand_path(p: str) -> Path:
     return Path(p).expanduser().resolve()
 
 
-def setup_history_dir() -> Path:
-    """Setup a directory on the host to store command history from the sandbox."""
-    now = datetime.now()
-    date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H-%M-%S")
-    unique_id = uuid.uuid4().hex[:8]
-    cwd_name = Path.cwd().name
-
-    history_base = (
-        Path.home() / ".local" / "share" / "docker-sandbox" / "command_history"
-    )
-    history_dir = history_base / date_str / f"{time_str}.{unique_id}.{cwd_name}"
-
-    history_dir.mkdir(parents=True, exist_ok=True)
-
-    # Pre-create files to avoid Docker creating them as directories if we mount them individually
-    (history_dir / "bash_history.txt").touch()
-    (history_dir / "fish_history.txt").touch()
-
-    return history_dir
-
-
 def get_dockerfile_hash() -> str:
     """Calculate the SHA256 hash of the Dockerfile."""
     with open(DOCKERFILE_PATH, "rb") as f:
@@ -243,23 +221,11 @@ def main():
     except subprocess.CalledProcessError:
         sys.exit(1)
 
-    history_dir = setup_history_dir()
     mount_args = get_mount_args()
-
-    # Add history mounts
-    mount_args.extend(
-        [
-            "--volume",
-            f"{history_dir / 'bash_history.txt'}:/home/sandbox/.bash_history:rw",
-            "--volume",
-            f"{history_dir / 'fish_history.txt'}:/home/sandbox/.local/share/fish/fish_history:rw",
-        ]
-    )
-
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
-    # Add Bash HISTFILE env var
-    env_and_ssh_args.extend(["--env", "HISTFILE=/home/sandbox/.bash_history"])
+    # Add a marker for the sandbox environment
+    env_and_ssh_args.extend(["--env", "DOCKER_SANDBOX=1"])
 
     cmd = (
         ["docker", "run", "-it", "--rm"]
@@ -279,6 +245,7 @@ def main():
         print(
             "\033[33mStarting fish shell in docker-sandbox container...\033[0m"
         )
+        cmd.append("/usr/bin/fish")
 
     # Run the container, replacing current process
     os.execvp("docker", cmd)
