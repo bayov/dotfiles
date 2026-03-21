@@ -32,6 +32,7 @@ MOUNTS = [
     Mount(".", "/workspace", read_only=False),
     Mount("~/.claude", "/home/sandbox/.claude", read_only=False),
     Mount("~/.claude.json", "/home/sandbox/.claude.json", read_only=False),
+    Mount("~/.gemini", "/home/sandbox/.gemini", read_only=False),
     Mount("~/.gitconfig", "/home/sandbox/.gitconfig", read_only=True),
     # Map dotfiles to the exact same path in the container to preserve symlinks
     Mount("~/dotfiles", str(DOTFILES_DIR), read_only=True),
