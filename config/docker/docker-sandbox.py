@@ -31,9 +31,12 @@ class Mount:
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
 MOUNTS = [
+    # The current project workspace.
     Mount(".", "/workspace", read_only=False),
+    # Claude Code settings (must be writable as CC modifies these).
     Mount("~/.claude", "/home/sandbox/.claude", read_only=False),
     Mount("~/.claude.json", "/home/sandbox/.claude.json", read_only=False),
+    # Gemini CLI settings (must be writable as Gemini modifies these).
     Mount("~/.gemini", "/home/sandbox/.gemini", read_only=False),
     Mount("~/.gitconfig", "/home/sandbox/.gitconfig", read_only=True),
     # Map dotfiles to the exact same path in the container to preserve symlinks
