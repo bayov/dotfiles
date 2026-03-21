@@ -31,6 +31,7 @@ depends = [
 "config/claude/settings.json" = "~/.claude/settings.json"
 "config/claude/keybindings.json" = "~/.claude/keybindings.json"
 "config/claude/statusline.py" = "~/.claude/statusline.py"
+"config/claude/Dockerfile.sc" = "~/.claude/Dockerfile.sc"
 
 [Code.files]
 "config/Code/User/settings.json" = "~/.vscode-server/data/Machine/settings.json"
