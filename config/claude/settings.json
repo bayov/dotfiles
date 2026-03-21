@@ -8,7 +8,7 @@
     },
     "enabledPlugins": { "rust-analyzer-lsp@claude-plugins-official": true },
     "sandbox": {
-        "enabled": true,
+        "enabled": false,
         "autoAllowBashIfSandboxed": true,
         "network": { "allowedDomains": ["*"] },
         "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
