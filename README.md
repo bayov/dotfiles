@@ -57,91 +57,13 @@ AI Tools
 - OpenSpec — https://github.com/fission-ai/openspec —
   `pnpm add -g @fission-ai/openspec`
 
-Linux
------
-
-If regular linux (not WSL), run the following:
+Install
+-------
 
 ```sh
-./run_linux.sh deploy
-```
+# install everything
+./install.sh
 
-For convenience, here are commands to install all requirements:
-
-```sh
-sudo apt-get update
-
-# install general pre-requisites
-sudo apt install build-essential pkg-config libssl-dev unzip git curl ca-certificates python3 python3-venv
-
-# install linux tools
-sudo apt install fd-find ripgrep btop
-
-# install fzf
-git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install
-
-# install fish shell
-sudo add-apt-repository ppa:fish-shell/release-4
-sudo apt update
-sudo apt install fish
-
-# set fish as default shell
-chsh -s $(which fish)
-
-# install starship
-curl -sS https://starship.rs/install.sh | sh
-
-# install Rust (use nightly toolchain)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# install sccache
-cargo install sccache --features=all
-
-# install cargo tools
-cargo install dotter jj-cli jj-starship zellij eza bat git-delta cargo-update fresh-editor
-
-# install gg-cli
-sudo apt install libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
-cargo install gg-cli
-
-# install cargo-binstall
-curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-
-# install cargo-nextest
-cargo binstall cargo-nextest --secure
-
-# install fisher (fish plugin manager)
-fish -c "curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source && fisher install jorgebucaran/fisher"
-
-# install fnm & Node.js
-curl -o- https://fnm.vercel.app/install | bash
-fnm install 24 # Node.js 24
-
-# install pnpm
-curl -fsSL https://get.pnpm.io/install.sh | sh -
-
-# install uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# install uv tools
-uv tool install dprint-py
-
-# install node-based tools
-pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
-pnpm approve-builds --global --all
-
-# install gum
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
-echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
-sudo apt update && sudo apt install gum
-```
-
-Windows (WSL)
--------------
-
-Run this **from within WSL**:
-
-```sh
-./run_wsl.sh deploy
+# deploy config files to their target locations
+./sync.sh
 ```

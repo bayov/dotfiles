@@ -19,9 +19,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     fd-find \
     ripgrep \
-    fish \
     bat \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Fish shell
+RUN sudo apt-add-repository -y ppa:fish-shell/release-4 && \
+    sudo apt-get update && \
+    sudo apt-get install -y fish
+
+# Install fzf
+RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 
 # Install Node.js 22 (using NodeSource)
 RUN mkdir -p /etc/apt/keyrings && \
@@ -43,9 +50,6 @@ RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fis
 # Switch to the non-root 'sandbox' user
 USER sandbox
 WORKDIR /home/sandbox
-
-# Install FZF
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 
 # Install Rust (nightly toolchain)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly && \

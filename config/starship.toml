@@ -9,7 +9,7 @@ add_newline = false
 
 # Used only in Google configuration.
 #
-# The run_linux.sh script modifies `right_format` from
+# The sync.sh script modifies `right_format` from
 # "$all" to "${custom.google3_pwd}" when `--google` is
 # provided.
 [custom.google3_pwd]
