@@ -6,8 +6,8 @@ if status is-interactive
     abbr -a ll l
     abbr -a z zellij
     abbr -a fd fdfind
-    abbr -a c claude --dangerously-skip-permissions
-    abbr -a g gemini --yolo
+    abbr -a c docker-sandbox claude --dangerously-skip-permissions
+    abbr -a g docker-sandbox gemini --yolo
     abbr -a oc opencode
 
     # Aliases
