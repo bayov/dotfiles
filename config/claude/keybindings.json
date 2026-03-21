@@ -101,7 +101,7 @@
                 "ctrl+r": "historySearch:next",
                 "escape": "historySearch:accept",
                 "tab": "historySearch:accept",
-                "enter": "historySearch:execute",
+                "enter": "historySearch:accept",
                 "up": "historySearch:navUp"
             }
         },
