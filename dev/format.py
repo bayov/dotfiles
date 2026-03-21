@@ -2,132 +2,23 @@
 
 import argparse
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-import contextvars
 from dataclasses import dataclass
-from enum import Enum
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import ClassVar, Iterable, Optional, Sequence, TextIO
+from typing import ClassVar, Iterable, Optional, Sequence
 
-
-# ANSI escape sequences for coloring output.
-RESET = "\033[0m"
-BOLD = "\033[1m"
-RED = "\033[31m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-CYAN = "\033[36m"
-GRAY = "\033[90m"
-
-
-class LogModule(Enum):
-    # Prints a summary of how many files were given as input, and how
-    # many were modified.
-    SUMMARY = "SUMMARY"
-
-    # Prints each modified file.
-    MODIFIED = "MODIFIED"
-
-    # Verbose debug logs.
-    DEBUG = "DEBUG"
-
-    # Always printed, indicates an error that occurred while formatting a file.
-    ERROR = "ERROR"
-    WARN = "WARN"
-
-    @staticmethod
-    def cli_controllable() -> list["LogModule"]:
-        """
-        Log modules that can be specified by CLI. Does not include ERROR and
-        WARN since they are always logged."""
-        return [
-            LogModule.SUMMARY,
-            LogModule.MODIFIED,
-            LogModule.DEBUG,
-        ]
-
-
-class Logger:
-    enabled_log_modules: set[LogModule]
-    use_color: bool
-
-    def __init__(self, enabled_log_modules: set[LogModule]):
-        self.enabled_log_modules = enabled_log_modules
-        self.enabled_log_modules.add(LogModule.ERROR)
-        self.enabled_log_modules.add(LogModule.WARN)
-        self.use_color = sys.stdout.isatty() and sys.stderr.isatty()
-
-    def log(
-        self,
-        m: LogModule,
-        msg: str,
-        file: TextIO = sys.stdout,
-        color: Optional[str] = None,
-    ):
-        if m not in self.enabled_log_modules:
-            return
-
-        color = color or self._log_module_color(m)
-        reset = RESET if self.use_color else ""
-
-        prefix = f"[{m.value:<{self._max_log_module_len()}}] "
-        print(f"{color}{prefix}{msg}{reset}", file=file)
-
-    def summary(self, msg: str, color: Optional[str] = None):
-        self.log(LogModule.SUMMARY, msg, color=color)
-
-    def modified(self, msg: str, color: Optional[str] = None):
-        self.log(LogModule.MODIFIED, msg, color=color)
-
-    def debug(self, msg: str, color: Optional[str] = None):
-        self.log(LogModule.DEBUG, msg, color=color)
-
-    def error(self, msg: str, color: Optional[str] = None):
-        self.log(LogModule.ERROR, msg, file=sys.stderr, color=color)
-
-    def warn(self, msg: str, color: Optional[str] = None):
-        self.log(LogModule.WARN, msg, file=sys.stderr, color=color)
-
-    @property
-    def is_debug_enabled(self) -> bool:
-        return LogModule.DEBUG in self.enabled_log_modules
-
-    @property
-    def is_summary_enabled(self) -> bool:
-        return LogModule.SUMMARY in self.enabled_log_modules
-
-    @property
-    def is_modified_enabled(self) -> bool:
-        return LogModule.MODIFIED in self.enabled_log_modules
-
-    def color(self, color: str) -> str:
-        if not self.use_color:
-            return ""
-        return color
-
-    def _log_module_color(self, m: LogModule) -> str:
-        if not self.use_color:
-            return ""
-        return {
-            LogModule.SUMMARY: GREEN,
-            LogModule.MODIFIED: CYAN,
-            LogModule.DEBUG: GRAY,
-            LogModule.ERROR: BOLD + RED,
-            LogModule.WARN: BOLD + YELLOW,
-        }[m]
-
-    def _max_log_module_len(self) -> int:
-        return max(len(m.value) for m in self.enabled_log_modules)
-
-
-_logger_ctx: contextvars.ContextVar[Logger] = contextvars.ContextVar("logger")
-
-
-def logger() -> Logger:
-    return _logger_ctx.get()
+from util import (
+    GRAY,
+    GREEN,
+    RESET,
+    LogModule,
+    Logger,
+    logger,
+    set_logger,
+)
 
 
 class FormatterError(Exception):
@@ -242,7 +133,8 @@ FORMATTERS: Sequence[Formatter] = [
 
 
 def _formatter_by_ext() -> dict[str, Formatter]:
-    """
+    """Returns a dict mapping each file extension to its configured formatter.
+
     Raises an error if multiple formatters are associated with the same
     extension.
     """
@@ -460,7 +352,7 @@ def format_files(
     Formats a chunk of files and returns the result including modified files
     count, the time taken, and the formatter name.
     """
-    _logger_ctx.set(log)
+    set_logger(log)
     start = time.perf_counter()
     mtimes = {f: os.path.getmtime(f) for f in chunk}
     error: Optional[FormatterError] = None
@@ -489,19 +381,17 @@ def main():
     p.add_argument("--git", action="store_true")
     p.add_argument("--jj", action="store_true")
     p.add_argument(
-        "--log",
-        choices=[m.value for m in LogModule.cli_controllable()],
-        default=[],
-        action="append",
-        help="What to log. Can be specified multiple times.",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose debug logging.",
     )
     args = p.parse_args()
 
-    log_modules = {LogModule(e) for e in args.log}
-    # LogModule.DEBUG implies all other log modules:
-    if LogModule.DEBUG in log_modules:
-        log_modules.update(LogModule.cli_controllable())
-    _logger_ctx.set(Logger(log_modules))
+    log_modules = {LogModule.INFO}
+    if args.verbose:
+        log_modules.add(LogModule.DEBUG)
+    set_logger(Logger(log_modules))
 
     files = collect_files(args)
     if files is None:
@@ -512,7 +402,7 @@ def main():
     files = resolve_files(files)
 
     if not files:
-        logger().summary("No files to format.")
+        logger().info("No files to format.", color=GREEN)
         sys.exit(0)
 
     start_time = time.perf_counter()
@@ -551,11 +441,8 @@ def main():
             res = future.result()
             for f in res.modified_files:
                 relative_to_cwd = f.relative_to(cwd)
-                logger().modified(
-                    f"{logger().color(GRAY)}"
-                    f"({res.formatter_name}) "
-                    f"{logger().color(RESET)}"
-                    f"{relative_to_cwd}"
+                logger().info(
+                    f"({res.formatter_name}) Formatted: {relative_to_cwd}"
                 )
             if res.error:
                 logger().error(str(res.error))
@@ -566,12 +453,12 @@ def main():
             )
 
     total_duration = time.perf_counter() - start_time
-    logger().summary(
+    logger().info(
         f"Modified {modified_files_count} out of {len(files)} file(s) in "
         f"{total_duration:.2f}s.",
-        # Change summary color to be GRAY if no files have been modified, for
+        # Change color to be GRAY if no files have been modified, for
         # a less distracting output.
-        color=GRAY if modified_files_count == 0 else None,
+        color=GRAY if modified_files_count == 0 else GREEN,
     )
 
     if logger().is_debug_enabled:
