@@ -9,6 +9,7 @@ import sys
 import shlex
 import argparse
 import uuid
+import hashlib
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ from datetime import datetime, timezone
 IMAGE_TAG = "sandbox-env"
 DOTFILES_DIR = Path.home() / "dotfiles"
 DOCKERFILE_PATH = DOTFILES_DIR / "config" / "docker" / "Dockerfile.sandbox"
+HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 
 
 @dataclass
@@ -107,6 +109,12 @@ def setup_history_dir() -> Path:
     return history_dir
 
 
+def get_dockerfile_hash() -> str:
+    """Calculate the SHA256 hash of the Dockerfile."""
+    with open(DOCKERFILE_PATH, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
 def build_image(rebuild: bool = False):
     """Ensure the sandbox Docker image is built and up to date."""
     if not DOCKERFILE_PATH.exists():
@@ -116,14 +124,16 @@ def build_image(rebuild: bool = False):
         )
         sys.exit(1)
 
-    # Check image status
+    current_hash = get_dockerfile_hash()
+
+    # Check image status and its stored hash label
     inspect_cmd = [
         "docker",
         "image",
         "inspect",
         IMAGE_TAG,
         "--format",
-        "{{.Created}}",
+        f'{{{{index .Config.Labels "{HASH_LABEL}"}}}}',
     ]
     result = subprocess.run(inspect_cmd, capture_output=True, text=True)
 
@@ -136,26 +146,13 @@ def build_image(rebuild: bool = False):
             f"\033[33mBuilding sandbox image ({IMAGE_TAG}) for the first time...\033[0m"
         )
     else:
-        try:
-            # Docker's .Created is in UTC (e.g., 2024-03-21T12:00:00Z)
-            # We handle 'Z' for compatibility and parse as UTC
-            img_created_str = result.stdout.strip().replace("Z", "+00:00")
-            img_created_dt = datetime.fromisoformat(img_created_str)
-
-            # Get Dockerfile mtime in UTC for a fair comparison
-            dockerfile_mtime = datetime.fromtimestamp(
-                DOCKERFILE_PATH.stat().st_mtime, tz=timezone.utc
-            )
-
-            if dockerfile_mtime > img_created_dt:
-                print(
-                    f"\033[33mDockerfile changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
-                )
-            else:
-                return  # Image exists and Dockerfile hasn't changed
-        except Exception as e:
+        # Image exists, check if hash matches
+        image_hash = result.stdout.strip()
+        if image_hash == current_hash:
+            return  # Hash matches, no need to rebuild
+        else:
             print(
-                f"\033[33mWarning: Could not compare timestamps ({e}). Rebuilding just in case...\033[0m"
+                f"\033[33mDockerfile changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
             )
 
     build_cmd = [
@@ -163,6 +160,8 @@ def build_image(rebuild: bool = False):
         "build",
         "-t",
         IMAGE_TAG,
+        "--label",
+        f"{HASH_LABEL}={current_hash}",
         "-f",
         str(DOCKERFILE_PATH),
         str(DOCKERFILE_PATH.parent),
