@@ -74,13 +74,23 @@ if status is-interactive
         set -g fish_history_sync_on_keystroke 0
         set -g fish_handle_history_sync 0
 
-        # Disable slow features to keep the prompt snappy during typing
-        function fish_right_prompt
+        # Override starship entirely for speed in the sandbox
+        # Starship custom commands (like jj-starship) are very slow over Docker mounts
+        function fish_prompt
             set_color red
-            echo "[SANDBOX]"
+            echo -n "[SANDBOX]"
+            set_color normal
+            echo -n " ❯ "
+        end
+        function fish_right_prompt
+            set_color blue
+            echo -n (prompt_pwd)" "
             set_color normal
         end
         function fish_title; end
+
+        # Disable slow completion features (like descriptions via apropos)
+        set -gx FISH_COMPLETION_NO_DESCRIPTIONS 1
     end
 end
 
