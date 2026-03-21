@@ -37,7 +37,7 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get update && apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# 3. Create non-root user (matching host UID 1000)
+# 3. Create non-root user named `sandbox` (matching host UID 1000)
 # Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
 RUN userdel -r ubuntu && \
     groupadd -g 1000 sandbox && \
