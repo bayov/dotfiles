@@ -51,8 +51,8 @@ keybinds clear-defaults=true {
         // bind "Ctrl c" { Copy; }
     
         // Scrolling & Scrollback
-        bind "Alt up" { ScrollUp; }
-        bind "Alt down" { ScrollDown; }
+        bind "Alt up" { ScrollUp; ScrollUp; }
+        bind "Alt down" { ScrollDown; ScrollDown; }
         bind "Alt PageUp" { HalfPageScrollUp; }
         bind "Alt PageDown" { HalfPageScrollDown; } 
         bind "Alt Home" { ScrollToTop; }
