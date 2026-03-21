@@ -45,7 +45,7 @@ RUN userdel -r ubuntu && \
     echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # 4. Install global npm tools
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
+RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
 
 # Switch to the non-root 'sandbox' user
 USER sandbox

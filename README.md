@@ -55,6 +55,8 @@ AI Tools
 - Gemini CLI — https://github.com/google-gemini/gemini-cli —
   `pnpm add -g @google/gemini-cli`
 - OpenCode — https://github.com/opencode-ai/opencode — `pnpm add -g opencode-ai`
+- OpenSpec — https://github.com/fission-ai/openspec —
+  `pnpm add -g @fission-ai/openspec`
 
 Linux
 -----
@@ -125,7 +127,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv tool install dprint-py
 
 # install node-based tools
-pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai
+pnpm add -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
 pnpm approve-builds --global --all
 
 # install gum
