@@ -84,6 +84,9 @@ keybinds clear-defaults=true {
         bind "Alt Shift q" { NewPane; }
         bind "Alt p" { TogglePanePinned; }
 
+        // Shift+Enter passthrough
+        bind "Shift Enter" { Write 27 91 49 51 59 50 117; }
+
         // Misc
         bind "Ctrl Alt d" { DumpScreen "/tmp/zellij-scrollback.txt"; }
         // Omni-tool available?
