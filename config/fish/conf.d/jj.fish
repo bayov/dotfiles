@@ -85,7 +85,7 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
         end
 
         jj bookmark move main --to @- --quiet
-        and jj git push --quiet
+        and gum spin --title "pushing main" -- jj git push --quiet
         and echo (set_color green) ✓ pushed main(set_color normal)
         and echo
         and begin
