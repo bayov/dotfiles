@@ -43,11 +43,14 @@ MOUNTS = [
     Mount("~/.gemini", "/home/sandbox/.gemini", ro=False),
     # Map dotfiles to the exact same path in the container to preserve symlinks
     Mount("~/dotfiles", str(DOTFILES_DIR)),
+    # `jj` config file should be read-only, but repo configuration should be
+    # writeable to allow `jj` to work in the sandbox
+    Mount("~/.config/jj/config.toml", "/home/sandbox/.config/jj/config.toml"),
+    Mount("~/.config/jj/repos", "/home/sandbox/.config/jj/repos", ro=False),
     # Essential configuration files
     Mount("~/.gitconfig", "/home/sandbox/.gitconfig"),
     Mount("~/.config/fish", "/home/sandbox/.config/fish"),
     Mount("~/.config/starship.toml", "/home/sandbox/.config/starship.toml"),
-    Mount("~/.config/jj", "/home/sandbox/.config/jj"),
     Mount("~/.config/delta", "/home/sandbox/.config/delta"),
     Mount("~/.config/eza", "/home/sandbox/.config/eza"),
     Mount("~/.config/fresh", "/home/sandbox/.config/fresh"),
@@ -55,7 +58,9 @@ MOUNTS = [
         "~/.config/quick_prompt_models.json",
         "/home/sandbox/.config/quick_prompt_models.json",
     ),
-    # Optional directories
+    # sccache cache directory (must be writable).
+    Mount("~/.cache/sccache", "/home/sandbox/.cache/sccache", ro=False),
+    # `quick_prompt` stats
     Mount(
         "~/.local/share/quick_prompt",
         "/home/sandbox/.local/share/quick_prompt",
@@ -70,6 +75,9 @@ ENV_VARS_TO_FORWARD = [
     "LANG",
     "LC_ALL",
     "FORCE_COLOR",
+    "SCCACHE_DIR",
+    "SCCACHE_CACHE_SIZE",
+    "RUSTC_WRAPPER",
 ]
 
 # ==============================================================================

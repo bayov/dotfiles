@@ -59,7 +59,10 @@ RUN mkdir -p /home/sandbox/.local/bin && \
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 
 # 7. Install Rust and Cargo-Binstall
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly && \
+    /home/sandbox/.cargo/bin/rustup toolchain install nightly --profile default && \
+    /home/sandbox/.cargo/bin/rustup default nightly && \
+    /home/sandbox/.cargo/bin/rustc --version
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
 # 8. Install Rust-based CLI tools via binstall (split to cache individually)
@@ -68,13 +71,14 @@ RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure eza
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure git-delta
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure fresh-editor
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure zellij
+RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure sccache
 
 # 9. Install uv and Python tools
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN /home/sandbox/.local/bin/uv tool install dprint-py
 
 # Ensure required directories exist
-RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt
+RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt /home/sandbox/.cache/sccache
 
 WORKDIR /workspace
 
