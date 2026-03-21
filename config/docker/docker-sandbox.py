@@ -28,42 +28,38 @@ HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 class Mount:
     host_path: str
     container_path: str
-    read_only: bool
+    ro: bool = True  # `ro` flag (read-only)
 
 
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
 MOUNTS = [
     # The current project workspace.
-    Mount(".", "/workspace", read_only=False),
+    Mount(".", "/workspace", ro=False),
     # Claude Code settings (must be writable as CC modifies these).
-    Mount("~/.claude", "/home/sandbox/.claude", read_only=False),
-    Mount("~/.claude.json", "/home/sandbox/.claude.json", read_only=False),
+    Mount("~/.claude", "/home/sandbox/.claude", ro=False),
+    Mount("~/.claude.json", "/home/sandbox/.claude.json", ro=False),
     # Gemini CLI settings (must be writable as Gemini modifies these).
-    Mount("~/.gemini", "/home/sandbox/.gemini", read_only=False),
-    Mount("~/.gitconfig", "/home/sandbox/.gitconfig", read_only=True),
+    Mount("~/.gemini", "/home/sandbox/.gemini", ro=False),
     # Map dotfiles to the exact same path in the container to preserve symlinks
-    Mount("~/dotfiles", str(DOTFILES_DIR), read_only=True),
-]
-
-# Essential terminal configurations to map from ~/.config/ -> /home/sandbox/.config/
-CONFIG_MOUNTS = [
-    "fish",
-    "starship.toml",
-    "jj",
-    "delta",
-    "eza",
-    "fresh",
-    "quick_prompt_models.json",
-    "claude-code",
-]
-
-# Additional optional directories to map if they exist
-OPTIONAL_MOUNTS = [
+    Mount("~/dotfiles", str(DOTFILES_DIR)),
+    # Essential configuration files
+    Mount("~/.gitconfig", "/home/sandbox/.gitconfig"),
+    Mount("~/.config/fish", "/home/sandbox/.config/fish"),
+    Mount("~/.config/starship.toml", "/home/sandbox/.config/starship.toml"),
+    Mount("~/.config/jj", "/home/sandbox/.config/jj"),
+    Mount("~/.config/delta", "/home/sandbox/.config/delta"),
+    Mount("~/.config/eza", "/home/sandbox/.config/eza"),
+    Mount("~/.config/fresh", "/home/sandbox/.config/fresh"),
+    Mount(
+        "~/.config/quick_prompt_models.json",
+        "/home/sandbox/.config/quick_prompt_models.json",
+    ),
+    # Optional directories
     Mount(
         "~/.local/share/quick_prompt",
         "/home/sandbox/.local/share/quick_prompt",
-        read_only=False,
+        ro=False,
     ),
 ]
 
@@ -184,27 +180,10 @@ def get_mount_args():
         if mount.host_path != "." and not host_path.exists():
             continue
 
-        ro_flag = ":ro" if mount.read_only else ""
+        ro_flag = ":ro" if mount.ro else ""
         args.extend(
             ["--volume", f"{host_path}:{mount.container_path}{ro_flag}"]
         )
-
-    # Config Mounts
-    for conf in CONFIG_MOUNTS:
-        host_conf = Path.home() / ".config" / conf
-        if host_conf.exists():
-            args.extend(
-                ["--volume", f"{host_conf}:/home/sandbox/.config/{conf}"]
-            )
-
-    # Optional Mounts
-    for mount in OPTIONAL_MOUNTS:
-        host_path = expand_path(mount.host_path)
-        if host_path.exists():
-            ro_flag = ":ro" if mount.read_only else ""
-            args.extend(
-                ["--volume", f"{host_path}:{mount.container_path}{ro_flag}"]
-            )
 
     return args
 
