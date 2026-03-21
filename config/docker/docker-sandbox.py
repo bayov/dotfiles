@@ -107,38 +107,6 @@ def setup_history_dir() -> Path:
     return history_dir
 
 
-def is_image_outdated(image_tag: str, dockerfile_path: Path) -> bool:
-    """Check if the image is missing or the Dockerfile has been modified since creation."""
-    inspect_cmd = [
-        "docker",
-        "image",
-        "inspect",
-        image_tag,
-        "--format",
-        "{{.Created}}",
-    ]
-    result = subprocess.run(inspect_cmd, capture_output=True, text=True)
-
-    if result.returncode != 0:
-        return True
-
-    try:
-        # Docker's .Created is in UTC (e.g., 2024-03-21T12:00:00Z)
-        # We handle 'Z' for compatibility and parse as UTC
-        img_created_str = result.stdout.strip().replace("Z", "+00:00")
-        img_created_dt = datetime.fromisoformat(img_created_str)
-
-        # Get Dockerfile mtime in UTC for a fair comparison
-        dockerfile_mtime = datetime.fromtimestamp(
-            dockerfile_path.stat().st_mtime, tz=timezone.utc
-        )
-
-        return dockerfile_mtime > img_created_dt
-    except Exception as e:
-        print(f"\033[33mWarning: Could not compare timestamps ({e}).\033[0m")
-        return True
-
-
 def build_image(rebuild: bool = False):
     """Ensure the sandbox Docker image is built and up to date."""
     if not DOCKERFILE_PATH.exists():
@@ -148,11 +116,47 @@ def build_image(rebuild: bool = False):
         )
         sys.exit(1)
 
-    if not rebuild and not is_image_outdated(IMAGE_TAG, DOCKERFILE_PATH):
-        return
+    # Check image status
+    inspect_cmd = [
+        "docker",
+        "image",
+        "inspect",
+        IMAGE_TAG,
+        "--format",
+        "{{.Created}}",
+    ]
+    result = subprocess.run(inspect_cmd, capture_output=True, text=True)
 
-    action = "Rebuilding" if rebuild else "Building"
-    print(f"\033[33m{action} sandbox image ({IMAGE_TAG})...\033[0m")
+    if rebuild:
+        print(
+            f"\033[33mRebuilding sandbox image ({IMAGE_TAG}) as requested...\033[0m"
+        )
+    elif result.returncode != 0:
+        print(
+            f"\033[33mBuilding sandbox image ({IMAGE_TAG}) for the first time...\033[0m"
+        )
+    else:
+        try:
+            # Docker's .Created is in UTC (e.g., 2024-03-21T12:00:00Z)
+            # We handle 'Z' for compatibility and parse as UTC
+            img_created_str = result.stdout.strip().replace("Z", "+00:00")
+            img_created_dt = datetime.fromisoformat(img_created_str)
+
+            # Get Dockerfile mtime in UTC for a fair comparison
+            dockerfile_mtime = datetime.fromtimestamp(
+                DOCKERFILE_PATH.stat().st_mtime, tz=timezone.utc
+            )
+
+            if dockerfile_mtime > img_created_dt:
+                print(
+                    f"\033[33mDockerfile changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
+                )
+            else:
+                return  # Image exists and Dockerfile hasn't changed
+        except Exception as e:
+            print(
+                f"\033[33mWarning: Could not compare timestamps ({e}). Rebuilding just in case...\033[0m"
+            )
 
     build_cmd = [
         "docker",
