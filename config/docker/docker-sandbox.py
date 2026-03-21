@@ -10,6 +10,7 @@ import shlex
 import argparse
 from pathlib import Path
 from dataclasses import dataclass
+from datetime import datetime
 
 # ==============================================================================
 # CONFIGURATION
@@ -105,14 +106,39 @@ def build_image(rebuild=False):
         subprocess.run(cmd, check=True)
         return
 
-    # Check if image exists
-    result = subprocess.run(
-        ["docker", "image", "inspect", IMAGE_TAG],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    # Check if image exists and compare timestamps
+    img_inspect = subprocess.run(
+        ["docker", "image", "inspect", IMAGE_TAG, "--format", "{{.Created}}"],
+        capture_output=True,
+        text=True,
     )
-    if result.returncode != 0:
+
+    should_build = False
+    if img_inspect.returncode != 0:
         print(f"\033[33mBuilding sandbox image ({IMAGE_TAG})...\033[0m")
+        should_build = True
+    else:
+        try:
+            # Format: 2024-03-21T12:00:00.123456789Z
+            # We use the first 19 chars for a simple comparison
+            img_created_str = img_inspect.stdout.strip()[:19]
+            img_created_dt = datetime.strptime(
+                img_created_str, "%Y-%m-%dT%H:%M:%S"
+            )
+            dockerfile_mtime = datetime.fromtimestamp(
+                DOCKERFILE_PATH.stat().st_mtime
+            )
+
+            if dockerfile_mtime > img_created_dt:
+                print(
+                    f"\033[33mDockerfile updated. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
+                )
+                should_build = True
+        except Exception:
+            # Fallback to building if timestamp parsing fails
+            should_build = True
+
+    if should_build:
         cmd = [
             "docker",
             "build",
