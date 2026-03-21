@@ -285,7 +285,14 @@ def main():
     if args.command:
         # Quote and join the arguments, as we pass them to fish -i -c
         cmd_str = " ".join(shlex.quote(a) for a in args.command)
+        print(
+            f"\033[33mStarting '{cmd_str}' in docker-sandbox container...\033[0m"
+        )
         cmd.extend(["/usr/bin/fish", "-i", "-c", cmd_str])
+    else:
+        print(
+            "\033[33mStarting fish shell in docker-sandbox container...\033[0m"
+        )
 
     # Run the container, replacing current process
     os.execvp("docker", cmd)
