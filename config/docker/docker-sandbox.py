@@ -10,7 +10,7 @@ import shlex
 import argparse
 from pathlib import Path
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 # ==============================================================================
 # CONFIGURATION
@@ -81,7 +81,40 @@ def expand_path(p: str) -> Path:
     return Path(p).expanduser().resolve()
 
 
-def build_image(rebuild=False):
+def is_image_outdated(image_tag: str, dockerfile_path: Path) -> bool:
+    """Check if the image is missing or the Dockerfile has been modified since creation."""
+    inspect_cmd = [
+        "docker",
+        "image",
+        "inspect",
+        image_tag,
+        "--format",
+        "{{.Created}}",
+    ]
+    result = subprocess.run(inspect_cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        return True
+
+    try:
+        # Docker's .Created is in UTC (e.g., 2024-03-21T12:00:00Z)
+        # We handle 'Z' for compatibility and parse as UTC
+        img_created_str = result.stdout.strip().replace("Z", "+00:00")
+        img_created_dt = datetime.fromisoformat(img_created_str)
+
+        # Get Dockerfile mtime in UTC for a fair comparison
+        dockerfile_mtime = datetime.fromtimestamp(
+            dockerfile_path.stat().st_mtime, tz=timezone.utc
+        )
+
+        return dockerfile_mtime > img_created_dt
+    except Exception as e:
+        print(f"\033[33mWarning: Could not compare timestamps ({e}).\033[0m")
+        return True
+
+
+def build_image(rebuild: bool = False):
+    """Ensure the sandbox Docker image is built and up to date."""
     if not DOCKERFILE_PATH.exists():
         print(
             f"\033[31mError: Dockerfile not found at {DOCKERFILE_PATH}\033[0m",
@@ -89,66 +122,26 @@ def build_image(rebuild=False):
         )
         sys.exit(1)
 
-    dockerfile_dir = DOCKERFILE_PATH.parent
-
-    if rebuild:
-        print(f"\033[33mRebuilding sandbox image ({IMAGE_TAG})...\033[0m")
-        cmd = [
-            "docker",
-            "build",
-            "--no-cache",
-            "-t",
-            IMAGE_TAG,
-            "-f",
-            str(DOCKERFILE_PATH),
-            str(dockerfile_dir),
-        ]
-        subprocess.run(cmd, check=True)
+    if not rebuild and not is_image_outdated(IMAGE_TAG, DOCKERFILE_PATH):
         return
 
-    # Check if image exists and compare timestamps
-    img_inspect = subprocess.run(
-        ["docker", "image", "inspect", IMAGE_TAG, "--format", "{{.Created}}"],
-        capture_output=True,
-        text=True,
-    )
+    action = "Rebuilding" if rebuild else "Building"
+    print(f"\033[33m{action} sandbox image ({IMAGE_TAG})...\033[0m")
 
-    should_build = False
-    if img_inspect.returncode != 0:
-        print(f"\033[33mBuilding sandbox image ({IMAGE_TAG})...\033[0m")
-        should_build = True
-    else:
-        try:
-            # Format: 2024-03-21T12:00:00.123456789Z
-            # We use the first 19 chars for a simple comparison
-            img_created_str = img_inspect.stdout.strip()[:19]
-            img_created_dt = datetime.strptime(
-                img_created_str, "%Y-%m-%dT%H:%M:%S"
-            )
-            dockerfile_mtime = datetime.fromtimestamp(
-                DOCKERFILE_PATH.stat().st_mtime
-            )
+    build_cmd = [
+        "docker",
+        "build",
+        "-t",
+        IMAGE_TAG,
+        "-f",
+        str(DOCKERFILE_PATH),
+        str(DOCKERFILE_PATH.parent),
+    ]
 
-            if dockerfile_mtime > img_created_dt:
-                print(
-                    f"\033[33mDockerfile updated. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
-                )
-                should_build = True
-        except Exception:
-            # Fallback to building if timestamp parsing fails
-            should_build = True
+    if rebuild:
+        build_cmd.insert(2, "--no-cache")
 
-    if should_build:
-        cmd = [
-            "docker",
-            "build",
-            "-t",
-            IMAGE_TAG,
-            "-f",
-            str(DOCKERFILE_PATH),
-            str(dockerfile_dir),
-        ]
-        subprocess.run(cmd, check=True)
+    subprocess.run(build_cmd, check=True)
 
 
 def get_mount_args():
