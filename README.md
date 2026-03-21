@@ -25,7 +25,6 @@ Requirements
     `cargo install zellij`
   - Eza — https://github.com/eza-community/eza — `cargo install eza`
   - Batcat — https://github.com/sharkdp/bat — `sudo apt install bat`
-  - Neovim — https://neovim.io/ — `sudo apt install neovim`
   - Git Delta — https://github.com/dandavison/delta — `cargo install git-delta`
   - fzf — https://github.com/junegunn/fzf —
     `git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install`
@@ -70,17 +69,18 @@ If regular linux (not WSL), run the following:
 For convenience, here are commands to install all requirements:
 
 ```sh
-# general pre-requisites
 sudo apt-get update
-sudo apt install build-essential pkg-config libssl-dev unzip
+
+# install general pre-requisites
+sudo apt install build-essential pkg-config libssl-dev unzip git curl ca-certificates python3 python3-venv
 
 # install linux tools
-sudo apt install fd-find ripgrep neovim btop
+sudo apt install fd-find ripgrep btop
 
 # install fzf
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install
 
-# install fish
+# install fish shell
 sudo add-apt-repository ppa:fish-shell/release-4
 sudo apt update
 sudo apt install fish
@@ -91,7 +91,7 @@ chsh -s $(which fish)
 # install starship
 curl -sS https://starship.rs/install.sh | sh
 
-# install rust
+# install Rust (use nightly toolchain)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # install sccache

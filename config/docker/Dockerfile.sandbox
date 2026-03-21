@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/home/sandbox/.cargo/bin:/home/sandbox/.local/bin:/home/sandbox/.fzf/bin:$PATH"
 ENV SHELL="/usr/bin/fish"
 
-# 1. Install system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
@@ -17,55 +17,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     python3 \
     python3-venv \
-    fish \
-    ripgrep \
     fd-find \
+    ripgrep \
+    fish \
     bat \
-    neovim \
-    sudo \
-    gpg \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up symlinks for tools that have different names in Ubuntu
-RUN ln -s /usr/bin/batcat /usr/local/bin/bat && \
-    ln -s /usr/bin/fdfind /usr/local/bin/fd
-
-# 2. Install Node.js 22 (using NodeSource)
+# Install Node.js 22 (using NodeSource)
 RUN mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# 3. Create non-root user named `sandbox` (matching host UID 1000)
+# Create non-root user named `sandbox` (matching host UID 1000)
 # Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
 RUN userdel -r ubuntu && \
     groupadd -g 1000 sandbox && \
     useradd -u 1000 -g 1000 -m -s /usr/bin/fish sandbox && \
     echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# 4. Install global npm tools
+# Install global npm tools
 RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
 
 # Switch to the non-root 'sandbox' user
 USER sandbox
 WORKDIR /home/sandbox
 
-# 5. Install Starship
-RUN mkdir -p /home/sandbox/.local/bin && \
-    curl -sS https://starship.rs/install.sh | sh -s -- -y --bin-dir /home/sandbox/.local/bin
-
-# 6. Install FZF
+# Install FZF
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 
-# 7. Install Rust and Cargo-Binstall
+# Install Rust (nightly toolchain)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly && \
     /home/sandbox/.cargo/bin/rustup toolchain install nightly --profile default && \
     /home/sandbox/.cargo/bin/rustup default nightly && \
     /home/sandbox/.cargo/bin/rustc --version
+
+# Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
-# 8. Install Rust-based CLI tools via binstall (split to cache individually)
+# Install Rust-based CLI tools via binstall (split to cache individually)
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure jj-cli
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure eza
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure git-delta
@@ -73,7 +64,17 @@ RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure fresh-editor
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure zellij
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure sccache
 
-# 9. Install uv and Python tools
+# cranelift for faster dev compile-times
+RUN /home/sandbox/.cargo/bin/rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+
+# wild-linker for faster dev compile-times
+RUN sudo apt-get update && sudo apt-get install -y clang && \
+    /home/sandbox/.cargo/bin/cargo install --locked wild-linker
+
+# cargo-nextest for running tests
+RUN /home/sandbox/.cargo/bin/cargo install --locked cargo-nextest
+
+# Install uv and Python tools
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN /home/sandbox/.local/bin/uv tool install dprint-py
 

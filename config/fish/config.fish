@@ -16,7 +16,7 @@ if status is-interactive
     alias hm="history merge"
 
     # Initialize prompt
-    starship init fish | source
+    type -q starship && starship init fish | source
 
     # Keybinds
     bind up             up-or-search
@@ -97,7 +97,6 @@ end
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
-alias vim=nvim
 alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 
 # Environment Variables

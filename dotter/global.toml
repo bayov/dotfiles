@@ -14,7 +14,6 @@ depends = [
     "fresh",
     "gemini",
     "jj",
-    "nvim",
     "opencode",
     "resources",
     "wezterm",
@@ -60,9 +59,6 @@ depends = [
 
 [jj.files]
 "config/jj" = "~/.config/jj"
-
-[nvim.files]
-"config/nvim" = "~/.config/nvim"
 
 [opencode.files]
 "config/opencode/AGENTS.md" = "~/.config/opencode/AGENTS.md"

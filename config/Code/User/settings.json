@@ -16,6 +16,7 @@
     "explorer.excludeGitIgnore": true, // Hide .gitignore'ed files in explorer
     "workbench.tree.indent": 14,
     "workbench.tree.renderIndentGuides": "always",
+    "scm.defaultViewMode": "tree",
     // --------------------------------------------------------------------------
     // Formatting
     // --------------------------------------------------------------------------
