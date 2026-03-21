@@ -74,7 +74,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN /home/sandbox/.local/bin/uv tool install dprint-py
 
 # Ensure required directories exist
-RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/quick_prompt
+RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt
 
 WORKDIR /workspace
 
