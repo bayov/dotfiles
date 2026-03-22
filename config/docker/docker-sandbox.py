@@ -8,7 +8,6 @@ import subprocess
 import sys
 import shlex
 import argparse
-import uuid
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass
@@ -49,7 +48,7 @@ MOUNTS = [
     Mount("~/.config/jj/repos", "/home/sandbox/.config/jj/repos", ro=False),
     # Essential configuration files
     Mount("~/.gitconfig", "/home/sandbox/.gitconfig"),
-    Mount("~/.config/fish", "/home/sandbox/.config/fish"),
+    Mount("~/.config/fish", "/home/sandbox/.config/fish", ro=False),
     Mount("~/.config/starship.toml", "/home/sandbox/.config/starship.toml"),
     Mount("~/.config/delta", "/home/sandbox/.config/delta"),
     Mount("~/.config/eza", "/home/sandbox/.config/eza"),
@@ -91,10 +90,22 @@ def expand_path(p: str) -> Path:
     return Path(p).expanduser().resolve()
 
 
-def get_dockerfile_hash() -> str:
-    """Calculate the SHA256 hash of the Dockerfile."""
+def get_sandbox_hash() -> str:
+    """Calculate a hash based on the Dockerfile and installer scripts."""
+    hasher = hashlib.sha256()
+
+    # Hash Dockerfile
     with open(DOCKERFILE_PATH, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+        hasher.update(f.read())
+
+    # Hash all installation scripts
+    install_scripts_dir = DOTFILES_DIR / "scripts" / "install"
+    for script in sorted(install_scripts_dir.glob("*.sh")):
+        with open(script, "rb") as f:
+            hasher.update(script.name.encode())
+            hasher.update(f.read())
+
+    return hasher.hexdigest()
 
 
 def build_image(rebuild: bool = False):
@@ -106,7 +117,7 @@ def build_image(rebuild: bool = False):
         )
         sys.exit(1)
 
-    current_hash = get_dockerfile_hash()
+    current_hash = get_sandbox_hash()
 
     # Check image status and its stored hash label
     inspect_cmd = [
@@ -134,7 +145,7 @@ def build_image(rebuild: bool = False):
             return  # Hash matches, no need to rebuild
         else:
             print(
-                f"\033[33mDockerfile changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
+                f"\033[33mEnvironment configuration changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
             )
 
     build_cmd = [
@@ -148,9 +159,6 @@ def build_image(rebuild: bool = False):
         str(DOCKERFILE_PATH),
         str(DOTFILES_DIR),
     ]
-
-    if rebuild:
-        build_cmd.insert(2, "--no-cache")
 
     subprocess.run(build_cmd, check=True)
 
