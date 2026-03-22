@@ -7,25 +7,37 @@ echo "  Installing APT Packages"
 echo "================================================================================"
 echo -e "\033[0m"
 
-sudo apt-get update
+source "$(dirname "$0")/sudo.sh"
+
+# Set apt-get options for Docker
+APT_OPTS=""
+if [ "$DOCKER_SANDBOX" = "1" ]; then
+    APT_OPTS="--no-install-recommends"
+fi
+
+$SUDO apt-get update
 
 # install general pre-requisites
-sudo apt-get install -y sudo
-sudo apt-get install -y software-properties-common
-sudo apt-get install -y build-essential
-sudo apt-get install -y pkg-config
-sudo apt-get install -y libssl-dev
-sudo apt-get install -y gnupg
-sudo apt-get install -y unzip
-sudo apt-get install -y git
-sudo apt-get install -y curl
-sudo apt-get install -y ca-certificates
-sudo apt-get install -y python3
-sudo apt-get install -y python3-venv
-sudo apt-get install -y clang  # For compiling Rust with wild-linker
-sudo apt-get install -y fd-find
-sudo apt-get install -y ripgrep
-sudo apt-get install -y btop
-sudo apt-get install -y bat
+$SUDO apt-get install -y $APT_OPTS software-properties-common
+$SUDO apt-get install -y $APT_OPTS build-essential
+$SUDO apt-get install -y $APT_OPTS pkg-config
+$SUDO apt-get install -y $APT_OPTS libssl-dev
+$SUDO apt-get install -y $APT_OPTS gnupg
+$SUDO apt-get install -y $APT_OPTS unzip
+$SUDO apt-get install -y $APT_OPTS git
+$SUDO apt-get install -y $APT_OPTS curl
+$SUDO apt-get install -y $APT_OPTS ca-certificates
+$SUDO apt-get install -y $APT_OPTS python3
+$SUDO apt-get install -y $APT_OPTS python3-venv
+$SUDO apt-get install -y $APT_OPTS clang  # For compiling Rust with wild-linker
+$SUDO apt-get install -y $APT_OPTS fd-find
+$SUDO apt-get install -y $APT_OPTS ripgrep
+$SUDO apt-get install -y $APT_OPTS btop
+$SUDO apt-get install -y $APT_OPTS bat
+
+# Clean up apt cache to reduce image size if in Docker
+if [ "$DOCKER_SANDBOX" = "1" ]; then
+    $SUDO rm -rf /var/lib/apt/lists/*
+fi
 
 # To update just run again

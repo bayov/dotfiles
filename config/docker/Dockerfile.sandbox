@@ -1,78 +1,43 @@
-# Use Ubuntu 24.04 as the base for a general purpose environment
+# Use Ubuntu 24.04 as the base for a general purpose environment.
 FROM ubuntu:24.04
 
-# Set environment variables
+# Set environment variables.
 ENV DOCKER_SANDBOX=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Pre-requisites for the installer scripts (running as root)
-# Only sudo is strictly required as the scripts use it.
-# The scripts handle the rest of the package installations.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
-    && rm -rf /var/lib/apt/lists/*
+# Bootstrap: Install sudo.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends sudo && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create non-root user named `sandbox` (matching host UID 1000)
-# Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
+# Remove the default `ubuntu` user and create a non-root user named `sandbox`.
 RUN userdel -r ubuntu && \
     groupadd -g 1000 sandbox && \
     useradd -u 1000 -g 1000 -m -s /usr/bin/bash sandbox && \
     echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Switch to the non-root 'sandbox' user
+# Switch to the non-root 'sandbox' user.
 USER sandbox
 WORKDIR /home/sandbox
 
-# Copy installer scripts to a temporary location
+# Copy installer scripts.
 COPY --chown=sandbox:sandbox scripts/install /home/sandbox/scripts/install
 
-# RUN THE SCRIPTS IN ORDER
-# Each script is self-sufficient and handles its own PATH for its execution.
-
-# 01 APT Packages (includes system tools like git, curl, gnupg, software-properties-common, etc.)
+# Run install scripts in order.
 RUN bash /home/sandbox/scripts/install/01_apt_packages.sh
-
-# 02 PyPi Packages (uv and dprint-py)
 RUN bash /home/sandbox/scripts/install/02_pypi_packages.sh
-
-# 03 Fish Shell (Installs fish and sets it as the default shell for the user)
-RUN bash /home/sandbox/scripts/install/03_fish.sh && \
-    sudo chsh -s /usr/bin/fish sandbox
-
-# 04 fzf
+RUN bash /home/sandbox/scripts/install/03_fish.sh
 RUN bash /home/sandbox/scripts/install/04_fzf.sh
-
-# 05 Starship
 RUN bash /home/sandbox/scripts/install/05_starship.sh
-
-# 06 Rust (nightly toolchain and cranelift)
 RUN bash /home/sandbox/scripts/install/06_rust.sh
-
-# 07 Cargo Packages (binstall, jj, eza, git-delta, fresh, sccache, wild-linker, nextest)
 RUN bash /home/sandbox/scripts/install/07_cargo_packages.sh
-
-# 08 Node.js (via fnm and pnpm)
 RUN bash /home/sandbox/scripts/install/08_nodejs.sh
-
-# 09 NPM Packages (gemini-cli, opencode, openspec)
 RUN bash /home/sandbox/scripts/install/09_npm_packages.sh
-
-# 10 Gum (TUI tools)
 RUN bash /home/sandbox/scripts/install/10_gum.sh
-
-# 11 Claude Code
 RUN bash /home/sandbox/scripts/install/11_claude_code.sh
 
-# Ensure required directories exist
-RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt /home/sandbox/.cache/sccache
-
-# Final environment adjustments
 WORKDIR /workspace
 
-# Runtime settings
-# SHELL is set to fish for tools that check $SHELL.
-# PATH is managed by fish config (mounted from dotfiles at runtime).
+# Default command is fish.
 ENV SHELL="/usr/bin/fish"
-
-# Default command is fish
 CMD ["/usr/bin/fish"]
