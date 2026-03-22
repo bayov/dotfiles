@@ -54,3 +54,12 @@ end
 function gemini --wraps=/google/bin/releases/gemini-cli/tools/gemini
     /google/bin/releases/gemini-cli/tools/gemini $argv
 end
+
+# Disable starship right prompt (use default prompt_pwd)
+function fish_right_prompt
+    set_color 666666
+    prompt_pwd
+    echo -n " "
+    set_color normal
+end
+

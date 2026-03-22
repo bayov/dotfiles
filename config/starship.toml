@@ -7,17 +7,6 @@ right_format = "$directory$custom"
 # Disable newline between commands
 add_newline = false
 
-# Used only in Google configuration.
-#
-# The sync.sh script modifies `right_format` from
-# "$all" to "${custom.google3_pwd}" when `--google` is
-# provided.
-[custom.google3_pwd]
-command = "prompt_pwd"
-when = true
-shell = ["/usr/bin/fish"]
-style = "#666666"
-
 # Make the prompt a single liner
 [line_break]
 disabled = true
