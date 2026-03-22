@@ -7,7 +7,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 for script in "$DIR"/scripts/install/*.sh; do
     if [ -x "$script" ]; then
         filename=$(basename "$script")
-        echo "Running $filename..."
         "$script"
     fi
 done
@@ -15,6 +14,6 @@ done
 
 echo -e "\033[32m"
 echo "================================================================================"
-echo "  All prereqs installed successfully!"
+echo "  All packages installed successfully!"
 echo "================================================================================"
 echo -e "\033[0m"

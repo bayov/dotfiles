@@ -9,11 +9,13 @@ echo -e "\033[0m"
 
 # Download and install fnm
 INSTALL_DIR="$HOME/.local/share/fnm"
-curl -o- https://fnm.vercel.app/install | bash -s -- --install-dir "$INSTALL_DIR" --skip-shell
+if [ ! -f "$INSTALL_DIR/fnm" ]; then
+    curl -o- https://fnm.vercel.app/install | bash -s -- --install-dir "$INSTALL_DIR" --skip-shell
+fi
 
 # Activate fnm
 export PATH="$INSTALL_DIR:$PATH"
-eval "$(fnm env)"
+eval "$(fnm env --shell bash)"
 
 # Download and install latest Node.js with LTS
 fnm install --lts

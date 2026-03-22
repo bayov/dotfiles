@@ -20,4 +20,4 @@ uv --version
 
 # Install package using `uv`.
 uv tool install --upgrade dprint-py
-uv tool install --upgrade ipython3
+uv tool install --upgrade ipython

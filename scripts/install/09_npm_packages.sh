@@ -9,7 +9,7 @@ echo -e "\033[0m"
 
 # Prepare environment
 export PATH="$HOME/.local/share/fnm:$PATH"
-eval "$(fnm env)"
+eval "$(fnm env --shell bash)"
 fnm use default
 corepack enable pnpm
 

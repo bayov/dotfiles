@@ -13,7 +13,7 @@ else
     (cd "$HOME/.fzf" && git pull)
 fi
 
-"$HOME/.fzf/install" --all --no-update-rc --no-bash --no-zsh
+"$HOME/.fzf/install" --all --no-update-rc --no-bash --no-fish --no-zsh
 
 # Print version
 echo "fzf version: $(fzf --version)"
