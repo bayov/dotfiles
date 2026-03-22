@@ -21,40 +21,40 @@ USER sandbox
 WORKDIR /home/sandbox
 
 # Copy and run installer scripts one by one to optimize cache.
-COPY --chown=sandbox:sandbox scripts/install/sudo.sh /home/sandbox/scripts/install/
+COPY --chown=sandbox:sandbox scripts/install/sudo.sh scripts/install/
 
-COPY --chown=sandbox:sandbox scripts/install/01_apt_packages.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/01_apt_packages.sh
+COPY --chown=sandbox:sandbox scripts/install/01_apt_packages.sh scripts/install/
+RUN bash scripts/install/01_apt_packages.sh
 
-COPY --chown=sandbox:sandbox scripts/install/02_pypi_packages.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/02_pypi_packages.sh
+COPY --chown=sandbox:sandbox scripts/install/02_pypi_packages.sh scripts/install/
+RUN bash scripts/install/02_pypi_packages.sh
 
-COPY --chown=sandbox:sandbox scripts/install/03_fish.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/03_fish.sh
+COPY --chown=sandbox:sandbox scripts/install/03_fish.sh scripts/install/
+RUN bash scripts/install/03_fish.sh
 
-COPY --chown=sandbox:sandbox scripts/install/04_fzf.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/04_fzf.sh
+COPY --chown=sandbox:sandbox scripts/install/04_fzf.sh scripts/install/
+RUN bash scripts/install/04_fzf.sh
 
-COPY --chown=sandbox:sandbox scripts/install/05_starship.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/05_starship.sh
+COPY --chown=sandbox:sandbox scripts/install/05_starship.sh scripts/install/
+RUN bash scripts/install/05_starship.sh
 
-COPY --chown=sandbox:sandbox scripts/install/06_rust.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/06_rust.sh
+COPY --chown=sandbox:sandbox scripts/install/06_rust.sh scripts/install/
+RUN bash scripts/install/06_rust.sh
 
-COPY --chown=sandbox:sandbox scripts/install/07_cargo_packages.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/07_cargo_packages.sh
+COPY --chown=sandbox:sandbox scripts/install/07_cargo_packages.sh scripts/install/
+RUN bash scripts/install/07_cargo_packages.sh
 
-COPY --chown=sandbox:sandbox scripts/install/08_nodejs.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/08_nodejs.sh
+COPY --chown=sandbox:sandbox scripts/install/08_nodejs.sh scripts/install/
+RUN bash scripts/install/08_nodejs.sh
 
-COPY --chown=sandbox:sandbox scripts/install/09_npm_packages.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/09_npm_packages.sh
+COPY --chown=sandbox:sandbox scripts/install/09_npm_packages.sh scripts/install/
+RUN bash scripts/install/09_npm_packages.sh
 
-COPY --chown=sandbox:sandbox scripts/install/10_gum.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/10_gum.sh
+COPY --chown=sandbox:sandbox scripts/install/10_gum.sh scripts/install/
+RUN bash scripts/install/10_gum.sh
 
-COPY --chown=sandbox:sandbox scripts/install/11_claude_code.sh /home/sandbox/scripts/install/
-RUN bash /home/sandbox/scripts/install/11_claude_code.sh
+COPY --chown=sandbox:sandbox scripts/install/11_claude_code.sh scripts/install/
+RUN bash scripts/install/11_claude_code.sh
 
 WORKDIR /workspace
 
