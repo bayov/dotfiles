@@ -12,6 +12,7 @@ import hashlib
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Optional
 
 # ==============================================================================
 # CONFIGURATION
@@ -20,54 +21,57 @@ from datetime import datetime, timezone
 IMAGE_TAG = "sandbox-env"
 DOTFILES_DIR = Path.home() / "dotfiles"
 DOCKERFILE_PATH = DOTFILES_DIR / "config" / "docker" / "Dockerfile.sandbox"
+SANDBOX_USER_HOME_DIR = "/home/sandbox"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 
 
 @dataclass
 class Mount:
     host_path: str
-    container_path: str
+    container_path: Optional[str] = None
     ro: bool = True  # `ro` flag (read-only)
+
+    def __post_init__(self):
+        if self.container_path is None:
+            if self.host_path.startswith("~"):
+                self.container_path = self.host_path.replace(
+                    "~", SANDBOX_USER_HOME_DIR, 1
+                )
+            else:
+                self.container_path = self.host_path
 
 
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
 MOUNTS = [
     # The current project workspace.
-    Mount(".", "/workspace", ro=False),
+    Mount(".", container_path="/workspace", ro=False),
     # Claude Code settings (must be writable as CC modifies these).
-    Mount("~/.claude", "/home/sandbox/.claude", ro=False),
-    Mount("~/.claude.json", "/home/sandbox/.claude.json", ro=False),
+    Mount("~/.claude", ro=False),
+    Mount("~/.claude.json", ro=False),
     # Gemini CLI settings (must be writable as Gemini modifies these).
-    Mount("~/.gemini", "/home/sandbox/.gemini", ro=False),
+    Mount("~/.gemini", ro=False),
     # Map dotfiles to the exact same path in the container to preserve symlinks
     Mount("~/dotfiles", str(DOTFILES_DIR)),
     # `jj` config file should be read-only, but repo configuration should be
     # writeable to allow `jj` to work in the sandbox
-    Mount("~/.config/jj/config.toml", "/home/sandbox/.config/jj/config.toml"),
-    Mount("~/.config/jj/repos", "/home/sandbox/.config/jj/repos", ro=False),
+    Mount("~/.config/jj/config.toml"),
+    Mount("~/.config/jj/repos", ro=False),
     # Essential configuration files
-    Mount("~/.gitconfig", "/home/sandbox/.gitconfig"),
-    Mount("~/.config/fish", "/home/sandbox/.config/fish", ro=False),
-    Mount("~/.config/starship.toml", "/home/sandbox/.config/starship.toml"),
-    Mount("~/.config/delta", "/home/sandbox/.config/delta"),
-    Mount("~/.config/eza", "/home/sandbox/.config/eza"),
-    Mount("~/.config/fresh", "/home/sandbox/.config/fresh"),
-    Mount(
-        "~/.config/quick_prompt_models.json",
-        "/home/sandbox/.config/quick_prompt_models.json",
-    ),
+    Mount("~/.gitconfig"),
+    Mount("~/.config/fish", ro=False),
+    Mount("~/.config/starship.toml"),
+    Mount("~/.config/delta"),
+    Mount("~/.config/eza"),
+    Mount("~/.config/fresh"),
+    Mount("~/.config/quick_prompt_models.json"),
     # `quick_prompt` stats
-    Mount(
-        "~/.local/share/quick_prompt",
-        "/home/sandbox/.local/share/quick_prompt",
-        ro=False,
-    ),
-    # Cargo cache (crates.io registry and git dependencies)
-    Mount("~/.cargo/registry", "/home/sandbox/.cargo/registry", ro=False),
-    Mount("~/.cargo/git", "/home/sandbox/.cargo/git", ro=False),
+    Mount("~/.local/share/quick_prompt", ro=False),
+    # Cargo cache (registry and git dependencies)
+    Mount("~/.cargo/registry", ro=False),
+    Mount("~/.cargo/git", ro=False),
     # sccache cache
-    Mount("~/.cache/sccache", "/home/sandbox/.cache/sccache", ro=False),
+    Mount("~/.cache/sccache", ro=False),
 ]
 
 # Environment variables to forward from host to container
