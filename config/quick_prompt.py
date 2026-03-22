@@ -74,6 +74,9 @@ STATS_HISTORY_COUNT = 30
 # How many samples to use when calculating model weight.
 MODEL_WEIGHT_SAMPLE_COUNT = 10
 
+# How many models to race by default.
+DEFAULT_MODEL_COUNT = 3
+
 # Timeout for detached model runs
 TIMEOUT_DURATION = 60
 
@@ -781,7 +784,7 @@ async def race_models(prompt: str) -> None:
     Races multiple models in parallel using detached internal worker processes.
     The first one to return a successful response wins.
     """
-    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick 2 weighted random ones.
+    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick N weighted random ones.
     override = os.getenv("QUICK_PROMPT_MODEL")
     if override:
         selected_models = [override]
@@ -797,7 +800,7 @@ async def race_models(prompt: str) -> None:
 
         # Weighted sampling without replacement
         selected_models = []
-        target_count = min(len(MODEL_POOL), 2)
+        target_count = min(len(MODEL_POOL), DEFAULT_MODEL_COUNT)
         temp_models = models[:]
         temp_weights = weights[:]
 
