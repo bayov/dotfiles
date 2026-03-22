@@ -108,7 +108,7 @@ def get_sandbox_hash() -> str:
     return hasher.hexdigest()
 
 
-def build_image(rebuild: bool = False):
+def build_image(rebuild: bool = False, no_rebuild: bool = False):
     """Ensure the sandbox Docker image is built and up to date."""
     if not DOCKERFILE_PATH.exists():
         print(
@@ -116,8 +116,6 @@ def build_image(rebuild: bool = False):
             file=sys.stderr,
         )
         sys.exit(1)
-
-    current_hash = get_sandbox_hash()
 
     # Check image status and its stored hash label
     inspect_cmd = [
@@ -129,12 +127,18 @@ def build_image(rebuild: bool = False):
         f'{{{{index .Config.Labels "{HASH_LABEL}"}}}}',
     ]
     result = subprocess.run(inspect_cmd, capture_output=True, text=True)
+    image_exists = result.returncode == 0
+
+    if no_rebuild and image_exists:
+        return
+
+    current_hash = get_sandbox_hash()
 
     if rebuild:
         print(
             f"\033[33mRebuilding sandbox image ({IMAGE_TAG}) as requested...\033[0m"
         )
-    elif result.returncode != 0:
+    elif not image_exists:
         print(
             f"\033[33mBuilding sandbox image ({IMAGE_TAG}) for the first time...\033[0m"
         )
@@ -212,6 +216,11 @@ def main():
         "--rebuild", action="store_true", help="Rebuild the sandbox image"
     )
     parser.add_argument(
+        "--no-rebuild",
+        action="store_true",
+        help="Avoid rebuilding the image if it already exists",
+    )
+    parser.add_argument(
         "--with-ssh",
         action="store_true",
         help="Enable SSH agent forwarding (allows git push from within sandbox)",
@@ -225,7 +234,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        build_image(args.rebuild)
+        build_image(args.rebuild, args.no_rebuild)
     except subprocess.CalledProcessError:
         sys.exit(1)
 
