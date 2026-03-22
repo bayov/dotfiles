@@ -3,12 +3,10 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing gg"
+echo "  Installing Starship"
 echo "================================================================================"
 echo -e "\033[0m"
 
-export PATH="$HOME/.cargo/bin:$PATH"
+curl -sS https://starship.rs/install.sh | sudo sh -s -- -y
 
-sudo apt-get update
-sudo apt-get install -y libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
-cargo install gg-cli
+# To update just run again

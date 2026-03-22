@@ -3,8 +3,12 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Cargo Binstall"
+echo "  Installing Fish Shell"
 echo "================================================================================"
 echo -e "\033[0m"
 
-curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+sudo apt-add-repository -y ppa:fish-shell/release-4
+sudo apt-get update
+sudo apt-get install -y fish
+
+# To update just run again

@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Rust"
+echo "  Installing Rust (nightly toolchain)"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -12,3 +12,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 rustup toolchain install nightly --profile default
 rustup default nightly
 rustc --version
+
+# cranelift for faster dev compile-times
+rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+
+# Update using `rustup update`

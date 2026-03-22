@@ -19,9 +19,10 @@ sudo apt-get install -y curl
 sudo apt-get install -y ca-certificates
 sudo apt-get install -y python3
 sudo apt-get install -y python3-venv
-
-# useful basic tools
+sudo apt-get install -y clang  # For compiling Rust with wild-linker
 sudo apt-get install -y fd-find
 sudo apt-get install -y ripgrep
 sudo apt-get install -y btop
 sudo apt-get install -y bat
+
+# To update just run again

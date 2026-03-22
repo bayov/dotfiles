@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+echo -e "\033[34m"
+echo "================================================================================"
+echo "  Installing Cargo Binstall & Cargo Packages"
+echo "================================================================================"
+echo -e "\033[0m"
+
+# Install cargo-binstall (not necessary to run if `cargo-binstall` is already installed -- It will be updated below)
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+export PATH="$HOME/.cargo/bin:$PATH"
+
+cargo binstall -y --secure cargo-binstall  # updates cargo-binstall if necessary
+cargo binstall -y --secure jj-cli
+cargo binstall -y --secure eza
+cargo binstall -y --secure git-delta
+cargo binstall -y --secure fresh-editor
+
+# For speeding up compilation
+cargo binstall -y --secure sccache
+cargo binstall -y --secure wild-linker
+
+# For better test runner
+cargo binstall -y --secure cargo-nextest
+
+# The following are not needed in docker sandbox
+cargo binstall -y --secure dotter
+cargo binstall -y --secure jj-starship
+cargo binstall -y --secure zellij
+cargo binstall -y --secure cargo-update
+
+# To update, just run again (without manually installing binstall with curl)

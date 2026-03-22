@@ -6,6 +6,20 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/home/sandbox/.cargo/bin:/home/sandbox/.local/bin:/home/sandbox/.fzf/bin:$PATH"
 ENV SHELL="/usr/bin/fish"
 
+# Create non-root user named `sandbox` (matching host UID 1000)
+# Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
+#
+# TODO: Fish shell is not installed yet, so we shouldn't set it as the default
+# shell for `sandbox` user yet. We should do it after installing fish.
+RUN userdel -r ubuntu && \
+    groupadd -g 1000 sandbox && \
+    useradd -u 1000 -g 1000 -m -s /usr/bin/fish sandbox && \
+    echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to the non-root 'sandbox' user
+USER sandbox
+WORKDIR /home/sandbox
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -17,10 +31,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     python3 \
     python3-venv \
+    clang \
     fd-find \
     ripgrep \
+    btop \
     bat \
     && rm -rf /var/lib/apt/lists/*
+
+# Install uv and Python tools
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+RUN /home/sandbox/.local/bin/uv tool install dprint-py
 
 # Install Fish shell
 RUN sudo apt-add-repository -y ppa:fish-shell/release-4 && \
@@ -30,32 +50,17 @@ RUN sudo apt-add-repository -y ppa:fish-shell/release-4 && \
 # Install fzf
 RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
 
-# Install Node.js 22 (using NodeSource)
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create non-root user named `sandbox` (matching host UID 1000)
-# Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
-RUN userdel -r ubuntu && \
-    groupadd -g 1000 sandbox && \
-    useradd -u 1000 -g 1000 -m -s /usr/bin/fish sandbox && \
-    echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# Install global npm tools
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
-
-# Switch to the non-root 'sandbox' user
-USER sandbox
-WORKDIR /home/sandbox
+# Install starship
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 
 # Install Rust (nightly toolchain)
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly && \
     /home/sandbox/.cargo/bin/rustup toolchain install nightly --profile default && \
     /home/sandbox/.cargo/bin/rustup default nightly && \
     /home/sandbox/.cargo/bin/rustc --version
+
+# cranelift for faster dev compile-times
+RUN /home/sandbox/.cargo/bin/rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 
 # Install cargo-binstall
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
@@ -67,9 +72,17 @@ RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure git-delta
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure fresh-editor
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure zellij
 RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure sccache
+RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure cargo-nextest
 
-# cranelift for faster dev compile-times
-RUN /home/sandbox/.cargo/bin/rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+# Install Node.js 22 (using NodeSource) TODO: replace to latest --tls
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install global npm tools
+RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
 
 # wild-linker for faster dev compile-times
 RUN sudo apt-get update && sudo apt-get install -y clang && \
@@ -77,10 +90,6 @@ RUN sudo apt-get update && sudo apt-get install -y clang && \
 
 # cargo-nextest for running tests
 RUN /home/sandbox/.cargo/bin/cargo install --locked cargo-nextest
-
-# Install uv and Python tools
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN /home/sandbox/.local/bin/uv tool install dprint-py
 
 # Ensure required directories exist
 RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt /home/sandbox/.cache/sccache
