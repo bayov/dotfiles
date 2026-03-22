@@ -146,7 +146,7 @@ def build_image(rebuild: bool = False):
         f"{HASH_LABEL}={current_hash}",
         "-f",
         str(DOCKERFILE_PATH),
-        str(DOCKERFILE_PATH.parent),
+        str(DOTFILES_DIR),
     ]
 
     if rebuild:
