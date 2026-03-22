@@ -63,6 +63,11 @@ MOUNTS = [
         "/home/sandbox/.local/share/quick_prompt",
         ro=False,
     ),
+    # Cargo cache (crates.io registry and git dependencies)
+    Mount("~/.cargo/registry", "/home/sandbox/.cargo/registry", ro=False),
+    Mount("~/.cargo/git", "/home/sandbox/.cargo/git", ro=False),
+    # sccache cache
+    Mount("~/.cache/sccache", "/home/sandbox/.cache/sccache", ro=False),
 ]
 
 # Environment variables to forward from host to container
@@ -166,24 +171,6 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
     subprocess.run(build_cmd, check=True)
 
 
-def get_sccache_mount_args():
-    """Support dynamic SCCACHE_DIR and sccache Unix Domain Socket (UDS)."""
-    args = []
-
-    # Set SCCACHE_DIR
-    # This ensures that if the user has a custom SCCACHE_DIR on the host,
-    # it is mounted to the container's sccache location.
-    sccache_dir = os.environ.get("SCCACHE_DIR")
-    if sccache_dir:
-        host_path = expand_path(sccache_dir)
-        if host_path.exists():
-            args.extend(
-                ["--volume", f"{host_path}:/home/sandbox/.cache/sccache"]
-            )
-
-    return args
-
-
 def get_mount_args():
     args = []
 
@@ -199,8 +186,6 @@ def get_mount_args():
         args.extend(
             ["--volume", f"{host_path}:{mount.container_path}{ro_flag}"]
         )
-
-    args.extend(get_sccache_mount_args())
 
     return args
 
