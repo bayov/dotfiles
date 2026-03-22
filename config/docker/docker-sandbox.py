@@ -224,9 +224,6 @@ def main():
     mount_args = get_mount_args()
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
-    # Add a marker for the sandbox environment
-    env_and_ssh_args.extend(["--env", "DOCKER_SANDBOX=1"])
-
     cmd = (
         ["docker", "run", "-it", "--rm"]
         + mount_args

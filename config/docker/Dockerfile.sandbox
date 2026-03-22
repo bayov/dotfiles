@@ -2,6 +2,7 @@
 FROM ubuntu:24.04
 
 # Set environment variables
+ENV DOCKER_SANDBOX=1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/home/sandbox/.cargo/bin:/home/sandbox/.local/bin:/home/sandbox/.fzf/bin:$PATH"
 ENV SHELL="/usr/bin/fish"
