@@ -20,20 +20,40 @@ RUN userdel -r ubuntu && \
 USER sandbox
 WORKDIR /home/sandbox
 
-# Copy installer scripts.
-COPY --chown=sandbox:sandbox scripts/install /home/sandbox/scripts/install
+# Copy and run installer scripts one by one to optimize cache.
+COPY --chown=sandbox:sandbox scripts/install/sudo.sh /home/sandbox/scripts/install/
 
-# Run install scripts in order.
+COPY --chown=sandbox:sandbox scripts/install/01_apt_packages.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/01_apt_packages.sh
+
+COPY --chown=sandbox:sandbox scripts/install/02_pypi_packages.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/02_pypi_packages.sh
+
+COPY --chown=sandbox:sandbox scripts/install/03_fish.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/03_fish.sh
+
+COPY --chown=sandbox:sandbox scripts/install/04_fzf.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/04_fzf.sh
+
+COPY --chown=sandbox:sandbox scripts/install/05_starship.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/05_starship.sh
+
+COPY --chown=sandbox:sandbox scripts/install/06_rust.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/06_rust.sh
+
+COPY --chown=sandbox:sandbox scripts/install/07_cargo_packages.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/07_cargo_packages.sh
+
+COPY --chown=sandbox:sandbox scripts/install/08_nodejs.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/08_nodejs.sh
+
+COPY --chown=sandbox:sandbox scripts/install/09_npm_packages.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/09_npm_packages.sh
+
+COPY --chown=sandbox:sandbox scripts/install/10_gum.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/10_gum.sh
+
+COPY --chown=sandbox:sandbox scripts/install/11_claude_code.sh /home/sandbox/scripts/install/
 RUN bash /home/sandbox/scripts/install/11_claude_code.sh
 
 WORKDIR /workspace

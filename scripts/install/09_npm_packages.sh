@@ -10,6 +10,9 @@ echo -e "\033[0m"
 # Prepare environment
 export PATH="$HOME/.local/share/fnm:$PATH"
 eval "$(fnm env)"
+fnm use default
+corepack enable pnpm
+
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
