@@ -74,7 +74,7 @@ ENV_VARS_TO_FORWARD = [
     "FORCE_COLOR",
     "SCCACHE_DIR",
     "SCCACHE_CACHE_SIZE",
-    "SCCACHE_SERVER_UDS",
+    "SCCACHE_BASEDIRS",
     "RUSTC_WRAPPER",
 ]
 
@@ -181,15 +181,6 @@ def get_sccache_mount_args():
                 ["--volume", f"{host_path}:/home/sandbox/.cache/sccache"]
             )
 
-    # sccache Unix Domain Socket (UDS)
-    # Sharing the server socket ensures the container uses the same sccache server
-    # as the host, providing shared stats and perfect cache sharing.
-    sccache_uds = os.environ.get("SCCACHE_SERVER_UDS", "/tmp/sccache.sock")
-    if sccache_uds:
-        host_path = expand_path(sccache_uds)
-        if host_path.exists():
-            args.extend(["--volume", f"{host_path}:{sccache_uds}"])
-
     return args
 
 
@@ -268,6 +259,16 @@ def main():
 
     mount_args = get_mount_args()
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
+
+    # Automatically set SCCACHE_BASEDIRS to include both the host's current directory
+    # and the container's workspace. This ensures that sccache treats them as the
+    # same location when computing cache keys, even though their absolute paths differ.
+    host_cwd = os.getcwd()
+    sccache_basedirs = os.environ.get("SCCACHE_BASEDIRS", "")
+    new_basedirs = f"{host_cwd}:/workspace"
+    if sccache_basedirs:
+        new_basedirs = f"{new_basedirs}:{sccache_basedirs}"
+    env_and_ssh_args.extend(["--env", f"SCCACHE_BASEDIRS={new_basedirs}"])
 
     cmd = (
         ["docker", "run", "-it", "--rm"]

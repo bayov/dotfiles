@@ -105,7 +105,7 @@ set -gx PNPM_HOME "$HOME/.local/share/pnpm"
 set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE "25GB"
-set -gx SCCACHE_SERVER_UDS "/tmp/sccache.sock"
+set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 set -gx generate_commit_message_template "$HOME/.config/resources/generate_commit_template.md"
 
 # $PATH
