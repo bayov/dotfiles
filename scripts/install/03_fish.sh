@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Fish Shell"
+echo "  Fish Shell"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -33,5 +33,3 @@ fi
 
 # Print version
 fish --version
-
-# To update just run again

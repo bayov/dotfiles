@@ -1,6 +1,7 @@
 # Main syntax
 set --global fish_color_normal normal
 set --global fish_color_command blue
+set --global fish_color_operator yellow
 set --global fish_color_comment brblack
 set --global fish_color_quote 6aab73
 set --global fish_color_escape b8bd5a
@@ -14,7 +15,6 @@ set --global fish_color_valid_path b2a897 --underline=single
 # "Keywords"
 set --global fish_color_end cf8e6d
 set --global fish_color_keyword cf8e6d
-set --global fish_color_operator cf8e6d
 
 # Misc
 set --global fish_color_error red

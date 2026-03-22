@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing APT Packages"
+echo "  APT Packages"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -39,5 +39,3 @@ $SUDO apt-get install -y $APT_OPTS bat
 if [ "$DOCKER_SANDBOX" = "1" ]; then
     $SUDO rm -rf /var/lib/apt/lists/*
 fi
-
-# To update just run again

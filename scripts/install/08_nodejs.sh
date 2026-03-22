@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Node.js (using fnm) & PNPM"
+echo "  Node.js (using fnm) & PNPM"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -27,5 +27,3 @@ corepack prepare pnpm@latest --activate
 echo "fnm version: $(fnm --version)"
 echo "node version: $(node --version)"
 echo "pnpm version: $(pnpm --version)"
-
-# To update just run again

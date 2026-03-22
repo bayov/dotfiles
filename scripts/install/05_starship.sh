@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Starship"
+echo "  Starship"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -13,5 +13,3 @@ curl -sS https://starship.rs/install.sh | $SUDO sh -s -- -y
 
 # Print version
 starship --version
-
-# To update just run again

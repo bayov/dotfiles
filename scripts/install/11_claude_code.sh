@@ -3,14 +3,15 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing Claude Code"
+echo "  Claude Code"
 echo "================================================================================"
 echo -e "\033[0m"
 
-curl -fsSL https://claude.ai/install.sh | bash
+# No need to manually update (claude code updates automatically).
+if ! command -v claude >/dev/null 2>&1; then
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Print version
 claude --version
-
-# No need to update (claude code updates automatically, so skip this when updating)

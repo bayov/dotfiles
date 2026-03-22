@@ -3,7 +3,7 @@ set -e
 
 echo -e "\033[34m"
 echo "================================================================================"
-echo "  Installing NPM Packages"
+echo "  NPM Packages"
 echo "================================================================================"
 echo -e "\033[0m"
 
@@ -16,8 +16,8 @@ corepack enable pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
-pnpm add -g @google/gemini-cli
-pnpm add -g opencode-ai
+pnpm add -g @google/gemini-cli@latest
+pnpm add -g opencode-ai@latest
 pnpm add -g @fission-ai/openspec@latest
 
 pnpm approve-builds --global --all || true
