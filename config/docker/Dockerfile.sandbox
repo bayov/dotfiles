@@ -4,98 +4,75 @@ FROM ubuntu:24.04
 # Set environment variables
 ENV DOCKER_SANDBOX=1
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH="/home/sandbox/.cargo/bin:/home/sandbox/.local/bin:/home/sandbox/.fzf/bin:$PATH"
-ENV SHELL="/usr/bin/fish"
+
+# Pre-requisites for the installer scripts (running as root)
+# Only sudo is strictly required as the scripts use it.
+# The scripts handle the rest of the package installations.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user named `sandbox` (matching host UID 1000)
 # Ubuntu 24.04 includes a default 'ubuntu' user with UID 1000. Remove it first.
-#
-# TODO: Fish shell is not installed yet, so we shouldn't set it as the default
-# shell for `sandbox` user yet. We should do it after installing fish.
 RUN userdel -r ubuntu && \
     groupadd -g 1000 sandbox && \
-    useradd -u 1000 -g 1000 -m -s /usr/bin/fish sandbox && \
+    useradd -u 1000 -g 1000 -m -s /usr/bin/bash sandbox && \
     echo "sandbox ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Switch to the non-root 'sandbox' user
 USER sandbox
 WORKDIR /home/sandbox
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    unzip \
-    git \
-    curl \
-    ca-certificates \
-    python3 \
-    python3-venv \
-    clang \
-    fd-find \
-    ripgrep \
-    btop \
-    bat \
-    && rm -rf /var/lib/apt/lists/*
+# Copy installer scripts to a temporary location
+COPY --chown=sandbox:sandbox scripts/install /home/sandbox/scripts/install
 
-# Install uv and Python tools
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-RUN /home/sandbox/.local/bin/uv tool install dprint-py
+# RUN THE SCRIPTS IN ORDER
+# Each script is self-sufficient and handles its own PATH for its execution.
 
-# Install Fish shell
-RUN sudo apt-add-repository -y ppa:fish-shell/release-4 && \
-    sudo apt-get update && \
-    sudo apt-get install -y fish
+# 01 APT Packages (includes system tools like git, curl, gnupg, software-properties-common, etc.)
+RUN bash /home/sandbox/scripts/install/01_apt_packages.sh
 
-# Install fzf
-RUN git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install --all
+# 02 PyPi Packages (uv and dprint-py)
+RUN bash /home/sandbox/scripts/install/02_pypi_packages.sh
 
-# Install starship
-RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
+# 03 Fish Shell (Installs fish and sets it as the default shell for the user)
+RUN bash /home/sandbox/scripts/install/03_fish.sh && \
+    sudo chsh -s /usr/bin/fish sandbox
 
-# Install Rust (nightly toolchain)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain nightly && \
-    /home/sandbox/.cargo/bin/rustup toolchain install nightly --profile default && \
-    /home/sandbox/.cargo/bin/rustup default nightly && \
-    /home/sandbox/.cargo/bin/rustc --version
+# 04 fzf
+RUN bash /home/sandbox/scripts/install/04_fzf.sh
 
-# cranelift for faster dev compile-times
-RUN /home/sandbox/.cargo/bin/rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+# 05 Starship
+RUN bash /home/sandbox/scripts/install/05_starship.sh
 
-# Install cargo-binstall
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+# 06 Rust (nightly toolchain and cranelift)
+RUN bash /home/sandbox/scripts/install/06_rust.sh
 
-# Install Rust-based CLI tools via binstall (split to cache individually)
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure jj-cli
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure eza
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure git-delta
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure fresh-editor
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure zellij
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure sccache
-RUN /home/sandbox/.cargo/bin/cargo binstall -y --secure cargo-nextest
+# 07 Cargo Packages (binstall, jj, eza, git-delta, fresh, sccache, wild-linker, nextest)
+RUN bash /home/sandbox/scripts/install/07_cargo_packages.sh
 
-# Install Node.js 22 (using NodeSource) TODO: replace to latest --tls
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
+# 08 Node.js (via fnm and pnpm)
+RUN bash /home/sandbox/scripts/install/08_nodejs.sh
 
-# Install global npm tools
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli opencode-ai @fission-ai/openspec@latest
+# 09 NPM Packages (gemini-cli, opencode, openspec)
+RUN bash /home/sandbox/scripts/install/09_npm_packages.sh
 
-# wild-linker for faster dev compile-times
-RUN sudo apt-get update && sudo apt-get install -y clang && \
-    /home/sandbox/.cargo/bin/cargo install --locked wild-linker
+# 10 Gum (TUI tools)
+RUN bash /home/sandbox/scripts/install/10_gum.sh
 
-# cargo-nextest for running tests
-RUN /home/sandbox/.cargo/bin/cargo install --locked cargo-nextest
+# 11 Claude Code
+RUN bash /home/sandbox/scripts/install/11_claude_code.sh
 
 # Ensure required directories exist
 RUN mkdir -p /home/sandbox/.claude /home/sandbox/.config /home/sandbox/.local/share/fish /home/sandbox/.local/share/quick_prompt /home/sandbox/.cache/sccache
 
+# Final environment adjustments
 WORKDIR /workspace
+
+# Runtime settings
+# SHELL is set to fish for tools that check $SHELL.
+# PATH is managed by fish config (mounted from dotfiles at runtime).
+ENV SHELL="/usr/bin/fish"
 
 # Default command is fish
 CMD ["/usr/bin/fish"]

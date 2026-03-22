@@ -12,14 +12,20 @@ INSTALL_DIR="$HOME/.local/share/fnm"
 curl -o- https://fnm.vercel.app/install | bash -s -- --install-dir "$INSTALL_DIR" --skip-shell
 
 # Activate fnm
-fnm env
+export PATH="$INSTALL_DIR:$PATH"
+eval "$(fnm env)"
 
 # Download and install latest Node.js with LTS
 fnm install --lts
-node -v  # prints version
+fnm use lts-latest
+fnm default lts-latest
 
 # Download and install pnpm (faster package manager)
 corepack prepare pnpm@latest --activate
-pnpm -v  # prints version
+
+# Print versions
+echo "fnm version: $(fnm --version)"
+echo "node version: $(node --version)"
+echo "pnpm version: $(pnpm --version)"
 
 # To update just run again

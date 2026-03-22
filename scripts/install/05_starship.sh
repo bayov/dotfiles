@@ -9,4 +9,7 @@ echo -e "\033[0m"
 
 curl -sS https://starship.rs/install.sh | sudo sh -s -- -y
 
+# Print version
+starship --version
+
 # To update just run again

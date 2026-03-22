@@ -11,4 +11,7 @@ sudo apt-add-repository -y ppa:fish-shell/release-4
 sudo apt-get update
 sudo apt-get install -y fish
 
+# Print version
+fish --version
+
 # To update just run again

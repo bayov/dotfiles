@@ -25,9 +25,11 @@ cargo binstall -y --secure wild-linker
 cargo binstall -y --secure cargo-nextest
 
 # The following are not needed in docker sandbox
-cargo binstall -y --secure dotter
-cargo binstall -y --secure jj-starship
-cargo binstall -y --secure zellij
-cargo binstall -y --secure cargo-update
+if [ "$DOCKER_SANDBOX" != "1" ]; then
+    cargo binstall -y --secure dotter
+    cargo binstall -y --secure jj-starship
+    cargo binstall -y --secure zellij
+    cargo binstall -y --secure cargo-update
+fi
 
 # To update, just run again (without manually installing binstall with curl)

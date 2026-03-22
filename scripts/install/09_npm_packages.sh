@@ -8,7 +8,8 @@ echo "==========================================================================
 echo -e "\033[0m"
 
 # Prepare environment
-fnm env
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "$(fnm env)"
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 

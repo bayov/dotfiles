@@ -10,9 +10,12 @@ echo -e "\033[0m"
 sudo apt-get update
 
 # install general pre-requisites
+sudo apt-get install -y sudo
+sudo apt-get install -y software-properties-common
 sudo apt-get install -y build-essential
 sudo apt-get install -y pkg-config
 sudo apt-get install -y libssl-dev
+sudo apt-get install -y gnupg
 sudo apt-get install -y unzip
 sudo apt-get install -y git
 sudo apt-get install -y curl

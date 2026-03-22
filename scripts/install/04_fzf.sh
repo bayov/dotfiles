@@ -12,4 +12,7 @@ if [ ! -d "$HOME/.fzf" ]; then
     "$HOME/.fzf/install" --all
 fi
 
+# Print version
+echo "fzf version: $(fzf --version)"
+
 # To update, run `cd $HOME/.fzf && git pull && ./install``
