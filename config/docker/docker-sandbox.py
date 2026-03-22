@@ -57,8 +57,6 @@ MOUNTS = [
         "~/.config/quick_prompt_models.json",
         "/home/sandbox/.config/quick_prompt_models.json",
     ),
-    # sccache cache directory (must be writable).
-    Mount("~/.cache/sccache", "/home/sandbox/.cache/sccache", ro=False),
     # `quick_prompt` stats
     Mount(
         "~/.local/share/quick_prompt",
@@ -76,6 +74,7 @@ ENV_VARS_TO_FORWARD = [
     "FORCE_COLOR",
     "SCCACHE_DIR",
     "SCCACHE_CACHE_SIZE",
+    "SCCACHE_SERVER_UDS",
     "RUSTC_WRAPPER",
 ]
 
@@ -167,6 +166,33 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
     subprocess.run(build_cmd, check=True)
 
 
+def get_sccache_mount_args():
+    """Support dynamic SCCACHE_DIR and sccache Unix Domain Socket (UDS)."""
+    args = []
+
+    # Set SCCACHE_DIR
+    # This ensures that if the user has a custom SCCACHE_DIR on the host,
+    # it is mounted to the container's sccache location.
+    sccache_dir = os.environ.get("SCCACHE_DIR")
+    if sccache_dir:
+        host_path = expand_path(sccache_dir)
+        if host_path.exists():
+            args.extend(
+                ["--volume", f"{host_path}:/home/sandbox/.cache/sccache"]
+            )
+
+    # sccache Unix Domain Socket (UDS)
+    # Sharing the server socket ensures the container uses the same sccache server
+    # as the host, providing shared stats and perfect cache sharing.
+    sccache_uds = os.environ.get("SCCACHE_SERVER_UDS", "/tmp/sccache.sock")
+    if sccache_uds:
+        host_path = expand_path(sccache_uds)
+        if host_path.exists():
+            args.extend(["--volume", f"{host_path}:{sccache_uds}"])
+
+    return args
+
+
 def get_mount_args():
     args = []
 
@@ -182,6 +208,8 @@ def get_mount_args():
         args.extend(
             ["--volume", f"{host_path}:{mount.container_path}{ro_flag}"]
         )
+
+    args.extend(get_sccache_mount_args())
 
     return args
 

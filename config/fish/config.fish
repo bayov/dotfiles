@@ -103,8 +103,9 @@ alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 set -gx EDITOR fresh
 set -gx PNPM_HOME "$HOME/.local/share/pnpm"
 set -gx RUSTC_WRAPPER sccache
-set -fx SCCACHE_DIR "$HOME/.cache/sccache"
+set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE "25GB"
+set -gx SCCACHE_SERVER_UDS "/tmp/sccache.sock"
 set -gx generate_commit_message_template "$HOME/.config/resources/generate_commit_template.md"
 
 # $PATH
