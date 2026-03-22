@@ -56,8 +56,6 @@ RUN bash scripts/install/10_gum.sh
 COPY --chown=sandbox:sandbox scripts/install/11_claude_code.sh scripts/install/
 RUN bash scripts/install/11_claude_code.sh
 
-WORKDIR /workspace
-
 # Default command is fish.
 ENV SHELL="/usr/bin/fish"
 CMD ["/usr/bin/fish"]

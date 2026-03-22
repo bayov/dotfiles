@@ -21,8 +21,9 @@ from typing import Optional
 IMAGE_TAG = "sandbox-env"
 DOTFILES_DIR = Path.home() / "dotfiles"
 DOCKERFILE_PATH = DOTFILES_DIR / "config" / "docker" / "Dockerfile.sandbox"
-SANDBOX_USER_HOME_DIR = "/home/sandbox"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
+SANDBOX_USER_HOME_DIR = "/home/sandbox"
+WORKSPACE_PATH = Path.cwd().resolve()
 
 
 @dataclass
@@ -44,8 +45,8 @@ class Mount:
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
 MOUNTS = [
-    # The current project workspace.
-    Mount(".", container_path="/workspace", ro=False),
+    # The current project workspace at its absolute host path.
+    Mount(".", container_path=str(WORKSPACE_PATH), ro=False),
     # Claude Code settings (must be writable as CC modifies these).
     Mount("~/.claude", ro=False),
     Mount("~/.claude.json", ro=False),
@@ -57,10 +58,15 @@ MOUNTS = [
     # writeable to allow `jj` to work in the sandbox
     Mount("~/.config/jj/config.toml"),
     Mount("~/.config/jj/repos", ro=False),
-    # Essential configuration files
-    Mount("~/.gitconfig"),
+    # Fish shell writes to `fish_variables*` files
     Mount("~/.config/fish", ro=False),
-    Mount("~/.config/starship.toml"),
+    Mount("~/.config/fish/completions"),
+    Mount("~/.config/fish/conf.d"),
+    Mount("~/.config/fish/functions"),
+    Mount("~/.config/fish/.gitignore"),
+    Mount("~/.config/fish/config.fish"),
+    # Other config files
+    Mount("~/.gitconfig"),
     Mount("~/.config/delta"),
     Mount("~/.config/eza"),
     Mount("~/.config/fresh"),
@@ -177,6 +183,7 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
 
 def get_mount_args():
     args = []
+    seen_container_paths = set()
 
     # Standard Mounts
     for mount in MOUNTS:
@@ -186,10 +193,13 @@ def get_mount_args():
         if mount.host_path != "." and not host_path.exists():
             continue
 
+        container_path = mount.container_path
+        if container_path in seen_container_paths:
+            continue
+        seen_container_paths.add(container_path)
+
         ro_flag = ":ro" if mount.ro else ""
-        args.extend(
-            ["--volume", f"{host_path}:{mount.container_path}{ro_flag}"]
-        )
+        args.extend(["--volume", f"{host_path}:{container_path}{ro_flag}"])
 
     return args
 
@@ -249,21 +259,11 @@ def main():
     mount_args = get_mount_args()
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
-    # Automatically set SCCACHE_BASEDIRS to include both the host's current directory
-    # and the container's workspace. This ensures that sccache treats them as the
-    # same location when computing cache keys, even though their absolute paths differ.
-    host_cwd = os.getcwd()
-    sccache_basedirs = os.environ.get("SCCACHE_BASEDIRS", "")
-    new_basedirs = f"{host_cwd}:/workspace"
-    if sccache_basedirs:
-        new_basedirs = f"{new_basedirs}:{sccache_basedirs}"
-    env_and_ssh_args.extend(["--env", f"SCCACHE_BASEDIRS={new_basedirs}"])
-
     cmd = (
         ["docker", "run", "-it", "--rm"]
         + mount_args
         + env_and_ssh_args
-        + ["--workdir", "/workspace", IMAGE_TAG]
+        + ["--workdir", str(WORKSPACE_PATH), IMAGE_TAG]
     )
 
     if args.command:
