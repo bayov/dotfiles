@@ -64,8 +64,8 @@ keybinds clear-defaults=true {
         bind "Alt t" { NewTab; }
         bind "Alt left" { GoToPreviousTab; }
         bind "Alt right" { GoToNextTab; }
-        bind "Alt [" { MoveTab "left"; }
-        bind "Alt ]" { MoveTab "right"; }
+        bind "Alt [" "Ctrl Alt left" { MoveTab "left"; }
+        bind "Alt ]" "Ctrl Alt right" { MoveTab "right"; }
         // `Alt+s, x` to close tab
 
         // Pane-management

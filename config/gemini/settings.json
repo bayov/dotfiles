@@ -1,36 +1,56 @@
 {
-    "context": { "fileName": "AGENTS.md" },
-    "model": { "name": "gemini-3-flash-preview" },
-    "security": {
-        "auth": { "selectedType": "oauth-personal" },
-        "enablePermanentToolApproval": true,
-        "folderTrust": { "enabled": true }
+  "context": {
+    "fileName": "AGENTS.md"
+  },
+  "model": {
+    "name": "gemini-3.1-pro-preview-customtools"
+  },
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
     },
-    "general": {
-        "previewFeatures": true,
-        "enablePromptCompletion": true,
-        "checkpointing": { "enabled": true },
-        "vimMode": false,
-        "sessionRetention": {
-            "enabled": true,
-            "maxAge": "30d",
-            "warningAcknowledged": true
-        }
+    "enablePermanentToolApproval": true,
+    "folderTrust": {
+      "enabled": true
+    }
+  },
+  "general": {
+    "previewFeatures": true,
+    "enablePromptCompletion": true,
+    "checkpointing": {
+      "enabled": true
     },
-    "ui": {
-        "dynamicWindowTitle": false,
-        "hideBanner": true,
-        "footer": { "hideContextPercentage": false, "hideSandboxStatus": true },
-        "showMemoryUsage": true,
-        "showCitations": true,
-        "showModelInfoInChat": true,
-        "hideWindowTitle": false,
-        "hideTips": true,
-        "useAlternateBuffer": true,
-        "incrementalRendering": true,
-        "hideFooter": false,
-        "theme": "Atom One"
+    "vimMode": false,
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "30d",
+      "warningAcknowledged": true
+    }
+  },
+  "ui": {
+    "dynamicWindowTitle": false,
+    "hideBanner": true,
+    "footer": {
+      "hideContextPercentage": false,
+      "hideSandboxStatus": true
     },
-    "tools": { "shell": { "showColor": true }, "autoAccept": true },
-    "experimental": { "skills": true }
+    "showMemoryUsage": true,
+    "showCitations": true,
+    "showModelInfoInChat": true,
+    "hideWindowTitle": false,
+    "hideTips": true,
+    "useAlternateBuffer": true,
+    "incrementalRendering": true,
+    "hideFooter": false,
+    "theme": "Atom One"
+  },
+  "tools": {
+    "shell": {
+      "showColor": true
+    },
+    "autoAccept": true
+  },
+  "experimental": {
+    "skills": true
+  }
 }
