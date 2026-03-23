@@ -12,7 +12,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
         return
     end
 
-    set -f preview_cmd 'jj diff -w --color=always -- (_fzf_parse_jj_diff_path {})'
+    set -f preview_cmd 'jj diff -w --color=always -- file:\"(_fzf_parse_jj_diff_path {})\"'
     if set --query fzf_diff_highlighter
         set preview_cmd "$preview_cmd | $fzf_diff_highlighter"
     end
@@ -33,7 +33,9 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
             --nth="2.." \
             --height=100% \
             --bind="alt-e:execute($EDITOR (_fzf_parse_jj_diff_path {}))+abort" \
-            --bind="ctrl-r:execute(jj restore (_fzf_parse_jj_diff_path {}))+reload(fish -c '$fzf_jj_status_command')" \
+            --bind="ctrl-r:execute(jj restore file:\"(_fzf_parse_jj_diff_path {})\")+reload(fish -c '$fzf_jj_status_command')" \
+            --bind="ctrl-y:execute-silent(printf '%s\n' {+} | fish -c 'while read -l line; _fzf_parse_jj_diff_path \$line; end | string collect | clip')" \
+            --bind="ctrl-alt-c:execute-silent(printf '%s\n' {+} | fish -c 'while read -l line; _fzf_parse_jj_diff_path \$line; end | string collect | clip')" \
             $fzf_jj_status_opts
     )
     if test $status -eq 0
