@@ -24,6 +24,7 @@ DOCKERFILE_PATH = DOTFILES_DIR / "config" / "docker" / "Dockerfile.sandbox"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
 WORKSPACE_PATH = Path.cwd().resolve()
+IS_IN_DOTFILES = WORKSPACE_PATH == DOTFILES_DIR
 
 
 @dataclass
@@ -55,29 +56,26 @@ MOUNTS = [
     # Map dotfiles to the exact same path in the container to preserve symlinks
     Mount(
         "~/dotfiles",
-        str(DOTFILES_DIR),
-        ro=not (
-            WORKSPACE_PATH == DOTFILES_DIR
-            or DOTFILES_DIR in WORKSPACE_PATH.parents
-        ),
+        container_path=str(DOTFILES_DIR),
+        ro=not IS_IN_DOTFILES,
     ),
     # `jj` config file should be read-only, but repo configuration should be
     # writeable to allow `jj` to work in the sandbox
-    Mount("~/.config/jj/config.toml"),
+    Mount("~/.config/jj/config.toml", ro=not IS_IN_DOTFILES),
     Mount("~/.config/jj/repos", ro=False),
     # Fish shell writes to `fish_variables*` files
     Mount("~/.config/fish", ro=False),
-    Mount("~/.config/fish/completions"),
-    Mount("~/.config/fish/conf.d"),
-    Mount("~/.config/fish/functions"),
-    Mount("~/.config/fish/.gitignore"),
-    Mount("~/.config/fish/config.fish"),
+    Mount("~/.config/fish/completions", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/fish/conf.d", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/fish/functions", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/fish/.gitignore", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/fish/config.fish", ro=not IS_IN_DOTFILES),
     # Other config files
-    Mount("~/.gitconfig"),
-    Mount("~/.config/delta"),
-    Mount("~/.config/eza"),
-    Mount("~/.config/fresh"),
-    Mount("~/.config/quick_prompt_models.json"),
+    Mount("~/.gitconfig", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/delta", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/eza", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/fresh", ro=not IS_IN_DOTFILES),
+    Mount("~/.config/quick_prompt_models.json", ro=not IS_IN_DOTFILES),
     # `quick_prompt` stats
     Mount("~/.local/share/quick_prompt", ro=False),
     # Cargo cache (registry and git dependencies)
