@@ -53,7 +53,14 @@ MOUNTS = [
     # Gemini CLI settings (must be writable as Gemini modifies these).
     Mount("~/.gemini", ro=False),
     # Map dotfiles to the exact same path in the container to preserve symlinks
-    Mount("~/dotfiles", str(DOTFILES_DIR)),
+    Mount(
+        "~/dotfiles",
+        str(DOTFILES_DIR),
+        ro=not (
+            WORKSPACE_PATH == DOTFILES_DIR
+            or DOTFILES_DIR in WORKSPACE_PATH.parents
+        ),
+    ),
     # `jj` config file should be read-only, but repo configuration should be
     # writeable to allow `jj` to work in the sandbox
     Mount("~/.config/jj/config.toml"),
