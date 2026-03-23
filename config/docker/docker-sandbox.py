@@ -265,7 +265,14 @@ def main():
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
     cmd = (
-        ["docker", "run", "-it", "--rm"]
+        [
+            "docker",
+            "run",
+            "-it",
+            "--rm",
+            "--cap-drop=ALL",
+            "--security-opt=no-new-privileges",
+        ]
         + mount_args
         + env_and_ssh_args
         + ["--workdir", str(WORKSPACE_PATH), IMAGE_TAG]
