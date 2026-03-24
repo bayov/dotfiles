@@ -46,7 +46,6 @@ depends = [
 "config/fish/completions" = { target = "~/.config/fish/completions", type = "symbolic", recurse = false }
 "config/fish/conf.d" = { target = "~/.config/fish/conf.d", type = "symbolic", recurse = false }
 "config/fish/functions" = { target = "~/.config/fish/functions", type = "symbolic", recurse = false }
-"config/fish/themes" = { target = "~/.config/fish/themes", type = "symbolic", recurse = false }
 
 [fresh.files]
 "config/fresh" = { target = "~/.config/fresh", type = "symbolic", recurse = false }
