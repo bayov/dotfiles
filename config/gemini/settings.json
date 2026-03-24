@@ -1,6 +1,6 @@
 {
     "context": { "fileName": "AGENTS.md" },
-    "model": { "name": "gemini-3.1-pro-preview" },
+    "model": { "name": "gemini-3-flash-preview" },
     "security": {
         "auth": { "selectedType": "oauth-personal" },
         "enablePermanentToolApproval": true,

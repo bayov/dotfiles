@@ -180,8 +180,12 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
         f"{HASH_LABEL}={current_hash}",
         "-f",
         str(DOCKERFILE_PATH),
-        str(DOTFILES_DIR),
     ]
+
+    if rebuild:
+        build_cmd.append("--no-cache")
+
+    build_cmd.append(str(DOTFILES_DIR))
 
     subprocess.run(build_cmd, check=True)
 
