@@ -40,6 +40,15 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
             end
 
             if jj workspace forget "$name"
+                # Move out of the directory if we are currently in it.
+                # This prevents 'mv' from failing to remove the directory itself
+                # when it is the current working directory of the shell.
+                set -l real_base (realpath "$base_dir")
+                set -l real_pwd (realpath (pwd))
+                if string match -q "$real_base/$name" "$real_pwd"; or string match -q "$real_base/$name/*" "$real_pwd"
+                    cd "$real_base"
+                end
+
                 set -l timestamp (date "+%Y-%m-%d.%H%M%S")
                 set -l target_path "$backup_dir/$timestamp.$name"
 
