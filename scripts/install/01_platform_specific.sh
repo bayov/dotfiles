@@ -38,6 +38,11 @@ if [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
     $SUDO apt-get install -y $APT_OPTS btop
     $SUDO apt-get install -y $APT_OPTS bat
 
+    # Install glow via snap if available
+    if command -v snap >/dev/null 2>&1; then
+        $SUDO snap install glow
+    fi
+
     # Clean up apt cache to reduce image size if in Docker
     if [ "$DOCKER_SANDBOX" = "1" ]; then
         $SUDO rm -rf /var/lib/apt/lists/*
