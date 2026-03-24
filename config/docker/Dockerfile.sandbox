@@ -23,8 +23,8 @@ WORKDIR /home/sandbox
 # Copy and run installer scripts one by one to optimize cache.
 COPY --chown=sandbox:sandbox scripts/install/sudo.sh scripts/install/
 
-COPY --chown=sandbox:sandbox scripts/install/01_apt_packages.sh scripts/install/
-RUN bash scripts/install/01_apt_packages.sh
+COPY --chown=sandbox:sandbox scripts/install/01_platform_specific.sh scripts/install/
+RUN bash scripts/install/01_platform_specific.sh
 
 COPY --chown=sandbox:sandbox scripts/install/02_pypi_packages.sh scripts/install/
 RUN bash scripts/install/02_pypi_packages.sh
