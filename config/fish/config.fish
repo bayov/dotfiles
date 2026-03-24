@@ -8,6 +8,7 @@ if status is-interactive
     abbr -a c docker-sandbox --no-rebuild -- claude --dangerously-skip-permissions
     abbr -a g docker-sandbox --no-rebuild -- gemini --yolo
     abbr -a oc opencode
+    abbr -a lmd glow --width 160
 
     # Aliases
     alias za="zellij attach default --create"
