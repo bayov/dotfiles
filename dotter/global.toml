@@ -82,6 +82,4 @@ depends = [
 "config/quick_prompt_models.json" = "~/.config/quick_prompt_models.json"
 
 [starship.files]
-# Using template to force a copy, since we need to override right_prompt in
-# Google environment.
-"config/starship.toml" = { target = "~/.config/starship.toml", type = "template" }
+"config/starship.toml" = "~/.config/starship.toml"
