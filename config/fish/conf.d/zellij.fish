@@ -7,18 +7,15 @@ set --query zellij_fish_dump_full_screen
 or set --universal zellij_fish_dump_full_screen 0
 
 function __zellij_scrollback_dump
-    set -l tmpfile (command mktemp)
     set -l options
     test $zellij_fish_dump_full_screen -eq 1; and set -a options --full
-    command zellij action dump-screen $options $tmpfile
-    command cat $tmpfile
-    command rm $tmpfile
+    command zellij action dump-screen $options
 end
 
 function zellij_scrollback_paths --description "Prints all paths that exist in the current Zellij pane's scrollback."
     # FIXME: does not capture every true positive yet
     __zellij_scrollback_dump \
-        | string match --all --regex --groups-only '((?:/|~|\.\.?/)\S+[^/ \t\n\r"\'\(\)\[\]\{\}])' \
+        | string match --all --regex --groups-only '((?:/|~|\.\.?/|[\w._-]+/)\S*[^/ \t\n\r"\'\(\)\[\]\{\}])' \
         | while read p
             # Only output paths that exists
             # Expand ~ to $HOME because test -e doesn't do it for variables
