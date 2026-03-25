@@ -16,7 +16,7 @@ corepack enable pnpm
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME:$PATH"
 
-pnpm add -g @google/gemini-cli@latest
+pnpm add -g @google/gemini-cli@preview
 pnpm add -g opencode-ai@latest
 pnpm add -g @fission-ai/openspec@latest
 
