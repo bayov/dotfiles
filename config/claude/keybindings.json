@@ -5,7 +5,7 @@
         {
             "context": "Global",
             "bindings": {
-                "ctrl+t": "app:toggleTodos",
+                "alt+j": "app:toggleTodos",
                 "alt+v": "app:toggleTranscript",
                 "ctrl+o": null,
                 "ctrl+shift+b": "app:toggleBrief",
@@ -18,7 +18,7 @@
             "bindings": {
                 "shift+enter": "chat:newline",
                 "escape": "chat:cancel",
-                "ctrl+f": "chat:killAgents",
+                "ctrl+t": "chat:killAgents",
                 "shift+tab": "chat:cycleMode",
                 "alt+m": "chat:modelPicker",
                 "meta+p": null,
