@@ -16,4 +16,8 @@ function note --description "Note-taking: open or create a note in \$personal_no
     end
 
     $EDITOR $note_path
+
+    if test -f $note_path -a ! -s $note_path
+        rm $note_path
+    end
 end
