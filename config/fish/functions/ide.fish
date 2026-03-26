@@ -1,7 +1,8 @@
-function ide --description 'Open VS Code'
+function ide --description 'Open VS Code silently'
     if not set -q argv[1]
-        "/mnt/c/Programs/VS Code/Code.exe" .
+        command "/mnt/c/Programs/VS Code/Code.exe" . >/dev/null 2>&1 </dev/null &
     else
-        "/mnt/c/Programs/VS Code/Code.exe" $argv
+        command "/mnt/c/Programs/VS Code/Code.exe" $argv >/dev/null 2>&1 </dev/null &
     end
+    disown
 end
