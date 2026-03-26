@@ -1,6 +1,6 @@
-function n --description "Note-taking: open or create a note in \$personal_notes_default_dir"
+function note --description "Note-taking: open or create a note in \$personal_notes_default_dir"
     if test (count $argv) -eq 0
-        echo "Usage: n <note.md>"
+        echo "Usage: note <note.md>"
         return 1
     end
 

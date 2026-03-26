@@ -12,11 +12,11 @@ function _fzf_search_notes --description "Search notes and open or create one in
     set -f fzf_status $status
 
     if test $fzf_status -eq 0
-        n $result[2]
+        note $result[2]
     else if test $fzf_status -eq 1
         # No match — use query as new note name
         if test -n "$result[1]"
-            n $result[1]
+            note $result[1]
         end
     end
 
