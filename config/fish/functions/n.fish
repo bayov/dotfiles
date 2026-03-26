@@ -4,7 +4,7 @@ function n --description "Note-taking: open or create a note in \$personal_notes
         return 1
     end
 
-    set notes_dir (test -n "$personal_notes_default_dir"; and echo $personal_notes_default_dir; or echo ~/dotfiles/notes)
+    set notes_dir (test -n "$personal_notes_default_dir"; and echo $personal_notes_default_dir; or echo ~/notes)
     set note_path $notes_dir/$argv[1]
 
     if not test -d $notes_dir

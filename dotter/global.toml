@@ -23,6 +23,8 @@ depends = [
     "srt-settings",
     "quick_prompt",
     "starship",
+    # personal notes
+    "notes",
 ]
 
 [claude.files]
@@ -83,3 +85,6 @@ depends = [
 
 [starship.files]
 "config/starship.toml" = "~/.config/starship.toml"
+
+[notes.files]
+"notes" = { target = "~/notes", type = "symbolic", recurse = false }
