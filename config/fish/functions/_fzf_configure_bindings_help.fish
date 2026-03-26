@@ -20,6 +20,7 @@ DESCRIPTION
         Search Projects    |  Alt+W       (W for workspace) |  --projects
         Search Zellij Paths|  Alt+Shift+F (F for files)     |  --zellij_paths
         Search Zellij URLs |  Alt+U       (U for urls)      |  --zellij_urls
+        Search Notes       |  Alt+N       (N for notes)     |  --notes
     Override a command's binding by specifying its corresponding option with the desired key
     sequence. Disable a command's binding by specifying its corresponding option with no value.
 

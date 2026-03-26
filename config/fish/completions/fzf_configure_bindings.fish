@@ -8,3 +8,4 @@ complete fzf_configure_bindings --long variables --description "Change the key b
 complete fzf_configure_bindings --long projects --description "Change the key binding for Search Projects" --condition "not __fish_seen_argument --projects"
 complete fzf_configure_bindings --long zellij_paths --description "Change the key binding for Search Zellij Paths" --condition "not __fish_seen_argument --zellij_paths"
 complete fzf_configure_bindings --long zellij_urls --description "Change the key binding for Search Zellij URLs" --condition "not __fish_seen_argument --zellij_urls"
+complete fzf_configure_bindings --long notes --description "Change the key binding for Search Notes" --condition "not __fish_seen_argument --notes"
