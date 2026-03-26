@@ -108,7 +108,7 @@ set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE "25GB"
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
-set -gx generate_commit_message_template "$HOME/.config/resources/generate_commit_template.md"
+set -gx generate_commit_message_template "$HOME/dotfiles/assets/generate_commit_template.md"
 
 # $PATH
 fish_add_path ~/.local/bin

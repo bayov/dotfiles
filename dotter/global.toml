@@ -15,7 +15,6 @@ depends = [
     "gemini",
     "jj",
     "opencode",
-    "resources",
     "wezterm",
     "zellij",
     # single files
@@ -63,9 +62,6 @@ depends = [
 [opencode.files]
 "config/opencode/AGENTS.md" = "~/.config/opencode/AGENTS.md"
 "config/opencode/opencode.jsonc" = "~/.config/opencode/opencode.jsonc"
-
-[resources.files]
-"config/resources" = { target = "~/.config/resources", type = "symbolic", recurse = false }
 
 [wezterm.files]
 "config/wezterm" = { target = "/mnt/c/Users/hesos/.config/wezterm", type = "template" }
