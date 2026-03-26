@@ -1,8 +1,10 @@
 Write a commit message for the following git diff:
 
-<git-diff>
+```git-diff
 {{diff}}
-</git-diff>
+```
+
+---
 
 **IMPORTANT:** Wrap your response in <commit-message> tags. Example:
 
