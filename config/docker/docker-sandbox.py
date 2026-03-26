@@ -276,6 +276,8 @@ def main():
             "--rm",
             "--cap-drop=ALL",
             "--security-opt=no-new-privileges",
+            "--env",
+            f"CARGO_TARGET_DIR={WORKSPACE_PATH}/target/docker-sandbox",
         ]
         + mount_args
         + env_and_ssh_args
