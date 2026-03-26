@@ -38,8 +38,8 @@ function gm --description "Generates AI description for the current commit based
     mkdir -p $temp_dir
     set -l ts (date "+%Y-%m-%d.%H-%M-%S")
     set -l rid (random)
-    set -l input_file "$temp_dir/$ts.$rid.prompt_input.txt"
-    set -l output_file "$temp_dir/$ts.$rid.prompt_output.txt"
+    set -l input_file "$temp_dir/$ts.$rid.prompt_input.md"
+    set -l output_file "$temp_dir/$ts.$rid.prompt_output.md"
 
     # This is also good for debugging (can see the last sent prompt).
     echo $prompt > $input_file
