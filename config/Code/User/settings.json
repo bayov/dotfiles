@@ -239,6 +239,8 @@
     // Dependi
     "dependi.decoration.compatible.template": "✓",
     "dependi.decoration.patchAvailable.template": "⇢ ${version}",
+    // Svelte
+    "svelte.enable-ts-plugin": true,
     // --------------------------------------------------------------------------
     // Uncategorized
     //  | VS Code appends new settings after the last setting so I'm keeping
