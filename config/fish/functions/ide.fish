@@ -1,8 +1,8 @@
-function ide --description 'Open VS Code silently'
+function ide --description 'Open VS Code in WSL mode silently'
     if not set -q argv[1]
-        command "/mnt/c/Programs/VS Code/Code.exe" . >/dev/null 2>&1 </dev/null &
+        code . >/dev/null 2>&1 </dev/null &
     else
-        command "/mnt/c/Programs/VS Code/Code.exe" $argv >/dev/null 2>&1 </dev/null &
+        code $argv >/dev/null 2>&1 </dev/null &
     end
     disown
 end
