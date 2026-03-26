@@ -5,6 +5,7 @@
     "files.autoSave": "onFocusChange",
     "window.enableMenuBarMnemonics": false, // Disable Alt key focusing the menu
     "window.customMenuBarAltFocus": false, // Disable Alt key focusing the menu
+    "window.restoreWindows": "none",
     // --------------------------------------------------------------------------
     // Files & Explorer
     // --------------------------------------------------------------------------

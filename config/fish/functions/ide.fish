@@ -1,8 +1,8 @@
-function ide --description 'Open VS Code in WSL mode silently'
+function ide --description 'Open current directory in VS Code'
     if not set -q argv[1]
-        code . >/dev/null 2>&1 </dev/null &
+        code --new-window . >/dev/null 2>&1 </dev/null &
     else
-        code $argv >/dev/null 2>&1 </dev/null &
+        code --new-window $argv >/dev/null 2>&1 </dev/null &
     end
     disown
 end
