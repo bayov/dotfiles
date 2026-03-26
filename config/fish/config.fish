@@ -4,6 +4,8 @@ if status is-interactive
     abbr -a v fresh
     abbr -a ll l
     abbr -a z zellij
+    abbr -a zl zellij list-sessions
+    abbr -a zka zellij kill-all-sessions
     abbr -a fd fdfind
     abbr -a c docker-sandbox --no-rebuild -- claude --dangerously-skip-permissions
     abbr -a g docker-sandbox --no-rebuild -- gemini --yolo
@@ -12,9 +14,8 @@ if status is-interactive
 
     # Aliases
     alias za="zellij attach default --create --force-run-commands"
-    alias zl="zellij list-sessions"
-    alias zka="zellij kill-all-sessions"
     alias hm="history merge"
+    alias v="$EDITOR"
 
     # Initialize prompt
     type -q starship && starship init fish | source
