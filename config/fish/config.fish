@@ -11,7 +11,7 @@ if status is-interactive
     abbr -a lmd glow --width 160
 
     # Aliases
-    alias za="zellij attach default --create"
+    alias za="zellij attach default --create --force-run-commands"
     alias zl="zellij list-sessions"
     alias zka="zellij kill-all-sessions"
     alias hm="history merge"
