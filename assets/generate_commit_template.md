@@ -1,8 +1,8 @@
 Write a commit message for the following git diff:
 
-```git-diff
+<git-diff>
 {{diff}}
-```
+</git-diff>
 
 ---
 
