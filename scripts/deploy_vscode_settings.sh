@@ -107,8 +107,9 @@ deploy_link() {
     local nc="\033[0m"
 
     # Escape backslashes for echo -e
+    local rel_path_escaped="${rel_path//\\/\\\\}"
     local wsl_target_escaped="${wsl_target//\\/\\\\}"
-    local log_line="${cyan}PS symlink${nc} \"${magenta}${rel_path}${nc}\" -> \"${magenta}${wsl_target_escaped}${nc}\""
+    local log_line="${cyan}PS symlink${nc} \"${magenta}${rel_path_escaped}${nc}\"\n  ↳ \"${magenta}${wsl_target_escaped}${nc}\""
 
     if [ -z "$FORCE" ]; then
         if check_link "$win_path" "$wsl_target"; then
@@ -122,8 +123,7 @@ deploy_link() {
 }
 
 undeploy_link() {
-    local rel_path="$1"
-    local win_path="$2"
+    local win_path="$1"
 
     # Define colors for log line
     local cyan="\033[0;36m"
@@ -147,14 +147,14 @@ undeploy_link() {
 }
 
 # Relative paths for logging
-REL_SETTINGS="./config/Code/User/settings.json"
-REL_KEYBINDINGS="./config/Code/User/keybindings.json"
+REL_SETTINGS="%appdata%\\config\\Code\\User\\settings.json"
+REL_KEYBINDINGS="%appdata%\\config\\Code\\User\\keybindings.json"
 
 if [ "$OPERATION" = "deploy" ]; then
     deploy_link "$REL_SETTINGS" "$WIN_SETTINGS_PATH" "$WSL_SETTINGS_PATH"
     deploy_link "$REL_KEYBINDINGS" "$WIN_KEYBINDINGS_PATH" "$WSL_KEYBINDINGS_PATH"
 
 elif [ "$OPERATION" = "undeploy" ]; then
-    undeploy_link "$REL_SETTINGS" "$WIN_SETTINGS_PATH"
-    undeploy_link "$REL_KEYBINDINGS" "$WIN_KEYBINDINGS_PATH"
+    undeploy_link "$WIN_SETTINGS_PATH"
+    undeploy_link "$WIN_KEYBINDINGS_PATH"
 fi
