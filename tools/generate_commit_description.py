@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Generates an AI commit description for the current jj commit and prints it to stdout."""
+
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from random import randint
+
+
+def main() -> None:
+    # 1. Get diff
+    diff_result = subprocess.run(
+        ["jj", "diff", "--git"], capture_output=True, text=True
+    )
+    diff = diff_result.stdout.strip()
+    if not diff:
+        print("No changes found.", file=sys.stderr)
+        sys.exit(1)
+
+    # 2. Load prompt template
+    template_path = Path(
+        os.environ.get(
+            "generate_commit_message_template",
+            str(Path.home() / "dotfiles/assets/generate_commit_template.md"),
+        )
+    )
+    prompt = template_path.read_text().replace("{{diff}}", diff)
+
+    # 3. Save prompt to temp file (useful for debugging)
+    temp_dir = Path("/tmp/generate-commit-message")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y-%m-%d.%H-%M-%S")
+    rid = randint(0, 999999)
+    input_file = temp_dir / f"{ts}.{rid}.prompt_input.md"
+    output_file = temp_dir / f"{ts}.{rid}.prompt_output.md"
+    input_file.write_text(prompt)
+
+    # 4. Run quick_prompt
+    quick_prompt = Path.home() / ".local/share/quick_prompt/quick_prompt.py"
+    with open(input_file) as f:
+        qp_result = subprocess.run(
+            [sys.executable, quick_prompt],
+            stdin=f,
+            capture_output=True,
+            text=True,
+        )
+    if qp_result.returncode != 0 or not qp_result.stdout.strip():
+        sys.exit(1)
+    output_file.write_text(qp_result.stdout)
+
+    # 5. Extract commit message from <commit-message> tags
+    output_text = qp_result.stdout
+    match = re.search(
+        r"<commit-message>\s*(.*?)\s*</commit-message>", output_text, re.DOTALL
+    )
+    if not match:
+        print(
+            "\033[31m ✘ Failed to extract commit message from prompt output.\033[0m",
+            file=sys.stderr,
+        )
+        print(
+            f"\033[90m   Prompt input:  \033[36m{input_file}\033[0m",
+            file=sys.stderr,
+        )
+        print(
+            f"\033[90m   Prompt output: \033[36m{output_file}\033[0m",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    commit_description = match.group(1).strip()
+    output_file.write_text(commit_description)
+
+    print(
+        json.dumps(
+            {
+                "prompt_input_file": str(input_file),
+                "prompt_output_file": str(output_file),
+                "commit_description": commit_description,
+            },
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

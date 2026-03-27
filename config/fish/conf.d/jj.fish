@@ -17,10 +17,6 @@ function gm --description "Generates AI description for the current commit based
     # Run my personal formatter
     format_personal_project || return $status
 
-    # Get current commit git diff
-    set -l diff (jj diff --git | string collect)
-    test -z "$diff" && echo "No changes found." && return 1
-
     # Warn if description already exists
     set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
     if test -n "$current_desc"
@@ -28,40 +24,14 @@ function gm --description "Generates AI description for the current commit based
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
     end
 
-    # Get last 50 commits to use as example
-    # set -l log (jj log -r '~@' -n 50 --no-graph --template 'description ++ "--------------------------\n"' | string collect)
-
-    # Load prompt from template
-    set -l prompt (cat "$generate_commit_message_template" | string replace "{{diff}}" "$diff" | string collect)
-
-    set -l temp_dir "/tmp/generate-commit-message"
-    mkdir -p $temp_dir
-    set -l ts (date "+%Y-%m-%d.%H-%M-%S")
-    set -l rid (random)
-    set -l input_file "$temp_dir/$ts.$rid.prompt_input.md"
-    set -l output_file "$temp_dir/$ts.$rid.prompt_output.md"
-
-    # This is also good for debugging (can see the last sent prompt).
-    echo $prompt > $input_file
-
-    # show loader while `quick_prompt` is running
-    gum spin --title "generating commit message" -- fish -c "cat $input_file | quick_prompt > $output_file"
-    if test $status -ne 0; or not test -s "$output_file"
-        return 1
-    end
-
-    set -l msg (cat $output_file | perl -0777 -ne 'if (/^.*?<commit-message>\s*(.*?)\s*<\/commit-message>.*?$/s) { print $1; exit 0 } else { exit 1 }' | string trim | string collect)
-
-    if test $status -ne 0
-        echo -e (set_color red)" ✘ Failed to extract commit message prompt output."(set_color normal) >&2
-        echo -e (set_color brblack)"   Prompt input:  "(set_color cyan)"$input_file"(set_color normal) >&2
-        echo -e (set_color brblack)"   Prompt output: "(set_color cyan)"$output_file"(set_color normal) >&2
-        echo
-        return 1
-    end
+    set -l result (gum spin --title "generating commit description" --show-output -- python3 "$HOME/dotfiles/tools/generate_commit_description.py" | string collect)
+    or return 1
+    set -l output_file (echo $result | jq -r '.prompt_output_file')
+    set -l msg (cat $output_file | string collect)
+    test -n "$msg" || return 1
 
     jj describe -m "$msg" --quiet
-    
+
     echo_box "$msg" --title="Generated commit description:" --width 100 # --title-color=2
 end
 
