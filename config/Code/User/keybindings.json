@@ -941,19 +941,30 @@
     { "key": "alt+8", "command": "-workbench.action.openEditorAtIndex8" },
     { "key": "alt+9", "command": "-workbench.action.openEditorAtIndex9" },
     {
-        "key": "alt+2",
-        "command": "workbench.action.toggleSidebarVisibility",
-        "when": "activeViewlet == 'workbench.view.scm'"
-    },
-    {
         "key": "alt+numpad9",
         "command": "-workbench.action.toggleSidebarVisibility",
         "when": "activeViewlet == 'workbench.view.scm'"
     },
     {
         "key": "alt+2",
-        "command": "workbench.view.scm",
-        "when": "workbench.scm.active && activeViewlet != 'workbench.view.scm'"
+        "command": "runCommands",
+        "when": "!sideBarVisible || activeViewlet != 'workbench.view.scm'",
+        "args": {
+            "commands": [
+                "workbench.view.scm",
+                "workbench.scm.action.focusNextResourceGroup"
+            ]
+        }
+    },
+    {
+        "key": "alt+2",
+        "command": "workbench.action.focusSideBar",
+        "when": "sideBarVisible && activeViewlet == 'workbench.view.scm' && !sideBarFocus"
+    },
+    {
+        "key": "alt+2",
+        "command": "workbench.action.toggleSidebarVisibility",
+        "when": "sideBarVisible && activeViewlet == 'workbench.view.scm' && sideBarFocus"
     },
     {
         "key": "alt+numpad9",
