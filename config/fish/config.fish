@@ -1,3 +1,26 @@
+# Environment Variables
+set -gx EDITOR fresh
+set -gx PNPM_HOME "$HOME/.local/share/pnpm"
+set -gx RUSTC_WRAPPER sccache
+set -gx SCCACHE_DIR "$HOME/.cache/sccache"
+set -gx SCCACHE_CACHE_SIZE "25GB"
+set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
+set -gx generate_commit_message_template "$HOME/dotfiles/assets/generate_commit_template.md"
+
+# Global aliases (even if shell is not interactive)
+alias cat=batcat
+alias bat=batcat
+alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
+
+# $PATH
+fish_add_path ~/.local/bin
+fish_add_path ~/.fzf/bin
+fish_add_path /snap/bin
+fish_add_path ~/.cargo/bin
+fish_add_path ~/.local/share/pnpm
+fish_add_path ~/.opencode/bin
+
+# Configuration that applies only for interactive shell sessions
 if status is-interactive
     abbr -a !! --position anywhere --function last_history_item
     abbr -a r reload
@@ -95,25 +118,3 @@ if status is-interactive
         set -gx FISH_COMPLETION_NO_DESCRIPTIONS 1
     end
 end
-
-# Global aliases (even if shell is not interactive)
-alias cat=batcat
-alias bat=batcat
-alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
-
-# Environment Variables
-set -gx EDITOR fresh
-set -gx PNPM_HOME "$HOME/.local/share/pnpm"
-set -gx RUSTC_WRAPPER sccache
-set -gx SCCACHE_DIR "$HOME/.cache/sccache"
-set -gx SCCACHE_CACHE_SIZE "25GB"
-set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
-set -gx generate_commit_message_template "$HOME/dotfiles/assets/generate_commit_template.md"
-
-# $PATH
-fish_add_path ~/.local/bin
-fish_add_path ~/.fzf/bin
-fish_add_path /snap/bin
-fish_add_path ~/.cargo/bin
-fish_add_path ~/.local/share/pnpm
-fish_add_path ~/.opencode/bin
