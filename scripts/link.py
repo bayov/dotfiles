@@ -2,9 +2,7 @@
 """
 Symlinks files from config/ to $HOME, mirroring the directory structure.
 
-Usage: python scripts/link.py --dry-run [--verbose] [--unlink]
-
---dry-run is currently required. This restriction will be lifted later.
+Usage: python scripts/link.py [--dry-run] [--verbose] [--unlink] [--force]
 """
 
 import argparse
@@ -45,6 +43,15 @@ except ImportError:
 LINK_TOML = ".link.toml"
 LINK_STATE = ".link-state.toml"
 ARROW = "⟶"
+
+FILE_MODES = ("symlink", "copy")
+
+
+@dataclass(frozen=True)
+class FileConfig:
+    dest: Path | None = None
+    skip: bool = False
+    mode: str = "symlink"  # "symlink" or "copy"
 
 
 @dataclass(frozen=True)
@@ -96,7 +103,7 @@ class Logger:
     def forced(self, dest: Path, src: Path) -> None:
         self._log(
             self.Status.LINK,
-            f"{RED}(--force){RESET} {self.fmt_path(dest, GREEN)} {ARROW} {self.fmt_src(src)}",
+            f"{self.fmt_path(dest, GREEN)} {ARROW} {self.fmt_src(src)} {RED}(--force){RESET}",
         )
 
     def notice(self, message: str) -> None:
@@ -178,12 +185,18 @@ class Linker:
     """
 
     def __init__(
-        self, dry_run: bool, force: bool, logger: Logger, state: LinkState
+        self,
+        dry_run: bool,
+        force: bool,
+        logger: Logger,
+        state: LinkState,
+        repo_root: Path | None = None,
     ):
         self.dry_run = dry_run
         self.force = force
         self.logger = logger
         self.state = state
+        self.repo_root = repo_root
         self.had_conflict = False
 
     def link_file(self, src: Path, dest: Path) -> None:
@@ -360,9 +373,11 @@ class CopyFilesMode(LinkMode):
     def _walk(
         self, src: Path, dest: Path, linker: "Linker", unlink: bool
     ) -> None:
-        for entry in sorted(src.iterdir()):
-            if entry.name == LINK_TOML:
-                continue
+        entries = [e for e in sorted(src.iterdir()) if e.name != LINK_TOML]
+        if linker.repo_root is not None:
+            ignored = _git_ignored(entries, linker.repo_root)
+            entries = [e for e in entries if e not in ignored]
+        for entry in entries:
             dest_entry = dest / entry.name
             if entry.is_dir() and not entry.is_symlink():
                 self._walk(entry, dest_entry, linker, unlink)
@@ -543,11 +558,14 @@ MODES: dict[str, LinkMode] = {
 DEFAULT_MODE = "symlink-files"
 
 
-def _read_mode(directory: Path, logger: Logger) -> tuple[LinkMode, Path | None]:
-    """Read .link.toml from directory and return the mode and optional dest override."""
+def _read_mode(
+    directory: Path, logger: Logger
+) -> tuple[LinkMode, Path | None, dict[str, FileConfig]]:
+    """Read .link.toml from directory and return the mode, optional dest override,
+    and per-file configs."""
     link_toml = directory / LINK_TOML
     if not link_toml.exists():
-        return MODES[DEFAULT_MODE], None
+        return MODES[DEFAULT_MODE], None, {}
 
     if tomllib is None:
         logger.error(
@@ -571,7 +589,64 @@ def _read_mode(directory: Path, logger: Logger) -> tuple[LinkMode, Path | None]:
     dest_str: str | None = link_section.get("dest")
     dest_override = Path(dest_str).expanduser() if dest_str else None
 
-    return MODES[mode_name], dest_override
+    file_configs: dict[str, FileConfig] = {}
+    for name, cfg in data.get("files", {}).items():
+        if not isinstance(cfg, dict):
+            continue
+        file_dest_str: str | None = cfg.get("dest")
+        file_dest = Path(file_dest_str).expanduser() if file_dest_str else None
+        skip = bool(cfg.get("skip", False))
+        file_mode: str = cfg.get("mode", "symlink")
+        if file_mode not in FILE_MODES:
+            logger.error(
+                f"{logger.fmt_src(link_toml)}: unknown file mode {repr(file_mode)}"
+                f" for {repr(name)}. Available: {', '.join(FILE_MODES)}"
+            )
+            sys.exit(1)
+        file_configs[name] = FileConfig(
+            dest=file_dest, skip=skip, mode=file_mode
+        )
+
+    return MODES[mode_name], dest_override, file_configs
+
+
+def _git_ignored(paths: list[Path], repo_root: Path) -> set[Path]:
+    """Return the subset of paths that git considers ignored."""
+    if not paths:
+        return set()
+    result = subprocess.run(
+        ["git", "check-ignore", "--"] + [str(p) for p in paths],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+    )
+    return {Path(line) for line in result.stdout.splitlines() if line}
+
+
+def _copy_file(src: Path, dest: Path, linker: Linker) -> None:
+    if dest.exists():
+        if filecmp.cmp(src, dest, shallow=False):
+            linker.logger.exists(dest)
+            return
+        linker._conflict(
+            f"{linker.logger.fmt_path(dest, RED)}: exists with different content"
+        )
+        return
+    if not linker.dry_run:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        linker.state.add(dest, src.resolve())
+    linker.logger.link(dest, src.resolve())
+
+
+def _uncopy_file(dest: Path, linker: Linker) -> None:
+    if dest.exists():
+        if not linker.dry_run:
+            dest.unlink()
+            linker.state.remove(dest)
+        linker.logger.unlinked(dest)
+    else:
+        linker.logger.absent(dest)
 
 
 def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
@@ -580,13 +655,17 @@ def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
       - .link.toml files: skip (they're config, not content).
       - Regular files / file-symlinks: link or unlink directly.
       - Directories: read their .link.toml, dispatch to appropriate mode.
+    Per-file overrides are read from src/.link.toml [files.*] sections.
     """
-    for entry in sorted(src.iterdir()):
-        if entry.name == LINK_TOML:
-            continue
+    _, _, file_configs = _read_mode(src, linker.logger)
+    entries = [e for e in sorted(src.iterdir()) if e.name != LINK_TOML]
+    if linker.repo_root is not None:
+        ignored = _git_ignored(entries, linker.repo_root)
+        entries = [e for e in entries if e not in ignored]
+    for entry in entries:
         dest_entry = dest / entry.name
         if entry.is_dir() and not entry.is_symlink():
-            mode, dest_override = _read_mode(entry, linker.logger)
+            mode, dest_override, _ = _read_mode(entry, linker.logger)
             effective_dest = (
                 dest_override if dest_override is not None else dest_entry
             )
@@ -595,10 +674,22 @@ def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
             else:
                 mode.link(entry, effective_dest, linker)
         elif entry.is_file() or entry.is_symlink():
+            file_cfg = file_configs.get(entry.name)
+            if file_cfg and file_cfg.skip:
+                continue
+            effective_dest = (
+                file_cfg.dest if (file_cfg and file_cfg.dest) else dest_entry
+            )
             if unlink:
-                linker.unlink_file(entry, dest_entry)
+                if file_cfg and file_cfg.mode == "copy":
+                    _uncopy_file(effective_dest, linker)
+                else:
+                    linker.unlink_file(entry, effective_dest)
             else:
-                linker.link_file(entry, dest_entry)
+                if file_cfg and file_cfg.mode == "copy":
+                    _copy_file(entry, effective_dest, linker)
+                else:
+                    linker.link_file(entry, effective_dest)
 
 
 def main() -> None:
@@ -608,13 +699,11 @@ def main() -> None:
     p = argparse.ArgumentParser(
         description="Symlink config/ files into $HOME.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Note: --dry-run is currently required.",
     )
     p.add_argument(
         "--dry-run",
         action="store_true",
-        required=True,
-        help="Print what would be done without making any changes (required).",
+        help="Print what would be done without making any changes.",
     )
     p.add_argument(
         "--verbose",
@@ -642,10 +731,15 @@ def main() -> None:
     state.load()
 
     linker = Linker(
-        dry_run=args.dry_run, force=args.force, logger=logger, state=state
+        dry_run=args.dry_run,
+        force=args.force,
+        logger=logger,
+        state=state,
+        repo_root=repo_root,
     )
 
-    logger.notice("(dry run — no changes will be made)")
+    if args.dry_run:
+        logger.notice("(dry run — no changes will be made)")
     _walk(config_dir, Path.home(), linker, unlink=args.unlink)
     if args.unlink:
         # Unlink stale entries: src files removed from repo since last link run.
@@ -656,7 +750,8 @@ def main() -> None:
         for dest, src in state.items():
             if not src.exists():
                 logger.orphan(dest, src)
-    logger.notice("(dry run — no changes have been made)")
+    if args.dry_run:
+        logger.notice("(dry run — no changes have been made)")
 
     if not args.dry_run:
         state.save()
