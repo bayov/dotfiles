@@ -18,9 +18,16 @@ from enum import Enum
 from pathlib import Path
 from typing import TextIO
 
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib  # type: ignore[no-redef]
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
+
 from util import (
     BOLD,
-    CYAN,
     GRAY,
     GREEN,
     MAGENTA,
@@ -31,19 +38,12 @@ from util import (
     require_project_root,
 )
 
-try:
-    import tomllib
-except ImportError:
-    try:
-        import tomli as tomllib  # type: ignore[no-redef]
-    except ImportError:
-        tomllib = None  # type: ignore[assignment]
-
 
 CONFIG_DIR = "home"
 LINK_TOML = ".link.toml"
 LINK_STATE = ".link-state.toml"
 ARROW = "⟶"
+INDENT = "    "
 
 FILE_MODES = ("symlink", "copy")
 
@@ -80,22 +80,22 @@ class Logger:
     def link(self, dest: Path, src: Path) -> None:
         self._log(
             self.Status.LINK,
-            f"{self.fmt_path(dest, GREEN)} {ARROW} {self.fmt_src(src)}",
+            f"{GREEN}{self.fmt_path(dest)}{RESET} {MAGENTA}{ARROW} {self.fmt_path(src)}{RESET}",
         )
 
     def unlinked(self, dest: Path) -> None:
-        self._log(self.Status.UNLINK, self.fmt_path(dest, YELLOW))
+        self._log(self.Status.UNLINK, f"{YELLOW}{self.fmt_path(dest)}{RESET}")
 
     def exists(self, dest: Path) -> None:
-        self._log(self.Status.EXISTS, self.fmt_path(dest, GRAY))
+        self._log(self.Status.EXISTS, f"{GRAY}{self.fmt_path(dest)}{RESET}")
 
     def absent(self, dest: Path) -> None:
-        self._log(self.Status.ABSENT, self.fmt_path(dest, GRAY))
+        self._log(self.Status.ABSENT, f"{GRAY}{self.fmt_path(dest)}{RESET}")
 
     def orphan(self, dest: Path, src: Path) -> None:
         self._log(
             self.Status.ORPHAN,
-            f"{self.fmt_path(dest, YELLOW)} {ARROW} {self.fmt_src(src)} (source deleted)",
+            f"{YELLOW}{self.fmt_path(dest)}{RESET} {MAGENTA}{ARROW} {self.fmt_path(src)}{RESET} (source deleted)",
         )
 
     def error(self, message: str) -> None:
@@ -104,24 +104,19 @@ class Logger:
     def forced(self, dest: Path, src: Path) -> None:
         self._log(
             self.Status.LINK,
-            f"{self.fmt_path(dest, GREEN)} {ARROW} {self.fmt_src(src)} {RED}(--force){RESET}",
+            f"{GREEN}{self.fmt_path(dest)}{RESET} {MAGENTA}{ARROW} {self.fmt_path(src)}{RESET} {RED}(--force){RESET}",
         )
 
     def notice(self, message: str) -> None:
         print(f"{GRAY}{message}{RESET}", file=sys.stderr)
 
-    def fmt_path(self, path: Path, color: str = CYAN) -> str:
+    def fmt_path(self, path: Path) -> str:
         """Format path for display, substituting ~ for $HOME."""
         home = Path.home()
         try:
-            rel = "~/" + str(path.relative_to(home))
+            return "~/" + str(path.relative_to(home))
         except ValueError:
-            rel = str(path)
-        return f"{color}{rel}{RESET}"
-
-    def fmt_src(self, path: Path) -> str:
-        """Format a source (dotfiles repo) path in magenta."""
-        return self.fmt_path(path, MAGENTA)
+            return str(path)
 
     def _log(self, status: Status, message: str) -> None:
         data = status.value
@@ -227,9 +222,14 @@ class Linker:
                 self.logger.exists(dest)
                 return
             self.logger.error(
-                f"{self.logger.fmt_path(dest, RED)}: symlink exists but points to wrong file.\n"
-                f"{GRAY}   current: {self.logger.fmt_path(actual, GRAY)}\n"
-                f"{GRAY}  expected: {self.logger.fmt_path(src_abs, GRAY)}{RESET}"
+                f"{RED}{self.logger.fmt_path(dest)}{RESET}: symlink exists but points to wrong file.\n"
+                f"{GRAY}{INDENT}current:  {self.logger.fmt_path(actual)}\n"
+                f"{GRAY}{INDENT}expected: {self.logger.fmt_path(src_abs)}{RESET}"
+                + (
+                    ""
+                    if self.force
+                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                )
             )
             if not self.force:
                 self.had_conflict = True
@@ -242,8 +242,17 @@ class Linker:
             return
 
         if dest.exists():
+            _hint = (
+                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
+                if dest.is_dir()
+                else (
+                    ""
+                    if self.force
+                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                )
+            )
             self.logger.error(
-                f"{self.logger.fmt_path(dest, RED)}: exists and is not a symlink"
+                f"{RED}{self.logger.fmt_path(dest)}{RESET}: exists and is not a symlink{_hint}"
             )
             if not self.force or dest.is_dir():
                 self.had_conflict = True
@@ -269,9 +278,14 @@ class Linker:
             expected = src.resolve()
             if actual != expected:
                 self.logger.error(
-                    f"{self.logger.fmt_path(dest, RED)}: symlink points to wrong file — skipping.\n"
-                    f"{GRAY}   current: {self.logger.fmt_path(actual, GRAY)}\n"
-                    f"{GRAY}  expected: {self.logger.fmt_path(expected, GRAY)}{RESET}"
+                    f"{RED}{self.logger.fmt_path(dest)}{RESET}: symlink points to wrong file — skipping.\n"
+                    f"{GRAY}{INDENT}current:  {self.logger.fmt_path(actual)}\n"
+                    f"{GRAY}{INDENT}expected: {self.logger.fmt_path(expected)}{RESET}"
+                    + (
+                        ""
+                        if self.force
+                        else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                    )
                 )
                 if not self.force:
                     self.had_conflict = True
@@ -282,14 +296,16 @@ class Linker:
             self.logger.unlinked(dest)
         elif dest.exists():
             self._conflict(
-                f"{self.logger.fmt_path(dest, RED)}: exists and is not a symlink"
+                f"{RED}{self.logger.fmt_path(dest)}{RESET}: exists and is not a symlink"
                 " — cannot unlink"
             )
         else:
             self.logger.absent(dest)
 
     def _conflict(self, message: str) -> None:
-        self.logger.error(message)
+        self.logger.error(
+            message + f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
+        )
         self.had_conflict = True
 
 
@@ -394,7 +410,7 @@ class CopyFilesMode(LinkMode):
                 linker.logger.exists(dest)
                 return
             linker._conflict(
-                f"{linker.logger.fmt_path(dest, RED)}: exists with different content"
+                f"{RED}{linker.logger.fmt_path(dest)}{RESET}: exists with different content"
             )
             return
         if not linker.dry_run:
@@ -469,7 +485,7 @@ class WindowsSymlinkDirMode(LinkMode):
         win_dest = _win_path_from_mnt(dest)
         if win_dest is None:
             linker._conflict(
-                f"{linker.logger.fmt_path(dest, RED)}: windows-symlink-dir requires "
+                f"{RED}{linker.logger.fmt_path(dest)}{RESET}: windows-symlink-dir requires "
                 "a /mnt/<drive>/... destination"
             )
             return
@@ -495,15 +511,15 @@ class WindowsSymlinkDirMode(LinkMode):
             return
         if rc == 3:
             linker._conflict(
-                f"{linker.logger.fmt_path(dest, RED)}: exists on Windows and is not a symlink"
+                f"{RED}{linker.logger.fmt_path(dest)}{RESET}: exists on Windows and is not a symlink"
             )
             return
         if rc == 1:
             actual_win = ps_result.stdout.decode(errors="replace").strip()
             linker.logger.error(
-                f"{linker.logger.fmt_path(dest, RED)}: Windows symlink exists but points to wrong file.\n"
-                f"{GRAY}   current: {actual_win}\n"
-                f"  expected: {unc_src}{RESET}"
+                f"{RED}{linker.logger.fmt_path(dest)}{RESET}: Windows symlink exists but points to wrong file.\n"
+                f"{GRAY}{INDENT}current:  {actual_win}\n"
+                f"{GRAY}{INDENT}expected: {unc_src}{RESET}"
             )
             if not linker.force:
                 linker.had_conflict = True
@@ -513,7 +529,7 @@ class WindowsSymlinkDirMode(LinkMode):
                 result = _run_ps_elevated(f'Remove-Item "{win_dest}" -Force')
                 if result.returncode != 0:
                     linker._conflict(
-                        f"{linker.logger.fmt_path(dest, RED)}: failed to remove existing Windows symlink"
+                        f"{RED}{linker.logger.fmt_path(dest)}{RESET}: failed to remove existing Windows symlink"
                     )
                     return
         # rc == 2: absent, or rc == 1 with --force: create it
@@ -523,7 +539,7 @@ class WindowsSymlinkDirMode(LinkMode):
             )
             if result.returncode != 0:
                 linker._conflict(
-                    f"{linker.logger.fmt_path(dest, RED)}: failed to create Windows symlink"
+                    f"{RED}{linker.logger.fmt_path(dest)}{RESET}: failed to create Windows symlink"
                 )
                 return
             linker.state.add(dest, src.resolve())
@@ -536,7 +552,7 @@ class WindowsSymlinkDirMode(LinkMode):
         win_dest = _win_path_from_mnt(dest)
         if win_dest is None:
             linker._conflict(
-                f"{linker.logger.fmt_path(dest, RED)}: windows-symlink-dir requires "
+                f"{RED}{linker.logger.fmt_path(dest)}{RESET}: windows-symlink-dir requires "
                 "a /mnt/<drive>/... destination"
             )
             return
@@ -554,7 +570,7 @@ class WindowsSymlinkDirMode(LinkMode):
             result = _run_ps_elevated(f'Remove-Item "{win_dest}" -Force')
             if result.returncode != 0:
                 linker._conflict(
-                    f"{linker.logger.fmt_path(dest, RED)}: failed to remove Windows symlink"
+                    f"{RED}{linker.logger.fmt_path(dest)}{RESET}: failed to remove Windows symlink"
                 )
                 return
             linker.state.remove(dest)
@@ -583,7 +599,7 @@ def _read_mode(
 
     if tomllib is None:
         logger.error(
-            f"cannot read {logger.fmt_src(link_toml)}: "
+            f"cannot read {MAGENTA}{logger.fmt_path(link_toml)}{RESET}: "
             "tomllib unavailable (Python 3.11+ required, or install tomli)"
         )
         sys.exit(1)
@@ -595,7 +611,7 @@ def _read_mode(
     mode_name: str = link_section.get("mode", DEFAULT_MODE)
     if mode_name not in MODES:
         logger.error(
-            f"{logger.fmt_src(link_toml)}: unknown mode {repr(mode_name)}. "
+            f"{MAGENTA}{logger.fmt_path(link_toml)}{RESET}: unknown mode {repr(mode_name)}. "
             f"Available modes: {', '.join(MODES)}"
         )
         sys.exit(1)
@@ -613,7 +629,7 @@ def _read_mode(
         file_mode: str = cfg.get("mode", "symlink")
         if file_mode not in FILE_MODES:
             logger.error(
-                f"{logger.fmt_src(link_toml)}: unknown file mode {repr(file_mode)}"
+                f"{MAGENTA}{logger.fmt_path(link_toml)}{RESET}: unknown file mode {repr(file_mode)}"
                 f" for {repr(name)}. Available: {', '.join(FILE_MODES)}"
             )
             sys.exit(1)
@@ -643,7 +659,7 @@ def _copy_file(src: Path, dest: Path, linker: Linker) -> None:
             linker.logger.exists(dest)
             return
         linker._conflict(
-            f"{linker.logger.fmt_path(dest, RED)}: exists with different content"
+            f"{RED}{linker.logger.fmt_path(dest)}{RESET}: exists with different content"
         )
         return
     if not linker.dry_run:
@@ -752,7 +768,7 @@ def main() -> None:
     )
 
     if args.dry_run:
-        logger.notice("(dry run — no changes will be made)")
+        logger.notice("(--dry-run: no changes will be made)")
     _walk(config_dir, Path.home(), linker, unlink=args.unlink)
     if args.unlink:
         # Unlink stale entries: src files removed from repo since last link run.
@@ -764,16 +780,18 @@ def main() -> None:
             if not src.exists():
                 logger.orphan(dest, src)
     if args.dry_run:
-        logger.notice("(dry run — no changes have been made)")
+        logger.notice("(--dry-run: no changes have been made)")
 
     if not args.dry_run:
         state.save()
 
     if linker.had_conflict:
         if args.force:
-            logger.error("Conflicts remain despite --force.")
+            logger.error(
+                f"{RED}some conflicts must be resolved manually{RESET}"
+            )
         else:
-            logger.error("Conflicts found. Use --force to override.")
+            logger.error(f"{RED}conflicts found{RESET}")
         sys.exit(1)
 
 

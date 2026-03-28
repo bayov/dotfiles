@@ -1,5 +1,2 @@
-[link]
-dest = "~/.config/fish"
-
 [files.".gitignore"]
 skip = true
