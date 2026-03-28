@@ -27,7 +27,7 @@ def main() -> None:
     template_path = Path(
         os.environ.get(
             "generate_commit_description_template",
-            str(DOTFILES_DIR / "config/dotfiles/generate_commit_description_template.md"),
+            str(DOTFILES_DIR / "config/generate_commit_description_template.md"),
         )
     )
     prompt = template_path.read_text().replace("{{diff}}", diff)

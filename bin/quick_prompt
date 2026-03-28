@@ -19,7 +19,7 @@ DOTFILES_DIR: Path = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotf
 STATS_DIR: Path = Path.home() / ".local/share/quick_prompt"
 DAILY_STATS_DIR: Path = STATS_DIR / "daily"
 AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
-MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/dotfiles/quick_prompt_models.json"
+MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/quick_prompt_models.json"
 
 
 def get_model_config() -> List[Dict[str, Any]]:

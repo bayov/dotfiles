@@ -28,6 +28,7 @@ from dev.util import (  # noqa: E402
     RED,
     RESET,
     YELLOW,
+    PROJECT_ROOT,
     require_project_root,
 )
 
@@ -40,6 +41,7 @@ except ImportError:
         tomllib = None  # type: ignore[assignment]
 
 
+CONFIG_DIR = "home"
 LINK_TOML = ".link.toml"
 LINK_STATE = ".link-state.toml"
 ARROW = "⟶"
@@ -480,6 +482,7 @@ class WindowsSymlinkDirMode(LinkMode):
             f"if (-not $i) {{ exit 2 }}\n"
             f'if ($i.LinkType -ne "SymbolicLink") {{ exit 3 }}\n'
             f'$actual = ($i.Target -join "").TrimEnd("\\")\n'
+            f'if ($actual.StartsWith("UNC\\")) {{ $actual = "\\\\" + $actual.Substring(4) }}\n'
             f'$expected = "{unc_src}".TrimEnd("\\")\n'
             f"if ($actual -eq $expected) {{ exit 0 }}\n"
             f"Write-Output $actual\n"
@@ -499,13 +502,23 @@ class WindowsSymlinkDirMode(LinkMode):
             return
         if rc == 1:
             actual_win = ps_result.stdout.decode(errors="replace").strip()
-            linker._conflict(
+            linker.logger.error(
                 f"{linker.logger.fmt_path(dest, RED)}: Windows symlink exists but points to wrong file.\n"
                 f"{GRAY}   current: {actual_win}\n"
                 f"  expected: {unc_src}{RESET}"
             )
-            return
-        # rc == 2: absent — create it
+            if not linker.force:
+                linker.had_conflict = True
+                return
+            # --force: remove existing symlink and fall through to create
+            if not linker.dry_run:
+                result = _run_ps_elevated(f'Remove-Item "{win_dest}" -Force')
+                if result.returncode != 0:
+                    linker._conflict(
+                        f"{linker.logger.fmt_path(dest, RED)}: failed to remove existing Windows symlink"
+                    )
+                    return
+        # rc == 2: absent, or rc == 1 with --force: create it
         if not linker.dry_run:
             result = _run_ps_elevated(
                 f'New-Item -ItemType SymbolicLink -Path "{win_dest}" -Target "{unc_src}" -Force'
@@ -516,7 +529,10 @@ class WindowsSymlinkDirMode(LinkMode):
                 )
                 return
             linker.state.add(dest, src.resolve())
-        linker.logger.link(dest, src.resolve())
+        if rc == 1:
+            linker.logger.forced(dest, src.resolve())
+        else:
+            linker.logger.link(dest, src.resolve())
 
     def unlink(self, src: Path, dest: Path, linker: "Linker") -> None:
         win_dest = _win_path_from_mnt(dest)
@@ -693,11 +709,12 @@ def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
 
 
 def main() -> None:
-    repo_root = Path(__file__).resolve().parent.parent
-    config_dir = repo_root / "config"
+    require_project_root()
+
+    config_dir = PROJECT_ROOT / CONFIG_DIR
 
     p = argparse.ArgumentParser(
-        description="Symlink config/ files into $HOME.",
+        description=f"Symlink {CONFIG_DIR}/ files into $HOME.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument(
@@ -725,9 +742,7 @@ def main() -> None:
 
     logger = Logger(verbose=args.verbose)
 
-    require_project_root(repo_root)
-
-    state = LinkState(repo_root / LINK_STATE)
+    state = LinkState(PROJECT_ROOT / LINK_STATE)
     state.load()
 
     linker = Linker(
@@ -735,7 +750,7 @@ def main() -> None:
         force=args.force,
         logger=logger,
         state=state,
-        repo_root=repo_root,
+        repo_root=PROJECT_ROOT,
     )
 
     if args.dry_run:
@@ -757,7 +772,10 @@ def main() -> None:
         state.save()
 
     if linker.had_conflict:
-        logger.error("Conflicts found. Use --force to override.")
+        if args.force:
+            logger.error("Conflicts remain despite --force.")
+        else:
+            logger.error("Conflicts found. Use --force to override.")
         sys.exit(1)
 
 

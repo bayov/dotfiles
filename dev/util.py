@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 from typing import Optional, TextIO
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 
 # ANSI escape sequences for coloring output.
 USE_COLOR = sys.stdout.isatty() or "FORCE_COLOR" in os.environ
@@ -111,11 +113,11 @@ def set_logger(l: Logger):
     _logger_ctx.set(l)
 
 
-def require_project_root(repo_root: Path) -> None:
-    """Exit with an error if repo_root doesn't look like the project root."""
-    if not (repo_root / "config").is_dir():
+def require_project_root() -> None:
+    """Exits with an error if the current working directory is not `PROJECT_ROOT`."""
+    if Path.cwd().resolve() != PROJECT_ROOT:
         print(
-            f"error: config/ not found at {repo_root} — run from project root",
+            f"error: must be run from the project root ({PROJECT_ROOT})",
             file=sys.stderr,
         )
         sys.exit(1)
