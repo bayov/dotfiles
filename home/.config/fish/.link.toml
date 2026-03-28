@@ -1,2 +1,5 @@
-[files.".gitignore"]
-skip = true
+linker = "spread"
+
+[[link]]
+src = ".gitignore"
+linker = "ignore"

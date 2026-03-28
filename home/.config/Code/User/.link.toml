@@ -1,10 +1,12 @@
-[link]
-dest = "~/.vscode-server/data/Machine"
+linker = "spread"
+dst = "~/.vscode-server/data/Machine"
 
-[files."settings.json"]
-dest = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/settings.json"
-mode = "windows-symlink"
+[[link]]
+src = "keybindings.json"
+linker = "windows-symlink"
+dst = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/keybindings.json"
 
-[files."keybindings.json"]
-dest = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/keybindings.json"
-mode = "windows-symlink"
+[[link]]
+src = "settings.json"
+linker = "windows-symlink"
+dst = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/settings.json"

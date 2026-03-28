@@ -216,7 +216,7 @@
     // --------------------------------------------------------------------------
     // Misc
     // --------------------------------------------------------------------------
-    "diffEditor.renderSideBySide": false,
+    "diffEditor.renderSideBySide": true,
     // Rifler (project text search)
     "rifler.panelLocation": "window",
     "rifler.searchHistory.maxEntries": 20,

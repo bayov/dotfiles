@@ -20,7 +20,7 @@
 .dotter/cache
 
 # link.py state (machine-local)
-.link-state.toml
+.links.toml
 
 # Compiled Python
 __pycache__

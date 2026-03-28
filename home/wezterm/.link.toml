@@ -1,3 +1,2 @@
-[link]
-mode = "windows-symlink-dir"
-dest = "/mnt/c/Users/hesos/.config/wezterm"
+linker = "windows-symlink"
+dst = "/mnt/c/Users/hesos/.config/wezterm"
