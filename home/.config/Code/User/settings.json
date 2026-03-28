@@ -223,13 +223,17 @@
     "telemetry.telemetryLevel": "off",
     // JSON schema validation
     "json.schemaDownload.trustedDomains": {
-        "https://schemastore.azurewebsites.net/": true,
-        "https://raw.githubusercontent.com/": true,
-        "https://www.schemastore.org/": true,
-        "https://json.schemastore.org/": true,
-        "https://json-schema.org/": true,
         "https://biomejs.dev": true,
-        "https://plugins.dprint.dev": true
+        "https://developer.microsoft.com/json-schemas/": true,
+        "https://json-schema.org/": true,
+        "https://json.schemastore.org/": true,
+        "https://opencode.ai": true,
+        "https://plugins.dprint.dev": true,
+        "https://raw.githubusercontent.com/": true,
+        "https://raw.githubusercontent.com/devcontainers/spec/": true,
+        "https://raw.githubusercontent.com/microsoft/vscode/": true,
+        "https://schemastore.azurewebsites.net/": true,
+        "https://www.schemastore.org/": true
     },
     // Jujutsu VCS
     "jjk.enableAnnotations": false, // hide blame annotations on current line

@@ -1,2 +1,10 @@
 [link]
 dest = "~/.vscode-server/data/Machine"
+
+[files."settings.json"]
+dest = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/settings.json"
+mode = "windows-symlink"
+
+[files."keybindings.json"]
+dest = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/keybindings.json"
+mode = "windows-symlink"

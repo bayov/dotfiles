@@ -45,14 +45,14 @@ LINK_STATE = ".link-state.toml"
 ARROW = "⟶"
 INDENT = "    "
 
-FILE_MODES = ("symlink", "copy")
+FILE_MODES = ("symlink", "copy", "windows-symlink")
 
 
 @dataclass(frozen=True)
 class FileConfig:
     dest: Path | None = None
     skip: bool = False
-    mode: str = "symlink"  # "symlink" or "copy"
+    mode: str = "symlink"  # "symlink", "copy", or "windows-symlink"
 
 
 @dataclass(frozen=True)
@@ -510,11 +510,30 @@ class WindowsSymlinkDirMode(LinkMode):
             linker.logger.exists(dest)
             return
         if rc == 3:
-            linker._conflict(
+            linker.logger.error(
                 f"{RED}{linker.logger.fmt_path(dest)}{RESET}: exists on Windows and is not a symlink"
+                + (
+                    f"\n{GRAY}{INDENT}--force provided, overriding to {MAGENTA}{ARROW} {linker.logger.fmt_path(src.resolve())}{RESET}"
+                    if linker.force
+                    else f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
+                )
             )
-            return
-        if rc == 1:
+            if not linker.force:
+                linker.had_conflict = True
+                return
+            if not linker.dry_run:
+                linker.logger.notice(
+                    f"(requesting Windows administrator access to remove {win_dest} — a UAC prompt will appear)"
+                )
+                result = _run_ps_elevated(
+                    f'Remove-Item "{win_dest}" -Force -Recurse'
+                )
+                if result.returncode != 0:
+                    linker._conflict(
+                        f"{RED}{linker.logger.fmt_path(dest)}{RESET}: failed to remove existing Windows item"
+                    )
+                    return
+        elif rc == 1:
             actual_win = ps_result.stdout.decode(errors="replace").strip()
             linker.logger.error(
                 f"{RED}{linker.logger.fmt_path(dest)}{RESET}: Windows symlink exists but points to wrong file.\n"
@@ -523,22 +542,27 @@ class WindowsSymlinkDirMode(LinkMode):
                 + (
                     f"\n{GRAY}{INDENT}--force provided, overriding to {MAGENTA}{ARROW} {linker.logger.fmt_path(src.resolve())}{RESET}"
                     if linker.force
-                    else ""
+                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
                 )
             )
             if not linker.force:
                 linker.had_conflict = True
                 return
-            # --force: remove existing symlink and fall through to create
             if not linker.dry_run:
+                linker.logger.notice(
+                    f"(requesting Windows administrator access to remove {win_dest} — a UAC prompt will appear)"
+                )
                 result = _run_ps_elevated(f'Remove-Item "{win_dest}" -Force')
                 if result.returncode != 0:
                     linker._conflict(
                         f"{RED}{linker.logger.fmt_path(dest)}{RESET}: failed to remove existing Windows symlink"
                     )
                     return
-        # rc == 2: absent, or rc == 1 with --force: create it
+        # rc == 2: absent; rc == 1 or 3 with --force: create it
         if not linker.dry_run:
+            linker.logger.notice(
+                f"(requesting Windows administrator access to create symlink at {win_dest} — a UAC prompt will appear)"
+            )
             result = _run_ps_elevated(
                 f'New-Item -ItemType SymbolicLink -Path "{win_dest}" -Target "{unc_src}" -Force'
             )
@@ -548,8 +572,10 @@ class WindowsSymlinkDirMode(LinkMode):
                 )
                 return
             linker.state.add(dest, src.resolve())
-        if rc != 1:
+        if rc == 2:
             linker.logger.link(dest, src.resolve())
+        else:
+            linker.logger.forced(dest, src.resolve())
 
     def unlink(self, src: Path, dest: Path, linker: "Linker") -> None:
         win_dest = _win_path_from_mnt(dest)
@@ -570,6 +596,9 @@ class WindowsSymlinkDirMode(LinkMode):
             return
 
         if not linker.dry_run:
+            linker.logger.notice(
+                f"(requesting Windows administrator access to remove {win_dest} — a UAC prompt will appear)"
+            )
             result = _run_ps_elevated(f'Remove-Item "{win_dest}" -Force')
             if result.returncode != 0:
                 linker._conflict(
@@ -591,14 +620,34 @@ MODES: dict[str, LinkMode] = {
 DEFAULT_MODE = "symlink-files"
 
 
+def _parse_link_target(
+    spec: dict, link_toml: Path, logger: Logger
+) -> tuple[LinkMode, Path | None]:
+    """Parse a single link target spec dict into (mode, dest_override)."""
+    mode_name: str = spec.get("mode", DEFAULT_MODE)
+    if mode_name not in MODES:
+        logger.error(
+            f"{MAGENTA}{logger.fmt_path(link_toml)}{RESET}: unknown mode {repr(mode_name)}. "
+            f"Available modes: {', '.join(MODES)}"
+        )
+        sys.exit(1)
+    dest_str: str | None = spec.get("dest")
+    dest_override = Path(dest_str).expanduser() if dest_str else None
+    return MODES[mode_name], dest_override
+
+
 def _read_mode(
     directory: Path, logger: Logger
-) -> tuple[LinkMode, Path | None, dict[str, FileConfig]]:
-    """Read .link.toml from directory and return the mode, optional dest override,
-    and per-file configs."""
+) -> tuple[list[tuple[LinkMode, Path | None]], dict[str, FileConfig]]:
+    """Read .link.toml from directory and return a list of (mode, dest_override)
+    targets and per-file configs.
+
+    Supports multiple targets via [[link.targets]] in addition to the primary
+    [link] section.
+    """
     link_toml = directory / LINK_TOML
     if not link_toml.exists():
-        return MODES[DEFAULT_MODE], None, {}
+        return [(MODES[DEFAULT_MODE], None)], {}
 
     if tomllib is None:
         logger.error(
@@ -611,16 +660,11 @@ def _read_mode(
         data = tomllib.load(f)
 
     link_section = data.get("link", {})
-    mode_name: str = link_section.get("mode", DEFAULT_MODE)
-    if mode_name not in MODES:
-        logger.error(
-            f"{MAGENTA}{logger.fmt_path(link_toml)}{RESET}: unknown mode {repr(mode_name)}. "
-            f"Available modes: {', '.join(MODES)}"
-        )
-        sys.exit(1)
-
-    dest_str: str | None = link_section.get("dest")
-    dest_override = Path(dest_str).expanduser() if dest_str else None
+    targets: list[tuple[LinkMode, Path | None]] = [
+        _parse_link_target(link_section, link_toml, logger)
+    ]
+    for extra in link_section.get("targets", []):
+        targets.append(_parse_link_target(extra, link_toml, logger))
 
     file_configs: dict[str, FileConfig] = {}
     for name, cfg in data.get("files", {}).items():
@@ -640,7 +684,7 @@ def _read_mode(
             dest=file_dest, skip=skip, mode=file_mode
         )
 
-    return MODES[mode_name], dest_override, file_configs
+    return targets, file_configs
 
 
 def _git_ignored(paths: list[Path], repo_root: Path) -> set[Path]:
@@ -690,7 +734,7 @@ def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
       - Directories: read their .link.toml, dispatch to appropriate mode.
     Per-file overrides are read from src/.link.toml [files.*] sections.
     """
-    _, _, file_configs = _read_mode(src, linker.logger)
+    _, file_configs = _read_mode(src, linker.logger)
     entries = [e for e in sorted(src.iterdir()) if e.name != LINK_TOML]
     if linker.repo_root is not None:
         ignored = _git_ignored(entries, linker.repo_root)
@@ -698,28 +742,50 @@ def _walk(src: Path, dest: Path, linker: Linker, unlink: bool) -> None:
     for entry in entries:
         dest_entry = dest / entry.name
         if entry.is_dir() and not entry.is_symlink():
-            mode, dest_override, _ = _read_mode(entry, linker.logger)
-            effective_dest = (
-                dest_override if dest_override is not None else dest_entry
-            )
-            if unlink:
-                mode.unlink(entry, effective_dest, linker)
-            else:
-                mode.link(entry, effective_dest, linker)
+            targets, _ = _read_mode(entry, linker.logger)
+            for mode, dest_override in targets:
+                effective_dest = (
+                    dest_override if dest_override is not None else dest_entry
+                )
+                if unlink:
+                    mode.unlink(entry, effective_dest, linker)
+                else:
+                    mode.link(entry, effective_dest, linker)
         elif entry.is_file() or entry.is_symlink():
             file_cfg = file_configs.get(entry.name)
             if file_cfg and file_cfg.skip:
                 continue
+            is_win = file_cfg is not None and file_cfg.mode == "windows-symlink"
             effective_dest = (
-                file_cfg.dest if (file_cfg and file_cfg.dest) else dest_entry
+                dest_entry
+                if is_win
+                else (
+                    file_cfg.dest
+                    if (file_cfg and file_cfg.dest)
+                    else dest_entry
+                )
             )
             if unlink:
-                if file_cfg and file_cfg.mode == "copy":
+                if is_win:
+                    MODES["windows-symlink-dir"].unlink(
+                        entry,
+                        file_cfg.dest,
+                        linker,  # type: ignore[union-attr]
+                    )
+                    linker.unlink_file(entry, effective_dest)
+                elif file_cfg and file_cfg.mode == "copy":
                     _uncopy_file(effective_dest, linker)
                 else:
                     linker.unlink_file(entry, effective_dest)
             else:
-                if file_cfg and file_cfg.mode == "copy":
+                if is_win:
+                    linker.link_file(entry, effective_dest)
+                    MODES["windows-symlink-dir"].link(
+                        entry,
+                        file_cfg.dest,
+                        linker,  # type: ignore[union-attr]
+                    )
+                elif file_cfg and file_cfg.mode == "copy":
                     _copy_file(entry, effective_dest, linker)
                 else:
                     linker.link_file(entry, effective_dest)
