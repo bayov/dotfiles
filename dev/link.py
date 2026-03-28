@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import ClassVar, TextIO
+from typing import Callable, ClassVar, TextIO
 
 try:
     import tomllib
@@ -66,6 +66,41 @@ class Link:
 class DirConfig:
     primary: Link  # root-level fields; src = directory containing .link.toml
     links: list[Link]  # [[link]] array entries; src = resolved child paths
+
+
+# ---------------------------------------------------------------------------
+# Linker result types
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class LinkerError:
+    """The link operation failed (conflict or unresolvable error)."""
+
+    message: str
+
+
+@dataclass
+class LinkerSuccess:
+    """The link operation completed (or was already in the correct state)."""
+
+    changed: bool = (
+        True  # False = already correct (link) / already absent (unlink)
+    )
+    forced: bool = False  # True = overrode a conflicting file via --force
+
+
+@dataclass
+class LinkerDelegate:
+    """Delegate to sub-links; the orchestrator dispatches each in turn."""
+
+    links: list[Link]
+    post_action: Callable[[], None] | None = (
+        None  # called after all links are dispatched
+    )
+
+
+LinkerResult = LinkerError | LinkerSuccess | LinkerDelegate
 
 
 # ---------------------------------------------------------------------------
@@ -239,12 +274,6 @@ class Context:
     had_conflict: bool = False
     _visited_link_tomls: set[Path] = field(default_factory=set)
 
-    def conflict(self, message: str) -> None:
-        self.logger.error(
-            message + f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
-        )
-        self.had_conflict = True
-
 
 # ---------------------------------------------------------------------------
 # Linker ABC
@@ -255,12 +284,12 @@ class Linker(ABC):
     name: ClassVar[LinkerType]
 
     @abstractmethod
-    def link(self, link: Link, ctx: Context) -> None:
-        """Deploy link.src to link.dst."""
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
+        """Deploy link.src to link.dst, or return sub-links to dispatch."""
         ...
 
     @abstractmethod
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         """Undo the deployment created by link()."""
         ...
 
@@ -421,17 +450,17 @@ def _run_ps_elevated(cmd: str) -> "subprocess.CompletedProcess[bytes]":
 class IgnoreLinker(Linker):
     name = LinkerType.IGNORE
 
-    def link(self, link: Link, ctx: Context) -> None:
-        pass
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
+        return LinkerDelegate(links=[])
 
-    def unlink(self, link: Link, ctx: Context) -> None:
-        pass
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
+        return LinkerDelegate(links=[])
 
 
 class SymlinkLinker(Linker):
     name = LinkerType.SYMLINK
 
-    def link(self, link: Link, ctx: Context) -> None:
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         src_abs = link.src.resolve()
         dst = link.dst
@@ -439,158 +468,124 @@ class SymlinkLinker(Linker):
         if dst.is_symlink():
             actual = dst.resolve()
             if actual == src_abs:
-                if not ctx.dry_run:
-                    ctx.state.add(
-                        Link(src=src_abs, dst=dst, linker=LinkerType.SYMLINK)
-                    )
-                ctx.logger.exists(dst)
-                return
-            ctx.logger.error(
+                return LinkerSuccess(changed=False)
+            msg = (
                 f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: symlink exists but points to wrong file.\n"
                 f"{GRAY}{INDENT}current:  {ctx.logger.fmt_path(actual)}\n"
                 f"{GRAY}{INDENT}expected: {ctx.logger.fmt_path(src_abs)}{RESET}"
-                + (
-                    f"\n{GRAY}{INDENT}--force provided, overriding to "
-                    f"{MAGENTA}{ARROW} {ctx.logger.fmt_path(src_abs)}{RESET}"
-                    if ctx.force
-                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
-                )
             )
             if not ctx.force:
-                ctx.had_conflict = True
-                return
+                return LinkerError(
+                    msg + f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                )
             if not ctx.dry_run:
                 dst.unlink()
                 dst.symlink_to(src_abs)
-                ctx.state.add(
-                    Link(src=src_abs, dst=dst, linker=LinkerType.SYMLINK)
-                )
-            return
+            return LinkerSuccess(forced=True)
 
         if dst.exists():
-            _hint = (
-                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
-                if dst.is_dir()
-                else (
-                    f"\n{GRAY}{INDENT}--force provided, overriding to "
-                    f"{MAGENTA}{ARROW} {ctx.logger.fmt_path(src_abs)}{RESET}"
-                    if ctx.force
-                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+            msg = f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: exists and is not a symlink"
+            if dst.is_dir():
+                return LinkerError(
+                    msg + f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                 )
-            )
-            ctx.logger.error(
-                f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: exists and is not a symlink{_hint}"
-            )
-            if not ctx.force or dst.is_dir():
-                ctx.had_conflict = True
-                return
+            if not ctx.force:
+                return LinkerError(
+                    msg + f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                )
             if not ctx.dry_run:
                 dst.unlink()
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 dst.symlink_to(src_abs)
-                ctx.state.add(
-                    Link(src=src_abs, dst=dst, linker=LinkerType.SYMLINK)
-                )
-            return
+            return LinkerSuccess(forced=True)
 
         if not ctx.dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.symlink_to(src_abs)
-            ctx.state.add(Link(src=src_abs, dst=dst, linker=LinkerType.SYMLINK))
-        ctx.logger.link(dst, src_abs)
+        return LinkerSuccess()
 
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         dst = link.dst
         if dst.is_symlink():
             actual = dst.resolve()
             expected = link.src.resolve()
             if actual != expected:
-                ctx.logger.error(
+                msg = (
                     f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: symlink points to wrong file — skipping.\n"
                     f"{GRAY}{INDENT}current:  {ctx.logger.fmt_path(actual)}\n"
                     f"{GRAY}{INDENT}expected: {ctx.logger.fmt_path(expected)}{RESET}"
-                    + (
-                        ""
-                        if ctx.force
-                        else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
-                    )
                 )
                 if not ctx.force:
-                    ctx.had_conflict = True
-                    return
+                    return LinkerError(
+                        msg
+                        + f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                    )
             if not ctx.dry_run:
                 dst.unlink()
-                ctx.state.remove(dst)
-            ctx.logger.unlinked(dst)
+            return LinkerSuccess()
         elif dst.exists():
-            ctx.conflict(
+            return LinkerError(
                 f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: exists and is not a symlink"
-                " — cannot unlink"
+                f" — cannot unlink\n{GRAY}{INDENT}you must solve this manually{RESET}"
             )
         else:
-            ctx.logger.absent(dst)
+            return LinkerSuccess(changed=False)
 
 
 class CopyLinker(Linker):
     name = LinkerType.COPY
 
-    def link(self, link: Link, ctx: Context) -> None:
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         if link.src.is_dir() and not link.src.is_symlink():
-            self._walk_dir(link.src, link.dst, ctx, unlink=False)
-        else:
-            self._copy_file(link.src, link.dst, ctx)
+            return LinkerDelegate(
+                links=self._collect_links(link.src, link.dst, ctx)
+            )
+        return self._copy_file(link.src, link.dst, ctx)
 
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         if link.src.is_dir() and not link.src.is_symlink():
-            self._walk_dir(link.src, link.dst, ctx, unlink=True)
-        else:
-            self._uncopy_file(link.dst, ctx)
+            return LinkerDelegate(
+                links=self._collect_links(link.src, link.dst, ctx)
+            )
+        return self._uncopy_file(link.dst, ctx)
 
-    def _walk_dir(
-        self, src: Path, dst: Path, ctx: Context, unlink: bool
-    ) -> None:
+    def _collect_links(self, src: Path, dst: Path, ctx: Context) -> list[Link]:
         entries = [e for e in sorted(src.iterdir()) if e.name != LINK_TOML]
         if ctx.repo_root is not None:
             ignored = _git_ignored(entries, ctx.repo_root)
             entries = [e for e in entries if e not in ignored]
-        for entry in entries:
-            dst_entry = dst / entry.name
-            if entry.is_dir() and not entry.is_symlink():
-                self._walk_dir(entry, dst_entry, ctx, unlink)
-            elif entry.is_file() or entry.is_symlink():
-                if unlink:
-                    self._uncopy_file(dst_entry, ctx)
-                else:
-                    self._copy_file(entry, dst_entry, ctx)
+        return [
+            Link(
+                src=entry.resolve(),
+                dst=dst / entry.name,
+                linker=LinkerType.COPY,
+            )
+            for entry in entries
+            if entry.is_dir() or entry.is_file() or entry.is_symlink()
+        ]
 
-    def _copy_file(self, src: Path, dst: Path, ctx: Context) -> None:
+    def _copy_file(self, src: Path, dst: Path, ctx: Context) -> LinkerResult:
         if dst.exists():
             if filecmp.cmp(src, dst, shallow=False):
-                ctx.logger.exists(dst)
-                return
-            ctx.conflict(
+                return LinkerSuccess(changed=False)
+            return LinkerError(
                 f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: exists with different content"
+                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
             )
-            return
         if not ctx.dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
-            ctx.state.add(
-                Link(src=src.resolve(), dst=dst, linker=LinkerType.COPY)
-            )
-        ctx.logger.link(dst, src.resolve())
+        return LinkerSuccess()
 
-    def _uncopy_file(self, dst: Path, ctx: Context) -> None:
+    def _uncopy_file(self, dst: Path, ctx: Context) -> LinkerResult:
         if dst.exists():
             if not ctx.dry_run:
                 dst.unlink()
-                ctx.state.remove(dst)
-            ctx.logger.unlinked(dst)
-        else:
-            ctx.logger.absent(dst)
+            return LinkerSuccess()
+        return LinkerSuccess(changed=False)
 
 
 class SpreadLinker(Linker):
@@ -608,15 +603,15 @@ class SpreadLinker(Linker):
 
     name = LinkerType.SPREAD
 
-    def link(self, link: Link, ctx: Context) -> None:
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
-        self._spread(link, ctx, unlink=False)
+        return LinkerDelegate(links=self._collect_child_links(link, ctx))
 
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
-        self._spread(link, ctx, unlink=True)
+        return LinkerDelegate(links=self._collect_child_links(link, ctx))
 
-    def _spread(self, link: Link, ctx: Context, unlink: bool) -> None:
+    def _collect_child_links(self, link: Link, ctx: Context) -> list[Link]:
         dir_config = _read_dir_config(link.src, ctx)
 
         # Build override lookup: resolved src path -> Link entry
@@ -630,6 +625,7 @@ class SpreadLinker(Linker):
             children = [c for c in children if c not in ignored]
 
         consumed: set[Path] = set()
+        result: list[Link] = []
 
         for child in children:
             child_abs = child.resolve()
@@ -637,8 +633,10 @@ class SpreadLinker(Linker):
                 override = overrides[child_abs]
                 consumed.add(child_abs)
                 effective_dst = override.dst or (link.dst / child.name)
-                child_link = Link(
-                    src=child_abs, dst=effective_dst, linker=override.linker
+                result.append(
+                    Link(
+                        src=child_abs, dst=effective_dst, linker=override.linker
+                    )
                 )
             elif (
                 child.is_dir()
@@ -649,37 +647,32 @@ class SpreadLinker(Linker):
                 effective_dst = child_config.primary.dst or (
                     link.dst / child.name
                 )
-                child_link = Link(
-                    src=child_abs,
-                    dst=effective_dst,
-                    linker=child_config.primary.linker,
+                result.append(
+                    Link(
+                        src=child_abs,
+                        dst=effective_dst,
+                        linker=child_config.primary.linker,
+                    )
                 )
             else:
-                child_link = Link(
-                    src=child_abs,
-                    dst=link.dst / child.name,
-                    linker=LinkerType.SYMLINK,
+                result.append(
+                    Link(
+                        src=child_abs,
+                        dst=link.dst / child.name,
+                        linker=LinkerType.SYMLINK,
+                    )
                 )
-
-            impl = LINKERS[child_link.linker]
-            if unlink:
-                impl.unlink(child_link, ctx)
-            else:
-                impl.link(child_link, ctx)
 
         # Process extra [[link]] entries whose src was not a direct child
         for src_path, extra in overrides.items():
             if src_path in consumed:
                 continue
             effective_dst = extra.dst or (link.dst / src_path.name)
-            extra_link = Link(
-                src=src_path, dst=effective_dst, linker=extra.linker
+            result.append(
+                Link(src=src_path, dst=effective_dst, linker=extra.linker)
             )
-            impl = LINKERS[extra_link.linker]
-            if unlink:
-                impl.unlink(extra_link, ctx)
-            else:
-                impl.link(extra_link, ctx)
+
+        return result
 
 
 class RecursiveLinker(Linker):
@@ -691,20 +684,26 @@ class RecursiveLinker(Linker):
 
     name = LinkerType.RECURSIVE
 
-    def link(self, link: Link, ctx: Context) -> None:
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
-        self._recurse(link, ctx, unlink=False)
+        return LinkerDelegate(links=self._collect_child_links(link, ctx))
 
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
-        self._recurse(link, ctx, unlink=True)
-        if not ctx.dry_run and link.dst.is_dir() and not link.dst.is_symlink():
-            try:
-                link.dst.rmdir()
-            except OSError:
-                pass
+        dst = link.dst
 
-    def _recurse(self, link: Link, ctx: Context, unlink: bool) -> None:
+        def cleanup() -> None:
+            if not ctx.dry_run and dst.is_dir() and not dst.is_symlink():
+                try:
+                    dst.rmdir()
+                except OSError:
+                    pass
+
+        return LinkerDelegate(
+            links=self._collect_child_links(link, ctx), post_action=cleanup
+        )
+
+    def _collect_child_links(self, link: Link, ctx: Context) -> list[Link]:
         children = [
             c for c in sorted(link.src.iterdir()) if c.name != LINK_TOML
         ]
@@ -712,6 +711,7 @@ class RecursiveLinker(Linker):
             ignored = _git_ignored(children, ctx.repo_root)
             children = [c for c in children if c not in ignored]
 
+        result = []
         for child in children:
             child_dst = link.dst / child.name  # type: ignore[operator]
             if child.is_dir() and not child.is_symlink():
@@ -719,34 +719,30 @@ class RecursiveLinker(Linker):
                 if child_toml.exists():
                     child_config = _read_dir_config(child, ctx)
                     effective_dst = child_config.primary.dst or child_dst
-                    child_link = Link(
-                        src=child.resolve(),
-                        dst=effective_dst,
-                        linker=child_config.primary.linker,
+                    result.append(
+                        Link(
+                            src=child.resolve(),
+                            dst=effective_dst,
+                            linker=child_config.primary.linker,
+                        )
                     )
-                    impl = LINKERS[child_link.linker]
-                    if unlink:
-                        impl.unlink(child_link, ctx)
-                    else:
-                        impl.link(child_link, ctx)
                 else:
-                    sub_link = Link(
+                    result.append(
+                        Link(
+                            src=child.resolve(),
+                            dst=child_dst,
+                            linker=LinkerType.RECURSIVE,
+                        )
+                    )
+            elif child.is_file() or child.is_symlink():
+                result.append(
+                    Link(
                         src=child.resolve(),
                         dst=child_dst,
-                        linker=LinkerType.RECURSIVE,
+                        linker=LinkerType.SYMLINK,
                     )
-                    self._recurse(sub_link, ctx, unlink)
-            elif child.is_file() or child.is_symlink():
-                file_link = Link(
-                    src=child.resolve(),
-                    dst=child_dst,
-                    linker=LinkerType.SYMLINK,
                 )
-                impl = LINKERS[LinkerType.SYMLINK]
-                if unlink:
-                    impl.unlink(file_link, ctx)
-                else:
-                    impl.link(file_link, ctx)
+        return result
 
 
 class WindowsSymlinkLinker(Linker):
@@ -760,15 +756,15 @@ class WindowsSymlinkLinker(Linker):
 
     name = LinkerType.WINDOWS_SYMLINK
 
-    def link(self, link: Link, ctx: Context) -> None:
+    def link(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         win_dst = _win_path_from_mnt(link.dst)
         if win_dst is None:
-            ctx.conflict(
+            return LinkerError(
                 f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: windows-symlink requires "
-                "a /mnt/<drive>/... destination"
+                f"a /mnt/<drive>/... destination"
+                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
             )
-            return
         src_abs = link.src.resolve()
         unc_src = _wsl_to_unc(src_abs)
 
@@ -786,73 +782,55 @@ class WindowsSymlinkLinker(Linker):
         rc = ps_result.returncode
 
         if rc == 0:
-            if not ctx.dry_run:
-                ctx.state.add(
-                    Link(
-                        src=src_abs,
-                        dst=link.dst,
-                        linker=LinkerType.WINDOWS_SYMLINK,
-                    )
-                )
-            ctx.logger.exists(link.dst)
-            return
+            return LinkerSuccess(changed=False)
 
         if rc == 3:
-            ctx.logger.error(
-                f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: exists on Windows and is not a symlink"
-                + (
-                    f"\n{GRAY}{INDENT}--force provided, overriding to "
-                    f"{MAGENTA}{ARROW} {ctx.logger.fmt_path(src_abs)}{RESET}"
-                    if ctx.force
-                    else f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
-                )
-            )
             if not ctx.force:
-                ctx.had_conflict = True
-                return
+                return LinkerError(
+                    f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: exists on Windows and is not a symlink"
+                    + (
+                        f"\n{GRAY}{INDENT}--force provided, overriding to "
+                        f"{MAGENTA}{ARROW} {ctx.logger.fmt_path(src_abs)}{RESET}"
+                        if ctx.force
+                        else f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
+                    )
+                )
             if not ctx.dry_run:
                 ctx.logger.notice(
                     f"(requesting Windows administrator access to remove {win_dst}"
                     " — a UAC prompt will appear)"
                 )
-                result = _run_ps_elevated(
+                rm_result = _run_ps_elevated(
                     f'Remove-Item "{win_dst}" -Force -Recurse'
                 )
-                if result.returncode != 0:
-                    ctx.conflict(
+                if rm_result.returncode != 0:
+                    return LinkerError(
                         f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
-                        "failed to remove existing Windows item"
+                        f"failed to remove existing Windows item"
+                        f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                     )
-                    return
         elif rc == 1:
             actual_win = ps_result.stdout.decode(errors="replace").strip()
-            ctx.logger.error(
-                f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
-                "Windows symlink exists but points to wrong file.\n"
-                f"{GRAY}{INDENT}current:  {actual_win}\n"
-                f"{GRAY}{INDENT}expected: {unc_src}{RESET}"
-                + (
-                    f"\n{GRAY}{INDENT}--force provided, overriding to "
-                    f"{MAGENTA}{ARROW} {ctx.logger.fmt_path(src_abs)}{RESET}"
-                    if ctx.force
-                    else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
-                )
-            )
             if not ctx.force:
-                ctx.had_conflict = True
-                return
+                return LinkerError(
+                    f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
+                    "Windows symlink exists but points to wrong file.\n"
+                    f"{GRAY}{INDENT}current:  {actual_win}\n"
+                    f"{GRAY}{INDENT}expected: {unc_src}{RESET}"
+                    f"\n{GRAY}{INDENT}(use --force to override){RESET}"
+                )
             if not ctx.dry_run:
                 ctx.logger.notice(
                     f"(requesting Windows administrator access to remove {win_dst}"
                     " — a UAC prompt will appear)"
                 )
-                result = _run_ps_elevated(f'Remove-Item "{win_dst}" -Force')
-                if result.returncode != 0:
-                    ctx.conflict(
+                rm_result = _run_ps_elevated(f'Remove-Item "{win_dst}" -Force')
+                if rm_result.returncode != 0:
+                    return LinkerError(
                         f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
-                        "failed to remove existing Windows symlink"
+                        f"failed to remove existing Windows symlink"
+                        f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                     )
-                    return
 
         # rc == 2 (absent) or force-cleared rc == 1/3: create the symlink
         if not ctx.dry_run:
@@ -860,34 +838,26 @@ class WindowsSymlinkLinker(Linker):
                 f"(requesting Windows administrator access to create symlink at {win_dst}"
                 " — a UAC prompt will appear)"
             )
-            result = _run_ps_elevated(
+            create_result = _run_ps_elevated(
                 f'New-Item -ItemType SymbolicLink -Path "{win_dst}" -Target "{unc_src}" -Force'
             )
-            if result.returncode != 0:
-                ctx.conflict(
+            if create_result.returncode != 0:
+                return LinkerError(
                     f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
-                    "failed to create Windows symlink"
+                    f"failed to create Windows symlink"
+                    f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                 )
-                return
-            ctx.state.add(
-                Link(
-                    src=src_abs, dst=link.dst, linker=LinkerType.WINDOWS_SYMLINK
-                )
-            )
-        if rc == 2:
-            ctx.logger.link(link.dst, src_abs)
-        else:
-            ctx.logger.forced(link.dst, src_abs)
+        return LinkerSuccess(forced=(rc != 2))
 
-    def unlink(self, link: Link, ctx: Context) -> None:
+    def unlink(self, link: Link, ctx: Context) -> LinkerResult:
         assert link.dst is not None
         win_dst = _win_path_from_mnt(link.dst)
         if win_dst is None:
-            ctx.conflict(
+            return LinkerError(
                 f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: windows-symlink requires "
-                "a /mnt/<drive>/... destination"
+                f"a /mnt/<drive>/... destination"
+                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
             )
-            return
 
         if (
             _run_ps(
@@ -895,23 +865,21 @@ class WindowsSymlinkLinker(Linker):
             ).returncode
             != 0
         ):
-            ctx.logger.absent(link.dst)
-            return
+            return LinkerSuccess(changed=False)
 
         if not ctx.dry_run:
             ctx.logger.notice(
                 f"(requesting Windows administrator access to remove {win_dst}"
                 " — a UAC prompt will appear)"
             )
-            result = _run_ps_elevated(f'Remove-Item "{win_dst}" -Force')
-            if result.returncode != 0:
-                ctx.conflict(
+            rm_result = _run_ps_elevated(f'Remove-Item "{win_dst}" -Force')
+            if rm_result.returncode != 0:
+                return LinkerError(
                     f"{RED}{ctx.logger.fmt_path(link.dst)}{RESET}: "
-                    "failed to remove Windows symlink"
+                    f"failed to remove Windows symlink"
+                    f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                 )
-                return
-            ctx.state.remove(link.dst)
-        ctx.logger.unlinked(link.dst)
+        return LinkerSuccess()
 
 
 LINKERS: dict[LinkerType, Linker] = {
@@ -922,6 +890,48 @@ LINKERS: dict[LinkerType, Linker] = {
     LinkerType.WINDOWS_SYMLINK: WindowsSymlinkLinker(),
     LinkerType.IGNORE: IgnoreLinker(),
 }
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
+
+
+def dispatch(link: Link, ctx: Context, *, unlink: bool = False) -> None:
+    """Dispatch a link to its linker, handle the result, and recurse as needed."""
+    assert link.dst is not None
+    impl = LINKERS[link.linker]
+    result: LinkerResult = (
+        impl.unlink(link, ctx) if unlink else impl.link(link, ctx)
+    )
+
+    if isinstance(result, LinkerDelegate):
+        for sub_link in result.links:
+            dispatch(sub_link, ctx, unlink=unlink)
+        if result.post_action is not None:
+            result.post_action()
+
+    elif isinstance(result, LinkerSuccess):
+        if not unlink:
+            if not ctx.dry_run:
+                ctx.state.add(link)
+            if result.forced:
+                ctx.logger.forced(link.dst, link.src)
+            elif result.changed:
+                ctx.logger.link(link.dst, link.src)
+            else:
+                ctx.logger.exists(link.dst)
+        else:
+            if result.changed:
+                if not ctx.dry_run:
+                    ctx.state.remove(link.dst)
+                ctx.logger.unlinked(link.dst)
+            else:
+                ctx.logger.absent(link.dst)
+
+    elif isinstance(result, LinkerError):
+        ctx.logger.error(result.message)
+        ctx.had_conflict = True
 
 
 # ---------------------------------------------------------------------------
@@ -980,13 +990,13 @@ def main() -> None:
     root_link = Link(src=config_dir, dst=Path.home(), linker=LinkerType.SPREAD)
 
     if args.unlink:
-        SpreadLinker().unlink(root_link, ctx)
+        dispatch(root_link, ctx, unlink=True)
         # Clean up stale state entries (src removed from repo since last run)
         for state_link in state.items():
             assert state_link.dst is not None
-            LINKERS[state_link.linker].unlink(state_link, ctx)
+            dispatch(state_link, ctx, unlink=True)
     else:
-        SpreadLinker().link(root_link, ctx)
+        dispatch(root_link, ctx)
         # Remove orphaned links: src deleted from repo, dst still exists
         for state_link in state.items():
             assert state_link.dst is not None
