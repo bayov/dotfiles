@@ -30,7 +30,6 @@
                 "down": "history:next",
                 "ctrl+_": "chat:undo",
                 "ctrl+shift+-": "chat:undo",
-                "ctrl+z": "chat:undo",
                 "alt+e": "chat:externalEditor",
                 "ctrl+g": null,
                 "ctrl+s": "chat:stash",
