@@ -20,7 +20,6 @@ depends = [
     # single files
     "gitconfig",
     "srt-settings",
-    "quick_prompt",
     "starship",
     # personal notes
     "notes",
@@ -74,10 +73,6 @@ depends = [
 
 [srt-settings.files]
 "config/.srt-settings.json" = "~/.srt-settings.json"
-
-[quick_prompt.files]
-"config/quick_prompt.py" = "~/.local/share/quick_prompt/quick_prompt.py"
-"config/quick_prompt_models.json" = "~/.config/quick_prompt_models.json"
 
 [starship.files]
 "config/starship.toml" = "~/.config/starship.toml"

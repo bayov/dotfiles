@@ -13,27 +13,22 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+DOTFILES_DIR: Path = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
+
 # --- Configuration & Constants ---
 STATS_DIR: Path = Path.home() / ".local/share/quick_prompt"
 DAILY_STATS_DIR: Path = STATS_DIR / "daily"
 AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
-MODELS_CONFIG_FILE: Path = Path.home() / ".config/quick_prompt_models.json"
+MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/dotfiles/quick_prompt_models.json"
 
 
 def get_model_config() -> List[Dict[str, Any]]:
     """Loads the model configuration from the configuration file."""
-    # Priority: ~/.config/quick_prompt_models.json (deployed)
-    # Then: same directory as script (local repo)
-    search_paths = [
-        MODELS_CONFIG_FILE,
-        Path(__file__).parent / "quick_prompt_models.json",
-    ]
-
-    config_file = next((p for p in search_paths if p.exists()), None)
+    config_file = MODELS_CONFIG_FILE if MODELS_CONFIG_FILE.exists() else None
 
     if not config_file:
         print(
-            f"Error: Configuration file not found in: {[str(p) for p in search_paths]}",
+            f"Error: Configuration file not found: {MODELS_CONFIG_FILE}",
             file=sys.stderr,
         )
         sys.exit(1)

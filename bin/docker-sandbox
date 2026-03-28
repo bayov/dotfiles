@@ -11,7 +11,6 @@ import argparse
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Optional
 
 # ==============================================================================
@@ -19,8 +18,8 @@ from typing import Optional
 # ==============================================================================
 
 IMAGE_TAG = "sandbox-env"
-DOTFILES_DIR = Path.home() / "dotfiles"
-DOCKERFILE_PATH = DOTFILES_DIR / "config" / "docker" / "Dockerfile.sandbox"
+DOTFILES_DIR = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
+DOCKERFILE_PATH = DOTFILES_DIR / "config" / "dotfiles" / "Dockerfile.sandbox"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
 WORKSPACE_PATH = Path.cwd().resolve()
@@ -55,7 +54,7 @@ MOUNTS = [
     Mount("~/.gemini", ro=False),
     # Map dotfiles to the exact same path in the container to preserve symlinks
     Mount(
-        "~/dotfiles",
+        str(DOTFILES_DIR),
         container_path=str(DOTFILES_DIR),
         ro=not IS_IN_DOTFILES,
     ),
@@ -75,7 +74,6 @@ MOUNTS = [
     Mount("~/.config/delta", ro=not IS_IN_DOTFILES),
     Mount("~/.config/eza", ro=not IS_IN_DOTFILES),
     Mount("~/.config/fresh", ro=not IS_IN_DOTFILES),
-    Mount("~/.config/quick_prompt_models.json", ro=not IS_IN_DOTFILES),
     # `quick_prompt` stats
     Mount("~/.local/share/quick_prompt", ro=False),
     # Cargo cache (registry and git dependencies)
@@ -92,6 +90,7 @@ ENV_VARS_TO_FORWARD = [
     "LANG",
     "LC_ALL",
     "FORCE_COLOR",
+    "DOTFILES_DIR",
     "SCCACHE_DIR",
     "SCCACHE_CACHE_SIZE",
     "SCCACHE_BASEDIRS",

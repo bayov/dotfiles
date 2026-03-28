@@ -24,7 +24,7 @@ function gm --description "Generates AI description for the current commit based
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
     end
 
-    set -l result (gum spin --title "generating commit description" --show-output -- python3 "$HOME/dotfiles/tools/generate_commit_description.py" | string collect)
+    set -l result (gum spin --title "generating commit description" --show-output -- generate_commit_description | string collect)
     or return 1
     set -l output_file (echo $result | jq -r '.prompt_output_file')
     set -l msg (cat $output_file | string collect)

@@ -1,4 +1,4 @@
-Write a commit message for the following git diff:
+Write a commit description for the following git diff:
 
 <git-diff>
 {{diff}}
@@ -6,12 +6,12 @@ Write a commit message for the following git diff:
 
 ---
 
-**IMPORTANT:** Wrap your response in <commit-message> tags. Example:
+**IMPORTANT:** Wrap your response in <commit-description> tags. Example:
 
 ```
-<commit-message>
+<commit-description>
 feat(lang): add Polish language
-</commit-message>
+</commit-description>
 ```
 
 ---
@@ -70,59 +70,59 @@ Examples
 ### Commit message with description and breaking change footer
 
 ```
-<commit-message>
+<commit-description>
 feat: allow provided config object to extend other configs
 
 BREAKING CHANGE: `extends` key in config file is now used for extending other config files
-</commit-message>
+</commit-description>
 ```
 
 ### Commit message with `!` to draw attention to breaking change
 
 ```
-<commit-message>
+<commit-description>
 feat!: send an email to the customer when a product is shipped
-</commit-message>
+</commit-description>
 ```
 
 ### Commit message with scope and `!` to draw attention to breaking change
 
 ```
-<commit-message>
+<commit-description>
 feat(api)!: send an email to the customer when a product is shipped
-</commit-message>
+</commit-description>
 ```
 
 ### Commit message with both `!` and BREAKING CHANGE footer
 
 ```
-</commit-message>
+</commit-description>
 feat!: drop support for Node 6
 
 BREAKING CHANGE: use JavaScript features not available in Node 6.
-<commit-message>
+<commit-description>
 ```
 
 ### Commit message with no body
 
 ```
-<commit-message>
+<commit-description>
 docs: correct spelling of CHANGELOG
-</commit-message>
+</commit-description>
 ```
 
 ### Commit message with scope
 
 ```
-<commit-message>
+<commit-description>
 feat(lang): add Polish language
-</commit-message>
+</commit-description>
 ```
 
 ### Commit message with multi-paragraph body and multiple footers
 
 ```
-<commit-message>
+<commit-description>
 fix: prevent racing of requests
 
 Introduce a request id and a reference to latest request. Dismiss
@@ -133,7 +133,7 @@ obsolete now.
 
 Reviewed-by: Z
 Refs: #123
-</commit-message>
+</commit-description>
 ```
 
 Specification
@@ -277,9 +277,9 @@ One recommendation is to use the `revert` type, and a footer that references the
 commit SHAs that are being reverted:
 
 ```
-<commit-message>
+<commit-description>
 revert: let us never again speak of the noodle incident
 
 Refs: 676104e, a215868
-</commit-message>
+</commit-description>
 ```

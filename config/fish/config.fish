@@ -1,18 +1,18 @@
 # Environment Variables
+set -q DOTFILES_DIR || set -gx DOTFILES_DIR "$HOME/dotfiles"
 set -gx EDITOR fresh
 set -gx PNPM_HOME "$HOME/.local/share/pnpm"
 set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE "25GB"
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
-set -gx generate_commit_message_template "$HOME/dotfiles/assets/generate_commit_template.md"
 
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
-alias quick_prompt="~/.local/share/quick_prompt/quick_prompt.py"
 
 # $PATH
+fish_add_path $DOTFILES_DIR/bin
 fish_add_path ~/.local/bin
 fish_add_path ~/.fzf/bin
 fish_add_path /snap/bin
@@ -72,7 +72,7 @@ if status is-interactive
     # Differ in previews
     set -gx fzf_diff_highlighter delta --paging=never
     # Project locations for project search fzf (Alt+W)
-    set -gx fzf_project_paths ~/dotfiles
+    set -gx fzf_project_paths $DOTFILES_DIR
     set -gx fzf_project_search_paths ~/projects ~/workspaces
     # Options for directory search fzf (Alt+F)
     set -gx fzf_fd_opts --hidden --follow
