@@ -5,39 +5,12 @@ default_target_type = "automatic"
 
 [default]
 depends = [
-    "gemini",
-    "jj",
-    "opencode",
-    "wezterm",
-    "zellij",
     # single files
-    "gitconfig",
     "srt-settings",
     "starship",
     # personal notes
     "notes",
 ]
-
-[gemini.files]
-"config/gemini/AGENTS.md" = "~/.gemini/AGENTS.md"
-"config/gemini/settings.json" = "~/.gemini/settings.json"
-"config/gemini/policies" = { target = "~/.gemini/policies", type = "symbolic", recurse = false }
-
-[jj.files]
-"config/jj" = "~/.config/jj"
-
-[opencode.files]
-"config/opencode/AGENTS.md" = "~/.config/opencode/AGENTS.md"
-"config/opencode/opencode.jsonc" = "~/.config/opencode/opencode.jsonc"
-
-[wezterm.files]
-"config/wezterm" = { target = "/mnt/c/Users/hesos/.config/wezterm", type = "template" }
-
-[zellij.files]
-"config/zellij" = "~/.config/zellij"
-
-[gitconfig.files]
-"config/.gitconfig" = "~/.gitconfig"
 
 [srt-settings.files]
 "config/.srt-settings.json" = "~/.srt-settings.json"

@@ -72,12 +72,13 @@ class Logger:
         ERROR = _StatusMetadata(RED, sys.stderr, verbose=False, symbol="!")
         EXISTS = _StatusMetadata(GRAY, sys.stdout, verbose=True, symbol="=")
         ABSENT = _StatusMetadata(GRAY, sys.stdout, verbose=True, symbol=" ")
-        ORPHAN = _StatusMetadata(YELLOW, sys.stderr, verbose=False, symbol="?")
 
     def __init__(self, verbose: bool):
         self.verbose = verbose
+        self.target_count = 0
 
     def link(self, dest: Path, src: Path) -> None:
+        self.target_count += 1
         self._log(
             self.Status.LINK,
             f"{GREEN}{self.fmt_path(dest)}{RESET} {MAGENTA}{ARROW} {self.fmt_path(src)}{RESET}",
@@ -87,15 +88,16 @@ class Logger:
         self._log(self.Status.UNLINK, f"{YELLOW}{self.fmt_path(dest)}{RESET}")
 
     def exists(self, dest: Path) -> None:
+        self.target_count += 1
         self._log(self.Status.EXISTS, f"{GRAY}{self.fmt_path(dest)}{RESET}")
 
     def absent(self, dest: Path) -> None:
         self._log(self.Status.ABSENT, f"{GRAY}{self.fmt_path(dest)}{RESET}")
 
-    def orphan(self, dest: Path, src: Path) -> None:
+    def removed_orphan(self, dest: Path, src: Path) -> None:
         self._log(
-            self.Status.ORPHAN,
-            f"{YELLOW}{self.fmt_path(dest)}{RESET} {MAGENTA}{ARROW} {self.fmt_path(src)}{RESET} (source deleted)",
+            self.Status.UNLINK,
+            f"{YELLOW}{self.fmt_path(dest)}{RESET} {GRAY}(removed because {self.fmt_path(src)} no longer exists){RESET}",
         )
 
     def error(self, message: str) -> None:
@@ -226,7 +228,7 @@ class Linker:
                 f"{GRAY}{INDENT}current:  {self.logger.fmt_path(actual)}\n"
                 f"{GRAY}{INDENT}expected: {self.logger.fmt_path(src_abs)}{RESET}"
                 + (
-                    ""
+                    f"\n{GRAY}{INDENT}--force provided, overriding to {MAGENTA}{ARROW} {self.logger.fmt_path(src_abs)}{RESET}"
                     if self.force
                     else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
                 )
@@ -238,7 +240,6 @@ class Linker:
                 dest.unlink()
                 dest.symlink_to(src_abs)
                 self.state.add(dest, src_abs)
-            self.logger.forced(dest, src_abs)
             return
 
         if dest.exists():
@@ -246,7 +247,7 @@ class Linker:
                 f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
                 if dest.is_dir()
                 else (
-                    ""
+                    f"\n{GRAY}{INDENT}--force provided, overriding to {MAGENTA}{ARROW} {self.logger.fmt_path(src_abs)}{RESET}"
                     if self.force
                     else f"\n{GRAY}{INDENT}(use --force to override){RESET}"
                 )
@@ -262,7 +263,6 @@ class Linker:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.symlink_to(src_abs)
                 self.state.add(dest, src_abs)
-            self.logger.forced(dest, src_abs)
             return
 
         # dest is absent — create symlink
@@ -520,6 +520,11 @@ class WindowsSymlinkDirMode(LinkMode):
                 f"{RED}{linker.logger.fmt_path(dest)}{RESET}: Windows symlink exists but points to wrong file.\n"
                 f"{GRAY}{INDENT}current:  {actual_win}\n"
                 f"{GRAY}{INDENT}expected: {unc_src}{RESET}"
+                + (
+                    f"\n{GRAY}{INDENT}--force provided, overriding to {MAGENTA}{ARROW} {linker.logger.fmt_path(src.resolve())}{RESET}"
+                    if linker.force
+                    else ""
+                )
             )
             if not linker.force:
                 linker.had_conflict = True
@@ -543,9 +548,7 @@ class WindowsSymlinkDirMode(LinkMode):
                 )
                 return
             linker.state.add(dest, src.resolve())
-        if rc == 1:
-            linker.logger.forced(dest, src.resolve())
-        else:
+        if rc != 1:
             linker.logger.link(dest, src.resolve())
 
     def unlink(self, src: Path, dest: Path, linker: "Linker") -> None:
@@ -775,12 +778,18 @@ def main() -> None:
         for dest, src in state.items():
             linker.unlink_file(src, dest)
     else:
-        # Notify about orphaned symlinks: src deleted, dest still exists.
+        # Remove orphaned symlinks: src deleted from repo, dest still exists.
         for dest, src in state.items():
             if not src.exists():
-                logger.orphan(dest, src)
+                if not args.dry_run and dest.is_symlink():
+                    dest.unlink()
+                    state.remove(dest)
+                logger.removed_orphan(dest, src)
     if args.dry_run:
         logger.notice("(--dry-run: no changes have been made)")
+
+    if not args.unlink:
+        print(f"{GREEN}✓ {logger.target_count} targets linked{RESET}")
 
     if not args.dry_run:
         state.save()
