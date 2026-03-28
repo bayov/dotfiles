@@ -36,7 +36,7 @@ if status is-interactive
     abbr -a lmd glow --width 160
 
     # Aliases
-    alias za="zellij attach default --create --force-run-commands"
+    alias za="zellij attach default --create"
     alias hm="history merge"
     alias v="$EDITOR"
 
