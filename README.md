@@ -3,10 +3,10 @@ Install
 
 ```sh
 # install everything
-./install.sh
+./dev/install.sh
 
-# deploy config files to their target locations
-./sync.sh
+# link home/ files to their destinations
+./dev/link.py
 ```
 
 **Manually install on Windows**
