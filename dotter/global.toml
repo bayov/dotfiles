@@ -5,11 +5,6 @@ default_target_type = "automatic"
 
 [default]
 depends = [
-    # directories
-    "claude",
-    "Code",
-    "delta",
-    "eza",
     "fish",
     "fresh",
     "gemini",
@@ -24,22 +19,6 @@ depends = [
     # personal notes
     "notes",
 ]
-
-[claude.files]
-"config/claude/CLAUDE.md" = "~/.claude/CLAUDE.md"
-"config/claude/settings.json" = "~/.claude/settings.json"
-"config/claude/keybindings.json" = "~/.claude/keybindings.json"
-"config/claude/statusline.py" = "~/.claude/statusline.py"
-
-[Code.files]
-"config/Code/User/settings.json" = "~/.vscode-server/data/Machine/settings.json"
-"config/Code/User/keybindings.json" = "~/.vscode-server/data/Machine/keybindings.json"
-
-[delta.files]
-"config/delta" = "~/.config/delta"
-
-[eza.files]
-"config/eza" = "~/.config/eza"
 
 [fish.files]
 "config/fish/config.fish" = "~/.config/fish/config.fish"
