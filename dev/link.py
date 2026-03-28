@@ -110,7 +110,7 @@ class Logger:
         )
 
     def notice(self, message: str) -> None:
-        print(f"{GRAY}{message}{RESET}", file=sys.stderr)
+        print(f"{YELLOW}{message}{RESET}", file=sys.stderr)
 
     def fmt_path(self, path: Path) -> str:
         """Format path for display, substituting ~ for $HOME."""
