@@ -1,5 +1,8 @@
+# For use as a remote VSCode configuration
 linker = "spread"
 dst = "~/.vscode-server/data/Machine"
+
+# For use in Windows (WSL)
 
 [[link]]
 src = "keybindings.json"
