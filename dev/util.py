@@ -2,6 +2,7 @@ import contextvars
 from datetime import datetime
 from enum import Enum
 import os
+from pathlib import Path
 import sys
 from typing import Optional, TextIO
 
@@ -108,3 +109,13 @@ def logger() -> Logger:
 
 def set_logger(l: Logger):
     _logger_ctx.set(l)
+
+
+def require_project_root(repo_root: Path) -> None:
+    """Exit with an error if repo_root doesn't look like the project root."""
+    if not (repo_root / "config").is_dir():
+        print(
+            f"error: config/ not found at {repo_root} — run from project root",
+            file=sys.stderr,
+        )
+        sys.exit(1)

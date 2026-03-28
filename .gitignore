@@ -19,6 +19,9 @@
 .dotter/cache.toml
 .dotter/cache
 
+# link.py state (machine-local)
+.link-state.toml
+
 # Compiled Python
 __pycache__
 *.pyc
