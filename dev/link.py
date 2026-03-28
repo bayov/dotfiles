@@ -2,7 +2,7 @@
 """
 Symlinks files from config/ to $HOME, mirroring the directory structure.
 
-Usage: python scripts/link.py [--dry-run] [--verbose] [--unlink] [--force]
+Usage: python dev/link.py [--dry-run] [--verbose] [--unlink] [--force]
 """
 
 import argparse
@@ -18,8 +18,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TextIO
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from dev.util import (  # noqa: E402
+from util import (
     BOLD,
     CYAN,
     GRAY,
@@ -461,8 +460,7 @@ class WindowsSymlinkDirMode(LinkMode):
 
     Required when dest is on the Windows filesystem (e.g. /mnt/c/...), because
     regular WSL symlinks are not recognized by Windows applications.  Uses
-    elevated PowerShell (New-Item -ItemType SymbolicLink) just like
-    scripts/deploy_vscode_settings.sh does.
+    elevated PowerShell (New-Item -ItemType SymbolicLink).
 
     Activate with mode = "windows-symlink-dir" in .link.toml.
     """

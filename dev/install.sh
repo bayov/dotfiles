@@ -4,7 +4,7 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Execute all install scripts in order
-for script in "$DIR"/scripts/install/*.sh; do
+for script in "$DIR"/install/*.sh; do
     if [ -x "$script" ]; then
         filename=$(basename "$script")
         "$script"
