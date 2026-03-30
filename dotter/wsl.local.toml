@@ -1,2 +1,0 @@
-includes = ["dotter/wsl.toml"]
-packages = ["default", "windows"]
