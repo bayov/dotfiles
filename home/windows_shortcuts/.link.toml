@@ -1,2 +1,4 @@
+[[link]]
+tags = ["wsl"]
 linker = "copy"
 dst = "/mnt/c/Users/hesos/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup"

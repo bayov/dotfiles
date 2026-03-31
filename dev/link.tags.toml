@@ -1,0 +1,15 @@
+# Tag detection for dev/link.py
+#
+# Each tag "detect" command runs via "sh -c"; exit 0 = tag is active.
+#
+# Multiple tags can be active simultaneously (e.g., a machine can be both
+# "mac" and "google_cloudtop"). Add custom tags for your specific environments.
+
+[tags.wsl]
+detect = "test -n \"$WSL_DISTRO_NAME\""
+
+[tags.linux]
+detect = "test \"$(uname)\" = \"Linux\" && test -z \"$WSL_DISTRO_NAME\""
+
+[tags.mac]
+detect = "test \"$(uname)\" = \"Darwin\""

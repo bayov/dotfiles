@@ -1,15 +1,16 @@
-# For use as a remote VSCode configuration
+# For use as a remote VSCode configuration (Linux / vscode-server)
+[[link]]
 linker = "spread"
 dst = "~/.vscode-server/data/Machine"
 
-# For use in Windows (WSL)
-
 [[link]]
+tags = ["wsl"]
 src = "keybindings.json"
 linker = "windows-symlink"
 dst = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/keybindings.json"
 
 [[link]]
+tags = ["wsl"]
 src = "settings.json"
 linker = "windows-symlink"
 dst = "/mnt/c/Users/hesos/AppData/Roaming/Code/User/settings.json"

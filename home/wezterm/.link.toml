@@ -1,2 +1,9 @@
+[[link]]
+tags = ["linux"]
+linker = "symlink"
+dst = "~/.config/wezterm"
+
+[[link]]
+tags = ["wsl"]
 linker = "windows-symlink"
 dst = "/mnt/c/Users/hesos/.config/wezterm"

@@ -41,6 +41,7 @@ from util import (
 
 CONFIG_DIR = "home"
 LINK_TOML = ".link.toml"
+TAGS_TOML = "link.tags.toml"
 LINKS_STATE = ".links.toml"
 ARROW = "⟶"
 INDENT = "    "
@@ -60,12 +61,16 @@ class Link:
     src: Path  # absolute, resolved
     dst: Path | None = None  # None = infer from parent context
     linker: LinkerType = LinkerType.SYMLINK
+    tags: tuple[
+        str, ...
+    ] = ()  # empty = always applies; AND semantics; "!tag" = negation
 
 
 @dataclass(frozen=True)
 class DirConfig:
-    primary: Link  # root-level fields; src = directory containing .link.toml
-    links: list[Link]  # [[link]] array entries; src = resolved child paths
+    links: list[
+        Link
+    ]  # all [[link]] entries; no-src entries have src = directory.resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +277,7 @@ class Context:
     state: LinksState
     repo_root: Path | None
     had_conflict: bool = False
+    active_tags: frozenset[str] = field(default_factory=frozenset)
     _visited_link_tomls: set[Path] = field(default_factory=set)
 
 
@@ -295,6 +301,58 @@ class Linker(ABC):
 
 
 # ---------------------------------------------------------------------------
+# Tag detection
+# ---------------------------------------------------------------------------
+
+
+def load_active_tags(tags_toml: Path) -> frozenset[str]:
+    """Read link.tags.toml and return the set of tags whose detect commands exit 0."""
+    if not tags_toml.exists() or tomllib is None:
+        return frozenset()
+    with open(tags_toml, "rb") as f:
+        data = tomllib.load(f)
+    active: set[str] = set()
+    for tag_name, tag_cfg in data.get("tags", {}).items():
+        detect_cmd: str | None = tag_cfg.get("detect")
+        if detect_cmd is None:
+            continue
+        r = subprocess.run(
+            detect_cmd, shell=True, executable="/bin/sh", capture_output=True
+        )
+        if r.returncode == 0:
+            active.add(tag_name)
+    return frozenset(active)
+
+
+def _link_matches_tags(link: Link, active_tags: frozenset[str]) -> bool:
+    """Return True if link's tags filter matches active_tags.
+
+    Empty tags = always matches. All listed tags must be active (AND).
+    Tags prefixed '!' are negated (that tag must NOT be active).
+    """
+    for tag in link.tags:
+        if tag.startswith("!"):
+            if tag[1:] in active_tags:
+                return False
+        else:
+            if tag not in active_tags:
+                return False
+    return True
+
+
+def _filter_by_tags(
+    entries: list[Link], active_tags: frozenset[str]
+) -> list[Link]:
+    """Return the subset of entries that match active_tags.
+
+    If any entry has tags and none match → return [] (explicit env control).
+    If all entries are tagless → return all (backward compat).
+    """
+    matching = [e for e in entries if _link_matches_tags(e, active_tags)]
+    return matching if (matching or any(e.tags for e in entries)) else entries
+
+
+# ---------------------------------------------------------------------------
 # Config parsing
 # ---------------------------------------------------------------------------
 
@@ -306,10 +364,7 @@ def _read_dir_config(directory: Path, ctx: Context) -> DirConfig:
     """
     link_toml = directory / LINK_TOML
     if not link_toml.exists():
-        return DirConfig(
-            primary=Link(src=directory, linker=LinkerType.SYMLINK),
-            links=[],
-        )
+        return DirConfig(links=[])
 
     ctx._visited_link_tomls.add(link_toml)
 
@@ -323,47 +378,29 @@ def _read_dir_config(directory: Path, ctx: Context) -> DirConfig:
     with open(link_toml, "rb") as f:
         data = tomllib.load(f)
 
-    linker_str: str = data.get("linker", LinkerType.SYMLINK.value)
-    try:
-        linker = LinkerType(linker_str)
-    except ValueError:
-        ctx.logger.error(
-            f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
-            f"unknown linker {repr(linker_str)}. "
-            f"Available: {', '.join(t.value for t in LinkerType)}"
-        )
-        sys.exit(1)
-
-    dst_str: str | None = data.get("dst")
-    dst = Path(dst_str).expanduser() if dst_str else None
-
-    primary = Link(src=directory, dst=dst, linker=linker)
-
     links: list[Link] = []
     for entry in data.get("link", []):
         src_str: str | None = entry.get("src")
+
         if src_str is None:
-            ctx.logger.error(
-                f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
-                "[[link]] entry missing required 'src'"
-            )
-            sys.exit(1)
+            # No-src entry: refers to the directory itself (the primary link).
+            resolved_src = directory.resolve()
+        else:
+            src_path = Path(src_str)
+            if src_path.is_absolute():
+                ctx.logger.error(
+                    f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
+                    f"[[link]] src must be relative, got {repr(src_str)}"
+                )
+                sys.exit(1)
 
-        src_path = Path(src_str)
-        if src_path.is_absolute():
-            ctx.logger.error(
-                f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
-                f"[[link]] src must be relative, got {repr(src_str)}"
-            )
-            sys.exit(1)
-
-        resolved_src = (directory / src_path).resolve()
-        if not resolved_src.exists():
-            ctx.logger.error(
-                f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
-                f"[[link]] src {repr(src_str)} does not exist"
-            )
-            sys.exit(1)
+            resolved_src = (directory / src_path).resolve()
+            if not resolved_src.exists():
+                ctx.logger.error(
+                    f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
+                    f"[[link]] src {repr(src_str)} does not exist"
+                )
+                sys.exit(1)
 
         entry_dst_str: str | None = entry.get("dst")
         entry_dst = Path(entry_dst_str).expanduser() if entry_dst_str else None
@@ -378,9 +415,27 @@ def _read_dir_config(directory: Path, ctx: Context) -> DirConfig:
             )
             sys.exit(1)
 
-        links.append(Link(src=resolved_src, dst=entry_dst, linker=entry_linker))
+        raw_tags = entry.get("tags", [])
+        if not isinstance(raw_tags, list) or not all(
+            isinstance(t, str) for t in raw_tags
+        ):
+            ctx.logger.error(
+                f"{MAGENTA}{ctx.logger.fmt_path(link_toml)}{RESET}: "
+                "[[link]] 'tags' must be a list of strings"
+            )
+            sys.exit(1)
+        entry_tags: tuple[str, ...] = tuple(raw_tags)
 
-    return DirConfig(primary=primary, links=links)
+        links.append(
+            Link(
+                src=resolved_src,
+                dst=entry_dst,
+                linker=entry_linker,
+                tags=entry_tags,
+            )
+        )
+
+    return DirConfig(links=links)
 
 
 def _git_ignored(paths: list[Path], repo_root: Path) -> set[Path]:
@@ -613,9 +668,13 @@ class SpreadLinker(Linker):
 
     def _collect_child_links(self, link: Link, ctx: Context) -> list[Link]:
         dir_config = _read_dir_config(link.src, ctx)
+        dir_abs = link.src.resolve()
 
-        # Build override lookup: resolved src path -> Link entry
-        overrides: dict[Path, Link] = {e.src: e for e in dir_config.links}
+        # Child-override entries: those with src != the directory itself.
+        overrides: dict[Path, list[Link]] = {}
+        for e in dir_config.links:
+            if e.src != dir_abs:
+                overrides.setdefault(e.src, []).append(e)
 
         children = [
             c for c in sorted(link.src.iterdir()) if c.name != LINK_TOML
@@ -630,30 +689,57 @@ class SpreadLinker(Linker):
         for child in children:
             child_abs = child.resolve()
             if child_abs in overrides:
-                override = overrides[child_abs]
                 consumed.add(child_abs)
-                effective_dst = override.dst or (link.dst / child.name)
-                result.append(
-                    Link(
-                        src=child_abs, dst=effective_dst, linker=override.linker
-                    )
+                entries = overrides[child_abs]
+                matching = [
+                    e for e in entries if _link_matches_tags(e, ctx.active_tags)
+                ]
+                # If any entry is tagged and none match → skip (explicit env control).
+                # If all entries are tagless → apply all (backward compat).
+                to_apply = (
+                    matching
+                    if (matching or any(e.tags for e in entries))
+                    else entries
                 )
+                for override in to_apply:
+                    effective_dst = override.dst or (link.dst / child.name)
+                    result.append(
+                        Link(
+                            src=child_abs,
+                            dst=effective_dst,
+                            linker=override.linker,
+                        )
+                    )
             elif (
                 child.is_dir()
                 and not child.is_symlink()
                 and (child / LINK_TOML).exists()
             ):
                 child_config = _read_dir_config(child, ctx)
-                effective_dst = child_config.primary.dst or (
-                    link.dst / child.name
-                )
-                result.append(
-                    Link(
-                        src=child_abs,
-                        dst=effective_dst,
-                        linker=child_config.primary.linker,
+                # No-src entries (src == child_abs) are the primary config for this child.
+                primary_entries = [
+                    e for e in child_config.links if e.src == child_abs
+                ]
+                if primary_entries:
+                    to_apply = _filter_by_tags(primary_entries, ctx.active_tags)
+                    for p in to_apply:
+                        effective_dst = p.dst or (link.dst / child.name)
+                        result.append(
+                            Link(
+                                src=child_abs,
+                                dst=effective_dst,
+                                linker=p.linker,
+                            )
+                        )
+                else:
+                    # No primary defined → default symlink.
+                    result.append(
+                        Link(
+                            src=child_abs,
+                            dst=link.dst / child.name,
+                            linker=LinkerType.SYMLINK,
+                        )
                     )
-                )
             else:
                 result.append(
                     Link(
@@ -664,13 +750,15 @@ class SpreadLinker(Linker):
                 )
 
         # Process extra [[link]] entries whose src was not a direct child
-        for src_path, extra in overrides.items():
+        for src_path, entries in overrides.items():
             if src_path in consumed:
                 continue
-            effective_dst = extra.dst or (link.dst / src_path.name)
-            result.append(
-                Link(src=src_path, dst=effective_dst, linker=extra.linker)
-            )
+            to_apply = _filter_by_tags(entries, ctx.active_tags)
+            for extra in to_apply:
+                effective_dst = extra.dst or (link.dst / src_path.name)
+                result.append(
+                    Link(src=src_path, dst=effective_dst, linker=extra.linker)
+                )
 
         return result
 
@@ -717,15 +805,31 @@ class RecursiveLinker(Linker):
             if child.is_dir() and not child.is_symlink():
                 child_toml = child / LINK_TOML
                 if child_toml.exists():
+                    child_abs = child.resolve()
                     child_config = _read_dir_config(child, ctx)
-                    effective_dst = child_config.primary.dst or child_dst
-                    result.append(
-                        Link(
-                            src=child.resolve(),
-                            dst=effective_dst,
-                            linker=child_config.primary.linker,
+                    primary_entries = [
+                        e for e in child_config.links if e.src == child_abs
+                    ]
+                    if primary_entries:
+                        for p in _filter_by_tags(
+                            primary_entries, ctx.active_tags
+                        ):
+                            effective_dst = p.dst or child_dst
+                            result.append(
+                                Link(
+                                    src=child_abs,
+                                    dst=effective_dst,
+                                    linker=p.linker,
+                                )
+                            )
+                    else:
+                        result.append(
+                            Link(
+                                src=child.resolve(),
+                                dst=child_dst,
+                                linker=LinkerType.SYMLINK,
+                            )
                         )
-                    )
                 else:
                     result.append(
                         Link(
@@ -969,9 +1073,27 @@ def main() -> None:
         action="store_true",
         help="Overwrite conflicting files/symlinks instead of aborting.",
     )
+    p.add_argument(
+        "--tags",
+        metavar="TAG",
+        nargs="*",
+        help=(
+            "Override active tags (space-separated). Skips auto-detection. "
+            "Useful with --dry-run to simulate a specific environment."
+        ),
+    )
     args = p.parse_args()
 
+    tags_toml = PROJECT_ROOT / "dev" / TAGS_TOML
+    active_tags = (
+        frozenset(args.tags)
+        if args.tags is not None
+        else load_active_tags(tags_toml)
+    )
+
     logger = Logger(verbose=args.verbose)
+    if active_tags:
+        logger.notice(f"active tags: {', '.join(sorted(active_tags))}")
     state = LinksState(PROJECT_ROOT / LINKS_STATE)
     state.load()
     ctx = Context(
@@ -980,6 +1102,7 @@ def main() -> None:
         logger=logger,
         state=state,
         repo_root=PROJECT_ROOT,
+        active_tags=active_tags,
     )
 
     all_link_tomls = set(config_dir.rglob(LINK_TOML))
