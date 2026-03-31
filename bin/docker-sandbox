@@ -24,6 +24,8 @@ HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
 WORKSPACE_PATH = Path.cwd().resolve()
 IS_IN_DOTFILES = WORKSPACE_PATH == DOTFILES_DIR
+WORKSPACES_DIR = Path.home() / "workspaces"
+IS_IN_WORKSPACES = str(WORKSPACE_PATH).startswith(str(WORKSPACES_DIR) + "/")
 
 
 @dataclass
@@ -31,6 +33,7 @@ class Mount:
     host_path: str
     container_path: Optional[str] = None
     ro: bool = True  # `ro` flag (read-only)
+    disabled: bool = False
 
     def __post_init__(self):
         if self.container_path is None:
@@ -42,11 +45,56 @@ class Mount:
                 self.container_path = self.host_path
 
 
+def get_linked_project_path() -> Optional[Path]:
+    """If in a jj/git workspace under ~/workspaces, return the linked project root."""
+    if not IS_IN_WORKSPACES:
+        return None
+
+    # jj workspace: .jj/repo is a symlink or file containing a relative path
+    # (relative to .jj/) pointing to <project>/.jj
+    jj_repo = WORKSPACE_PATH / ".jj" / "repo"
+    if jj_repo.is_symlink():
+        target = (jj_repo.parent / os.readlink(jj_repo)).resolve()
+        project_path = target.parent.parent  # target = <project>/.jj/repo → root is 2 up
+        if project_path.exists():
+            return project_path
+    elif jj_repo.is_file():
+        rel = jj_repo.read_text().strip()
+        target = (jj_repo.parent / rel).resolve()
+        project_path = target.parent.parent  # same: target = <project>/.jj/repo
+        if project_path.exists():
+            return project_path
+
+    # git worktree: .git is a file with "gitdir: <project>/.git/worktrees/<name>"
+    git_file = WORKSPACE_PATH / ".git"
+    if git_file.is_file():
+        content = git_file.read_text().strip()
+        if content.startswith("gitdir:"):
+            gitdir = Path(content[len("gitdir:"):].strip())
+            if not gitdir.is_absolute():
+                gitdir = (WORKSPACE_PATH / gitdir).resolve()
+            # gitdir = <project>/.git/worktrees/<name> → project root is 3 levels up
+            project_path = gitdir.parents[2]
+            if project_path.exists():
+                return project_path
+
+    return None
+
+
+LINKED_PROJECT_PATH = get_linked_project_path()
+
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
 MOUNTS = [
     # The current project workspace at its absolute host path.
     Mount(".", container_path=str(WORKSPACE_PATH), ro=False),
+    # If in a ~/workspaces/* jj/git workspace, also mount the linked project
+    # at its exact host path (read-only) so symlinks inside the workspace resolve.
+    Mount(
+        str(LINKED_PROJECT_PATH) if LINKED_PROJECT_PATH else ".",
+        ro=True,
+        disabled=LINKED_PROJECT_PATH is None,
+    ),
     # Claude Code settings (must be writable as CC modifies these).
     Mount("~/.claude", ro=False),
     Mount("~/.claude.json", ro=False),
@@ -195,6 +243,9 @@ def get_mount_args():
 
     # Standard Mounts
     for mount in MOUNTS:
+        if mount.disabled:
+            continue
+
         host_path = expand_path(mount.host_path)
 
         # Only mount if it exists, or if it's the workspace (.)
