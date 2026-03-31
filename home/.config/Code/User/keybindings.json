@@ -139,12 +139,12 @@
     },
     {
         "command": "editor.action.selectHighlights",
-        "key": "ctrl+alt+v",
+        "key": "shift+alt+end",
         "when": "editorFocus"
     },
     {
         "command": "editor.action.addSelectionToNextFindMatch",
-        "key": "alt+v",
+        "key": "shift+alt+pagedown",
         "when": "editorFocus"
     },
     {
@@ -173,7 +173,11 @@
         "key": "f10",
         "when": "debugState == 'stopped'"
     },
-    { "command": "cursorUndo", "key": "shift+alt+v", "when": "textInputFocus" },
+    {
+        "command": "cursorUndo",
+        "key": "shift+alt+pageup",
+        "when": "textInputFocus"
+    },
     {
         "command": "editor.action.dirtydiff.previous",
         "key": "ctrl+alt+up",
@@ -305,20 +309,57 @@
         "when": "editorTextFocus && !config.intellij-idea-keybindings.useCamelHumpsWords"
     },
     {
-        "command": "cursorPageDown",
+        "command": "cursorMove",
         "key": "pagedown",
-        "when": "textInputFocus"
+        "when": "textInputFocus",
+        "args": { "to": "down", "by": "wrappedLine", "value": 25 }
     },
     {
-        "command": "cursorPageDownSelect",
+        "command": "cursorMove",
+        "key": "pageup",
+        "when": "textInputFocus",
+        "args": { "to": "up", "by": "wrappedLine", "value": 25 }
+    },
+    {
+        "command": "cursorMove",
         "key": "shift+pagedown",
-        "when": "textInputFocus"
+        "when": "textInputFocus",
+        "args": {
+            "to": "down",
+            "by": "wrappedLine",
+            "value": 25,
+            "select": true
+        }
     },
-    { "command": "cursorPageUp", "key": "pageup", "when": "textInputFocus" },
     {
-        "command": "cursorPageUpSelect",
+        "command": "cursorMove",
         "key": "shift+pageup",
-        "when": "textInputFocus"
+        "when": "textInputFocus",
+        "args": { "to": "up", "by": "wrappedLine", "value": 25, "select": true }
+    },
+    {
+        "command": "editorScroll",
+        "key": "alt+pagedown",
+        "when": "textInputFocus",
+        "args": { "to": "down", "by": "wrappedLine", "value": 25 }
+    },
+    {
+        "command": "editorScroll",
+        "key": "alt+pageup",
+        "when": "textInputFocus",
+        "args": { "to": "up", "by": "wrappedLine", "value": 25 }
+    },
+    {
+        "command": "editorScroll",
+        "key": "alt+down",
+        "when": "textInputFocus",
+        "args": { "to": "down", "by": "wrappedLine", "value": 2 }
+    },
+    {
+        "command": "editorScroll",
+        "key": "alt+up",
+        "when": "textInputFocus",
+        "args": { "to": "up", "by": "wrappedLine", "value": 2 }
     },
     {
         "command": "cursorWordLeft",
@@ -701,7 +742,7 @@
         "when": "filesExplorerFocus"
     },
     {
-        "key": "alt+pagedown",
+        "key": "ctrl+shift+alt+pagedown",
         "command": "editor.action.moveSelectionToNextFindMatch",
         "when": "editorFocus"
     },
@@ -726,7 +767,7 @@
         "command": "-workbench.action.focusLeftGroup"
     },
     {
-        "key": "alt+down",
+        "key": "shift+alt+down",
         "command": "editor.action.insertCursorBelow",
         "when": "editorTextFocus"
     },
@@ -736,7 +777,7 @@
         "when": "editorTextFocus"
     },
     {
-        "key": "alt+up",
+        "key": "shift+alt+up",
         "command": "editor.action.insertCursorAbove",
         "when": "editorTextFocus"
     },
@@ -1195,7 +1236,7 @@
         "when": "editorTextFocus && !textCompareEditorActive"
     },
     {
-        "key": "alt+pageup",
+        "key": "ctrl+shift+alt+pageup",
         "command": "editor.action.moveSelectionToPreviousFindMatch",
         "when": "editorFocus"
     },
@@ -1367,5 +1408,15 @@
     { "key": "ctrl+shift+r", "command": "rifler.openReplace" },
     { "key": "ctrl+alt+r", "command": "-rifler.openReplace" },
     { "key": "ctrl+shift+f", "command": "rifler.open" },
-    { "key": "ctrl+alt+f", "command": "-rifler.open" }
+    { "key": "ctrl+alt+f", "command": "-rifler.open" },
+    {
+        "key": "ctrl+shift+alt+pagedown",
+        "command": "-cursorColumnSelectPageDown",
+        "when": "textInputFocus"
+    },
+    {
+        "key": "ctrl+shift+alt+pageup",
+        "command": "-cursorColumnSelectPageUp",
+        "when": "textInputFocus"
+    }
 ]

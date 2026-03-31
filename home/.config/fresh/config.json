@@ -62,8 +62,8 @@
             "when": "global"
         },
         {
-            "key": "v",
-            "modifiers": ["alt"],
+            "key": "PageDown",
+            "modifiers": ["shift", "alt"],
             "action": "add_cursor_next_match",
             "when": "global"
         },
