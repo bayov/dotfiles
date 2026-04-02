@@ -24,7 +24,7 @@ function gm --description "Generates AI description for the current commit based
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
     end
 
-    set -l result (gum spin --title "generating commit description" -- generate_commit_description | string collect)
+    set -l result (spinner --title "generating commit description" -- generate_commit_description | string collect)
     set -l error_msg (echo $result | jq -r '.error // empty' 2>/dev/null)
     if test -n "$error_msg"
         echo $error_msg
@@ -60,7 +60,7 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
         end
 
         jj bookmark move main --to @- --quiet
-        and gum spin --title "pushing main" -- jj git push --quiet
+        and spinner --title "pushing main" -- jj git push --quiet
         and echo (set_color green) ✓ pushed main(set_color normal)
         and echo
         and begin

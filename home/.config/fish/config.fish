@@ -88,11 +88,6 @@ if status is-interactive
     set -gx GUM_CONFIRM_SELECTED_BACKGROUND 4
     set -gx GUM_CONFIRM_SELECTED_FOREGROUND 16
     set -gx GUM_CONFIRM_PROMPT_FOREGROUND 4
-    # spin
-    set -gx GUM_SPIN_SPINNER points
-    set -gx GUM_SPIN_TITLE_FOREGROUND 4
-    set -gx GUM_SPIN_SPINNER_FOREGROUND 4
-    set -gx GUM_SPIN_PADDING "0 1"
 
     if set -q DOCKER_SANDBOX
         # Disable frequent history syncing in sandbox to avoid lag on shared volumes

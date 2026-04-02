@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Run a command with a spinner animation on stderr.
+
+Usage: spinner --title <title> -- <command> [args...]
+"""
+import signal
+import subprocess
+import sys
+import threading
+
+FRAMES = ["∙∙∙", "●∙∙", "∙●∙", "∙∙●"]
+FPS = 7
+BLUE = "\033[34m"
+RESET = "\033[0m"
+CLEAR_LINE = "\r\033[K"
+
+
+def parse_args(argv):
+    title = ""
+    cmd = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--title" and i + 1 < len(argv):
+            title = argv[i + 1]
+            i += 2
+        elif argv[i] == "--":
+            cmd = argv[i + 1:]
+            break
+        else:
+            i += 1
+    return title, cmd
+
+
+def spin(title, stop_event):
+    interval = 1.0 / FPS
+    i = 0
+    while True:
+        frame = FRAMES[i % len(FRAMES)]
+        sys.stderr.write(f"{CLEAR_LINE} {BLUE}{frame} {title}{RESET}")
+        sys.stderr.flush()
+        i += 1
+        if stop_event.wait(interval):
+            break
+    sys.stderr.write(CLEAR_LINE)
+    sys.stderr.flush()
+
+
+def main():
+    title, cmd = parse_args(sys.argv[1:])
+    if not cmd:
+        print("Usage: spinner --title <title> -- <command> [args...]", file=sys.stderr)
+        sys.exit(1)
+
+    show_spinner = sys.stderr.isatty()
+    # When both stdout and stderr point to the terminal, subprocess stdout would
+    # interleave with the spinner on the same line. Capture it and flush after.
+    capture_stdout = show_spinner and sys.stdout.isatty()
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE if capture_stdout else sys.stdout,
+        stderr=subprocess.DEVNULL if show_spinner else sys.stderr,
+        stdin=sys.stdin,
+    )
+
+    def forward_sigint(sig, frame):
+        proc.send_signal(signal.SIGINT)
+
+    original_sigint = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGINT, forward_sigint)
+
+    if show_spinner:
+        if capture_stdout:
+            captured = []
+            def read_stdout():
+                captured.append(proc.stdout.read())
+            reader = threading.Thread(target=read_stdout, daemon=True)
+            reader.start()
+
+        stop = threading.Event()
+        t = threading.Thread(target=spin, args=(title, stop), daemon=True)
+        t.start()
+        proc.wait()
+        stop.set()
+        t.join()
+
+        if capture_stdout:
+            reader.join()
+            if captured and captured[0]:
+                sys.stdout.buffer.write(captured[0])
+                sys.stdout.flush()
+    else:
+        proc.wait()
+
+    signal.signal(signal.SIGINT, original_sigint)
+    sys.exit(proc.returncode)
+
+
+if __name__ == "__main__":
+    main()
