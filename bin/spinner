@@ -9,10 +9,21 @@ import sys
 import threading
 
 FRAMES = ["∙∙∙", "●∙∙", "∙●∙", "∙∙●"]
-FPS = 7
-BLUE = "\033[34m"
+FPS = 20
+SPINNER_FPS = 7
+BLUE_RGB = (141, 176, 207)
+WHITE_RGB = (215, 228, 255)
+TAIL_LEN = 5
 RESET = "\033[0m"
 CLEAR_LINE = "\r\033[K"
+
+
+def rgb(r, g, b):
+    return f"\033[38;2;{r};{g};{b}m"
+
+
+def lerp_rgb(c1, c2, t):
+    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
 
 def parse_args(argv):
@@ -31,14 +42,32 @@ def parse_args(argv):
     return title, cmd
 
 
+def colorize_text(text, lead):
+    parts = []
+    for j, ch in enumerate(text):
+        dist = lead - j if lead is not None else TAIL_LEN + 1
+        if 0 <= dist <= TAIL_LEN:
+            color = rgb(*lerp_rgb(WHITE_RGB, BLUE_RGB, dist / TAIL_LEN))
+        else:
+            color = rgb(*BLUE_RGB)
+        parts.append(f"{color}{ch}")
+    return "".join(parts)
+
+
 def spin(title, stop_event):
     interval = 1.0 / FPS
-    i = 0
+    frame_acc = 0.0
+    slide_acc = 0.0
     while True:
-        frame = FRAMES[i % len(FRAMES)]
-        sys.stderr.write(f"{CLEAR_LINE} {BLUE}{frame} {title}{RESET}")
+        frame = FRAMES[int(frame_acc) % len(FRAMES)]
+        text = frame + (" " + title if title else "")
+        cycle = len(text) + TAIL_LEN + FPS  # tail exit + 1 second delay
+        pos = int(slide_acc) % cycle
+        lead = pos if pos < len(text) + TAIL_LEN else None
+        sys.stderr.write(f"{CLEAR_LINE} {colorize_text(text, lead)}{RESET}")
         sys.stderr.flush()
-        i += 1
+        frame_acc += SPINNER_FPS / FPS
+        slide_acc += 20.0 / FPS
         if stop_event.wait(interval):
             break
     sys.stderr.write(CLEAR_LINE)
