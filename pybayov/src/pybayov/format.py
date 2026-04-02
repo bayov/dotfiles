@@ -10,7 +10,7 @@ import sys
 import time
 import tomllib
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Optional, Protocol, Sequence, cast
 
 from .util import (
     GRAY,
@@ -48,14 +48,14 @@ class Formatter:
     # of extensionless files. Extracted from lines like `#!/usr/bin/env python3`
     # or `#!/usr/bin/python3` by taking the last path component after stripping
     # `env`.
-    shebangs: set[str] = field(default_factory=set)
+    shebangs: set[str] = field(default_factory=set[str])
 
     # Exact filenames (e.g. "Makefile", ".gitignore") matched against
     # `file.name`. Takes priority over extension and shebang matching, and
     # works regardless of whether the file has an extension.
-    filenames: set[str] = field(default_factory=set)
+    filenames: set[str] = field(default_factory=set[str])
 
-    def format_files(self, files: Sequence[Path]):
+    def format_files(self, files: Sequence[Path]) -> None:
         """Format the given files in place. Must be implemented by subclasses."""
         raise NotImplementedError
 
@@ -64,7 +64,7 @@ def _run_formatter_command(
     cmd: list[str],
     files: Sequence[Path],
     cwd: Optional[Path] = None,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[str]:
     """Run a formatter command with the given files appended as arguments.
 
     Logs the command at DEBUG level. Raises FormatterError on non-zero exit.
@@ -99,7 +99,7 @@ def _run_formatter_command(
 
 @dataclass(eq=False)
 class CmdFormatter(Formatter):
-    cmd: list[str] = field(default_factory=list)
+    cmd: list[str] = field(default_factory=list[str])
 
     # Working directory for the subprocess. Supports `{project_root}` placeholder.
     cwd: Optional[Path] = None
@@ -162,7 +162,7 @@ def load_formatters(config_path: Optional[Path] = None) -> list[CmdFormatter]:
         sys.exit(1)
     with open(config_path, "rb") as f:
         data = tomllib.load(f)
-    formatters = []
+    formatters: list[CmdFormatter] = []
     for i, entry in enumerate(data.get("formatter", [])):
         for required in ("name", "exts", "cmd", "max_files_per_format"):
             if required not in entry:
@@ -332,7 +332,7 @@ def _gitattributes_binary_patterns() -> list[str]:
     path = project_root() / ".gitattributes"
     if not path.exists():
         return []
-    patterns = []
+    patterns: list[str] = []
     for line in path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -465,7 +465,14 @@ def collect_jj_commit_diff() -> Iterable[Path]:
         yield root / f
 
 
-def collect_files(args) -> Optional[tuple[set[Path], list[Path]]]:
+class _CollectArgs(Protocol):
+    all_tracked: bool
+    file: list[str]
+    git: bool
+    jj: bool
+
+
+def collect_files(args: _CollectArgs) -> Optional[tuple[set[Path], list[Path]]]:
     """
     Collects files from all input sources provided in `args` into a single set.
 
@@ -530,7 +537,7 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
     no applicable formatter after resolution. Warns on either condition, and
     also warns when a symlink's extension differs from the resolved file's.
     """
-    result = set()
+    result: set[Path] = set()
     no_formatter: list[Path] = []
     for f in files:
         resolved: Path
@@ -633,7 +640,7 @@ def main():
             ):
                 pass
 
-    result = collect_files(args)
+    result = collect_files(cast(_CollectArgs, args))
     if result is None:
         print("No input sources specified.", file=sys.stderr)
         p.print_usage(file=sys.stderr)

@@ -12,6 +12,7 @@ import tempfile
 import time
 import tomllib
 from pathlib import Path
+from typing import IO, NotRequired, TypedDict
 
 from .util import (
     BOLD,
@@ -27,6 +28,27 @@ from .util import (
     set_logger,
 )
 
+
+class _TestSuiteConfig(TypedDict):
+    name: str
+    command: str
+    cwd: NotRequired[str]
+
+
+class _ProcessEntry(TypedDict):
+    name: str
+    proc: subprocess.Popen[bytes]
+    stdout: IO[bytes]
+    start_time: float
+    log_file: IO[bytes]
+    log_path: str
+    command_str: str
+    duration: float | None
+    returncode: int | None
+    read_fd: int
+    eof: bool
+
+
 CONFIG_PATH = Path(".config/test.toml")
 
 _ANSI_ESCAPE = re.compile(rb"\x1b(?:[@-Z\\-_]|\[[0-9;]*[ -/]*[@-~])")
@@ -36,7 +58,7 @@ def _strip_ansi(data: bytes) -> bytes:
     return _ANSI_ESCAPE.sub(b"", data)
 
 
-def load_test_suites() -> list[dict]:
+def load_test_suites() -> list[_TestSuiteConfig]:
     """Loads test commands from `.config/test.toml` in the current directory.
 
     The config file must define a `[[test_suite]]` array where each entry has:
@@ -58,7 +80,7 @@ def load_test_suites() -> list[dict]:
 def draw_box(text: str) -> str:
     lines = text.splitlines()
     width = max(len(line) for line in lines) + 2
-    res = []
+    res: list[str] = []
     res.append("┏" + "━" * width + "┓")
     for line in lines:
         res.append(f"┃ {line.ljust(width - 2)} ┃")
@@ -72,7 +94,7 @@ def run_command(
     quiet: bool,
     cwd: str | None = None,
     capture: bool = False,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[bytes | None]:
     """Runs a command, teeing output to the log file and optionally stdout.
 
     If not quiet and stdout is a TTY, uses a pseudo-terminal to preserve colors.
@@ -241,7 +263,7 @@ def main():
                     f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}"
                 )
     else:
-        processes = []
+        processes: list[_ProcessEntry] = []
         for test_suite in test_suites:
             name = test_suite["name"]
             command_str = test_suite["command"]
@@ -277,6 +299,7 @@ def main():
                 {
                     "name": name,
                     "proc": proc,
+                    "stdout": proc.stdout,
                     "start_time": start_time,
                     "log_file": open(cmd_log_path, "wb"),
                     "log_path": cmd_log_path,
@@ -309,10 +332,10 @@ def main():
                     code = p["proc"].poll()
                     if code is not None:
                         p["returncode"] = code
-                        p["duration"] = time.time() - p["start_time"]
+                        duration = time.time() - p["start_time"]
+                        p["duration"] = duration
 
                         name = p["name"]
-                        duration = p["duration"]
                         results.append((name, code, duration))
 
                         # Mark EOF before closing so this fd is excluded from
@@ -321,7 +344,7 @@ def main():
                         # otherwise block the loop forever.
                         p["eof"] = True
                         p["log_file"].close()
-                        p["proc"].stdout.close()
+                        p["stdout"].close()
 
                         # Read output from individual log
                         with open(p["log_path"], "rb") as f_cmd:

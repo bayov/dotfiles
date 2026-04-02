@@ -1,1 +1,10 @@
-{ "include": ["bin", "pybayov/src"] }
+{
+    "include": ["bin", "pybayov/src"],
+    "typeCheckingMode": "strict",
+    "reportUnknownVariableType": "error",
+    "reportUnknownMemberType": "error",
+    "reportUnknownArgumentType": "error",
+    "reportUnknownParameterType": "error",
+    "reportUnknownLambdaType": "error",
+    "reportMissingTypeArgument": "error"
+}
