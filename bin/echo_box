@@ -3,6 +3,7 @@
 
 Usage: echo_box [TEXT] [OPTIONS]
 """
+
 import re
 import sys
 
@@ -28,7 +29,7 @@ def strip_ansi(s):
 
 def _sgr_clears_bg(seq):
     inner = seq[2:-1]  # strip ESC[ and trailing m
-    if not inner:      # \x1b[m == \x1b[0m
+    if not inner:  # \x1b[m == \x1b[0m
         return True
     return any(p in ("0", "49") for p in inner.split(";"))
 
@@ -38,7 +39,7 @@ def restore_bg(line, bg_code):
     out = []
     pos = 0
     for m in SGR_RE.finditer(line):
-        out.append(line[pos:m.end()])
+        out.append(line[pos : m.end()])
         if _sgr_clears_bg(m.group()):
             out.append(bg_code)
         pos = m.end()
@@ -53,7 +54,7 @@ def hex_to_rgb(color):
 
 def lighten(color, amount=60):
     r, g, b = hex_to_rgb(color)
-    return f"#{min(r+amount,255):02x}{min(g+amount,255):02x}{min(b+amount,255):02x}"
+    return f"#{min(r + amount, 255):02x}{min(g + amount, 255):02x}{min(b + amount, 255):02x}"
 
 
 def fg(color):
@@ -79,11 +80,20 @@ def word_wrap(line, max_width):
 
 
 def render_box(
-    lines, width, bg_color,
-    margin_top=0, margin_right=0, margin_bottom=0, margin_left=0,
-    pad_top=DEFAULT_PAD_TOP, pad_right=DEFAULT_PAD_RIGHT,
-    pad_bottom=DEFAULT_PAD_BOTTOM, pad_left=DEFAULT_PAD_LEFT,
-    title=None, title_color=DEFAULT_TITLE_COLOR, title_bg=None,
+    lines,
+    width,
+    bg_color,
+    margin_top=0,
+    margin_right=0,
+    margin_bottom=0,
+    margin_left=0,
+    pad_top=DEFAULT_PAD_TOP,
+    pad_right=DEFAULT_PAD_RIGHT,
+    pad_bottom=DEFAULT_PAD_BOTTOM,
+    pad_left=DEFAULT_PAD_LEFT,
+    title=None,
+    title_color=DEFAULT_TITLE_COLOR,
+    title_bg=None,
     title_padding=DEFAULT_TITLE_PADDING,
 ):
     bg_code = bg(bg_color)
@@ -98,7 +108,15 @@ def render_box(
         title_start = (width - title_vis) // 2
         title_end = title_start + title_vis
         left_fill = fg(bg_color) + "▄" * title_start
-        title_cell = bg(title_bg) + fg(title_color) + ITALIC + " " * title_padding + title + " " * title_padding + RESET
+        title_cell = (
+            bg(title_bg)
+            + fg(title_color)
+            + ITALIC
+            + " " * title_padding
+            + title
+            + " " * title_padding
+            + RESET
+        )
         right_fill = fg(bg_color) + "▄" * max(0, width - title_end) + RESET
         border_top = mleft + left_fill + title_cell + right_fill + mright
     else:
@@ -117,7 +135,16 @@ def render_box(
         vis = len(strip_ansi(line))
         fill = " " * max(0, inner_width - vis)
         content = restore_bg(line, bg_code)
-        out.append(mleft + bg_code + " " * pad_left + content + fill + " " * pad_right + RESET + mright)
+        out.append(
+            mleft
+            + bg_code
+            + " " * pad_left
+            + content
+            + fill
+            + " " * pad_right
+            + RESET
+            + mright
+        )
 
     for _ in range(pad_bottom):
         out.append(mleft + blank + mright)
@@ -153,122 +180,186 @@ def parse_args(argv):
             i += 1
             title = argv[i]
         elif arg.startswith("--title="):
-            title = arg[len("--title="):]
+            title = arg[len("--title=") :]
         elif arg in ("-c", "--title-color"):
             i += 1
             title_color = argv[i]
         elif arg.startswith("--title-color="):
-            title_color = arg[len("--title-color="):]
+            title_color = arg[len("--title-color=") :]
         elif arg == "--title-bg":
             i += 1
             title_bg = argv[i]
         elif arg.startswith("--title-bg="):
-            title_bg = arg[len("--title-bg="):]
+            title_bg = arg[len("--title-bg=") :]
         elif arg == "--title-padding":
             i += 1
             title_padding = int(argv[i])
         elif arg.startswith("--title-padding="):
-            title_padding = int(arg[len("--title-padding="):])
+            title_padding = int(arg[len("--title-padding=") :])
         elif arg == "--bg":
             i += 1
             box_bg = argv[i]
         elif arg.startswith("--bg="):
-            box_bg = arg[len("--bg="):]
+            box_bg = arg[len("--bg=") :]
         elif arg in ("-w", "--width"):
             i += 1
             width = int(argv[i])
         elif arg.startswith("--width="):
-            width = int(arg[len("--width="):])
+            width = int(arg[len("--width=") :])
         elif arg in ("-m", "--margin"):
             i += 1
             margin = int(argv[i])
         elif arg.startswith("--margin="):
-            margin = int(arg[len("--margin="):])
+            margin = int(arg[len("--margin=") :])
         elif arg == "--margin-top":
             i += 1
             margin_top = int(argv[i])
         elif arg.startswith("--margin-top="):
-            margin_top = int(arg[len("--margin-top="):])
+            margin_top = int(arg[len("--margin-top=") :])
         elif arg == "--margin-right":
             i += 1
             margin_right = int(argv[i])
         elif arg.startswith("--margin-right="):
-            margin_right = int(arg[len("--margin-right="):])
+            margin_right = int(arg[len("--margin-right=") :])
         elif arg == "--margin-bottom":
             i += 1
             margin_bottom = int(argv[i])
         elif arg.startswith("--margin-bottom="):
-            margin_bottom = int(arg[len("--margin-bottom="):])
+            margin_bottom = int(arg[len("--margin-bottom=") :])
         elif arg == "--margin-left":
             i += 1
             margin_left = int(argv[i])
         elif arg.startswith("--margin-left="):
-            margin_left = int(arg[len("--margin-left="):])
+            margin_left = int(arg[len("--margin-left=") :])
         elif arg in ("-p", "--padding"):
             i += 1
             padding = int(argv[i])
         elif arg.startswith("--padding="):
-            padding = int(arg[len("--padding="):])
+            padding = int(arg[len("--padding=") :])
         elif arg == "--padding-top":
             i += 1
             pad_top = int(argv[i])
         elif arg.startswith("--padding-top="):
-            pad_top = int(arg[len("--padding-top="):])
+            pad_top = int(arg[len("--padding-top=") :])
         elif arg == "--padding-right":
             i += 1
             pad_right = int(argv[i])
         elif arg.startswith("--padding-right="):
-            pad_right = int(arg[len("--padding-right="):])
+            pad_right = int(arg[len("--padding-right=") :])
         elif arg == "--padding-bottom":
             i += 1
             pad_bottom = int(argv[i])
         elif arg.startswith("--padding-bottom="):
-            pad_bottom = int(arg[len("--padding-bottom="):])
+            pad_bottom = int(arg[len("--padding-bottom=") :])
         elif arg == "--padding-left":
             i += 1
             pad_left = int(argv[i])
         elif arg.startswith("--padding-left="):
-            pad_left = int(arg[len("--padding-left="):])
+            pad_left = int(arg[len("--padding-left=") :])
         elif not arg.startswith("-"):
             text = arg
         i += 1
 
-    mt = margin_top    if margin_top    is not None else margin
-    mr = margin_right  if margin_right  is not None else margin
+    mt = margin_top if margin_top is not None else margin
+    mr = margin_right if margin_right is not None else margin
     mb = margin_bottom if margin_bottom is not None else margin
-    ml = margin_left   if margin_left   is not None else margin
+    ml = margin_left if margin_left is not None else margin
 
-    pt = pad_top    if pad_top    is not None else (padding if padding is not None else DEFAULT_PAD_TOP)
-    pr = pad_right  if pad_right  is not None else (padding if padding is not None else DEFAULT_PAD_RIGHT)
-    pb = pad_bottom if pad_bottom is not None else (padding if padding is not None else DEFAULT_PAD_BOTTOM)
-    pl = pad_left   if pad_left   is not None else (padding if padding is not None else DEFAULT_PAD_LEFT)
+    pt = (
+        pad_top
+        if pad_top is not None
+        else (padding if padding is not None else DEFAULT_PAD_TOP)
+    )
+    pr = (
+        pad_right
+        if pad_right is not None
+        else (padding if padding is not None else DEFAULT_PAD_RIGHT)
+    )
+    pb = (
+        pad_bottom
+        if pad_bottom is not None
+        else (padding if padding is not None else DEFAULT_PAD_BOTTOM)
+    )
+    pl = (
+        pad_left
+        if pad_left is not None
+        else (padding if padding is not None else DEFAULT_PAD_LEFT)
+    )
 
-    return text, title, title_color, title_bg, title_padding, box_bg, width, show_help, mt, mr, mb, ml, pt, pr, pb, pl
+    return (
+        text,
+        title,
+        title_color,
+        title_bg,
+        title_padding,
+        box_bg,
+        width,
+        show_help,
+        mt,
+        mr,
+        mb,
+        ml,
+        pt,
+        pr,
+        pb,
+        pl,
+    )
 
 
 def main():
-    text, title, title_color, title_bg, title_padding, box_bg, width, show_help, mt, mr, mb, ml, pt, pr, pb, pl = parse_args(sys.argv[1:])
+    (
+        text,
+        title,
+        title_color,
+        title_bg,
+        title_padding,
+        box_bg,
+        width,
+        show_help,
+        mt,
+        mr,
+        mb,
+        ml,
+        pt,
+        pr,
+        pb,
+        pl,
+    ) = parse_args(sys.argv[1:])
 
     if show_help:
         print("Usage: echo_box [TEXT] [OPTIONS]")
         print()
         print("Options:")
         print("  -t, --title=STR          Set box title")
-        print(f"  -c, --title-color=COLOR  Set title color (default: {DEFAULT_TITLE_COLOR})")
-        print(f"      --title-bg=COLOR     Set title background color (default: lighter version of --bg)")
-        print(f"      --title-padding=INT  Set title horizontal padding (default: {DEFAULT_TITLE_PADDING})")
-        print(f"  -w, --width=INT          Set box width (default: {DEFAULT_WIDTH})")
-        print(f"  -m, --margin=INT         Set all margins (default: {DEFAULT_MARGIN})")
+        print(
+            f"  -c, --title-color=COLOR  Set title color (default: {DEFAULT_TITLE_COLOR})"
+        )
+        print(
+            f"      --title-bg=COLOR     Set title background color (default: lighter version of --bg)"
+        )
+        print(
+            f"      --title-padding=INT  Set title horizontal padding (default: {DEFAULT_TITLE_PADDING})"
+        )
+        print(
+            f"  -w, --width=INT          Set box width (default: {DEFAULT_WIDTH})"
+        )
+        print(
+            f"  -m, --margin=INT         Set all margins (default: {DEFAULT_MARGIN})"
+        )
         print("      --margin-top=INT     Set top margin")
         print("      --margin-right=INT   Set right margin")
         print("      --margin-bottom=INT  Set bottom margin")
         print("      --margin-left=INT    Set left margin")
-        print(f"  -p, --padding=INT        Set all padding (default: top/bottom={DEFAULT_PAD_TOP}, left/right={DEFAULT_PAD_RIGHT})")
+        print(
+            f"  -p, --padding=INT        Set all padding (default: top/bottom={DEFAULT_PAD_TOP}, left/right={DEFAULT_PAD_RIGHT})"
+        )
         print("      --padding-top=INT    Set top padding")
         print("      --padding-right=INT  Set right padding")
         print("      --padding-bottom=INT Set bottom padding")
         print("      --padding-left=INT   Set left padding")
-        print(f"      --bg=COLOR           Set box background color (default: {DEFAULT_BG})")
+        print(
+            f"      --bg=COLOR           Set box background color (default: {DEFAULT_BG})"
+        )
         print("  -h, --help               Show help")
         return
 
@@ -282,11 +373,25 @@ def main():
         for wrapped in word_wrap(raw_line, inner_width):
             lines.append(wrapped)
 
-    print(render_box(lines, width, box_bg,
-                     margin_top=mt, margin_right=mr, margin_bottom=mb, margin_left=ml,
-                     pad_top=pt, pad_right=pr, pad_bottom=pb, pad_left=pl,
-                     title=title, title_color=title_color, title_bg=title_bg,
-                     title_padding=title_padding))
+    print(
+        render_box(
+            lines,
+            width,
+            box_bg,
+            margin_top=mt,
+            margin_right=mr,
+            margin_bottom=mb,
+            margin_left=ml,
+            pad_top=pt,
+            pad_right=pr,
+            pad_bottom=pb,
+            pad_left=pl,
+            title=title,
+            title_color=title_color,
+            title_bg=title_bg,
+            title_padding=title_padding,
+        )
+    )
 
 
 if __name__ == "__main__":

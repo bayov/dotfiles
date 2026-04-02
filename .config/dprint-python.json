@@ -1,0 +1,4 @@
+{
+    "ruff": { "lineLength": 80, "associations": ["**/*"] },
+    "plugins": ["https://plugins.dprint.dev/ruff-0.7.2.wasm"]
+}

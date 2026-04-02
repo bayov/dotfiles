@@ -39,6 +39,12 @@ exts = [
     ".html",
     ".xml",
 ]
-shebangs = ["python3", "python"]
 cmd = ["dprint", "fmt"]
+max_files_per_format = 1000
+
+[[formatter]]
+name = "dprint-python-shebang"
+exts = []
+shebangs = ["python3", "python"]
+cmd = ["dprint", "fmt", "--config", ".config/dprint-python.json"]
 max_files_per_format = 1000

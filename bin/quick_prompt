@@ -13,7 +13,9 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-DOTFILES_DIR: Path = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
+DOTFILES_DIR: Path = Path(
+    os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
+)
 
 # --- Configuration & Constants ---
 STATS_DIR: Path = Path.home() / ".local/share/quick_prompt"

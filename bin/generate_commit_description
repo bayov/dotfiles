@@ -10,7 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from random import randint
 
-DOTFILES_DIR: Path = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
+DOTFILES_DIR: Path = Path(
+    os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
+)
 
 
 def main() -> None:
@@ -27,7 +29,9 @@ def main() -> None:
     template_path = Path(
         os.environ.get(
             "generate_commit_description_template",
-            str(DOTFILES_DIR / "config/generate_commit_description_template.md"),
+            str(
+                DOTFILES_DIR / "config/generate_commit_description_template.md"
+            ),
         )
     )
     prompt = template_path.read_text().replace("{{diff}}", diff)
@@ -57,14 +61,20 @@ def main() -> None:
     # 5. Extract commit description from <commit-description> tags
     output_text = qp_result.stdout
     match = re.search(
-        r"<commit-description>\s*(.*?)\s*</commit-description>", output_text, re.DOTALL
+        r"<commit-description>\s*(.*?)\s*</commit-description>",
+        output_text,
+        re.DOTALL,
     )
     if not match:
-        print(json.dumps({
-            "error": "Failed to extract commit description from prompt output.",
-            "prompt_input_file": str(input_file),
-            "prompt_output_file": str(output_file),
-        }))
+        print(
+            json.dumps(
+                {
+                    "error": "Failed to extract commit description from prompt output.",
+                    "prompt_input_file": str(input_file),
+                    "prompt_output_file": str(output_file),
+                }
+            )
+        )
         sys.exit(1)
 
     commit_description = match.group(1).strip()

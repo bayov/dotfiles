@@ -18,7 +18,9 @@ from typing import Optional
 # ==============================================================================
 
 IMAGE_TAG = "sandbox-env"
-DOTFILES_DIR = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
+DOTFILES_DIR = Path(
+    os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
+)
 DOCKERFILE_PATH = DOTFILES_DIR / "config" / "sandbox.Dockerfile"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
@@ -55,7 +57,9 @@ def get_linked_project_path() -> Optional[Path]:
     jj_repo = WORKSPACE_PATH / ".jj" / "repo"
     if jj_repo.is_symlink():
         target = (jj_repo.parent / os.readlink(jj_repo)).resolve()
-        project_path = target.parent.parent  # target = <project>/.jj/repo → root is 2 up
+        project_path = (
+            target.parent.parent
+        )  # target = <project>/.jj/repo → root is 2 up
         if project_path.exists():
             return project_path
     elif jj_repo.is_file():
@@ -70,7 +74,7 @@ def get_linked_project_path() -> Optional[Path]:
     if git_file.is_file():
         content = git_file.read_text().strip()
         if content.startswith("gitdir:"):
-            gitdir = Path(content[len("gitdir:"):].strip())
+            gitdir = Path(content[len("gitdir:") :].strip())
             if not gitdir.is_absolute():
                 gitdir = (WORKSPACE_PATH / gitdir).resolve()
             # gitdir = <project>/.git/worktrees/<name> → project root is 3 levels up

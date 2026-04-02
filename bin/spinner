@@ -3,6 +3,7 @@
 
 Usage: spinner --title <title> -- <command> [args...]
 """
+
 import signal
 import subprocess
 import sys
@@ -35,7 +36,7 @@ def parse_args(argv):
             title = argv[i + 1]
             i += 2
         elif argv[i] == "--":
-            cmd = argv[i + 1:]
+            cmd = argv[i + 1 :]
             break
         else:
             i += 1
@@ -61,7 +62,7 @@ def spin(title, stop_event):
     while True:
         frame = FRAMES[int(frame_acc) % len(FRAMES)]
         text = frame + (" " + title if title else "")
-        cycle = len(text) + TAIL_LEN + FPS  # tail exit + 1 second delay
+        cycle = len(text) + TAIL_LEN + FPS // 2  # tail exit + 0.5 second delay
         pos = int(slide_acc) % cycle
         lead = pos if pos < len(text) + TAIL_LEN else None
         sys.stderr.write(f"{CLEAR_LINE} {colorize_text(text, lead)}{RESET}")
@@ -77,7 +78,10 @@ def spin(title, stop_event):
 def main():
     title, cmd = parse_args(sys.argv[1:])
     if not cmd:
-        print("Usage: spinner --title <title> -- <command> [args...]", file=sys.stderr)
+        print(
+            "Usage: spinner --title <title> -- <command> [args...]",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     show_spinner = sys.stderr.isatty()
@@ -101,8 +105,10 @@ def main():
     if show_spinner:
         if capture_stdout:
             captured = []
+
             def read_stdout():
                 captured.append(proc.stdout.read())
+
             reader = threading.Thread(target=read_stdout, daemon=True)
             reader.start()
 
