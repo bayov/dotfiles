@@ -19,7 +19,7 @@ from typing import Optional
 
 IMAGE_TAG = "sandbox-env"
 DOTFILES_DIR = Path(os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles")))
-DOCKERFILE_PATH = DOTFILES_DIR / "config" / "Dockerfile.sandbox"
+DOCKERFILE_PATH = DOTFILES_DIR / "config" / "sandbox.Dockerfile"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
 WORKSPACE_PATH = Path.cwd().resolve()
