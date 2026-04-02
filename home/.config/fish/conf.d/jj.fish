@@ -15,7 +15,7 @@ end
 
 function gm --description "Generates AI description for the current commit based on its diff"
     # Run my personal formatter
-    uv run pybayov-format --all-tracked || return $status
+    uv run python -m pybayov.format --all-tracked || return $status
 
     # Warn if description already exists
     set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
@@ -46,7 +46,7 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
 
     # If it's a personal project, push parent commit as main git branch
     if test -f "$root/.bayov-personal-project"
-        test_personal_project || return $status
+        uv run python -m pybayov.test || return $status
 
         # Check if `main` bookmark is already at parent (`@-`)
         if not test -z (jj log -r "main & @-" -T 1 --no-graph)

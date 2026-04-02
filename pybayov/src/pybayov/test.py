@@ -14,7 +14,7 @@ import time
 import tomllib
 from pathlib import Path
 
-from util import (
+from .util import (
     BOLD,
     CYAN,
     GRAY,

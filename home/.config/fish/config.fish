@@ -6,6 +6,7 @@ set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE 25GB
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
+set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
