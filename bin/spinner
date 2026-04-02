@@ -4,6 +4,7 @@
 Usage: spinner --title <title> -- <command> [args...]
 """
 
+import argparse
 import signal
 import subprocess
 import sys
@@ -28,19 +29,22 @@ def lerp_rgb(c1, c2, t):
 
 
 def parse_args(argv):
-    title = ""
-    cmd = []
-    i = 0
-    while i < len(argv):
-        if argv[i] == "--title" and i + 1 < len(argv):
-            title = argv[i + 1]
-            i += 2
-        elif argv[i] == "--":
-            cmd = argv[i + 1 :]
-            break
-        else:
-            i += 1
-    return title, cmd
+    # Split on '--' to separate spinner args from command
+    try:
+        sep = argv.index("--")
+        spinner_argv = argv[:sep]
+        cmd = argv[sep + 1 :]
+    except ValueError:
+        spinner_argv = argv
+        cmd = []
+
+    parser = argparse.ArgumentParser(
+        prog="spinner",
+        usage="spinner [--title TITLE] -- <command> [args...]",
+    )
+    parser.add_argument("--title", default="")
+    args = parser.parse_args(spinner_argv)
+    return args.title, cmd
 
 
 def colorize_text(text, lead):
@@ -78,9 +82,8 @@ def spin(title, stop_event):
 def main():
     title, cmd = parse_args(sys.argv[1:])
     if not cmd:
-        print(
-            "Usage: spinner --title <title> -- <command> [args...]",
-            file=sys.stderr,
+        sys.stderr.write(
+            "spinner: error: missing command (expected ' -- <command>')\n"
         )
         sys.exit(1)
 
