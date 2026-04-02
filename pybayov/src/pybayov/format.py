@@ -12,7 +12,7 @@ import tomllib
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from util import (
+from .util import (
     GRAY,
     GREEN,
     LogModule,
