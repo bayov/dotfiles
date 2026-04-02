@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import fcntl
 import os
 import pty
 import re
@@ -21,7 +20,6 @@ from .util import (
     GREEN,
     RED,
     RESET,
-    USE_COLOR,
     LogModule,
     Logger,
     logger,
@@ -30,6 +28,12 @@ from .util import (
 )
 
 CONFIG_PATH = Path(".config/test.toml")
+
+_ANSI_ESCAPE = re.compile(rb"\x1b(?:[@-Z\\-_]|\[[0-9;]*[ -/]*[@-~])")
+
+
+def _strip_ansi(data: bytes) -> bytes:
+    return _ANSI_ESCAPE.sub(b"", data)
 
 
 def load_test_suites() -> list[dict]:
@@ -74,50 +78,41 @@ def run_command(
     `cwd` sets the working directory for the subprocess; defaults to the current
     directory if not specified.
     """
-    if not quiet and USE_COLOR:
-        master_fd, slave_fd = pty.openpty()
-        process = subprocess.Popen(
-            cmd_args,
-            stdout=slave_fd,
-            stderr=slave_fd,
-            close_fds=True,
-            cwd=cwd,
-        )
-        os.close(slave_fd)
-        read_fd = master_fd
-    else:
-        process = subprocess.Popen(
-            cmd_args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            cwd=cwd,
-        )
-        read_fd = process.stdout.fileno()
+    master_fd, slave_fd = pty.openpty()
+    process = subprocess.Popen(
+        cmd_args,
+        stdin=subprocess.DEVNULL,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        close_fds=True,
+        cwd=cwd,
+    )
+    os.close(slave_fd)
+    read_fd = master_fd
 
     log_file = open(log_file_path, "ab") if log_file_path else None
 
     try:
         while True:
-            if not quiet and USE_COLOR:
-                # Use select with a short timeout so we can detect when the
-                # main process exits even if child processes (e.g. TypeScript
-                # language server workers) still hold the PTY slave fd open.
-                r, _, _ = select.select([read_fd], [], [], 0.05)
-                if not r:
-                    if process.poll() is not None:
-                        break
-                    continue
+            # Use select with a short timeout so we can detect when the
+            # main process exits even if child processes (e.g. TypeScript
+            # language server workers) still hold the PTY slave fd open.
+            r, _, _ = select.select([read_fd], [], [], 0.05)
+            if not r:
+                if process.poll() is not None:
+                    break
+                continue
 
             try:
                 chunk = os.read(read_fd, 1024)
             except OSError:
-                # This happens when the slave_fd/pipe is closed (process finished)
+                # This happens when the slave_fd is closed (process finished)
                 break
             if not chunk:
                 break
 
             if log_file:
-                log_file.write(chunk)
+                log_file.write(_strip_ansi(chunk))
                 log_file.flush()
 
             if not quiet:
@@ -126,8 +121,7 @@ def run_command(
     finally:
         if log_file:
             log_file.close()
-        if not quiet:
-            os.close(read_fd)
+        os.close(read_fd)
 
     returncode = process.wait()
     return subprocess.CompletedProcess(cmd_args, returncode)
@@ -227,32 +221,23 @@ def main():
             )
             os.close(fd)
 
-            # Run in background. Using PTY to preserve colors if stdout is a TTY and not in quiet mode.
+            # Run in background using a pipe (no PTY, suppresses progress bars).
+            # Force colors via env vars since there's no TTY.
             cwd = test_suite.get("cwd")
             start_time = time.time()
-            if not args.quiet and USE_COLOR:
-                master_fd, slave_fd = pty.openpty()
-                proc = subprocess.Popen(
-                    cmd_args,
-                    stdout=slave_fd,
-                    stderr=slave_fd,
-                    close_fds=True,
-                    cwd=cwd,
-                )
-                os.close(slave_fd)
-                read_fd = master_fd
-            else:
-                proc = subprocess.Popen(
-                    cmd_args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    cwd=cwd,
-                )
-                read_fd = proc.stdout.fileno()
-
-            # Set non-blocking read
-            fl = fcntl.fcntl(read_fd, fcntl.F_GETFL)
-            fcntl.fcntl(read_fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+            env = os.environ.copy()
+            env["FORCE_COLOR"] = "1"
+            env["CLICOLOR_FORCE"] = "1"
+            proc = subprocess.Popen(
+                cmd_args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                close_fds=True,
+                cwd=cwd,
+                env=env,
+            )
+            read_fd = proc.stdout.fileno()
 
             processes.append(
                 {
@@ -302,7 +287,7 @@ def main():
                         # otherwise block the loop forever.
                         p["eof"] = True
                         p["log_file"].close()
-                        os.close(p["read_fd"])
+                        p["proc"].stdout.close()
 
                         # Read output from individual log
                         with open(p["log_path"], "rb") as f_cmd:
@@ -327,11 +312,11 @@ def main():
                             print("\n")
                             sys.stdout.buffer.flush()
 
-                        # Append individual log to main log file
+                        # Append individual log to main log file (strip ANSI for clean text)
                         if log_file_path:
                             with open(log_file_path, "ab") as f_main:
                                 f_main.write(b"\n\n" + header + b"\n")
-                                f_main.write(output)
+                                f_main.write(_strip_ansi(output))
 
                         if code == 0:
                             logger().info(
@@ -372,13 +357,16 @@ def main():
             f"Test suite {'':{suite_padding}}FAILED{duration_suffix}",
             color=BOLD + RED,
         )
-        sys.exit(1)
     else:
         logger().info(
             f"Test suite {'':{suite_padding}}PASSED{duration_suffix}",
             color=BOLD + GREEN,
         )
-        sys.exit(0)
+
+    if log_file_path:
+        logger().info(f"Output log: {log_file_path}", color=GRAY)
+
+    sys.exit(1 if any_failed else 0)
 
 
 if __name__ == "__main__":
