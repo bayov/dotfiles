@@ -4,6 +4,7 @@
 Usage: echo_box [TEXT] [OPTIONS]
 """
 
+import argparse
 import re
 import sys
 
@@ -47,22 +48,36 @@ def restore_bg(line, bg_code):
     return "".join(out)
 
 
+def parse_color(s):
+    """Return int (palette index 0-255) or hex string '#rrggbb' unchanged."""
+    s = s.strip()
+    if s.startswith("#"):
+        return s
+    return int(s)
+
+
 def hex_to_rgb(color):
     h = color.lstrip("#")
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
 def lighten(color, amount=60):
+    if isinstance(color, int):
+        return color  # can't lighten palette colors
     r, g, b = hex_to_rgb(color)
     return f"#{min(r + amount, 255):02x}{min(g + amount, 255):02x}{min(b + amount, 255):02x}"
 
 
 def fg(color):
+    if isinstance(color, int):
+        return f"\x1b[38;5;{color}m"
     r, g, b = hex_to_rgb(color)
     return f"\x1b[38;2;{r};{g};{b}m"
 
 
 def bg(color):
+    if isinstance(color, int):
+        return f"\x1b[48;5;{color}m"
     r, g, b = hex_to_rgb(color)
     return f"\x1b[48;2;{r};{g};{b}m"
 
@@ -157,227 +172,141 @@ def render_box(
     return "\n".join(out)
 
 
-def parse_args(argv):
-    text = ""
-    title = None
-    title_color = DEFAULT_TITLE_COLOR
-    title_bg = None
-    title_padding = DEFAULT_TITLE_PADDING
-    box_bg = DEFAULT_BG
-    width = DEFAULT_WIDTH
-    show_help = False
-    margin = DEFAULT_MARGIN
-    margin_top = margin_right = margin_bottom = margin_left = None
-    padding = None
-    pad_top = pad_right = pad_bottom = pad_left = None
+def main():
+    parser = argparse.ArgumentParser(
+        prog="echo_box",
+        description="Print text in a styled box with optional title.",
+        epilog="Content is read from --content or stdin.",
+    )
+    parser.add_argument(
+        "--content",
+        metavar="STR",
+        default=None,
+        help="Box content (or pass via stdin)",
+    )
+    parser.add_argument("-t", "--title", metavar="STR", help="Box title")
+    parser.add_argument(
+        "-c",
+        "--title-fg",
+        "--title-color",
+        dest="title_color",
+        metavar="COLOR",
+        type=parse_color,
+        default=DEFAULT_TITLE_COLOR,
+        help=f"Title foreground color (default: {DEFAULT_TITLE_COLOR})",
+    )
+    parser.add_argument(
+        "--title-bg",
+        metavar="COLOR",
+        type=parse_color,
+        default=None,
+        help="Title background color (default: lighter version of --bg)",
+    )
+    parser.add_argument(
+        "--title-padding",
+        metavar="INT",
+        type=int,
+        default=DEFAULT_TITLE_PADDING,
+        help=f"Title horizontal padding (default: {DEFAULT_TITLE_PADDING})",
+    )
+    parser.add_argument(
+        "--bg",
+        dest="box_bg",
+        metavar="COLOR",
+        type=parse_color,
+        default=DEFAULT_BG,
+        help=f"Box background color (default: {DEFAULT_BG})",
+    )
+    parser.add_argument(
+        "-w",
+        "--width",
+        metavar="INT",
+        type=int,
+        default=DEFAULT_WIDTH,
+        help=f"Box width (default: {DEFAULT_WIDTH})",
+    )
+    parser.add_argument(
+        "-m",
+        "--margin",
+        metavar="INT",
+        type=int,
+        default=DEFAULT_MARGIN,
+        help=f"All margins (default: {DEFAULT_MARGIN})",
+    )
+    parser.add_argument("--margin-top", metavar="INT", type=int, default=None)
+    parser.add_argument("--margin-right", metavar="INT", type=int, default=None)
+    parser.add_argument(
+        "--margin-bottom", metavar="INT", type=int, default=None
+    )
+    parser.add_argument("--margin-left", metavar="INT", type=int, default=None)
+    parser.add_argument(
+        "-p",
+        "--padding",
+        metavar="INT",
+        type=int,
+        default=None,
+        help=f"All padding (default: top/bottom={DEFAULT_PAD_TOP}, left/right={DEFAULT_PAD_RIGHT})",
+    )
+    parser.add_argument("--padding-top", metavar="INT", type=int, default=None)
+    parser.add_argument(
+        "--padding-right", metavar="INT", type=int, default=None
+    )
+    parser.add_argument(
+        "--padding-bottom", metavar="INT", type=int, default=None
+    )
+    parser.add_argument("--padding-left", metavar="INT", type=int, default=None)
 
-    i = 0
-    while i < len(argv):
-        arg = argv[i]
-        if arg in ("-h", "--help"):
-            show_help = True
-        elif arg in ("-t", "--title"):
-            i += 1
-            title = argv[i]
-        elif arg.startswith("--title="):
-            title = arg[len("--title=") :]
-        elif arg in ("-c", "--title-color"):
-            i += 1
-            title_color = argv[i]
-        elif arg.startswith("--title-color="):
-            title_color = arg[len("--title-color=") :]
-        elif arg == "--title-bg":
-            i += 1
-            title_bg = argv[i]
-        elif arg.startswith("--title-bg="):
-            title_bg = arg[len("--title-bg=") :]
-        elif arg == "--title-padding":
-            i += 1
-            title_padding = int(argv[i])
-        elif arg.startswith("--title-padding="):
-            title_padding = int(arg[len("--title-padding=") :])
-        elif arg == "--bg":
-            i += 1
-            box_bg = argv[i]
-        elif arg.startswith("--bg="):
-            box_bg = arg[len("--bg=") :]
-        elif arg in ("-w", "--width"):
-            i += 1
-            width = int(argv[i])
-        elif arg.startswith("--width="):
-            width = int(arg[len("--width=") :])
-        elif arg in ("-m", "--margin"):
-            i += 1
-            margin = int(argv[i])
-        elif arg.startswith("--margin="):
-            margin = int(arg[len("--margin=") :])
-        elif arg == "--margin-top":
-            i += 1
-            margin_top = int(argv[i])
-        elif arg.startswith("--margin-top="):
-            margin_top = int(arg[len("--margin-top=") :])
-        elif arg == "--margin-right":
-            i += 1
-            margin_right = int(argv[i])
-        elif arg.startswith("--margin-right="):
-            margin_right = int(arg[len("--margin-right=") :])
-        elif arg == "--margin-bottom":
-            i += 1
-            margin_bottom = int(argv[i])
-        elif arg.startswith("--margin-bottom="):
-            margin_bottom = int(arg[len("--margin-bottom=") :])
-        elif arg == "--margin-left":
-            i += 1
-            margin_left = int(argv[i])
-        elif arg.startswith("--margin-left="):
-            margin_left = int(arg[len("--margin-left=") :])
-        elif arg in ("-p", "--padding"):
-            i += 1
-            padding = int(argv[i])
-        elif arg.startswith("--padding="):
-            padding = int(arg[len("--padding=") :])
-        elif arg == "--padding-top":
-            i += 1
-            pad_top = int(argv[i])
-        elif arg.startswith("--padding-top="):
-            pad_top = int(arg[len("--padding-top=") :])
-        elif arg == "--padding-right":
-            i += 1
-            pad_right = int(argv[i])
-        elif arg.startswith("--padding-right="):
-            pad_right = int(arg[len("--padding-right=") :])
-        elif arg == "--padding-bottom":
-            i += 1
-            pad_bottom = int(argv[i])
-        elif arg.startswith("--padding-bottom="):
-            pad_bottom = int(arg[len("--padding-bottom=") :])
-        elif arg == "--padding-left":
-            i += 1
-            pad_left = int(argv[i])
-        elif arg.startswith("--padding-left="):
-            pad_left = int(arg[len("--padding-left=") :])
-        elif not arg.startswith("-"):
-            text = arg
-        i += 1
+    args = parser.parse_args()
 
-    mt = margin_top if margin_top is not None else margin
-    mr = margin_right if margin_right is not None else margin
-    mb = margin_bottom if margin_bottom is not None else margin
-    ml = margin_left if margin_left is not None else margin
+    text = args.content
+    if text is None:
+        if sys.stdin.isatty():
+            parser.error(
+                "no content provided (use --content or pipe via stdin)"
+            )
+        text = sys.stdin.read()
+
+    mt = args.margin_top if args.margin_top is not None else args.margin
+    mr = args.margin_right if args.margin_right is not None else args.margin
+    mb = args.margin_bottom if args.margin_bottom is not None else args.margin
+    ml = args.margin_left if args.margin_left is not None else args.margin
 
     pt = (
-        pad_top
-        if pad_top is not None
-        else (padding if padding is not None else DEFAULT_PAD_TOP)
+        args.padding_top
+        if args.padding_top is not None
+        else (args.padding if args.padding is not None else DEFAULT_PAD_TOP)
     )
     pr = (
-        pad_right
-        if pad_right is not None
-        else (padding if padding is not None else DEFAULT_PAD_RIGHT)
+        args.padding_right
+        if args.padding_right is not None
+        else (args.padding if args.padding is not None else DEFAULT_PAD_RIGHT)
     )
     pb = (
-        pad_bottom
-        if pad_bottom is not None
-        else (padding if padding is not None else DEFAULT_PAD_BOTTOM)
+        args.padding_bottom
+        if args.padding_bottom is not None
+        else (args.padding if args.padding is not None else DEFAULT_PAD_BOTTOM)
     )
     pl = (
-        pad_left
-        if pad_left is not None
-        else (padding if padding is not None else DEFAULT_PAD_LEFT)
+        args.padding_left
+        if args.padding_left is not None
+        else (args.padding if args.padding is not None else DEFAULT_PAD_LEFT)
     )
 
-    return (
-        text,
-        title,
-        title_color,
-        title_bg,
-        title_padding,
-        box_bg,
-        width,
-        show_help,
-        mt,
-        mr,
-        mb,
-        ml,
-        pt,
-        pr,
-        pb,
-        pl,
+    title_bg = (
+        args.title_bg if args.title_bg is not None else lighten(args.box_bg)
     )
 
-
-def main():
-    (
-        text,
-        title,
-        title_color,
-        title_bg,
-        title_padding,
-        box_bg,
-        width,
-        show_help,
-        mt,
-        mr,
-        mb,
-        ml,
-        pt,
-        pr,
-        pb,
-        pl,
-    ) = parse_args(sys.argv[1:])
-
-    if show_help:
-        print("Usage: echo_box [TEXT] [OPTIONS]")
-        print()
-        print("Options:")
-        print("  -t, --title=STR          Set box title")
-        print(
-            f"  -c, --title-color=COLOR  Set title color (default: {DEFAULT_TITLE_COLOR})"
-        )
-        print(
-            f"      --title-bg=COLOR     Set title background color (default: lighter version of --bg)"
-        )
-        print(
-            f"      --title-padding=INT  Set title horizontal padding (default: {DEFAULT_TITLE_PADDING})"
-        )
-        print(
-            f"  -w, --width=INT          Set box width (default: {DEFAULT_WIDTH})"
-        )
-        print(
-            f"  -m, --margin=INT         Set all margins (default: {DEFAULT_MARGIN})"
-        )
-        print("      --margin-top=INT     Set top margin")
-        print("      --margin-right=INT   Set right margin")
-        print("      --margin-bottom=INT  Set bottom margin")
-        print("      --margin-left=INT    Set left margin")
-        print(
-            f"  -p, --padding=INT        Set all padding (default: top/bottom={DEFAULT_PAD_TOP}, left/right={DEFAULT_PAD_RIGHT})"
-        )
-        print("      --padding-top=INT    Set top padding")
-        print("      --padding-right=INT  Set right padding")
-        print("      --padding-bottom=INT Set bottom padding")
-        print("      --padding-left=INT   Set left padding")
-        print(
-            f"      --bg=COLOR           Set box background color (default: {DEFAULT_BG})"
-        )
-        print("  -h, --help               Show help")
-        return
-
-    if title_bg is None:
-        title_bg = lighten(box_bg)
-
-    inner_width = width - pl - pr
+    inner_width = args.width - pl - pr
     lines = []
-
-    for raw_line in text.splitlines() or [text]:
+    for raw_line in text.splitlines() or [""]:
         for wrapped in word_wrap(raw_line, inner_width):
             lines.append(wrapped)
 
     print(
         render_box(
             lines,
-            width,
-            box_bg,
+            args.width,
+            args.box_bg,
             margin_top=mt,
             margin_right=mr,
             margin_bottom=mb,
@@ -386,10 +315,10 @@ def main():
             pad_right=pr,
             pad_bottom=pb,
             pad_left=pl,
-            title=title,
-            title_color=title_color,
+            title=args.title,
+            title_color=args.title_color,
             title_bg=title_bg,
-            title_padding=title_padding,
+            title_padding=args.title_padding,
         )
     )
 

@@ -20,7 +20,7 @@ function gm --description "Generates AI description for the current commit based
     # Warn if description already exists
     set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
     if test -n "$current_desc"
-        echo_box "$current_desc" --title="Existing Commit Description"
+        echo_box --content="$current_desc" --title="Existing Commit Description" --title-fg=3
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
     end
 
@@ -37,7 +37,7 @@ function gm --description "Generates AI description for the current commit based
 
     jj describe -m "$msg" --quiet
 
-    echo_box "$msg" --title="Generated Commit Description" --width 100
+    echo_box --content="$msg" --title="Generated Commit Description" --width 100
 end
 
 function cm --description "Generates AI description for the current commit and starts a new change"
