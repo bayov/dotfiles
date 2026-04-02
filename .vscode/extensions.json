@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        // Formatting
+        "dprint.dprint",
+        // Python
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-pyright.pyright",
+        // Dependency management
+        "fill-labs.dependi"
+    ]
+}

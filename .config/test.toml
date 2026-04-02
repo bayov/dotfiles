@@ -1,0 +1,3 @@
+[[test_suite]]
+name = "pyright"
+command = "uv run pyright"
