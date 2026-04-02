@@ -12,7 +12,7 @@ function fzf_history_delete
     set -l cmd (string collect -- $parts[2])
 
     # Store backup of deleted history entries, just in case.
-    printf '⎯⎯⎯⎯⎯[ %s ]⎯⎯⎯⎯⎯\n%s\n\n' "$timestamp" "$cmd" >> $fzf_history_deleted_backup_file
+    printf '⎯⎯⎯⎯⎯[ %s ]⎯⎯⎯⎯⎯\n%s\n\n' "$timestamp" "$cmd" >>$fzf_history_deleted_backup_file
 
     # Delete history entry.
     history delete --exact --case-sensitive -- "$cmd"

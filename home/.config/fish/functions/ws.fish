@@ -25,7 +25,7 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                         echo "        plugin location=\"zellij:compact-bar\""
                         echo "    }"
                         echo "}"
-                    end > "$layout_file"
+                    end >"$layout_file"
                     zellij action new-tab --name "@$name" --layout "$layout_file"
                 end
             end
@@ -89,13 +89,13 @@ end
 
 # --- Completions ---
 # Disable file completions for the main command
-complete -c ws -f 
+complete -c ws -f
 
 # Subcommands
-complete -c ws -n "__fish_use_subcommand" -a add -d "Add a new workspace"
-complete -c ws -n "__fish_use_subcommand" -a list -d "List all workspaces"
-complete -c ws -n "__fish_use_subcommand" -a "remove rm" -d "Forget and archive a workspace"
-complete -c ws -n "__fish_use_subcommand" -a rm-current -d "Remove current workspace and close Zellij tab"
+complete -c ws -n __fish_use_subcommand -a add -d "Add a new workspace"
+complete -c ws -n __fish_use_subcommand -a list -d "List all workspaces"
+complete -c ws -n __fish_use_subcommand -a "remove rm" -d "Forget and archive a workspace"
+complete -c ws -n __fish_use_subcommand -a rm-current -d "Remove current workspace and close Zellij tab"
 
 # Dynamic completion for 'remove' (shows existing workspaces)
 # This assumes 'jj workspace list' output format is 'name: path'

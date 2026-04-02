@@ -2,7 +2,7 @@ function clip --description 'Cross-platform clipboard copy'
     set -l os (uname)
 
     # Detect environment and execute appropriate copy command
-    if test "$os" = "Darwin"
+    if test "$os" = Darwin
         # macOS
         pbcopy
     else if uname -r | string match -qi "*microsoft*"

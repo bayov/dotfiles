@@ -1,4 +1,10 @@
 [[formatter]]
+name = "fish_indent"
+exts = [".fish"]
+cmd = ["fish_indent", "--write"]
+max_files_per_format = 20
+
+[[formatter]]
 name = "dprint"
 exts = [
     ".md",

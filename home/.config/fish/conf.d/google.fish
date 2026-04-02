@@ -5,7 +5,7 @@ else
 end
 
 # Run this configuration only in Google
-test "$use_google_config" = "true" || return
+test "$use_google_config" = true || return
 
 # Run gcert on login if less than 60m remain
 #if status --is-interactive
@@ -62,4 +62,3 @@ function fish_right_prompt
     echo -n " "
     set_color normal
 end
-

@@ -4,7 +4,7 @@ set -gx EDITOR fresh
 set -gx PNPM_HOME "$HOME/.local/share/pnpm"
 set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"
-set -gx SCCACHE_CACHE_SIZE "25GB"
+set -gx SCCACHE_CACHE_SIZE 25GB
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 
 # Global aliases (even if shell is not interactive)
@@ -44,12 +44,12 @@ if status is-interactive
     type -q starship && starship init fish | source
 
     # Keybinds
-    bind up             up-or-search
-    bind down           down-or-search
-    bind ctrl-h         backward-kill-word  # ctrl+h == ctrl+backspace
-    bind ctrl-delete    kill-word
-    bind alt-backspace  backward-kill-line
-    bind alt-delete     kill-line
+    bind up up-or-search
+    bind down down-or-search
+    bind ctrl-h backward-kill-word # ctrl+h == ctrl+backspace
+    bind ctrl-delete kill-word
+    bind alt-backspace backward-kill-line
+    bind alt-delete kill-line
 
     # Silence fish shell greeting
     set -gx fish_greeting
@@ -78,7 +78,7 @@ if status is-interactive
     set -gx fzf_fd_opts --hidden --follow
     set -gx fzf_preview_dir_cmd "ls_with_default_args --color=always"
     # Options for jj log search fzf (Ctl+Alt+J)
-    set -gx fzf_jj_log_template "one_line_no_graph"
+    set -gx fzf_jj_log_template one_line_no_graph
 
     # gum settings
     # ------------
@@ -112,7 +112,8 @@ if status is-interactive
             echo -n (prompt_pwd)" "
             set_color normal
         end
-        function fish_title; end
+        function fish_title
+        end
 
         # Disable slow completion features (like descriptions via apropos)
         set -gx FISH_COMPLETION_NO_DESCRIPTIONS 1

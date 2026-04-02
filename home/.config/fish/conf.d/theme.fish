@@ -26,7 +26,6 @@ set --global fish_pager_color_prefix brblack --underline=single
 set --global fish_pager_color_background
 set --global fish_pager_color_description B3A06D
 
-
 # Pager (selected)
 set --global fish_pager_color_selected_completion normal
 set --global fish_pager_color_selected_prefix normal --underline=single
@@ -34,10 +33,10 @@ set --global fish_pager_color_selected_background --background=333333
 set --global fish_pager_color_selected_description B3A06D
 
 # Pager (seconday)
-set --global fish_pager_color_secondary_background 
-set --global fish_pager_color_secondary_completion 
-set --global fish_pager_color_secondary_description 
-set --global fish_pager_color_secondary_prefix 
+set --global fish_pager_color_secondary_background
+set --global fish_pager_color_secondary_completion
+set --global fish_pager_color_secondary_description
+set --global fish_pager_color_secondary_prefix
 
 set --global fish_pager_color_progress brwhite --bold --background=cyan
 

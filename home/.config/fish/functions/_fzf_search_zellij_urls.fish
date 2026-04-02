@@ -19,7 +19,7 @@ function _fzf_search_zellij_urls --description "Search URLs in Zellij scrollback
         set -f key $fzf_output[1]
         set -f selected_urls $fzf_output[2..-1]
 
-        if test "$key" = "ctrl-o"
+        if test "$key" = ctrl-o
             for url in $selected_urls
                 _fzf_open_url "$url"
             end
