@@ -1,9 +1,9 @@
-﻿local wezterm = require("wezterm")
+local wezterm = require("wezterm")
 local mux = wezterm.mux
 local act = wezterm.action
 
-local helpers = require("helpers")
 local bayov_color_scheme = require("bayov_color_scheme")
+local helpers = require("helpers")
 local zoom = require("zoom")
 
 -- This will hold the configuration we export.
@@ -23,7 +23,7 @@ config.font = wezterm.font("JetBrains Mono NL")
 config.line_height = 1.0
 config.font_size = 10
 wezterm.GLOBAL.base_font_size = config.font_size
-config.harfbuzz_features = {"calt=0", "clig=0", "liga=0"} -- disable ligatures
+config.harfbuzz_features = { "calt=0", "clig=0", "liga=0" } -- disable ligatures
 -- Colors
 bayov_color_scheme.apply_to_config(config)
 config.inactive_pane_hsb = {
@@ -60,7 +60,8 @@ config.max_fps = 120
 config.animation_fps = 120
 config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
-local url_regex = "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"
+local url_regex =
+    "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"
 config.quick_select_patterns = {
     url_regex,
     -- Base16 IDs
@@ -76,7 +77,7 @@ config.quick_select_patterns = {
 config.quick_select_alphabet = "qwerasdzxcv"
 
 -- Start in full-screen
-wezterm.on("gui-attached", function (window, pane)
+wezterm.on("gui-attached", function(window, pane)
     local workspace = mux.get_active_workspace()
     for _, window in ipairs(mux.all_windows()) do
         if window:get_workspace() == workspace then
@@ -124,9 +125,9 @@ config.keys = {
     -- {mods = "ALT", key = "c", action = act.ActivateCopyMode},
 
     -- Copy & Paste
-    {mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt},
+    { mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt },
     -- {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
-    {mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard")},
+    { mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard") },
     -- {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
@@ -150,10 +151,10 @@ config.keys = {
     -- }),
 
     -- Presentation
-    {mods = "ALT", key = "\\", action = act.ToggleFullScreen},
-    {mods = "CTRL", key = "-", action = zoom.ZoomOut},
-    {mods = "CTRL", key = "=", action = zoom.ZoomIn},
-    {mods = "CTRL", key = "0", action = zoom.ResetZoom},
+    { mods = "ALT", key = "\\", action = act.ToggleFullScreen },
+    { mods = "CTRL", key = "-", action = zoom.ZoomOut },
+    { mods = "CTRL", key = "=", action = zoom.ZoomIn },
+    { mods = "CTRL", key = "0", action = zoom.ResetZoom },
 
     -- Tab-management
     -- {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},
@@ -188,25 +189,25 @@ config.keys = {
 
     -- Misc
     -- {mods = "ALT", key = "z", action = act.QuitApplication},
-    {mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette},
-    {mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration},
-    {mods = "ALT", key = "`", action = act.ShowDebugOverlay},
+    { mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette },
+    { mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration },
+    { mods = "ALT", key = "`", action = act.ShowDebugOverlay },
 
     -- Support Shift+Enter for CLI tools
-    {mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u")},
+    { mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u") },
 
     -- QuickSelect
-    {mods = "ALT", key = "k", action = act.QuickSelect},
+    { mods = "ALT", key = "k", action = act.QuickSelect },
     {
         mods = "ALT",
         key = "o",
         action = act.QuickSelectArgs({
             label = "open url",
-            patterns = {url_regex},
+            patterns = { url_regex },
             action = wezterm.action_callback(function(window, pane)
-              local url = window:get_selection_text_for_pane(pane)
-              wezterm.log_info("opening: " .. url)
-              wezterm.open_with(url)
+                local url = window:get_selection_text_for_pane(pane)
+                wezterm.log_info("opening: " .. url)
+                wezterm.open_with(url)
             end),
         }),
     },
@@ -217,8 +218,8 @@ config.keys = {
 config.key_tables = {}
 config.key_tables.copy_mode = {
     -- Close
-    {mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection},
-    {mods = "ALT", key = "c", action = helpers.CloseAndClearSelection},
+    { mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection },
+    { mods = "ALT", key = "c", action = helpers.CloseAndClearSelection },
     -- Perform copy (and then close)
     {
         mods = "CTRL",
@@ -239,26 +240,86 @@ config.key_tables.copy_mode = {
         }),
     },
     -- Enter selection mode
-    {mods = "NONE", key = "v", action = act.CopyMode({SetSelectionMode = "Cell"})},
-    {mods = "SHIFT", key = "v", action = act.CopyMode({SetSelectionMode = "Line"})},
-    {mods = "CTRL", key = "v", action = act.CopyMode({SetSelectionMode = "SemanticZone"})},
-    {mods = "CTRL", key = "w", action = act.CopyMode({SetSelectionMode = "Word"})},
-    {mods = "SHIFT", key = "Insert", action = act.CopyMode({SetSelectionMode = "Block"})},
+    {
+        mods = "NONE",
+        key = "v",
+        action = act.CopyMode({ SetSelectionMode = "Cell" }),
+    },
+    {
+        mods = "SHIFT",
+        key = "v",
+        action = act.CopyMode({ SetSelectionMode = "Line" }),
+    },
+    {
+        mods = "CTRL",
+        key = "v",
+        action = act.CopyMode({ SetSelectionMode = "SemanticZone" }),
+    },
+    {
+        mods = "CTRL",
+        key = "w",
+        action = act.CopyMode({ SetSelectionMode = "Word" }),
+    },
+    {
+        mods = "SHIFT",
+        key = "Insert",
+        action = act.CopyMode({ SetSelectionMode = "Block" }),
+    },
     -- Movement
-    {mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp")},
-    {mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown")},
-    {mods = "NONE", key = "LeftArrow", action = act.CopyMode("MoveLeft")},
-    {mods = "NONE", key = "RightArrow", action = act.CopyMode("MoveRight")},
-    {mods = "CTRL", key = "LeftArrow", action = act.CopyMode("MoveBackwardWord")},
-    {mods = "CTRL", key = "RightArrow", action = act.CopyMode("MoveForwardWord")},
-    {mods = "NONE", key = "Home", action = act.CopyMode("MoveToStartOfLineContent")},
-    {mods = "NONE", key = "End", action = act.CopyMode("MoveToEndOfLineContent")},
-    {mods = "CTRL", key = "Home", action = act.CopyMode("MoveToScrollbackTop")},
-    {mods = "CTRL", key = "End", action = act.CopyMode("MoveToScrollbackBottom")},
-    {mods = "NONE", key = "PageUp", action = act.CopyMode({MoveByPage = -0.5})},
-    {mods = "NONE", key = "PageDown", action = act.CopyMode({MoveByPage = 0.5})},
-    {mods = "SHIFT", key = "UpArrow", action = act.CopyMode("MoveBackwardSemanticZone")},
-    {mods = "SHIFT", key = "DownArrow", action = act.CopyMode("MoveForwardSemanticZone")},
+    { mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp") },
+    { mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown") },
+    { mods = "NONE", key = "LeftArrow", action = act.CopyMode("MoveLeft") },
+    { mods = "NONE", key = "RightArrow", action = act.CopyMode("MoveRight") },
+    {
+        mods = "CTRL",
+        key = "LeftArrow",
+        action = act.CopyMode("MoveBackwardWord"),
+    },
+    {
+        mods = "CTRL",
+        key = "RightArrow",
+        action = act.CopyMode("MoveForwardWord"),
+    },
+    {
+        mods = "NONE",
+        key = "Home",
+        action = act.CopyMode("MoveToStartOfLineContent"),
+    },
+    {
+        mods = "NONE",
+        key = "End",
+        action = act.CopyMode("MoveToEndOfLineContent"),
+    },
+    {
+        mods = "CTRL",
+        key = "Home",
+        action = act.CopyMode("MoveToScrollbackTop"),
+    },
+    {
+        mods = "CTRL",
+        key = "End",
+        action = act.CopyMode("MoveToScrollbackBottom"),
+    },
+    {
+        mods = "NONE",
+        key = "PageUp",
+        action = act.CopyMode({ MoveByPage = -0.5 }),
+    },
+    {
+        mods = "NONE",
+        key = "PageDown",
+        action = act.CopyMode({ MoveByPage = 0.5 }),
+    },
+    {
+        mods = "SHIFT",
+        key = "UpArrow",
+        action = act.CopyMode("MoveBackwardSemanticZone"),
+    },
+    {
+        mods = "SHIFT",
+        key = "DownArrow",
+        action = act.CopyMode("MoveForwardSemanticZone"),
+    },
     -- Clear search and selection
     {
         mods = "ALT",
@@ -271,14 +332,14 @@ config.key_tables.copy_mode = {
     },
 }
 config.key_tables.search_mode = {
-    {mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection},
-    {mods = "CTRL|SHIFT", key = "f", action = helpers.CloseAndClearSelection},
-    {mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType")},
-    {mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType")},
-    {mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch")},
-    {mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch")},
-    {mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch")},
-    {mods = "NONE", key = "DownArrow", action = act.CopyMode("NextMatch")},
+    { mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection },
+    { mods = "CTRL|SHIFT", key = "f", action = helpers.CloseAndClearSelection },
+    { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType") },
+    { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
+    { mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch") },
+    { mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch") },
+    { mods = "NONE", key = "DownArrow", action = act.CopyMode("NextMatch") },
     -- Perform copy (and then close)
     {
         mods = "CTRL",
@@ -291,13 +352,17 @@ config.key_tables.search_mode = {
     },
 }
 config.key_tables.pane = {
-    {mods = "NONE", key = "Escape", action = act.PopKeyTable},
-    {mods = "ALT", key = "RightArrow", action = act.SplitHorizontal({})},
-    {mods = "ALT", key = "DownArrow", action = act.SplitVertical({})},
-    {mods = "NONE", key = "s", action = act.PaneSelect},
-    {mods = "NONE", key = "f", action = act.TogglePaneZoomState},
-    {mods = "NONE", key = "r", action = act.RotatePanes("Clockwise")},
-    {mods = "NONE", key = "x", action = act.CloseCurrentTab({confirm = false})},
+    { mods = "NONE", key = "Escape", action = act.PopKeyTable },
+    { mods = "ALT", key = "RightArrow", action = act.SplitHorizontal({}) },
+    { mods = "ALT", key = "DownArrow", action = act.SplitVertical({}) },
+    { mods = "NONE", key = "s", action = act.PaneSelect },
+    { mods = "NONE", key = "f", action = act.TogglePaneZoomState },
+    { mods = "NONE", key = "r", action = act.RotatePanes("Clockwise") },
+    {
+        mods = "NONE",
+        key = "x",
+        action = act.CloseCurrentTab({ confirm = false }),
+    },
 }
 
 --------------------------------------------------------------------------------
@@ -307,12 +372,12 @@ config.mouse_bindings = {
     {
         mods = "NONE",
         event = { Down = { streak = 3, button = "Left" } },
-        action = wezterm.action.SelectTextAtMouseCursor "Line",
+        action = wezterm.action.SelectTextAtMouseCursor("Line"),
     },
     {
         mods = "CTRL",
         event = { Down = { streak = 1, button = "Left" } },
-        action = wezterm.action.SelectTextAtMouseCursor "SemanticZone",
+        action = wezterm.action.SelectTextAtMouseCursor("SemanticZone"),
     },
     -- Disable copy on selection
     -- (disabled to match Zellij which doesn't support Copy action).
@@ -328,7 +393,10 @@ config.mouse_bindings = {
         action = wezterm.action_callback(function(window, pane)
             local has_selection = window:get_selection_text_for_pane(pane) ~= ""
             if has_selection then
-                window:perform_action(act.CopyTo("ClipboardAndPrimarySelection"), pane)
+                window:perform_action(
+                    act.CopyTo("ClipboardAndPrimarySelection"),
+                    pane
+                )
                 window:perform_action(act.ClearSelection, pane)
             else
                 window:perform_action(act({ PasteFrom = "Clipboard" }), pane)

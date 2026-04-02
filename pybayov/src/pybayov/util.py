@@ -1,6 +1,7 @@
 import contextvars
 from datetime import datetime
 from enum import Enum
+from functools import lru_cache
 import os
 from pathlib import Path
 import subprocess
@@ -127,6 +128,7 @@ def set_logger(l: Logger):
     _logger_ctx.set(l)
 
 
+@lru_cache(maxsize=1)
 def jj_repo_root() -> Path:
     """Return the root of the current jj workspace.
 
@@ -145,6 +147,7 @@ def jj_repo_root() -> Path:
         raise ValueError("Not in a jj repository")
 
 
+@lru_cache(maxsize=1)
 def git_repo_root() -> Path:
     """Return the root of the current git repository.
 

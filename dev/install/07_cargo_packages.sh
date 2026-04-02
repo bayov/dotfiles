@@ -18,6 +18,7 @@ cargo binstall -y --secure jj-cli
 cargo binstall -y --secure eza
 cargo binstall -y --secure git-delta
 cargo binstall -y --secure fresh-editor
+cargo binstall -y --secure stylua
 
 # For speeding up compilation
 cargo binstall -y --secure sccache

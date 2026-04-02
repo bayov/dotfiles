@@ -1,5 +1,5 @@
 [ignore]
-exts = [".lock", ".lnk"]
+exts = [".lock", ".lnk", ".ahk"]
 shebangs = []
 
 [[formatter]]
@@ -12,6 +12,12 @@ max_files_per_format = 20
 name = "fish_indent"
 exts = [".fish"]
 cmd = ["fish_indent", "--write"]
+max_files_per_format = 20
+
+[[formatter]]
+name = "stylua"
+exts = [".lua"]
+cmd = ["stylua", "--"]
 max_files_per_format = 20
 
 [[formatter]]
