@@ -9,6 +9,7 @@ requires-python = ">=3.11"
 
 [project.scripts]
 pybayov-format = "pybayov.format:main"
+pybayov-test = "pybayov.test:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pybayov"]
