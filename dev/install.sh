@@ -5,12 +5,11 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Execute all install scripts in order
 for script in "$DIR"/install/*.sh; do
-    if [ -x "$script" ]; then
-        filename=$(basename "$script")
-        "$script"
-    fi
+	if [ -x "$script" ]; then
+		filename=$(basename "$script")
+		"$script"
+	fi
 done
-
 
 echo -e "\033[32m"
 echo "================================================================================"

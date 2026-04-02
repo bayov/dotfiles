@@ -9,7 +9,7 @@ echo -e "\033[0m"
 
 # No need to manually update (claude code updates automatically).
 if ! command -v claude >/dev/null 2>&1; then
-    curl -fsSL https://claude.ai/install.sh | bash
+	curl -fsSL https://claude.ai/install.sh | bash
 fi
 export PATH="$HOME/.local/bin:$PATH"
 

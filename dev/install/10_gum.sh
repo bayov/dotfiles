@@ -12,7 +12,7 @@ source "$(dirname "$0")/sudo.sh"
 # Set apt-get options for Docker
 APT_OPTS=""
 if [ "$DOCKER_SANDBOX" = "1" ]; then
-    APT_OPTS="--no-install-recommends"
+	APT_OPTS="--no-install-recommends"
 fi
 
 $SUDO mkdir -p /etc/apt/keyrings
@@ -23,7 +23,7 @@ $SUDO apt-get install -y $APT_OPTS gum
 
 # Clean up apt cache to reduce image size if in Docker
 if [ "$DOCKER_SANDBOX" = "1" ]; then
-    $SUDO rm -rf /var/lib/apt/lists/*
+	$SUDO rm -rf /var/lib/apt/lists/*
 fi
 
 # Print version

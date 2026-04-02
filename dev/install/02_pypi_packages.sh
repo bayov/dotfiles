@@ -10,9 +10,9 @@ echo -e "\033[0m"
 # Update or install `uv`
 export PATH="$HOME/.local/bin:$PATH"
 if command -v uv >/dev/null 2>&1; then
-    uv self update
+	uv self update
 else
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+	curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
 # Print version

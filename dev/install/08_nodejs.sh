@@ -10,7 +10,7 @@ echo -e "\033[0m"
 # Download and install fnm
 INSTALL_DIR="$HOME/.local/share/fnm"
 if [ ! -f "$INSTALL_DIR/fnm" ]; then
-    curl -o- https://fnm.vercel.app/install | bash -s -- --install-dir "$INSTALL_DIR" --skip-shell
+	curl -o- https://fnm.vercel.app/install | bash -s -- --install-dir "$INSTALL_DIR" --skip-shell
 fi
 
 # Activate fnm

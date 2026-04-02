@@ -3,6 +3,12 @@ exts = [".lock", ".lnk"]
 shebangs = []
 
 [[formatter]]
+name = "shfmt"
+exts = [".sh"]
+cmd = ["shfmt", "--write"]
+max_files_per_format = 20
+
+[[formatter]]
 name = "fish_indent"
 exts = [".fish"]
 cmd = ["fish_indent", "--write"]
