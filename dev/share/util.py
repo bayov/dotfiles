@@ -3,10 +3,9 @@ from datetime import datetime
 from enum import Enum
 import os
 from pathlib import Path
+import subprocess
 import sys
 from typing import Optional, TextIO
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 # ANSI escape sequences for coloring output.
@@ -113,11 +112,62 @@ def set_logger(l: Logger):
     _logger_ctx.set(l)
 
 
+def jj_repo_root() -> Path:
+    try:
+        root = subprocess.check_output(
+            ["jj", "workspace", "root"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if log := _logger_ctx.get(None):
+            log.debug(f"Detected jj repository root: {root}")
+        return Path(root)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        raise ValueError("Not in a jj repository")
+
+
+def git_repo_root() -> Path:
+    try:
+        root = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if log := _logger_ctx.get(None):
+            log.debug(f"Detected git repository root: {root}")
+        return Path(root)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        raise ValueError("Not in a git repository")
+
+
+def project_root() -> Path:
+    try:
+        return jj_repo_root()
+    except ValueError:
+        pass
+
+    try:
+        return git_repo_root()
+    except ValueError:
+        pass
+
+    p = Path.cwd()
+    while True:
+        if (p / ".bayov-personal-project").exists():
+            return p
+        if p.parent == p:
+            break
+        p = p.parent
+
+    return Path(__file__).resolve().parent.parent
+
+
 def require_project_root() -> None:
-    """Exits with an error if the current working directory is not `PROJECT_ROOT`."""
-    if Path.cwd().resolve() != PROJECT_ROOT:
+    """Exits with an error if the current working directory is not `project_root()`."""
+    root = project_root()
+    if Path.cwd().resolve() != root:
         print(
-            f"error: must be run from the project root ({PROJECT_ROOT})",
+            f"error: must be run from the project root ({root})",
             file=sys.stderr,
         )
         sys.exit(1)
