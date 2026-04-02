@@ -44,6 +44,12 @@ class Formatter:
     # parallel (e.g. `rustfmt`).
     max_files_per_format: int
 
+    # Interpreter names (e.g. "python3", "bash") matched against the shebang
+    # of extensionless files. Extracted from lines like `#!/usr/bin/env python3`
+    # or `#!/usr/bin/python3` by taking the last path component after stripping
+    # `env`.
+    shebangs: set[str] = field(default_factory=set)
+
     def format_files(self, files: Sequence[Path]):
         """Format the given files in place. Must be implemented by subclasses."""
         raise NotImplementedError
@@ -164,8 +170,9 @@ def load_formatters(config_path: Optional[Path] = None) -> list[CmdFormatter]:
             CmdFormatter(
                 name=entry["name"],
                 exts=set(entry["exts"]),
-                cmd=entry["cmd"],
                 max_files_per_format=entry["max_files_per_format"],
+                shebangs=set(entry.get("shebangs", [])),
+                cmd=entry["cmd"],
                 cwd=Path(entry["cwd"]) if "cwd" in entry else None,
                 stdout_mode=entry.get("stdout_mode", False),
             )
@@ -173,7 +180,35 @@ def load_formatters(config_path: Optional[Path] = None) -> list[CmdFormatter]:
     return formatters
 
 
+@dataclass(frozen=True)
+class IgnoreConfig:
+    exts: set[str]
+    shebangs: set[str]
+
+
+def load_ignore(config_path: Optional[Path] = None) -> IgnoreConfig:
+    """Loads the `[ignore]` section from the formatter config file.
+
+    Optional fields: `exts` (list of extensions, e.g. `[".lock"]`),
+    `shebangs` (list of interpreter names, e.g. `["bash"]`).
+    Files matching either will be silently excluded from the no-formatter warning.
+    Returns an empty `IgnoreConfig` if the section is absent.
+    """
+    if config_path is None:
+        config_path = project_root() / ".config" / "format.toml"
+    if not config_path.exists():
+        return IgnoreConfig(exts=set(), shebangs=set())
+    with open(config_path, "rb") as f:
+        data = tomllib.load(f)
+    entry = data.get("ignore", {})
+    return IgnoreConfig(
+        exts=set(entry.get("exts", [])),
+        shebangs=set(entry.get("shebangs", [])),
+    )
+
+
 FORMATTERS: list[CmdFormatter] = load_formatters()
+IGNORE: IgnoreConfig = load_ignore()
 
 
 def _all_supported_exts() -> set[str]:
@@ -186,24 +221,74 @@ def _all_supported_exts() -> set[str]:
 supported_exts = _all_supported_exts()
 
 
-def find_formatter(file: Path) -> Optional[CmdFormatter]:
-    """Returns the formatter for `file`, or `None` if none applies."""
-    if file.suffix not in supported_exts:
+def _read_shebang(file: Path) -> Optional[str]:
+    """Returns the raw shebang line (e.g. `#!/usr/bin/env python3`), or None."""
+    try:
+        with open(file, "rb") as f:
+            first_line = (
+                f.readline(512).decode("utf-8", errors="replace").strip()
+            )
+    except OSError:
         return None
-    for fmt in FORMATTERS:
-        if file.suffix in fmt.exts:
-            return fmt
-    return None
+    return first_line if first_line.startswith("#!") else None
+
+
+def _shebang_interpreter(file: Path) -> Optional[str]:
+    """Returns the interpreter name from the shebang, or None.
+
+    Handles both `#!/usr/bin/env python3` (returns `python3`) and
+    `#!/usr/bin/python3` (returns `python3`).
+    """
+    shebang = _read_shebang(file)
+    if shebang is None:
+        return None
+    parts = shebang[2:].split()
+    if not parts:
+        return None
+    if Path(parts[0]).name == "env":
+        return parts[1] if len(parts) > 1 else None
+    return Path(parts[0]).name
+
+
+def find_formatter(file: Path) -> Optional[CmdFormatter]:
+    """Returns the formatter for `file`, or `None` if none applies.
+
+    For files with an extension, matches by extension. For extensionless files,
+    reads the shebang and matches by interpreter name.
+    """
+    if file.suffix:
+        if file.suffix not in supported_exts:
+            return None
+        for fmt in FORMATTERS:
+            if file.suffix in fmt.exts:
+                return fmt
+        return None
+    else:
+        interpreter = _shebang_interpreter(file)
+        if interpreter is None:
+            return None
+        for fmt in FORMATTERS:
+            if interpreter in fmt.shebangs:
+                return fmt
+        return None
 
 
 def _validate_formatters() -> None:
-    """Ensures no two formatters claim the same extension."""
+    """Ensures no two formatters claim the same extension or shebang."""
     for ext in supported_exts:
         handlers = [f for f in FORMATTERS if ext in f.exts]
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
                 f"Extension {ext!r} is claimed by multiple formatters: {names}"
+            )
+    all_shebangs = [s for fmt in FORMATTERS for s in fmt.shebangs]
+    for shebang in all_shebangs:
+        handlers = [f for f in FORMATTERS if shebang in f.shebangs]
+        if len(handlers) > 1:
+            names = ", ".join(f.name for f in handlers)
+            raise ValueError(
+                f"Shebang {shebang!r} is claimed by multiple formatters: {names}"
             )
 
 
@@ -278,7 +363,7 @@ def collect_all_tracked_files() -> Iterable[Path]:
             raise ValueError(
                 "Not in a jj or git repository, cannot use --all-tracked"
             )
-    return (f for f in files if f.suffix in supported_exts)
+    return files
 
 
 def collect_file_or_directory(path: Path) -> Iterable[Path]:
@@ -294,7 +379,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
     If it's neither, we raise an error.
     """
     if path.is_file():
-        if path.suffix in supported_exts:
+        if path.suffix in supported_exts or path.suffix == "":
             yield path
         else:
             raise ValueError(
@@ -304,6 +389,9 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
     elif path.is_dir():
         for ext in supported_exts:
             for f in path.rglob(f"*{ext}"):
+                yield f
+        for f in path.rglob("*"):
+            if f.is_file() and f.suffix == "":
                 yield f
     else:
         raise ValueError(f"Path {repr(path)} is not a file or directory")
@@ -324,9 +412,7 @@ def collect_git_staged_files() -> Iterable[Path]:
         f"`{' '.join(command)}` returned {len(staged_files)} file(s)"
     )
     for f in staged_files:
-        p = root / f
-        if p.suffix in supported_exts:
-            yield p
+        yield root / f
 
 
 def collect_jj_commit_diff() -> Iterable[Path]:
@@ -343,37 +429,47 @@ def collect_jj_commit_diff() -> Iterable[Path]:
         f"`{' '.join(command)}` returned {len(out.splitlines())} file(s)"
     )
     for f in out.splitlines():
-        p = root / f
-        if p.suffix in supported_exts:
-            yield p
+        yield root / f
 
 
-def collect_files(args) -> Optional[set[Path]]:
+def collect_files(args) -> Optional[tuple[set[Path], list[Path]]]:
     """
     Collects files from all input sources provided in `args` into a single set.
 
-    Returns `None` if no input sources were specified.
+    Returns `None` if no input sources were specified. Otherwise returns a tuple
+    of (formattable files, files skipped due to unsupported extension).
     """
-    files: set[Path] = set()
+    all_files: set[Path] = set()
     input_sources: list[str] = []
     if args.all_tracked:
         logger().debug("Collecting all tracked files")
         input_sources.append("--all-tracked")
-        files.update(collect_all_tracked_files())
+        all_files.update(collect_all_tracked_files())
     for f in args.file:
         logger().debug(f"Collecting file/directory {f}")
         input_sources.append(f"--file {f}")
-        files.update(collect_file_or_directory(Path(f)))
+        all_files.update(collect_file_or_directory(Path(f)))
     if args.git:
         logger().debug("Collecting git staged files")
         input_sources.append("--git")
-        files.update(collect_git_staged_files())
+        all_files.update(collect_git_staged_files())
     if args.jj:
         logger().debug("Collecting jj commit diff files")
         input_sources.append("--jj")
-        files.update(collect_jj_commit_diff())
+        all_files.update(collect_jj_commit_diff())
     if not input_sources:
         return None
+
+    # Split into formattable files and those with an unsupported extension.
+    # Extensionless files are always passed through; shebang matching happens
+    # later in find_formatter / resolve_files.
+    files: set[Path] = set()
+    unsupported_ext_files: list[Path] = []
+    for f in all_files:
+        if f.suffix in supported_exts or f.suffix == "":
+            files.add(f)
+        else:
+            unsupported_ext_files.append(f)
 
     # Exclude files marked as binary in .gitattributes — they should not be
     # reformatted as text.
@@ -387,10 +483,10 @@ def collect_files(args) -> Optional[set[Path]]:
                 filtered.add(f)
         files = filtered
 
-    return files
+    return files, unsupported_ext_files
 
 
-def resolve_files(files: set[Path]) -> set[Path]:
+def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
     """Resolve each path to its canonical form, filtering out unusable entries.
 
     Skips paths that cannot be resolved (e.g. broken symlinks) or that have
@@ -398,6 +494,7 @@ def resolve_files(files: set[Path]) -> set[Path]:
     also warns when a symlink's extension differs from the resolved file's.
     """
     result = set()
+    no_formatter: list[Path] = []
     for f in files:
         resolved: Path
         try:
@@ -407,10 +504,7 @@ def resolve_files(files: set[Path]) -> set[Path]:
             continue
         formatter = find_formatter(resolved)
         if formatter is None:
-            logger().warn(
-                f"File {repr(f)} resolves to {repr(resolved)}: "
-                f"no formatter applies, skipping."
-            )
+            no_formatter.append(resolved)
             continue
         if resolved.suffix != f.suffix:
             logger().warn(
@@ -419,7 +513,7 @@ def resolve_files(files: set[Path]) -> set[Path]:
                 f"Selected formatter: {formatter.name}."
             )
         result.add(resolved)
-    return result
+    return result, no_formatter
 
 
 @dataclass(frozen=True)
@@ -487,13 +581,14 @@ def main():
         log_modules.add(LogModule.DEBUG)
     set_logger(Logger(log_modules))
 
-    files = collect_files(args)
-    if files is None:
+    result = collect_files(args)
+    if result is None:
         print("No input sources specified.", file=sys.stderr)
         p.print_usage(file=sys.stderr)
         sys.exit(1)
 
-    files = resolve_files(files)
+    files, unsupported_ext_files = result
+    files, no_shebang_files = resolve_files(files)
 
     if not files:
         logger().info("No files to format.", color=GREEN)
@@ -564,6 +659,28 @@ def main():
         # a less distracting output.
         color=GRAY if modified_files_count == 0 else GREEN,
     )
+
+    no_formatter_files = [
+        f
+        for f in unsupported_ext_files + no_shebang_files
+        if f.suffix not in IGNORE.exts
+        and _shebang_interpreter(f) not in IGNORE.shebangs
+    ]
+    if no_formatter_files:
+        exts = sorted(
+            {
+                f.suffix if f.suffix else "<no-extension>"
+                for f in no_formatter_files
+            }
+        )
+        logger().warn(
+            f"{len(no_formatter_files)} file(s) had no associated formatter "
+            f"(extensions: {', '.join(exts)})"
+        )
+        for f in sorted(no_formatter_files):
+            shebang = _read_shebang(f)
+            suffix = f"  [{shebang}]" if shebang else ""
+            logger().warn(f"  {f.relative_to(cwd)}{suffix}")
 
     if logger().is_debug_enabled:
         for name, (start, end) in formatter_spans.items():
