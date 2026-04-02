@@ -38,6 +38,10 @@ class Logger:
         enabled_log_modules: set[LogModule],
         show_timestamps: bool = False,
     ):
+        """Initialize the logger with the given modules enabled.
+
+        WARN and ERROR are always enabled regardless of `enabled_log_modules`.
+        """
         self.enabled_log_modules = enabled_log_modules
         self.enabled_log_modules.add(LogModule.ERROR)
         self.enabled_log_modules.add(LogModule.WARN)
@@ -51,6 +55,7 @@ class Logger:
         file: TextIO = sys.stdout,
         color: Optional[str] = None,
     ):
+        """Emit a log message for module `m` if that module is enabled."""
         if m not in self.enabled_log_modules:
             return
 
@@ -67,27 +72,34 @@ class Logger:
         print(f"{ts}{color}{prefix}{msg}{reset}", file=file, flush=True)
 
     def debug(self, msg: str, color: Optional[str] = None):
+        """Emit a DEBUG-level message."""
         self.log(LogModule.DEBUG, msg, color=color)
 
     def info(self, msg: str, color: Optional[str] = None):
+        """Emit an INFO-level message."""
         self.log(LogModule.INFO, msg, color=color)
 
     def error(self, msg: str, color: Optional[str] = None):
+        """Emit an ERROR-level message to stderr."""
         self.log(LogModule.ERROR, msg, file=sys.stderr, color=color)
 
     def warn(self, msg: str, color: Optional[str] = None):
+        """Emit a WARN-level message to stderr."""
         self.log(LogModule.WARN, msg, file=sys.stderr, color=color)
 
     @property
     def is_debug_enabled(self) -> bool:
+        """True if DEBUG-level logging is enabled."""
         return LogModule.DEBUG in self.enabled_log_modules
 
     def color(self, color: str) -> str:
+        """Return `color` if color output is enabled, otherwise an empty string."""
         if not self.use_color:
             return ""
         return color
 
     def _log_module_color(self, m: LogModule) -> str:
+        """Return the ANSI color string for the given log module."""
         if not self.use_color:
             return ""
         return {
@@ -98,6 +110,7 @@ class Logger:
         }[m]
 
     def _max_log_module_len(self) -> int:
+        """Return the length of the longest log module name, used for alignment."""
         return max(len(m.value) for m in LogModule)
 
 
@@ -105,14 +118,20 @@ _logger_ctx: contextvars.ContextVar[Logger] = contextvars.ContextVar("logger")
 
 
 def logger() -> Logger:
+    """Return the current context's logger. Raises LookupError if none is set."""
     return _logger_ctx.get()
 
 
 def set_logger(l: Logger):
+    """Set the logger for the current context."""
     _logger_ctx.set(l)
 
 
 def jj_repo_root() -> Path:
+    """Return the root of the current jj workspace.
+
+    Raises ValueError if not in a jj repository.
+    """
     try:
         root = subprocess.check_output(
             ["jj", "workspace", "root"],
@@ -127,6 +146,10 @@ def jj_repo_root() -> Path:
 
 
 def git_repo_root() -> Path:
+    """Return the root of the current git repository.
+
+    Raises ValueError if not in a git repository.
+    """
     try:
         root = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -141,6 +164,12 @@ def git_repo_root() -> Path:
 
 
 def project_root() -> Path:
+    """Detect and return the project root directory.
+
+    Tries in order: jj workspace root, git repository root, then walks up
+    from CWD looking for a `.bayov-personal-project` marker file. Falls back
+    to the directory two levels above this file.
+    """
     try:
         return jj_repo_root()
     except ValueError:

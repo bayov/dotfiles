@@ -45,6 +45,7 @@ class Formatter:
     max_files_per_format: int
 
     def format_files(self, files: Sequence[Path]):
+        """Format the given files in place. Must be implemented by subclasses."""
         raise NotImplementedError
 
 
@@ -53,6 +54,10 @@ def _run_formatter_command(
     files: Sequence[Path],
     cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
+    """Run a formatter command with the given files appended as arguments.
+
+    Logs the command at DEBUG level. Raises FormatterError on non-zero exit.
+    """
     files_str = [str(f) for f in files]
     if logger().is_debug_enabled:
         if len(files_str) > 1:
@@ -96,6 +101,12 @@ class CmdFormatter(Formatter):
     stdout_mode: bool = False
 
     def format_files(self, files: Sequence[Path]):
+        """Format files using the configured command.
+
+        Resolves `{project_root}` placeholders in `cmd` and `cwd`. In
+        `stdout_mode`, runs the command per-file and writes back only if the
+        output differs from the original content.
+        """
         resolved_cmd = [
             arg.replace("{project_root}", str(project_root()))
             for arg in self.cmd
@@ -166,6 +177,7 @@ FORMATTERS: list[CmdFormatter] = load_formatters()
 
 
 def _all_supported_exts() -> set[str]:
+    """Return the union of all file extensions claimed by any formatter."""
     return {ext for fmt in FORMATTERS for ext in fmt.exts}
 
 
@@ -379,6 +391,12 @@ def collect_files(args) -> Optional[set[Path]]:
 
 
 def resolve_files(files: set[Path]) -> set[Path]:
+    """Resolve each path to its canonical form, filtering out unusable entries.
+
+    Skips paths that cannot be resolved (e.g. broken symlinks) or that have
+    no applicable formatter after resolution. Warns on either condition, and
+    also warns when a symlink's extension differs from the resolved file's.
+    """
     result = set()
     for f in files:
         resolved: Path
@@ -448,6 +466,7 @@ def format_files(
 
 
 def main():
+    """Entry point. Parses arguments, collects files, and runs formatters."""
     require_project_root()
 
     p = argparse.ArgumentParser()
