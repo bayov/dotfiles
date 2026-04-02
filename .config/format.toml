@@ -1,6 +1,12 @@
 [ignore]
-exts = [".lock", ".lnk", ".ahk"]
+exts = [".lock", ".lnk", ".ahk", ".kdl", ".Dockerfile", ".gitconfig"]
 shebangs = []
+filenames = [
+    ".gitignore",
+    ".python-version",
+    ".gitconfig",
+    ".bayov-personal-project",
+]
 
 [[formatter]]
 name = "shfmt"
