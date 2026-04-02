@@ -11,6 +11,8 @@ set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
+alias bayov-format="uv run python -m pybayov.format"
+alias bayov-test="uv run python -m pybayov.test"
 
 # $PATH
 fish_add_path $DOTFILES_DIR/bin

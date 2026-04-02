@@ -618,6 +618,21 @@ def main():
         log_modules.add(LogModule.DEBUG)
     set_logger(Logger(log_modules))
 
+    if not args.all_tracked and not args.file and not args.git and not args.jj:
+        try:
+            jj_repo_root()
+            args.jj = True
+        except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+            try:
+                git_repo_root()
+                args.git = True
+            except (
+                subprocess.CalledProcessError,
+                FileNotFoundError,
+                ValueError,
+            ):
+                pass
+
     result = collect_files(args)
     if result is None:
         print("No input sources specified.", file=sys.stderr)
