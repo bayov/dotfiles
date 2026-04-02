@@ -2,21 +2,24 @@
 
 import argparse
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import fnmatch
 import os
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
-from typing import ClassVar, Iterable, Optional, Sequence
+from typing import Iterable, Optional, Sequence
 
 from util import (
     GRAY,
     GREEN,
-    RESET,
+    PROJECT_ROOT,
     LogModule,
     Logger,
     logger,
+    require_project_root,
     set_logger,
 )
 
@@ -25,9 +28,10 @@ class FormatterError(Exception):
     pass
 
 
+@dataclass(eq=False)
 class Formatter:
-    name: ClassVar[str]
-    exts: ClassVar[set[str]]
+    name: str
+    exts: set[str]
 
     # Maximum number of files to format in a single command invocation.
     #
@@ -36,14 +40,16 @@ class Formatter:
     #
     # Use to parallelize formatting of formatters that don't natively run in
     # parallel (e.g. `rustfmt`).
-    max_files_per_format: ClassVar[int]
+    max_files_per_format: int
 
     def format_files(self, files: Sequence[Path]):
         raise NotImplementedError
 
 
 def _run_formatter_command(
-    cmd: list[str], files: Sequence[Path]
+    cmd: list[str],
+    files: Sequence[Path],
+    cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
     files_str = [str(f) for f in files]
     if logger().is_debug_enabled:
@@ -56,7 +62,12 @@ def _run_formatter_command(
     try:
         command = cmd + [str(f) for f in files]
         return subprocess.run(
-            command, check=True, capture_output=True, text=True
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.CalledProcessError as e:
         raise FormatterError(
@@ -68,89 +79,157 @@ def _run_formatter_command(
         ) from e
 
 
+@dataclass(eq=False)
 class CmdFormatter(Formatter):
-    cmd: ClassVar[list[str]]
+    cmd: list[str] = field(default_factory=list)
+
+    # Working directory for the subprocess. Supports `{project_root}` placeholder.
+    cwd: Optional[Path] = None
+
+    # When True, the command outputs the formatted content to stdout rather than
+    # modifying the file in place. The script writes back to the file only if
+    # the content differs from the original, to avoid spurious mtime updates.
+    #
+    # Required for formatters like `bean-format` that do not support `--in-place`.
+    stdout_mode: bool = False
 
     def format_files(self, files: Sequence[Path]):
-        _run_formatter_command(self.cmd, files)
+        resolved_cmd = [
+            arg.replace("{project_root}", str(PROJECT_ROOT)) for arg in self.cmd
+        ]
+        resolved_cwd = (
+            Path(str(self.cwd).replace("{project_root}", str(PROJECT_ROOT)))
+            if self.cwd is not None
+            else None
+        )
 
-
-class RustfmtFormatter(CmdFormatter):
-    name = "rustfmt"
-    exts = {".rs"}
-    cmd = ["rustfmt"]
-
-    # rustfmt doesn't natively run in parallel.
-    max_files_per_format = 20
-
-
-class DprintFormatter(CmdFormatter):
-    name = "dprint"
-    exts = {
-        ".md",
-        ".py",
-        ".js",
-        ".jsx",
-        ".ts",
-        ".tsx",
-        ".json",
-        ".jsonc",
-        ".toml",
-        ".yaml",
-        ".yml",
-    }
-    cmd = ["dprint", "fmt"]
-
-    # dprint runs in parallel internally, so we can format many files at once.
-    max_files_per_format = 1000
-
-
-class BeancountFormatter(Formatter):
-    name = "bean-format"
-    exts = {
-        ".beancount",
-    }
-
-    # bean-format doesn't natively run in parallel, and since we run it without
-    # --in-place to avoid mtime updates, we must run it one-by-one.
-    max_files_per_format = 1
-
-    def format_files(self, files: Sequence[Path]):
-        for f in files:
-            content = f.read_text()
-            res = _run_formatter_command(cmd=["bean-format"], files=[f])
-
-            formatted = res.stdout
-            if formatted != content:
-                f.write_text(formatted)
-
-
-FORMATTERS: Sequence[Formatter] = [
-    RustfmtFormatter(),
-    DprintFormatter(),
-    BeancountFormatter(),
-]
-
-
-def _formatter_by_ext() -> dict[str, Formatter]:
-    """Returns a dict mapping each file extension to its configured formatter.
-
-    Raises an error if multiple formatters are associated with the same
-    extension.
-    """
-    result: dict[str, Formatter] = {}
-    for formatter in FORMATTERS:
-        for ext in formatter.exts:
-            if ext in result:
-                raise ValueError(
-                    f"Extension {repr(ext)} is associated with both "
-                    f"{result[ext].name} and {formatter.name}"
+        if self.stdout_mode:
+            for f in files:
+                content = f.read_text()
+                res = _run_formatter_command(
+                    resolved_cmd, [f], cwd=resolved_cwd
                 )
-            result[ext] = formatter
-    return result
+                if res.stdout != content:
+                    f.write_text(res.stdout)
+        else:
+            _run_formatter_command(resolved_cmd, files, cwd=resolved_cwd)
 
 
-formatter_by_ext = _formatter_by_ext()
+def load_formatters(config_path: Optional[Path] = None) -> list[CmdFormatter]:
+    """Loads formatter definitions from a TOML config file.
+
+    Reads `[[formatter]]` entries and constructs `CmdFormatter` instances.
+    Each entry must have `name`, `exts`, `cmd`, and `max_files_per_format`.
+    Optional fields: `cwd` (string path, supports `{project_root}`),
+    `stdout_mode` (bool, default false).
+
+    Exits with an error if the config file is not found or is malformed.
+    """
+    if config_path is None:
+        config_path = PROJECT_ROOT / ".config" / "format.toml"
+    if not config_path.exists():
+        print(
+            f"error: formatter config not found: {config_path}\n\n"
+            f"Create .config/format.toml in your project root.\n"
+            f"See examples/format.toml in the devscripts repo for the schema.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    with open(config_path, "rb") as f:
+        data = tomllib.load(f)
+    formatters = []
+    for i, entry in enumerate(data.get("formatter", [])):
+        for required in ("name", "exts", "cmd", "max_files_per_format"):
+            if required not in entry:
+                print(
+                    f"error: formatter[{i}] missing required field '{required}'",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        formatters.append(
+            CmdFormatter(
+                name=entry["name"],
+                exts=set(entry["exts"]),
+                cmd=entry["cmd"],
+                max_files_per_format=entry["max_files_per_format"],
+                cwd=Path(entry["cwd"]) if "cwd" in entry else None,
+                stdout_mode=entry.get("stdout_mode", False),
+            )
+        )
+    return formatters
+
+
+FORMATTERS: list[CmdFormatter] = load_formatters()
+
+
+def _all_supported_exts() -> set[str]:
+    return {ext for fmt in FORMATTERS for ext in fmt.exts}
+
+
+# All file extensions handled by at least one formatter. Used to pre-filter
+# files before path-aware routing via `find_formatter`.
+supported_exts = _all_supported_exts()
+
+
+def find_formatter(file: Path) -> Optional[CmdFormatter]:
+    """Returns the formatter for `file`, or `None` if none applies."""
+    if file.suffix not in supported_exts:
+        return None
+    for fmt in FORMATTERS:
+        if file.suffix in fmt.exts:
+            return fmt
+    return None
+
+
+def _validate_formatters() -> None:
+    """Ensures no two formatters claim the same extension."""
+    for ext in supported_exts:
+        handlers = [f for f in FORMATTERS if ext in f.exts]
+        if len(handlers) > 1:
+            names = ", ".join(f.name for f in handlers)
+            raise ValueError(
+                f"Extension {ext!r} is claimed by multiple formatters: {names}"
+            )
+
+
+_validate_formatters()
+
+
+def _gitattributes_binary_patterns() -> list[str]:
+    """Returns glob patterns marked as `binary` in the project's .gitattributes.
+
+    Only patterns with the `binary` attribute (a shorthand for
+    `-text -diff merge=binary`) are returned. Patterns without this attribute
+    are ignored.
+    """
+    path = PROJECT_ROOT / ".gitattributes"
+    if not path.exists():
+        return []
+    patterns = []
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) >= 2 and "binary" in parts[1:]:
+            patterns.append(parts[0])
+    return patterns
+
+
+def _is_binary_file(file: Path, binary_patterns: list[str]) -> bool:
+    """Returns True if `file` matches any binary pattern from .gitattributes.
+
+    Matches are attempted against both the filename and the path relative to
+    `PROJECT_ROOT`, so patterns like `uv.lock` and `docs/*.pdf` both work.
+    """
+    try:
+        rel = str(file.relative_to(PROJECT_ROOT))
+    except ValueError:
+        rel = file.name
+    return any(
+        fnmatch.fnmatch(file.name, p) or fnmatch.fnmatch(rel, p)
+        for p in binary_patterns
+    )
 
 
 def jj_repo_root() -> Path:
@@ -210,7 +289,7 @@ def collect_all_tracked_files() -> Iterable[Path]:
             raise ValueError(
                 "Not in a jj or git repository, cannot use --all-tracked"
             )
-    return (f for f in files if f.suffix in formatter_by_ext)
+    return (f for f in files if f.suffix in supported_exts)
 
 
 def collect_file_or_directory(path: Path) -> Iterable[Path]:
@@ -226,7 +305,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
     If it's neither, we raise an error.
     """
     if path.is_file():
-        if path.suffix in formatter_by_ext:
+        if path.suffix in supported_exts:
             yield path
         else:
             raise ValueError(
@@ -234,7 +313,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
                 f"{repr(path.suffix)}"
             )
     elif path.is_dir():
-        for ext in formatter_by_ext.keys():
+        for ext in supported_exts:
             for f in path.rglob(f"*{ext}"):
                 yield f
     else:
@@ -257,7 +336,7 @@ def collect_git_staged_files() -> Iterable[Path]:
     )
     for f in staged_files:
         p = root / f
-        if p.suffix in formatter_by_ext:
+        if p.suffix in supported_exts:
             yield p
 
 
@@ -276,7 +355,7 @@ def collect_jj_commit_diff() -> Iterable[Path]:
     )
     for f in out.splitlines():
         p = root / f
-        if p.suffix in formatter_by_ext:
+        if p.suffix in supported_exts:
             yield p
 
 
@@ -306,6 +385,19 @@ def collect_files(args) -> Optional[set[Path]]:
         files.update(collect_jj_commit_diff())
     if not input_sources:
         return None
+
+    # Exclude files marked as binary in .gitattributes — they should not be
+    # reformatted as text.
+    binary_patterns = _gitattributes_binary_patterns()
+    if binary_patterns:
+        filtered: set[Path] = set()
+        for f in files:
+            if _is_binary_file(f, binary_patterns):
+                logger().debug(f"Skipping binary file: {f}")
+            else:
+                filtered.add(f)
+        files = filtered
+
     return files
 
 
@@ -318,11 +410,11 @@ def resolve_files(files: set[Path]) -> set[Path]:
         except OSError:
             logger().warn(f"File {repr(f)} cannot be resolved, skipping.")
             continue
-        formatter = formatter_by_ext.get(resolved.suffix)
+        formatter = find_formatter(resolved)
         if formatter is None:
             logger().warn(
-                f"File {repr(f)} resolves to {repr(resolved)} with unsupported "
-                f"extension {repr(resolved.suffix)}, skipping."
+                f"File {repr(f)} resolves to {repr(resolved)}: "
+                f"no formatter applies, skipping."
             )
             continue
         if resolved.suffix != f.suffix:
@@ -339,7 +431,10 @@ def resolve_files(files: set[Path]) -> set[Path]:
 class FormatResult:
     formatter_name: str
     modified_files: list[Path]
-    duration: float
+    # Absolute perf_counter timestamps for this chunk, used to compute
+    # wall-clock time per formatter across parallel chunks.
+    start_time: float
+    end_time: float
     error: Optional[FormatterError]
 
 
@@ -369,12 +464,15 @@ def format_files(
     return FormatResult(
         formatter_name=formatter.name,
         modified_files=modified_files,
-        duration=time.perf_counter() - start,
+        start_time=start,
+        end_time=time.perf_counter(),
         error=error,
     )
 
 
 def main():
+    require_project_root()
+
     p = argparse.ArgumentParser()
     p.add_argument("--all-tracked", action="store_true")
     p.add_argument("--file", default=[], action="append")
@@ -411,17 +509,19 @@ def main():
 
     files_by_formatter: dict[Formatter, list[Path]] = {}
     for f in files:
-        formatter = formatter_by_ext.get(f.suffix)
+        formatter = find_formatter(f)
         if not formatter:
-            # Should not happen since we filter files by supported extensions
-            # when collecting.
+            # Should not happen since resolve_files already skips files with
+            # no applicable formatter.
             raise ValueError(
                 f"No formatter found for file {repr(f)} with extension "
                 f"{repr(f.suffix)}"
             )
         files_by_formatter.setdefault(formatter, []).append(f)
 
-    formatter_durations: dict[str, float] = {}
+    # Per-formatter (min_start, max_end) across parallel chunks, so we can
+    # report actual wall-clock time rather than a misleading cumulative sum.
+    formatter_spans: dict[str, tuple[float, float]] = {}
 
     with ThreadPoolExecutor() as executor:
         futures: list[Future[FormatResult]] = []
@@ -448,9 +548,17 @@ def main():
                 logger().error(str(res.error))
                 sys.exit(1)
             modified_files_count += len(res.modified_files)
-            formatter_durations[res.formatter_name] = (
-                formatter_durations.get(res.formatter_name, 0.0) + res.duration
-            )
+            prev = formatter_spans.get(res.formatter_name)
+            if prev is None:
+                formatter_spans[res.formatter_name] = (
+                    res.start_time,
+                    res.end_time,
+                )
+            else:
+                formatter_spans[res.formatter_name] = (
+                    min(prev[0], res.start_time),
+                    max(prev[1], res.end_time),
+                )
 
     total_duration = time.perf_counter() - start_time
     logger().info(
@@ -462,8 +570,8 @@ def main():
     )
 
     if logger().is_debug_enabled:
-        for name, duration in formatter_durations.items():
-            logger().debug(f"Time spent in {name}: {duration:.2f}s")
+        for name, (start, end) in formatter_spans.items():
+            logger().debug(f"Time spent in {name}: {end - start:.2f}s")
 
 
 if __name__ == "__main__":

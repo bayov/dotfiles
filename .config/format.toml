@@ -1,0 +1,15 @@
+[[formatter]]
+name = "dprint"
+exts = [
+    ".md",
+    ".py",
+    ".json",
+    ".jsonc",
+    ".toml",
+    ".yaml",
+    ".yml",
+    ".html",
+    ".xml",
+]
+cmd = ["dprint", "fmt"]
+max_files_per_format = 1000
