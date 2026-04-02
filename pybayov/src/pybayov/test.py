@@ -270,6 +270,7 @@ def main():
                 cwd=cwd,
                 env=env,
             )
+            assert proc.stdout is not None
             read_fd = proc.stdout.fileno()
 
             processes.append(
