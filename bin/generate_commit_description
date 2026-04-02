@@ -20,7 +20,7 @@ def main() -> None:
     )
     diff = diff_result.stdout.strip()
     if not diff:
-        print("No changes found.", file=sys.stderr)
+        print(json.dumps({"error": "No changes found."}))
         sys.exit(1)
 
     # 2. Load prompt template
@@ -50,6 +50,7 @@ def main() -> None:
             text=True,
         )
     if qp_result.returncode != 0 or not qp_result.stdout.strip():
+        print(json.dumps({"error": "quick_prompt failed"}))
         sys.exit(1)
     output_file.write_text(qp_result.stdout)
 
@@ -59,18 +60,11 @@ def main() -> None:
         r"<commit-description>\s*(.*?)\s*</commit-description>", output_text, re.DOTALL
     )
     if not match:
-        print(
-            "\033[31m ✘ Failed to extract commit description from prompt output.\033[0m",
-            file=sys.stderr,
-        )
-        print(
-            f"\033[90m   Prompt input:  \033[36m{input_file}\033[0m",
-            file=sys.stderr,
-        )
-        print(
-            f"\033[90m   Prompt output: \033[36m{output_file}\033[0m",
-            file=sys.stderr,
-        )
+        print(json.dumps({
+            "error": "Failed to extract commit description from prompt output.",
+            "prompt_input_file": str(input_file),
+            "prompt_output_file": str(output_file),
+        }))
         sys.exit(1)
 
     commit_description = match.group(1).strip()

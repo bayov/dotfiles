@@ -24,15 +24,13 @@ function gm --description "Generates AI description for the current commit based
         gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
     end
 
-    set -l tmpfile (mktemp)
-    gum spin --title "generating commit description" -- sh -c "generate_commit_description >\"$tmpfile\" 2>&1"
-    set -l exit_code $status
-    set -l result (string collect < $tmpfile)
-    rm -f $tmpfile
-    if test $exit_code -ne 0
-        test -n "$result"; and echo $result
+    set -l result (gum spin --title "generating commit description" -- generate_commit_description | string collect)
+    set -l error_msg (echo $result | jq -r '.error // empty' 2>/dev/null)
+    if test -n "$error_msg"
+        echo $error_msg
         return 1
     end
+    test -n "$result" || return 1
     set -l output_file (echo $result | jq -r '.prompt_output_file')
     set -l msg (cat $output_file | string collect)
     test -n "$msg" || return 1
