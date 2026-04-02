@@ -71,12 +71,14 @@ def run_command(
     log_file_path: str | None,
     quiet: bool,
     cwd: str | None = None,
+    capture: bool = False,
 ) -> subprocess.CompletedProcess:
     """Runs a command, teeing output to the log file and optionally stdout.
 
     If not quiet and stdout is a TTY, uses a pseudo-terminal to preserve colors.
     `cwd` sets the working directory for the subprocess; defaults to the current
     directory if not specified.
+    If `capture` is True, the ANSI-stripped output is returned in `.stdout`.
     """
     master_fd, slave_fd = pty.openpty()
     process = subprocess.Popen(
@@ -91,6 +93,7 @@ def run_command(
     read_fd = master_fd
 
     log_file = open(log_file_path, "ab") if log_file_path else None
+    captured = bytearray() if capture else None
 
     try:
         while True:
@@ -111,9 +114,12 @@ def run_command(
             if not chunk:
                 break
 
+            stripped = _strip_ansi(chunk)
             if log_file:
-                log_file.write(_strip_ansi(chunk))
+                log_file.write(stripped)
                 log_file.flush()
+            if captured is not None:
+                captured.extend(stripped)
 
             if not quiet:
                 sys.stdout.buffer.write(chunk)
@@ -124,7 +130,11 @@ def run_command(
         os.close(read_fd)
 
     returncode = process.wait()
-    return subprocess.CompletedProcess(cmd_args, returncode)
+    return subprocess.CompletedProcess(
+        cmd_args,
+        returncode,
+        stdout=bytes(captured) if captured is not None else None,
+    )
 
 
 def main():
@@ -148,6 +158,12 @@ def main():
         "-s",
         action="store_true",
         help="Run tests sequentially instead of in parallel",
+    )
+    parser.add_argument(
+        "--show-failures",
+        "-f",
+        action="store_true",
+        help="When used with --quiet, print output of failed tests",
     )
     args = parser.parse_args()
 
@@ -190,11 +206,28 @@ def main():
             if logger().is_debug_enabled:
                 logger().debug(f"Command: {command_str}")
 
+            capture = args.quiet and args.show_failures
             start_time = time.time()
             res = run_command(
-                cmd_args, log_file_path, args.quiet, test_suite.get("cwd")
+                cmd_args,
+                log_file_path,
+                args.quiet,
+                test_suite.get("cwd"),
+                capture=capture,
             )
             duration = time.time() - start_time
+
+            if capture and res.returncode != 0 and res.stdout:
+                indented = b"".join(
+                    b"    " + line
+                    for line in res.stdout.strip().splitlines(keepends=True)
+                )
+                print()
+                logger().info(f"{name} output:")
+                print()
+                sys.stdout.buffer.write(indented)
+                print("\n")
+                sys.stdout.buffer.flush()
 
             results.append((name, res.returncode, duration))
 
@@ -296,7 +329,9 @@ def main():
                         header = draw_box(f"{p['command_str']}").encode()
 
                         indented_output = b""
-                        if not args.quiet and output:
+                        if output and (
+                            not args.quiet or (args.show_failures and code != 0)
+                        ):
                             indented_output = b"".join(
                                 b"    " + line
                                 for line in output.strip().splitlines(
