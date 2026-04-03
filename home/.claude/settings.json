@@ -7,7 +7,12 @@
         "type": "command",
         "command": "python3 ~/.claude/statusline.py"
     },
-    "enabledPlugins": { "rust-analyzer-lsp@claude-plugins-official": true },
+    "enabledPlugins": { "skill-creator@claude-plugins-official": true },
+    "extraKnownMarketplaces": {
+        "anthropic-agent-skills": {
+            "source": { "source": "github", "repo": "anthropics/skills" }
+        }
+    },
     "sandbox": {
         "enabled": false,
         "autoAllowBashIfSandboxed": true,
