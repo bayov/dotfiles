@@ -1255,13 +1255,13 @@
         "command": "-github.copilot.chat.rerunWithCopilotDebug",
         "when": "github.copilot-chat.activated && terminalFocus && terminalShellIntegrationEnabled && !terminalAltBufferActive"
     },
-    { "key": "ctrl+alt+.", "command": "editor.action.marker.nextInFiles" },
+    { "key": "shift+alt+.", "command": "editor.action.marker.nextInFiles" },
     {
         "key": "f8",
         "command": "-editor.action.marker.nextInFiles",
         "when": "editorFocus"
     },
-    { "key": "ctrl+alt+,", "command": "editor.action.marker.prevInFiles" },
+    { "key": "shift+alt+,", "command": "editor.action.marker.prevInFiles" },
     {
         "key": "alt+.",
         "command": "editor.action.dirtydiff.next",
@@ -1418,5 +1418,20 @@
         "key": "ctrl+shift+alt+pageup",
         "command": "-cursorColumnSelectPageUp",
         "when": "textInputFocus"
+    },
+    {
+        "key": "shift+alt+,",
+        "command": "-editor.action.fontZoomOut",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "shift+alt+.",
+        "command": "-editor.action.autoFix",
+        "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/"
+    },
+    {
+        "key": "shift+alt+.",
+        "command": "-editor.action.fontZoomIn",
+        "when": "editorTextFocus"
     }
 ]
