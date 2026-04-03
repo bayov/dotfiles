@@ -179,11 +179,6 @@
         "when": "textInputFocus"
     },
     {
-        "command": "editor.action.dirtydiff.previous",
-        "key": "ctrl+alt+up",
-        "when": "editorTextFocus"
-    },
-    {
         "command": "editor.action.clipboardCutAction",
         "key": "ctrl+x",
         "when": "editorTextFocus && !editorReadonly"
@@ -767,22 +762,22 @@
         "command": "-workbench.action.focusLeftGroup"
     },
     {
-        "key": "shift+alt+down",
+        "key": "ctrl+alt+down",
         "command": "editor.action.insertCursorBelow",
         "when": "editorTextFocus"
     },
     {
-        "key": "ctrl+alt+down",
+        "key": "shift+alt+down",
         "command": "-editor.action.insertCursorBelow",
         "when": "editorTextFocus"
     },
     {
-        "key": "shift+alt+up",
+        "key": "ctrl+alt+up",
         "command": "editor.action.insertCursorAbove",
         "when": "editorTextFocus"
     },
     {
-        "key": "ctrl+alt+up",
+        "key": "shift+alt+up",
         "command": "-editor.action.insertCursorAbove",
         "when": "editorTextFocus"
     },
@@ -1225,11 +1220,6 @@
         "when": "editorFocus"
     },
     { "key": "ctrl+v", "command": "-editor.action.clipboardPasteAction" },
-    {
-        "key": "ctrl+alt+down",
-        "command": "editor.action.dirtydiff.next",
-        "when": "editorTextFocus"
-    },
     {
         "key": "alt+f3",
         "command": "-editor.action.dirtydiff.next",
