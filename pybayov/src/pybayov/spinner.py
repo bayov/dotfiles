@@ -82,7 +82,7 @@ COMET_SPEED = 30.0  # characters per second
 TEXT_COLORS = [
     (141, 176, 207),  # blue
     (180, 120, 220),  # purple
-    (120, 200, 140),  # green
+    (220, 120, 180),  # pink
 ]
 COLOR_CYCLE_SPEED = 0.3  # cycles per second through TEXT_COLORS
 WHITE_RGB = (255, 255, 255)
