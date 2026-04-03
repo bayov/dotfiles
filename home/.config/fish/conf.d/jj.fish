@@ -13,32 +13,7 @@ function s
     end
 end
 
-function gm --description "Generates AI description for the current commit based on its diff"
-    # Run my personal formatter
-    precommit || return $status
-
-    # Warn if description already exists
-    set -l current_desc (jj log -r @ -n 1 --no-graph -T 'description' | string trim | string collect)
-    if test -n "$current_desc"
-        echo_box --content="$current_desc" --title="Existing Commit Description" --title-fg=3
-        gum confirm "Override description?" --prompt.foreground=3 --selected.background=3 --padding="0 1" || return
-    end
-
-    set -l result (spinner --title "generating commit description" -- generate_commit_description | string collect)
-    set -l error_msg (echo $result | jq -r '.error // empty' 2>/dev/null)
-    if test -n "$error_msg"
-        echo $error_msg
-        return 1
-    end
-    test -n "$result" || return 1
-    set -l output_file (echo $result | jq -r '.prompt_output_file')
-    set -l msg (cat $output_file | string collect)
-    test -n "$msg" || return 1
-
-    jj describe -m "$msg" --quiet
-
-    echo_box --content="$msg" --title="Generated Commit Description" --width 100
-end
+alias gm=generate_commit_description_interactive
 
 function cm --description "Generates AI description for the current commit and starts a new change"
     gm || return

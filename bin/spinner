@@ -5,6 +5,9 @@ Usage: spinner --title <title> -- <command> [args...]
 """
 
 import argparse
+import importlib.machinery
+import importlib.util
+import os
 import signal
 import subprocess
 import sys
@@ -18,6 +21,25 @@ WHITE_RGB = (255, 255, 255)
 TAIL_LEN = 5
 RESET = "\033[0m"
 CLEAR_LINE = "\r\033[K"
+
+_eb_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "echo_box")
+_eb_loader = importlib.machinery.SourceFileLoader("echo_box", _eb_path)
+_spec = importlib.util.spec_from_loader("echo_box", _eb_loader)
+_eb = importlib.util.module_from_spec(_spec)
+_eb_loader.exec_module(_eb)
+
+DEFAULT_BOX_BG = _eb.DEFAULT_BG
+DEFAULT_BOX_WIDTH = _eb.DEFAULT_WIDTH
+DEFAULT_BOX_MARGIN = _eb.DEFAULT_MARGIN
+DEFAULT_BOX_PAD_LEFT = _eb.DEFAULT_PAD_LEFT
+DEFAULT_BOX_PAD_RIGHT = _eb.DEFAULT_PAD_RIGHT
+DEFAULT_BOX_PAD_TOP = _eb.DEFAULT_PAD_TOP
+DEFAULT_BOX_PAD_BOTTOM = _eb.DEFAULT_PAD_BOTTOM
+
+fg_esc = _eb.fg
+bg_esc = _eb.bg
+lighten = _eb.lighten
+ITALIC = _eb.ITALIC
 
 
 def rgb(r, g, b):
@@ -40,11 +62,46 @@ def parse_args(argv):
 
     parser = argparse.ArgumentParser(
         prog="spinner",
-        usage="spinner [--title TITLE] -- <command> [args...]",
+        usage="spinner [--title TITLE] [--box ...] -- <command> [args...]",
     )
     parser.add_argument("--title", default="")
+    parser.add_argument(
+        "--box", action="store_true", help="Render spinner inside a box"
+    )
+    parser.add_argument("--box-title", default=None, metavar="STR")
+    parser.add_argument("--box-bg", default=DEFAULT_BOX_BG, metavar="COLOR")
+    parser.add_argument(
+        "--box-width", type=int, default=DEFAULT_BOX_WIDTH, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-margin", type=int, default=DEFAULT_BOX_MARGIN, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-margin-top", type=int, default=None, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-margin-bottom", type=int, default=None, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-pad-left", type=int, default=DEFAULT_BOX_PAD_LEFT, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-pad-right",
+        type=int,
+        default=DEFAULT_BOX_PAD_RIGHT,
+        metavar="INT",
+    )
+    parser.add_argument(
+        "--box-pad-top", type=int, default=DEFAULT_BOX_PAD_TOP, metavar="INT"
+    )
+    parser.add_argument(
+        "--box-pad-bottom",
+        type=int,
+        default=DEFAULT_BOX_PAD_BOTTOM,
+        metavar="INT",
+    )
     args = parser.parse_args(spinner_argv)
-    return args.title, cmd
+    return args, cmd
 
 
 def colorize_text(text, lead):
@@ -59,28 +116,121 @@ def colorize_text(text, lead):
     return "".join(parts)
 
 
-def spin(title, stop_event):
+def spin(title, stop_event, box=None):
+    """Animate spinner. box=(bg, width, pad_left, pad_right, margin, pad_bottom, margin_bottom) or None."""
     interval = 1.0 / FPS
     frame_acc = 0.0
     slide_acc = 0.0
+
+    if box:
+        (
+            box_bg,
+            width,
+            pad_left,
+            pad_right,
+            margin,
+            pad_bottom,
+            margin_bottom,
+        ) = box
+        bg_c = bg_esc(box_bg)
+        ml = " " * margin
+        inner_width = width - pad_left - pad_right
+        blank = ml + bg_c + " " * width + RESET
+        # spinner line is pad_bottom + 1 (border) + margin_bottom + 1 (cursor gap) lines above cursor
+        lines_below = pad_bottom + margin_bottom + 2
+        up = f"\033[{lines_below}A"
+        down = f"\033[{lines_below}B"
+
     while True:
         frame = FRAMES[int(frame_acc) % len(FRAMES)]
         text = frame + (" " + title if title else "")
-        cycle = len(text) + TAIL_LEN + FPS // 2  # tail exit + 0.5 second delay
+        cycle = len(text) + TAIL_LEN + FPS // 2
         pos = int(slide_acc) % cycle
         lead = pos if pos < len(text) + TAIL_LEN else None
-        sys.stderr.write(f"{CLEAR_LINE} {colorize_text(text, lead)}{RESET}")
+        colored = colorize_text(text, lead) + RESET
+
+        if box:
+            vis = len(text)
+            fill = " " * max(0, inner_width - vis)
+            content = f"{ml}{bg_c}{' ' * pad_left}{colored}{bg_c}{fill}{' ' * pad_right}{RESET}"
+            line = f"{up}\r{content}{down}\r"
+        else:
+            line = f"{CLEAR_LINE} {colored}"
+
+        sys.stderr.write(line)
         sys.stderr.flush()
         frame_acc += SPINNER_FPS / FPS
         slide_acc += 20.0 / FPS
         if stop_event.wait(interval):
             break
-    sys.stderr.write(CLEAR_LINE)
+
+    if box:
+        # blank out the spinner line; box borders are already printed
+        sys.stderr.write(f"{up}\r{blank}{down}\r")
+    else:
+        sys.stderr.write(CLEAR_LINE)
+    sys.stderr.flush()
+
+
+def _resolve_margins(args):
+    mt = (
+        args.box_margin_top
+        if args.box_margin_top is not None
+        else args.box_margin
+    )
+    mb = (
+        args.box_margin_bottom
+        if args.box_margin_bottom is not None
+        else args.box_margin
+    )
+    return mt, mb
+
+
+def print_box(args):
+    box_bg = args.box_bg
+    width = args.box_width
+    margin = args.box_margin
+    mt, mb = _resolve_margins(args)
+    ml = " " * margin
+    blank = ml + bg_esc(box_bg) + " " * width + RESET
+
+    if args.box_title:
+        title = args.box_title
+        title_bg = lighten(box_bg)
+        title_vis = len(title) + 2
+        title_start = (width - title_vis) // 2
+        title_end = title_start + title_vis
+        left_fill = fg_esc(box_bg) + "▄" * title_start
+        title_cell = (
+            bg_esc(title_bg)
+            + fg_esc("#ffffff")
+            + ITALIC
+            + " "
+            + title
+            + " "
+            + RESET
+        )
+        right_fill = fg_esc(box_bg) + "▄" * max(0, width - title_end) + RESET
+        border_top = ml + left_fill + title_cell + right_fill
+    else:
+        border_top = ml + fg_esc(box_bg) + "▄" * width + RESET
+
+    for _ in range(mt):
+        sys.stderr.write("\n")
+    sys.stderr.write(border_top + "\n")
+    for _ in range(args.box_pad_top):
+        sys.stderr.write(blank + "\n")
+    sys.stderr.write(blank + "\n")  # spinner content line (animated in place)
+    for _ in range(args.box_pad_bottom):
+        sys.stderr.write(blank + "\n")
+    sys.stderr.write(ml + fg_esc(box_bg) + "▀" * width + RESET + "\n")
+    for _ in range(mb):
+        sys.stderr.write("\n")
     sys.stderr.flush()
 
 
 def main():
-    title, cmd = parse_args(sys.argv[1:])
+    args, cmd = parse_args(sys.argv[1:])
     if not cmd:
         sys.stderr.write(
             "spinner: error: missing command (expected ' -- <command>')\n"
@@ -88,8 +238,6 @@ def main():
         sys.exit(1)
 
     show_spinner = sys.stderr.isatty()
-    # When both stdout and stderr point to the terminal, subprocess stdout would
-    # interleave with the spinner on the same line. Capture it and flush after.
     capture_stdout = show_spinner and sys.stdout.isatty()
 
     proc = subprocess.Popen(
@@ -115,14 +263,69 @@ def main():
             reader = threading.Thread(target=read_stdout, daemon=True)
             reader.start()
 
+        box = None
+        if args.box:
+            print_box(args)
+            _, mb = _resolve_margins(args)
+            box = (
+                args.box_bg,
+                args.box_width,
+                args.box_pad_left,
+                args.box_pad_right,
+                args.box_margin,
+                args.box_pad_bottom,
+                mb,
+            )
+
         stop = threading.Event()
-        t = threading.Thread(target=spin, args=(title, stop), daemon=True)
+        t = threading.Thread(
+            target=spin, args=(args.title, stop, box), daemon=True
+        )
         t.start()
         proc.wait()
         stop.set()
         t.join()
 
-        if capture_stdout:
+        if args.box and capture_stdout:
+            reader.join()
+            result_text = (
+                (captured[0] if captured else b"")
+                .decode(errors="replace")
+                .rstrip("\n")
+            )
+            inner_width = (
+                args.box_width - args.box_pad_left - args.box_pad_right
+            )
+            lines = []
+            for raw in result_text.splitlines() or [""]:
+                for wrapped in _eb.word_wrap(raw, inner_width):
+                    lines.append(wrapped)
+            # move to top of box (including margins), clear, redraw with results
+            mt, mb = _resolve_margins(args)
+            total_box_lines = (
+                mt + args.box_pad_top + args.box_pad_bottom + mb + 3
+            )
+            sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+            sys.stderr.write(
+                _eb.render_box(
+                    lines,
+                    args.box_width,
+                    args.box_bg,
+                    margin_top=mt,
+                    margin_right=args.box_margin,
+                    margin_bottom=mb,
+                    margin_left=args.box_margin,
+                    pad_top=args.box_pad_top,
+                    pad_right=args.box_pad_right,
+                    pad_bottom=args.box_pad_bottom,
+                    pad_left=args.box_pad_left,
+                    title=args.box_title,
+                    title_bg=lighten(args.box_bg),
+                )
+                + "\n"
+            )
+            sys.stderr.flush()
+        elif capture_stdout:
             reader.join()
             if captured and captured[0]:
                 sys.stdout.buffer.write(captured[0])
