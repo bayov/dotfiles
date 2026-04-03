@@ -6,7 +6,8 @@
         "show_menu_bar": false,
         "show_tab_bar": false,
         "show_status_bar": true,
-        "rulers": [80]
+        "rulers": [80],
+        "menu_bar_mnemonics": false
     },
     "file_explorer": { "show_hidden": true },
     "file_browser": { "show_hidden": true },
