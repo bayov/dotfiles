@@ -38,8 +38,8 @@ alias prepush="bayov-test --quiet --show-failures"
 
 # ── Interactive-only ───────────────────────────────────────────────────────────
 case $- in
-    *i*) ;;
-      *) return;;
+*i*) ;;
+*) return ;;
 esac
 
 # History
@@ -54,36 +54,36 @@ shopt -s checkwinsize
 
 # Prompt
 case "$TERM" in
-    xterm-color|*-256color) color_prompt=yes;;
+xterm-color | *-256color) color_prompt=yes ;;
 esac
 if [ "$color_prompt" = yes ]; then
-    PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+	PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 else
-    PS1='\u@\h:\w\$ '
+	PS1='\u@\h:\w\$ '
 fi
 unset color_prompt
 
 # ls colors
 if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-    alias grep='grep --color=auto'
+	test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+	alias ls='ls --color=auto'
+	alias grep='grep --color=auto'
 fi
 
 # Bash completion
 if ! shopt -oq posix; then
-    if [ -f /usr/share/bash-completion/bash_completion ]; then
-        . /usr/share/bash-completion/bash_completion
-    elif [ -f /etc/bash_completion ]; then
-        . /etc/bash_completion
-    fi
+	if [ -f /usr/share/bash-completion/bash_completion ]; then
+		. /usr/share/bash-completion/bash_completion
+	elif [ -f /etc/bash_completion ]; then
+		. /etc/bash_completion
+	fi
 fi
 
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 alias za="zellij attach default --create"
-alias hm="history -n"  # merge history from other sessions
+alias hm="history -n" # merge history from other sessions
 alias v="$EDITOR"
 alias fd=fdfind
 alias lmd="glow --width 160"
@@ -93,10 +93,10 @@ type -P starship &>/dev/null && eval "$(starship init bash)"
 
 # fzf
 if [ -f ~/.fzf/shell/key-bindings.bash ]; then
-    . ~/.fzf/shell/key-bindings.bash
+	. ~/.fzf/shell/key-bindings.bash
 fi
 if [ -f ~/.fzf/shell/completion.bash ]; then
-    . ~/.fzf/shell/completion.bash
+	. ~/.fzf/shell/completion.bash
 fi
 
 export FZF_DEFAULT_OPTS='
@@ -128,6 +128,6 @@ export GUM_CONFIRM_PROMPT_FOREGROUND=4
 
 # Docker sandbox overrides
 if [ -n "$DOCKER_SANDBOX" ]; then
-    PS1='\[\033[0;31m\][SANDBOX]\[\033[0m\] ❯ '
-    export FISH_COMPLETION_NO_DESCRIPTIONS=1
+	PS1='\[\033[0;31m\][SANDBOX]\[\033[0m\] ❯ '
+	export FISH_COMPLETION_NO_DESCRIPTIONS=1
 fi
