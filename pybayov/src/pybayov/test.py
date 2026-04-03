@@ -50,6 +50,7 @@ class _ProcessEntry(TypedDict):
     returncode: int | None
     read_fd: int
     eof: bool
+    raw_output: bytearray
 
 
 CONFIG_PATH = Path(".config/test.toml")
@@ -315,6 +316,7 @@ def main():
                     "returncode": None,
                     "read_fd": read_fd,
                     "eof": False,
+                    "raw_output": bytearray(),
                 }
             )
 
@@ -328,6 +330,7 @@ def main():
                     chunk = os.read(fd, 4096)
                     if chunk:
                         p["log_file"].write(_strip_ansi(chunk))
+                        p["raw_output"].extend(chunk)
                     else:
                         p["eof"] = True
                 except OSError:
@@ -353,17 +356,14 @@ def main():
                         p["log_file"].close()
                         p["stdout"].close()
 
-                        # Read output from individual log
-                        with open(p["log_path"], "rb") as f_cmd:
-                            output = f_cmd.read()
-
+                        raw_output = bytes(p["raw_output"])
                         indented_output = b""
-                        if output and (
+                        if raw_output and (
                             not args.quiet or (args.show_failures and code != 0)
                         ):
                             indented_output = b"".join(
                                 b"    " + line
-                                for line in output.strip().splitlines(
+                                for line in raw_output.strip().splitlines(
                                     keepends=True
                                 )
                             )
