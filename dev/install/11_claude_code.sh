@@ -13,6 +13,10 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 export PATH="$HOME/.local/bin:$PATH"
 
+# Activate fnm so npx is available
+export PATH="$HOME/.local/share/fnm:$PATH"
+eval "$(fnm env --shell bash)"
+
 npx playwright install chrome
 
 # Print version
