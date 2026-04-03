@@ -118,8 +118,12 @@ bind ctrl-delete kill-word
 Fresh (`~/dotfiles/home/.config/fresh/config.json`)
 ---------------------------------------------------
 
-Docs: https://fresh-editor.com/docs/keybindings (fetch if you need to look up
-action names or context values)
+Docs: https://getfresh.dev/docs/configuration/keyboard (fetch if you need to
+look up context values)\
+Actions:
+https://raw.githubusercontent.com/sinelaw/fresh/refs/heads/master/crates/fresh-editor/locales/en.json
+(fetch for available action names — keys are `action.{action_name}`, strip the
+`action.` prefix to get the string to use in the `"action"` field)
 
 JSON array in the `"keybinds"` field:
 

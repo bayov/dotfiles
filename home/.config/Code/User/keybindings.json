@@ -1263,6 +1263,16 @@
     },
     { "key": "ctrl+alt+,", "command": "editor.action.marker.prevInFiles" },
     {
+        "key": "alt+.",
+        "command": "editor.action.dirtydiff.next",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
+        "key": "alt+,",
+        "command": "editor.action.dirtydiff.previous",
+        "when": "editorTextFocus && !textCompareEditorActive"
+    },
+    {
         "key": "shift+f8",
         "command": "-editor.action.marker.prevInFiles",
         "when": "editorFocus"
