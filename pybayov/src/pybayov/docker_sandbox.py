@@ -101,6 +101,13 @@ MOUNTS = [
     ),
     # Claude Code settings (must be writable as CC modifies these).
     Mount("~/.claude", ro=False),
+    # Also mount at the host path so absolute paths recorded by tools (e.g. plugin
+    # installPath) remain valid inside the container regardless of username.
+    Mount(
+        str(Path.home() / ".claude"),
+        container_path=str(Path.home() / ".claude"),
+        ro=True,
+    ),
     Mount("~/.claude.json", ro=False),
     # Gemini CLI settings (must be writable as Gemini modifies these).
     Mount("~/.gemini", ro=False),
