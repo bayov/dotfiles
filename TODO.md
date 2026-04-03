@@ -2,7 +2,6 @@ TODO
 ----
 
 - handle home/.claude/statusline.py
-- handle VScode config in different envs
 
 Infeasible
 ----------
