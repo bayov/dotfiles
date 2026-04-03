@@ -746,6 +746,8 @@
     },
 
     // Explorer view (alt+1)
+    { "command": "-workbench.action.toggleSidebarVisibility", "key": "alt+1" },
+    { "command": "-workbench.view.explorer", "key": "alt+1" },
     { "command": "-workbench.action.openEditorAtIndex1", "key": "alt+1" },
     { "command": "workbench.files.action.showActiveFileInExplorer", "key": "alt+1", "when": "editorTextFocus" },
     { "command": "workbench.view.explorer", "key": "alt+1", "when": "!editorTextFocus && (!sideBarVisible || activeViewlet != 'workbench.view.explorer')" },
@@ -945,5 +947,9 @@
     // Font size / auto-fix unbinds (freeing shift+alt+.,)
     { "command": "-editor.action.fontZoomOut", "key": "shift+alt+,", "when": "editorTextFocus" },
     { "command": "-editor.action.autoFix", "key": "shift+alt+.", "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/" },
-    { "command": "-editor.action.fontZoomIn", "key": "shift+alt+.", "when": "editorTextFocus" }
+    { "command": "-editor.action.fontZoomIn", "key": "shift+alt+.", "when": "editorTextFocus" },
+
+    //--------------------------------------------------------------------------
+    // Uncategorized (keybinding modifications done in UI will appear below)
+    //--------------------------------------------------------------------------
 ]
