@@ -737,7 +737,7 @@
         "when": "filesExplorerFocus"
     },
     {
-        "key": "ctrl+shift+alt+pagedown",
+        "key": "ctrl+alt+pagedown",
         "command": "editor.action.moveSelectionToNextFindMatch",
         "when": "editorFocus"
     },
@@ -1226,7 +1226,7 @@
         "when": "editorTextFocus && !textCompareEditorActive"
     },
     {
-        "key": "ctrl+shift+alt+pageup",
+        "key": "ctrl+alt+pageup",
         "command": "editor.action.moveSelectionToPreviousFindMatch",
         "when": "editorFocus"
     },
