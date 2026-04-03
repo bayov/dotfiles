@@ -79,7 +79,12 @@ SPINNER_FRAMES = [
 ]
 SPINNER_FPS = 20
 COMET_SPEED = 30.0  # characters per second
-BLUE_RGB = (141, 176, 207)
+TEXT_COLORS = [
+    (141, 176, 207),  # blue
+    (180, 120, 220),  # purple
+    (120, 200, 140),  # green
+]
+COLOR_CYCLE_SPEED = 0.3  # cycles per second through TEXT_COLORS
 WHITE_RGB = (255, 255, 255)
 TAIL_LEN = 5
 RESET = "\033[0m"
@@ -163,14 +168,16 @@ def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     return args, cmd
 
 
-def colorize_text(text: str, lead: int | None) -> str:
+def colorize_text(
+    text: str, lead: int | None, base_color: tuple[int, int, int]
+) -> str:
     parts: list[str] = []
     for j, ch in enumerate(text):
         dist = lead - j if lead is not None else TAIL_LEN + 1
         if 0 <= dist <= TAIL_LEN:
-            color = rgb(*lerp_rgb(WHITE_RGB, BLUE_RGB, dist / TAIL_LEN))
+            color = rgb(*lerp_rgb(WHITE_RGB, base_color, dist / TAIL_LEN))
         else:
-            color = rgb(*BLUE_RGB)
+            color = rgb(*base_color)
         parts.append(f"{color}{ch}")
     return "".join(parts)
 
@@ -187,6 +194,7 @@ def spin(
     interval = 1.0 / FPS
     frame_acc = 0.0
     slide_acc = 0.0
+    color_acc = 0.0
 
     up = ""
     down = ""
@@ -217,14 +225,23 @@ def spin(
         down = f"\033[{lines_below}B"
 
     while True:
+        t = color_acc % len(TEXT_COLORS)
+        i = int(t)
+        base_color: tuple[int, int, int] = lerp_rgb(  # type: ignore[assignment]
+            TEXT_COLORS[i], TEXT_COLORS[(i + 1) % len(TEXT_COLORS)], t - i
+        )
         frame = SPINNER_FRAMES[int(frame_acc) % len(SPINNER_FRAMES)]
-        frame_colored = rgb(*BLUE_RGB) + frame
+        frame_colored = rgb(*base_color) + frame
         if title:
             title_text = " " + title
             cycle = len(title_text) + TAIL_LEN + FPS // 2
             pos = int(slide_acc) % cycle
             lead = pos if pos < len(title_text) + TAIL_LEN else None
-            colored = frame_colored + colorize_text(title_text, lead) + RESET
+            colored = (
+                frame_colored
+                + colorize_text(title_text, lead, base_color)
+                + RESET
+            )
         else:
             cycle = TAIL_LEN + FPS // 2
             colored = frame_colored + RESET
@@ -242,6 +259,7 @@ def spin(
         sys.stderr.flush()
         frame_acc += SPINNER_FPS / FPS
         slide_acc += COMET_SPEED / FPS
+        color_acc += COLOR_CYCLE_SPEED / FPS
         if stop_event.wait(interval):
             break
 
