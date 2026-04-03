@@ -1,6 +1,7 @@
 ---
 name: keybind
-description: Manages keyboard shortcuts across all apps in this dotfiles setup. Invoke with /keybind or whenever the user wants to add, change, remove, or view a keybinding — including "bind a key", "remap this shortcut", "add a shortcut", "what's bound to X", or any keybinding-related task. This skill knows all six config files, their syntax formats, and the terminal shadowing priority (WezTerm > Zellij > running app) that causes subtle bugs when the same key is claimed at multiple layers.
+description: Manages keyboard shortcuts across all apps in this dotfiles setup.
+disable-model-invocation: true
 ---
 
 Keybind Manager
