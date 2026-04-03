@@ -18,12 +18,12 @@ DOTFILES_DIR: Path = Path(
 
 
 class GenerateError(Exception):
-    def __init__(self, error_info: dict):
+    def __init__(self, error_info: dict[str, str]):
         self.error_info = error_info
         super().__init__(error_info.get("error", "Unknown error"))
 
 
-def generate() -> dict:
+def generate() -> dict[str, str]:
     """Generate a commit description and return the result dict.
 
     Raises GenerateError on failure.

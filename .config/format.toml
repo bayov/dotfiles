@@ -6,6 +6,7 @@ filenames = [
     ".python-version",
     ".gitconfig",
     ".bayov-personal-project",
+    "py.typed",
 ]
 
 [[formatter]]
