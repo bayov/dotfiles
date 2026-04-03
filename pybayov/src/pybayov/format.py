@@ -546,6 +546,9 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
                 f"File {repr(f)} does not exist (deleted?), skipping."
             )
             continue
+        if f.is_symlink():
+            logger().debug(f"File {repr(f)} is a symlink, skipping.")
+            continue
         try:
             resolved = f.resolve(strict=True)
         except OSError:
