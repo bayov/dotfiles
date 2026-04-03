@@ -8,11 +8,7 @@
         "command": "python3 ~/.claude/statusline.py"
     },
     "enabledPlugins": { "skill-creator@claude-plugins-official": true },
-    "extraKnownMarketplaces": {
-        "anthropic-agent-skills": {
-            "source": { "source": "github", "repo": "anthropics/skills" }
-        }
-    },
+    "extraKnownMarketplaces": {},
     "sandbox": {
         "enabled": false,
         "autoAllowBashIfSandboxed": true,
