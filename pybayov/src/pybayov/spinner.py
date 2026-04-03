@@ -18,31 +18,67 @@ from typing import Any
 
 from pybayov import echo_box as _eb
 
-FPS = 20
+FPS = 60
 SPINNER_FRAMES = [
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
-    "●∙∙∙∙",
-    "⦁●∙∙∙",
-    "∙⦁●∙∙",
-    "∙∙⦁●∙",
-    "∙∙∙⦁●",
-    "∙∙∙∙⦁",
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
-    "∙∙∙∙●",
-    "∙∙∙●⦁",
-    "∙∙●⦁∙",
-    "∙●⦁∙∙",
-    "●⦁∙∙∙",
-    "⦁∙∙∙∙",
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
-    "∙∙∙∙∙",
+    "⢀⠀",
+    "⡀⠀",
+    "⠄⠀",
+    "⢂⠀",
+    "⡂⠀",
+    "⠅⠀",
+    "⢃⠀",
+    "⡃⠀",
+    "⠍⠀",
+    "⢋⠀",
+    "⡋⠀",
+    "⠍⠁",
+    "⢋⠁",
+    "⡋⠁",
+    "⠍⠉",
+    "⠋⠉",
+    "⠋⠉",
+    "⠉⠙",
+    "⠉⠙",
+    "⠉⠩",
+    "⠈⢙",
+    "⠈⡙",
+    "⢈⠩",
+    "⡀⢙",
+    "⠄⡙",
+    "⢂⠩",
+    "⡂⢘",
+    "⠅⡘",
+    "⢃⠨",
+    "⡃⢐",
+    "⠍⡐",
+    "⢋⠠",
+    "⡋⢀",
+    "⠍⡁",
+    "⢋⠁",
+    "⡋⠁",
+    "⠍⠉",
+    "⠋⠉",
+    "⠋⠉",
+    "⠉⠙",
+    "⠉⠙",
+    "⠉⠩",
+    "⠈⢙",
+    "⠈⡙",
+    "⠈⠩",
+    "⠀⢙",
+    "⠀⡙",
+    "⠀⠩",
+    "⠀⢘",
+    "⠀⡘",
+    "⠀⠨",
+    "⠀⢐",
+    "⠀⡐",
+    "⠀⠠",
+    "⠀⢀",
+    "⠀⡀",
 ]
-SPINNER_FPS = 10
+SPINNER_FPS = 20
+COMET_SPEED = 30.0  # characters per second
 BLUE_RGB = (141, 176, 207)
 WHITE_RGB = (255, 255, 255)
 TAIL_LEN = 5
@@ -182,11 +218,17 @@ def spin(
 
     while True:
         frame = SPINNER_FRAMES[int(frame_acc) % len(SPINNER_FRAMES)]
+        frame_colored = rgb(*BLUE_RGB) + frame
+        if title:
+            title_text = " " + title
+            cycle = len(title_text) + TAIL_LEN + FPS // 2
+            pos = int(slide_acc) % cycle
+            lead = pos if pos < len(title_text) + TAIL_LEN else None
+            colored = frame_colored + colorize_text(title_text, lead) + RESET
+        else:
+            cycle = TAIL_LEN + FPS // 2
+            colored = frame_colored + RESET
         text = frame + (" " + title if title else "")
-        cycle = len(text) + TAIL_LEN + FPS // 2
-        pos = int(slide_acc) % cycle
-        lead = pos if pos < len(text) + TAIL_LEN else None
-        colored = colorize_text(text, lead) + RESET
 
         if box:
             vis = len(text)
@@ -199,7 +241,7 @@ def spin(
         sys.stderr.write(line)
         sys.stderr.flush()
         frame_acc += SPINNER_FPS / FPS
-        slide_acc += 20.0 / FPS
+        slide_acc += COMET_SPEED / FPS
         if stop_event.wait(interval):
             break
 
