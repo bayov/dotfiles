@@ -191,7 +191,7 @@ config.keys = {
     -- {mods = "ALT", key = "z", action = act.QuitApplication},
     { mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette },
     { mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration },
-    { mods = "ALT", key = "`", action = act.ShowDebugOverlay },
+    { mods = "CTRL", key = "`", action = act.ShowDebugOverlay },
 
     -- Support Shift+Enter for CLI tools
     { mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u") },

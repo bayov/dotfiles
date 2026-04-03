@@ -80,8 +80,8 @@ keybinds clear-defaults=true {
         bind "Alt x" { CloseFocus; }
 
         // Floating-panes
-        bind "Alt q" { ToggleFloatingPanes; }
-        bind "Alt Shift q" { NewPane; }
+        bind "Alt `" { ToggleFloatingPanes; }
+        bind "Alt ~" { NewPane; }
         bind "Alt p" { TogglePanePinned; }
 
         // Shift+Enter passthrough

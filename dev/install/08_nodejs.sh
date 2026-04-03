@@ -25,6 +25,9 @@ fnm default lts-latest
 # Download and install pnpm (faster package manager)
 corepack prepare pnpm@latest --activate
 
+# Enable npm/npx shims via corepack
+corepack enable npm
+
 # Print versions
 echo "fnm version: $(fnm --version)"
 echo "node version: $(node --version)"
