@@ -18,9 +18,31 @@ from typing import Any
 
 from pybayov import echo_box as _eb
 
-FRAMES = ["∙∙∙", "●∙∙", "∙●∙", "∙∙●"]
 FPS = 20
-SPINNER_FPS = 7
+SPINNER_FRAMES = [
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+    "●∙∙∙∙",
+    "⦁●∙∙∙",
+    "∙⦁●∙∙",
+    "∙∙⦁●∙",
+    "∙∙∙⦁●",
+    "∙∙∙∙⦁",
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+    "∙∙∙∙●",
+    "∙∙∙●⦁",
+    "∙∙●⦁∙",
+    "∙●⦁∙∙",
+    "●⦁∙∙∙",
+    "⦁∙∙∙∙",
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+    "∙∙∙∙∙",
+]
+SPINNER_FPS = 10
 BLUE_RGB = (141, 176, 207)
 WHITE_RGB = (255, 255, 255)
 TAIL_LEN = 5
@@ -159,7 +181,7 @@ def spin(
         down = f"\033[{lines_below}B"
 
     while True:
-        frame = FRAMES[int(frame_acc) % len(FRAMES)]
+        frame = SPINNER_FRAMES[int(frame_acc) % len(SPINNER_FRAMES)]
         text = frame + (" " + title if title else "")
         cycle = len(text) + TAIL_LEN + FPS // 2
         pos = int(slide_acc) % cycle

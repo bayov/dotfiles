@@ -20,7 +20,6 @@ alias spinner="uv run python -m pybayov.spinner"
 alias quick-prompt="uv run python -m pybayov.quick_prompt"
 alias docker-sandbox="uv run python -m pybayov.docker_sandbox"
 alias generate-commit-description="uv run python -m pybayov.generate_commit_description"
-alias generate-commit-description-interactive="uv run python -m pybayov.generate_commit_description_interactive"
 
 alias precommit=bayov-format
 alias prepush="bayov-test --quiet --show-failures"

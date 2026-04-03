@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Generates an AI commit description for the current jj commit and prints it to stdout."""
+"""Generates an AI commit description for the current jj commit and prints it to stdout.
+
+With --interactive: shows a spinner, prompts before overriding an existing description,
+and applies the result via `jj describe`.
+"""
 
 import json
 import os
@@ -10,7 +14,9 @@ from datetime import datetime
 from pathlib import Path
 from random import randint
 
+from pybayov import echo_box as _eb
 from pybayov import quick_prompt as _qp
+from pybayov import spinner as _spinner
 
 DOTFILES_DIR: Path = Path(
     os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
@@ -90,7 +96,82 @@ def generate() -> dict[str, str]:
     }
 
 
+def _interactive_main() -> None:
+    precommit_result: subprocess.CompletedProcess[bytes] = subprocess.run(
+        ["fish", "-c", "precommit"]
+    )
+    if precommit_result.returncode != 0:
+        sys.exit(precommit_result.returncode)
+
+    log_result = subprocess.run(
+        ["jj", "log", "-r", "@", "-n", "1", "--no-graph", "-T", "description"],
+        capture_output=True,
+        text=True,
+    )
+    current_desc: str = log_result.stdout.strip()
+
+    if current_desc:
+        inner_width = (
+            _eb.DEFAULT_WIDTH - _eb.DEFAULT_PAD_LEFT - _eb.DEFAULT_PAD_RIGHT
+        )
+        lines = [
+            w
+            for raw in current_desc.splitlines() or [""]
+            for w in _eb.word_wrap(raw, inner_width)
+        ]
+        print(
+            _eb.render_box(
+                lines,
+                _eb.DEFAULT_WIDTH,
+                _eb.DEFAULT_BG,
+                margin_top=_eb.DEFAULT_MARGIN,
+                margin_right=_eb.DEFAULT_MARGIN,
+                margin_bottom=0,
+                margin_left=_eb.DEFAULT_MARGIN,
+                pad_top=_eb.DEFAULT_PAD_TOP,
+                pad_right=_eb.DEFAULT_PAD_RIGHT,
+                pad_bottom=_eb.DEFAULT_PAD_BOTTOM,
+                pad_left=_eb.DEFAULT_PAD_LEFT,
+                title="Existing Commit Description",
+                title_color=3,
+                title_bg=_eb.lighten(_eb.DEFAULT_BG),
+            )
+        )
+        confirm_result: subprocess.CompletedProcess[bytes] = subprocess.run(
+            [
+                "gum",
+                "confirm",
+                "Override description?",
+                "--prompt.foreground=3",
+                "--selected.background=3",
+                "--padding=0 1",
+            ]
+        )
+        if confirm_result.returncode != 0:
+            sys.exit(confirm_result.returncode)
+
+    try:
+        description = _spinner.run_with_spinner(
+            lambda: generate()["commit_description"],
+            title="generating",
+            box=True,
+            box_title="Commit Description",
+        )
+    except GenerateError as e:
+        sys.stderr.write(f"{e}\n")
+        sys.exit(1)
+
+    if not description:
+        sys.stderr.write("Empty commit description\n")
+        sys.exit(1)
+
+    subprocess.run(["jj", "describe", "-m", description, "--quiet"])
+
+
 def main() -> None:
+    if "--interactive" in sys.argv:
+        _interactive_main()
+        return
     try:
         data = generate()
     except GenerateError as e:
