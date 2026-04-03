@@ -448,7 +448,10 @@ def main() -> None:
         stdin=sys.stdin,
     )
 
+    interrupted = [False]
+
     def forward_sigint(sig: int, frame: types.FrameType | None) -> None:
+        interrupted[0] = True
         proc.send_signal(signal.SIGINT)
 
     original_sigint = signal.getsignal(signal.SIGINT)
@@ -516,14 +519,18 @@ def main() -> None:
             if reader is not None:
                 reader.join()
             if args.box:
-                RED = "#cc4444"
-                GREY = "#888888"
-                cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
-                error_msg = (
-                    fg_esc(RED)
-                    + f"command exited with {proc.returncode} exit code"
-                    + RESET
-                )
+                if interrupted[0]:
+                    box_lines = [fg_esc(11) + "interrupted" + RESET]
+                else:
+                    RED = "#cc4444"
+                    GREY = "#888888"
+                    cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
+                    error_msg = (
+                        fg_esc(RED)
+                        + f"command exited with {proc.returncode} exit code"
+                        + RESET
+                    )
+                    box_lines = [cmd_line, error_msg]
                 mt, mb = _resolve_margins(_box_args)
                 total_box_lines = (
                     mt
@@ -535,7 +542,7 @@ def main() -> None:
                 sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
                 sys.stderr.write(
                     _eb.render_box(
-                        [cmd_line, error_msg],
+                        box_lines,
                         _box_args.box_width,
                         _box_args.box_bg,
                         margin_top=mt,

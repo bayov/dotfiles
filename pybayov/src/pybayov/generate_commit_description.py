@@ -153,7 +153,7 @@ def _interactive_main() -> None:
     try:
         description = _spinner.run_with_spinner(
             lambda: generate()["commit_description"],
-            title="generating",
+            title="generating commit description...",
             box=True,
             box_title="Commit Description",
         )
