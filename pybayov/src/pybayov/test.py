@@ -3,14 +3,16 @@
 import argparse
 import os
 import pty
+import random
 import re
 import select
 import shlex
+import string
 import subprocess
 import sys
-import tempfile
 import time
 import tomllib
+from datetime import datetime
 from pathlib import Path
 from typing import IO, NotRequired, TypedDict
 
@@ -24,6 +26,7 @@ from .util import (
     LogModule,
     Logger,
     logger,
+    project_root,
     require_project_root,
     set_logger,
 )
@@ -52,6 +55,7 @@ class _ProcessEntry(TypedDict):
 CONFIG_PATH = Path(".config/test.toml")
 
 _ANSI_ESCAPE = re.compile(rb"\x1b(?:[@-Z\\-_]|\[[0-9;]*[ -/]*[@-~])")
+_VALID_SUITE_NAME = re.compile(r"^[a-zA-Z0-9_]+$")
 
 
 def _strip_ansi(data: bytes) -> bytes:
@@ -62,7 +66,7 @@ def load_test_suites() -> list[_TestSuiteConfig]:
     """Loads test commands from `.config/test.toml` in the current directory.
 
     The config file must define a `[[test_suite]]` array where each entry has:
-    - `name`: display name for the command
+    - `name`: display name for the command (must be alphanumeric with underscores)
     - `command`: shell command string to execute
     - `cwd` (optional): working directory relative to the project root
     """
@@ -74,18 +78,32 @@ def load_test_suites() -> list[_TestSuiteConfig]:
         sys.exit(1)
     with open(CONFIG_PATH, "rb") as f:
         config = tomllib.load(f)
-    return config.get("test_suite", [])
+    suites: list[_TestSuiteConfig] = config.get("test_suite", [])
+    for suite in suites:
+        name = suite["name"]
+        if not _VALID_SUITE_NAME.match(name):
+            print(
+                f"error: test suite name must be alphanumeric with underscores, got: {name!r}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    return suites
 
 
-def draw_box(text: str) -> str:
-    lines = text.splitlines()
-    width = max(len(line) for line in lines) + 2
-    res: list[str] = []
-    res.append("┏" + "━" * width + "┓")
-    for line in lines:
-        res.append(f"┃ {line.ljust(width - 2)} ┃")
-    res.append("┗" + "━" * width + "┛")
-    return "\n".join(res)
+def _make_log_dir() -> Path:
+    """Creates and returns a per-invocation log directory under /tmp/test_logs."""
+    root_name = project_root().name
+    timestamp = datetime.now().strftime("%Y-%m-%d.%H-%M-%S")
+    invocation_id = "".join(
+        random.choices(string.ascii_lowercase + string.digits, k=4)
+    )
+    log_dir = Path(f"/tmp/test_logs/{root_name}/{timestamp}.{invocation_id}")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
+def underlined_title(text: str) -> str:
+    return f"{text}\n{'-' * len(text)}"
 
 
 def run_command(
@@ -201,28 +219,18 @@ def main():
 
     suite_start_time = time.time()
 
-    log_file_path = None
-    if args.quiet or not args.sequential:
-        fd, log_file_path = tempfile.mkstemp(
-            prefix="test_suite_", suffix=".log"
-        )
-        os.close(fd)
-        logger().info(
-            f"Test command output will be directed to: {log_file_path}"
-        )
+    log_dir = _make_log_dir()
+    logger().info(f"Test logs: {log_dir}")
 
     if args.sequential:
         for test_suite in test_suites:
             name = test_suite["name"]
             command_str = test_suite["command"]
             cmd_args = shlex.split(command_str)
+            log_file_path = str(log_dir / f"{name}.log")
 
-            if log_file_path:
-                header = draw_box(f"{command_str}")
-                with open(log_file_path, "a") as f:
-                    if test_suite != test_suites[0]:
-                        f.write("\n\n")
-                    f.write(f"{header}\n")
+            with open(log_file_path, "w") as f:
+                f.write(underlined_title(command_str) + "\n\n")
 
             logger().info(f"Running {name}...")
             if logger().is_debug_enabled:
@@ -270,11 +278,7 @@ def main():
             cmd_args = shlex.split(command_str)
 
             logger().info(f"Running {name}...")
-            # Create a separate log file for each command to avoid interleaving
-            fd, cmd_log_path = tempfile.mkstemp(
-                prefix=f"test_{name.replace(' ', '_')}_", suffix=".log"
-            )
-            os.close(fd)
+            cmd_log_path = str(log_dir / f"{name}.log")
 
             # Run in background using a pipe (no PTY, suppresses progress bars).
             # Force colors via env vars since there's no TTY.
@@ -295,13 +299,16 @@ def main():
             assert proc.stdout is not None
             read_fd = proc.stdout.fileno()
 
+            log_file = open(cmd_log_path, "wb")
+            log_file.write(underlined_title(command_str).encode() + b"\n\n")
+
             processes.append(
                 {
                     "name": name,
                     "proc": proc,
                     "stdout": proc.stdout,
                     "start_time": start_time,
-                    "log_file": open(cmd_log_path, "wb"),
+                    "log_file": log_file,
                     "log_path": cmd_log_path,
                     "command_str": command_str,
                     "duration": None,
@@ -320,7 +327,7 @@ def main():
                 try:
                     chunk = os.read(fd, 4096)
                     if chunk:
-                        p["log_file"].write(chunk)
+                        p["log_file"].write(_strip_ansi(chunk))
                     else:
                         p["eof"] = True
                 except OSError:
@@ -350,8 +357,6 @@ def main():
                         with open(p["log_path"], "rb") as f_cmd:
                             output = f_cmd.read()
 
-                        header = draw_box(f"{p['command_str']}").encode()
-
                         indented_output = b""
                         if output and (
                             not args.quiet or (args.show_failures and code != 0)
@@ -371,12 +376,6 @@ def main():
                             print("\n")
                             sys.stdout.buffer.flush()
 
-                        # Append individual log to main log file (strip ANSI for clean text)
-                        if log_file_path:
-                            with open(log_file_path, "ab") as f_main:
-                                f_main.write(b"\n\n" + header + b"\n")
-                                f_main.write(_strip_ansi(output))
-
                         if code == 0:
                             logger().info(
                                 f"✓ {name} passed {GRAY}({duration:.2f}s){RESET}",
@@ -386,8 +385,6 @@ def main():
                             logger().error(
                                 f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}"
                             )
-
-                        os.remove(p["log_path"])
 
     # Summary
     total_duration = time.time() - suite_start_time
@@ -422,8 +419,7 @@ def main():
             color=BOLD + GREEN,
         )
 
-    if log_file_path:
-        logger().info(f"Output log: {log_file_path}", color=GRAY)
+    logger().info(f"Output logs: {log_dir}", color=GRAY)
 
     sys.exit(1 if any_failed else 0)
 
