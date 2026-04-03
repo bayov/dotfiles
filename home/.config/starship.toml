@@ -1,6 +1,6 @@
 "$schema" = "https://starship.rs/config-schema.json"
 
-format = "$cmd_duration$status$time$character"
+format = "$cmd_duration$status$time$shell$character"
 
 right_format = "$directory$custom"
 
@@ -13,7 +13,7 @@ disabled = true
 
 [time]
 disabled = false
-format = "[$time]($style) "
+format = "[$time]($style)"
 style = "#666666"
 
 [cmd_duration]
@@ -33,6 +33,11 @@ disabled = true
 
 [git_status]
 disabled = true
+
+[shell]
+bash_indicator = " [\\[bash\\]](#c65822)"
+fish_indicator = ""
+disabled = false
 
 [custom.jj]
 when = "jj-starship detect"
