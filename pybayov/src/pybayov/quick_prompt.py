@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, cast
 
 DOTFILES_DIR: Path = Path(
     os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
@@ -86,7 +86,7 @@ DEFAULT_MODEL_COUNT = 3
 TIMEOUT_DURATION = 60
 
 # Global state for verbosity
-VERBOSE: bool = False
+_verbose: bool = False
 
 
 # --- Helper Functions ---
@@ -94,7 +94,7 @@ VERBOSE: bool = False
 
 def debug(msg: str) -> None:
     """Prints a debug message to stderr if VERBOSE is enabled."""
-    if VERBOSE:
+    if _verbose:
         # Gray color using ANSI escape codes for subtle output
         print(f"\033[90m[debug] {msg}\033[0m", file=sys.stderr)
 
@@ -335,9 +335,9 @@ def print_stats() -> None:
 
     # Sort models by average duration in the rolling window (fastest first)
     # Models with no wins in the window are placed at the end
-    def get_window_avg(stats):
-        results = stats.get("last_run_results", [])
-        win_durations = [
+    def get_window_avg(stats: Dict[str, Any]) -> float:
+        results: List[Dict[str, Any]] = stats.get("last_run_results", [])
+        win_durations: List[float] = [
             r["duration"] for r in results if r.get("error") is None
         ]
         if not win_durations:
@@ -400,13 +400,13 @@ def print_stats() -> None:
     )
 
     # Collect all successful durations across all models for global percentile comparison (History graph)
-    all_durations = []
+    all_durations: List[float] = []
     # Also collect all non-zero averages for a separate Avg distribution
-    all_averages = []
+    all_averages: List[float] = []
 
-    for m, s in data.items():
-        results = s.get("last_run_results", [])
-        win_durations = [
+    for _, s in data.items():
+        results: List[Dict[str, Any]] = s.get("last_run_results", [])
+        win_durations: List[float] = [
             r["duration"] for r in results if r.get("error") is None
         ]
         if win_durations:
@@ -459,7 +459,7 @@ def print_stats() -> None:
             num_symbols = len(recent)
 
             # Extract timestamps for the window
-            def format_ts(raw):
+            def format_ts(raw: Any) -> str:
                 if not raw:
                     return " " * 19
                 try:
@@ -722,21 +722,21 @@ def get_model_weights() -> Dict[str, float]:
     Calculates weights for each model in MODEL_POOL based on historical average duration.
     Weight = 1 / (avg_duration^2). Models without stats get a default weight.
     """
-    stats_data = {}
+    stats_data: Dict[str, Any] = {}
     if AGGREGATED_STATS_FILE.exists():
         with open(AGGREGATED_STATS_FILE, "r") as f:
             try:
                 # Shared lock
                 fcntl.flock(f, fcntl.LOCK_SH)
-                stats_data = json.load(f)
+                stats_data = cast(Dict[str, Any], json.load(f))
             except (json.JSONDecodeError, IOError):
                 pass
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
 
-    weights = {}
+    weights: Dict[str, float] = {}
     # Use existing averages to determine a baseline for new models
-    known_averages = [
+    known_averages: List[float] = [
         s["avg"] for s in stats_data.values() if s.get("wins", 0) > 0
     ]
     # Default to 4.5s if no stats exist, otherwise use the average of averages
@@ -799,13 +799,13 @@ async def race_models(prompt: str) -> str:
         models = list(weights_dict.keys())
         weights = [weights_dict[m] for m in models]
 
-        if VERBOSE:
+        if _verbose:
             debug("Model weights for selection:")
             for m, w in weights_dict.items():
                 debug(f"  {m}: {w:.4f}")
 
         # Weighted sampling without replacement
-        selected_models = []
+        selected_models: List[str] = []
         target_count = min(len(_get_model_pool()), DEFAULT_MODEL_COUNT)
         temp_models = models[:]
         temp_weights = weights[:]
@@ -822,11 +822,11 @@ async def race_models(prompt: str) -> str:
     # 2. Start workers as detached processes
     # We use start_new_session=True so they outlive the parent script.
     # They communicate their result via stdout.
-    worker_procs = []
-    worker_tasks = []
+    worker_procs: List[asyncio.subprocess.Process] = []
+    worker_tasks: List[asyncio.Task[bytes]] = []
     for model in selected_models:
         cmd = [sys.executable, __file__, "--internal-worker", model]
-        if VERBOSE:
+        if _verbose:
             cmd.append("--verbose")
 
         proc = await asyncio.create_subprocess_exec(
@@ -836,6 +836,8 @@ async def race_models(prompt: str) -> str:
             stderr=asyncio.subprocess.DEVNULL,
             start_new_session=True,
         )
+        assert proc.stdin is not None
+        assert proc.stdout is not None
         # Send prompt immediately
         proc.stdin.write(prompt.encode())
         await proc.stdin.drain()
@@ -854,8 +856,8 @@ async def race_models(prompt: str) -> str:
             )
 
             for task in done:
-                res_text = task.result().decode().strip()
-                model = task.get_name()
+                res_text: str = task.result().decode().strip()
+                model: str = task.get_name()
 
                 if res_text:
                     # Winner!
@@ -874,14 +876,18 @@ async def race_models(prompt: str) -> str:
         # while the event loop is still running. Without this, transports are
         # closed by GC after the loop shuts down, causing "Event loop is closed"
         # errors from BaseSubprocessTransport.__del__.
-        remaining = [t for t in worker_tasks if not t.done()]
+        remaining: List[asyncio.Task[bytes]] = [
+            t for t in worker_tasks if not t.done()
+        ]
         for t in remaining:
             t.cancel()
         if remaining:
             await asyncio.gather(*remaining, return_exceptions=True)
         for proc in worker_procs:
             try:
-                proc._transport.close()
+                transport = getattr(proc, "_transport", None)
+                if transport is not None:
+                    transport.close()
             except Exception:
                 pass
         await asyncio.sleep(0)  # let close callbacks run before loop shuts down
@@ -952,8 +958,8 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    global VERBOSE
-    VERBOSE = args.verbose
+    global _verbose
+    _verbose = args.verbose
 
     if args.internal_worker:
         # Run as a worker. Prompt is provided via stdin.
