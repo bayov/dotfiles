@@ -241,9 +241,9 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
     subprocess.run(build_cmd, check=True)
 
 
-def get_mount_args():
-    args = []
-    seen_container_paths = set()
+def get_mount_args() -> list[str]:
+    args: list[str] = []
+    seen_container_paths: set[str | None] = set()
 
     # Standard Mounts
     for mount in MOUNTS:
@@ -267,8 +267,8 @@ def get_mount_args():
     return args
 
 
-def get_env_and_ssh_args(with_ssh=False):
-    args = []
+def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
+    args: list[str] = []
 
     # Pass configured environment variables
     for env_var in ENV_VARS_TO_FORWARD:

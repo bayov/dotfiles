@@ -24,20 +24,20 @@ ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mK]")
 SGR_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def strip_ansi(s):
+def strip_ansi(s: str) -> str:
     return ANSI_RE.sub("", s)
 
 
-def _sgr_clears_bg(seq):
+def _sgr_clears_bg(seq: str) -> bool:
     inner = seq[2:-1]  # strip ESC[ and trailing m
     if not inner:  # \x1b[m == \x1b[0m
         return True
     return any(p in ("0", "49") for p in inner.split(";"))
 
 
-def restore_bg(line, bg_code):
+def restore_bg(line: str, bg_code: str) -> str:
     """Re-inject bg_code after any SGR sequence that resets the background."""
-    out = []
+    out: list[str] = []
     pos = 0
     for m in SGR_RE.finditer(line):
         out.append(line[pos : m.end()])
@@ -48,7 +48,7 @@ def restore_bg(line, bg_code):
     return "".join(out)
 
 
-def parse_color(s):
+def parse_color(s: str) -> int | str:
     """Return int (palette index 0-255) or hex string '#rrggbb' unchanged."""
     s = s.strip()
     if s.startswith("#"):
@@ -56,34 +56,34 @@ def parse_color(s):
     return int(s)
 
 
-def hex_to_rgb(color):
+def hex_to_rgb(color: str) -> tuple[int, int, int]:
     h = color.lstrip("#")
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
-def lighten(color, amount=60):
+def lighten(color: int | str, amount: int = 60) -> int | str:
     if isinstance(color, int):
         return color  # can't lighten palette colors
     r, g, b = hex_to_rgb(color)
     return f"#{min(r + amount, 255):02x}{min(g + amount, 255):02x}{min(b + amount, 255):02x}"
 
 
-def fg(color):
+def fg(color: int | str) -> str:
     if isinstance(color, int):
         return f"\x1b[38;5;{color}m"
     r, g, b = hex_to_rgb(color)
     return f"\x1b[38;2;{r};{g};{b}m"
 
 
-def bg(color):
+def bg(color: int | str) -> str:
     if isinstance(color, int):
         return f"\x1b[48;5;{color}m"
     r, g, b = hex_to_rgb(color)
     return f"\x1b[48;2;{r};{g};{b}m"
 
 
-def word_wrap(line, max_width):
-    result = []
+def word_wrap(line: str, max_width: int) -> list[str]:
+    result: list[str] = []
     while len(strip_ansi(line)) > max_width:
         cut = line.rfind(" ", 0, max_width)
         if cut <= 0:
@@ -95,36 +95,37 @@ def word_wrap(line, max_width):
 
 
 def render_box(
-    lines,
-    width,
-    bg_color,
-    margin_top=0,
-    margin_right=0,
-    margin_bottom=0,
-    margin_left=0,
-    pad_top=DEFAULT_PAD_TOP,
-    pad_right=DEFAULT_PAD_RIGHT,
-    pad_bottom=DEFAULT_PAD_BOTTOM,
-    pad_left=DEFAULT_PAD_LEFT,
-    title=None,
-    title_color=DEFAULT_TITLE_COLOR,
-    title_bg=None,
-    title_padding=DEFAULT_TITLE_PADDING,
-):
+    lines: list[str],
+    width: int,
+    bg_color: int | str,
+    margin_top: int = 0,
+    margin_right: int = 0,
+    margin_bottom: int = 0,
+    margin_left: int = 0,
+    pad_top: int = DEFAULT_PAD_TOP,
+    pad_right: int = DEFAULT_PAD_RIGHT,
+    pad_bottom: int = DEFAULT_PAD_BOTTOM,
+    pad_left: int = DEFAULT_PAD_LEFT,
+    title: str | None = None,
+    title_color: int | str = DEFAULT_TITLE_COLOR,
+    title_bg: int | str | None = None,
+    title_padding: int = DEFAULT_TITLE_PADDING,
+) -> str:
     bg_code = bg(bg_color)
     inner_width = width - pad_left - pad_right
     blank = bg_code + " " * width + RESET
     mleft = " " * margin_left
     mright = " " * margin_right
-    out = []
+    out: list[str] = []
 
     if title:
         title_vis = len(strip_ansi(title)) + 2 * title_padding
         title_start = (width - title_vis) // 2
         title_end = title_start + title_vis
         left_fill = fg(bg_color) + "▄" * title_start
+        title_bg_safe = title_bg if title_bg is not None else bg_color
         title_cell = (
-            bg(title_bg)
+            bg(title_bg_safe)
             + fg(title_color)
             + ITALIC
             + " " * title_padding
@@ -297,7 +298,7 @@ def main():
     )
 
     inner_width = args.width - pl - pr
-    lines = []
+    lines: list[str] = []
     for raw_line in text.splitlines() or [""]:
         for wrapped in word_wrap(raw_line, inner_width):
             lines.append(wrapped)

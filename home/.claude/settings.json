@@ -14,5 +14,6 @@
         "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
         "excludedCommands": ["cargo:*", "sccache:*"]
     },
-    "skipDangerousModePermissionPrompt": true
+    "skipDangerousModePermissionPrompt": true,
+    "model": "haiku"
 }
