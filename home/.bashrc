@@ -1,6 +1,42 @@
 # ~/.bashrc: executed by bash(1) for non-login shells.
 
-# If not running interactively, don't do anything
+# ── Environment Variables ──────────────────────────────────────────────────────
+[ -z "$DOTFILES_DIR" ] && export DOTFILES_DIR="$HOME/dotfiles"
+export EDITOR=fresh
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export RUSTC_WRAPPER=sccache
+export SCCACHE_DIR="$HOME/.cache/sccache"
+export SCCACHE_CACHE_SIZE=25GB
+export SCCACHE_BASEDIRS="$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
+export PYTHONPATH="$DOTFILES_DIR/pybayov/src"
+
+# ── PATH ───────────────────────────────────────────────────────────────────────
+_prepend_path() { [[ ":$PATH:" != *":$1:"* ]] && export PATH="$1:$PATH"; }
+_prepend_path "$HOME/.local/bin"
+_prepend_path "$HOME/.fzf/bin"
+_prepend_path "/snap/bin"
+_prepend_path "$HOME/.cargo/bin"
+_prepend_path "$HOME/.local/share/pnpm"
+_prepend_path "$HOME/.opencode/bin"
+unset -f _prepend_path
+
+# ── Global Aliases ─────────────────────────────────────────────────────────────
+alias cat=batcat
+alias bat=batcat
+
+# pybayov script aliases
+alias bayov-format="uv run python -m pybayov.format"
+alias bayov-test="uv run python -m pybayov.test"
+alias echo-box="uv run python -m pybayov.echo_box"
+alias spinner="uv run python -m pybayov.spinner"
+alias quick-prompt="uv run python -m pybayov.quick_prompt"
+alias docker-sandbox="uv run python -m pybayov.docker_sandbox"
+alias generate-commit-description="uv run python -m pybayov.generate_commit_description"
+
+alias precommit=bayov-format
+alias prepush="bayov-test --quiet --show-failures"
+
+# ── Interactive-only ───────────────────────────────────────────────────────────
 case $- in
     *i*) ;;
       *) return;;
@@ -43,43 +79,6 @@ if ! shopt -oq posix; then
     fi
 fi
 
-# ── Environment Variables ──────────────────────────────────────────────────────
-[ -z "$DOTFILES_DIR" ] && export DOTFILES_DIR="$HOME/dotfiles"
-export EDITOR=fresh
-export PNPM_HOME="$HOME/.local/share/pnpm"
-export RUSTC_WRAPPER=sccache
-export SCCACHE_DIR="$HOME/.cache/sccache"
-export SCCACHE_CACHE_SIZE=25GB
-export SCCACHE_BASEDIRS="$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
-export PYTHONPATH="$DOTFILES_DIR/pybayov/src"
-
-# ── PATH ───────────────────────────────────────────────────────────────────────
-_prepend_path() { [[ ":$PATH:" != *":$1:"* ]] && export PATH="$1:$PATH"; }
-_prepend_path "$HOME/.local/bin"
-_prepend_path "$HOME/.fzf/bin"
-_prepend_path "/snap/bin"
-_prepend_path "$HOME/.cargo/bin"
-_prepend_path "$HOME/.local/share/pnpm"
-_prepend_path "$HOME/.opencode/bin"
-unset -f _prepend_path
-
-# ── Global Aliases ─────────────────────────────────────────────────────────────
-alias cat=batcat
-alias bat=batcat
-
-# pybayov script aliases
-alias bayov-format="uv run python -m pybayov.format"
-alias bayov-test="uv run python -m pybayov.test"
-alias echo-box="uv run python -m pybayov.echo_box"
-alias spinner="uv run python -m pybayov.spinner"
-alias quick-prompt="uv run python -m pybayov.quick_prompt"
-alias docker-sandbox="uv run python -m pybayov.docker_sandbox"
-alias generate-commit-description="uv run python -m pybayov.generate_commit_description"
-
-alias precommit=bayov-format
-alias prepush="bayov-test --quiet --show-failures"
-
-# ── Interactive-only ───────────────────────────────────────────────────────────
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'

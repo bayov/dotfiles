@@ -26,17 +26,20 @@ except ImportError:
     except ImportError:
         tomllib = None  # type: ignore[assignment]
 
-from util import (
+from pybayov.util import (
     BOLD,
+    CYAN,
     GRAY,
     GREEN,
     MAGENTA,
     RED,
     RESET,
     YELLOW,
-    PROJECT_ROOT,
+    project_root,
     require_project_root,
 )
+
+PROJECT_ROOT = project_root()
 
 
 CONFIG_DIR = "home"
@@ -670,10 +673,13 @@ class SpreadLinker(Linker):
         dir_config = _read_dir_config(link.src, ctx)
         dir_abs = link.src.resolve()
 
-        # Child-override entries: those with src != the directory itself.
+        # Child-override entries: no-dst entries with src != the directory itself.
+        # These modify how a specific child is handled within this spread invocation.
+        # Entries with an explicit dst are standalone extra links — they are emitted
+        # once by the parent when it processes this directory, not per spread invocation.
         overrides: dict[Path, list[Link]] = {}
         for e in dir_config.links:
-            if e.src != dir_abs:
+            if e.src != dir_abs and e.dst is None:
                 overrides.setdefault(e.src, []).append(e)
 
         children = [
@@ -689,7 +695,6 @@ class SpreadLinker(Linker):
         for child in children:
             child_abs = child.resolve()
             if child_abs in overrides:
-                consumed.add(child_abs)
                 entries = overrides[child_abs]
                 matching = [
                     e for e in entries if _link_matches_tags(e, ctx.active_tags)
@@ -701,38 +706,63 @@ class SpreadLinker(Linker):
                     if (matching or any(e.tags for e in entries))
                     else entries
                 )
-                for override in to_apply:
-                    effective_dst = override.dst or (link.dst / child.name)
-                    result.append(
-                        Link(
-                            src=child_abs,
-                            dst=effective_dst,
-                            linker=override.linker,
-                        )
-                    )
-            elif (
-                child.is_dir()
-                and not child.is_symlink()
-                and (child / LINK_TOML).exists()
-            ):
-                child_config = _read_dir_config(child, ctx)
-                # No-src entries (src == child_abs) are the primary config for this child.
-                primary_entries = [
-                    e for e in child_config.links if e.src == child_abs
-                ]
-                if primary_entries:
-                    to_apply = _filter_by_tags(primary_entries, ctx.active_tags)
-                    for p in to_apply:
-                        effective_dst = p.dst or (link.dst / child.name)
+                if to_apply:
+                    consumed.add(child_abs)
+                    for override in to_apply:
+                        effective_dst = override.dst or (link.dst / child.name)
                         result.append(
                             Link(
                                 src=child_abs,
                                 dst=effective_dst,
-                                linker=p.linker,
+                                linker=override.linker,
+                            )
+                        )
+            if child_abs not in consumed:
+                if (
+                    child.is_dir()
+                    and not child.is_symlink()
+                    and (child / LINK_TOML).exists()
+                ):
+                    child_config = _read_dir_config(child, ctx)
+                    # No-src entries (src == child_abs) are the primary config for this child.
+                    primary_entries = [
+                        e for e in child_config.links if e.src == child_abs
+                    ]
+                    if primary_entries:
+                        to_apply = _filter_by_tags(
+                            primary_entries, ctx.active_tags
+                        )
+                        for p in to_apply:
+                            effective_dst = p.dst or (link.dst / child.name)
+                            result.append(
+                                Link(
+                                    src=child_abs,
+                                    dst=effective_dst,
+                                    linker=p.linker,
+                                )
+                            )
+                        # Emit standalone extras (has-dst entries) from the child's
+                        # config exactly once here, not inside each spread invocation.
+                        for e in child_config.links:
+                            if e.src != child_abs and e.dst is not None:
+                                if _link_matches_tags(e, ctx.active_tags):
+                                    result.append(
+                                        Link(
+                                            src=e.src,
+                                            dst=e.dst,
+                                            linker=e.linker,
+                                        )
+                                    )
+                    else:
+                        # No primary defined → default symlink.
+                        result.append(
+                            Link(
+                                src=child_abs,
+                                dst=link.dst / child.name,
+                                linker=LinkerType.SYMLINK,
                             )
                         )
                 else:
-                    # No primary defined → default symlink.
                     result.append(
                         Link(
                             src=child_abs,
@@ -740,24 +770,19 @@ class SpreadLinker(Linker):
                             linker=LinkerType.SYMLINK,
                         )
                     )
-            else:
-                result.append(
-                    Link(
-                        src=child_abs,
-                        dst=link.dst / child.name,
-                        linker=LinkerType.SYMLINK,
-                    )
-                )
 
-        # Process extra [[link]] entries whose src was not a direct child
+        # Process extra [[link]] entries (no-dst) whose src was not a direct child.
         for src_path, entries in overrides.items():
             if src_path in consumed:
                 continue
             to_apply = _filter_by_tags(entries, ctx.active_tags)
             for extra in to_apply:
-                effective_dst = extra.dst or (link.dst / src_path.name)
                 result.append(
-                    Link(src=src_path, dst=effective_dst, linker=extra.linker)
+                    Link(
+                        src=src_path,
+                        dst=link.dst / src_path.name,
+                        linker=extra.linker,
+                    )
                 )
 
         return result
@@ -1093,7 +1118,10 @@ def main() -> None:
 
     logger = Logger(verbose=args.verbose)
     if active_tags:
-        logger.notice(f"active tags: {', '.join(sorted(active_tags))}")
+        tags_str = f"{RESET}, ".join(
+            f"{MAGENTA}{t}" for t in sorted(active_tags)
+        )
+        print(f"{CYAN}active tags: {tags_str}{RESET}", file=sys.stderr)
     state = LinksState(PROJECT_ROOT / LINKS_STATE)
     state.load()
     ctx = Context(

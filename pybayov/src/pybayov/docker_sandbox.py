@@ -129,6 +129,7 @@ MOUNTS = [
     Mount("~/.config/fish/.gitignore", ro=not IS_IN_DOTFILES),
     Mount("~/.config/fish/config.fish", ro=not IS_IN_DOTFILES),
     # Other config files
+    Mount("~/.bashrc", ro=not IS_IN_DOTFILES),
     Mount("~/.gitconfig", ro=not IS_IN_DOTFILES),
     Mount("~/.config/delta", ro=not IS_IN_DOTFILES),
     Mount("~/.config/eza", ro=not IS_IN_DOTFILES),
