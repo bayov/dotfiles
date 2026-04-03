@@ -1,5 +1,5 @@
 {
-    "include": ["bin", "pybayov/src"],
+    "include": ["pybayov"],
     "typeCheckingMode": "strict",
     "reportUnknownVariableType": "error",
     "reportUnknownMemberType": "error",

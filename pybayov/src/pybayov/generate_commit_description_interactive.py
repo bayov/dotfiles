@@ -19,21 +19,19 @@ from pybayov import generate_commit_description as _gcd
 from pybayov import spinner as _spinner
 
 
-def run(cmd, **kwargs):
-    return subprocess.run(cmd, **kwargs)
-
-
 def main() -> None:
-    r = run(["fish", "-c", "precommit"])
-    if r.returncode != 0:
-        sys.exit(r.returncode)
+    precommit_result: subprocess.CompletedProcess[bytes] = subprocess.run(
+        ["fish", "-c", "precommit"]
+    )
+    if precommit_result.returncode != 0:
+        sys.exit(precommit_result.returncode)
 
-    r = run(
+    log_result = subprocess.run(
         ["jj", "log", "-r", "@", "-n", "1", "--no-graph", "-T", "description"],
         capture_output=True,
         text=True,
     )
-    current_desc = r.stdout.strip()
+    current_desc: str = log_result.stdout.strip()
 
     if current_desc:
         inner_width = (
@@ -62,7 +60,7 @@ def main() -> None:
                 title_bg=_eb.lighten(_eb.DEFAULT_BG),
             )
         )
-        r = run(
+        confirm_result: subprocess.CompletedProcess[bytes] = subprocess.run(
             [
                 "gum",
                 "confirm",
@@ -72,8 +70,8 @@ def main() -> None:
                 "--padding=0 1",
             ]
         )
-        if r.returncode != 0:
-            sys.exit(r.returncode)
+        if confirm_result.returncode != 0:
+            sys.exit(confirm_result.returncode)
 
     def _generate():
         data = _gcd.generate()
@@ -94,7 +92,7 @@ def main() -> None:
         sys.stderr.write("Empty commit description\n")
         sys.exit(1)
 
-    run(["jj", "describe", "-m", description, "--quiet"])
+    subprocess.run(["jj", "describe", "-m", description, "--quiet"])
 
 
 if __name__ == "__main__":
