@@ -53,9 +53,6 @@ function p --description "Updates bookmark `main` to track `@-` and pushes to re
     if test -f "$root/.bayov-personal-project"
         prepush || return $status
         printf "\n"
-        printf "\n"
-        printf "\n"
-        printf "\n"
 
         # Check if `main` bookmark is already at parent (`@-`)
         if not test -z (jj log -r "main & @-" -T 1 --no-graph)
