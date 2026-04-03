@@ -64,10 +64,7 @@
     { "command": "explorer.newFile", "key": "alt+insert", "when": "explorerViewletFocus" },
     { "command": "explorer.newFolder", "key": "shift+alt+insert", "when": "explorerViewletFocus" },
 
-    { "command": "-workbench.action.moveEditorToFirstGroup", "key": "shift+alt+1" },
-    { "command": "workbench.files.action.showActiveFileInExplorer", "key": "shift+alt+1" },
-
-    { "command": "-copyFilePath", "key": "shift+alt+c" },
+{ "command": "-copyFilePath", "key": "shift+alt+c" },
     { "command": "-copyFilePath", "key": "ctrl+shift+c", "when": "!editorFocus && !terminalFocus" },
     { "command": "copyFilePath", "key": "ctrl+k ctrl+shift+c", "when": "!editorFocus && !terminalFocus" },
 
@@ -748,6 +745,13 @@
         }
     },
 
+    // Explorer view (alt+1)
+    { "command": "-workbench.action.openEditorAtIndex1", "key": "alt+1" },
+    { "command": "workbench.files.action.showActiveFileInExplorer", "key": "alt+1", "when": "editorTextFocus" },
+    { "command": "workbench.view.explorer", "key": "alt+1", "when": "!editorTextFocus && (!sideBarVisible || activeViewlet != 'workbench.view.explorer')" },
+    { "command": "workbench.action.focusSideBar", "key": "alt+1", "when": "!editorTextFocus && sideBarVisible && activeViewlet == 'workbench.view.explorer' && !sideBarFocus" },
+    { "command": "workbench.action.toggleSidebarVisibility", "key": "alt+1", "when": "!editorTextFocus && sideBarVisible && activeViewlet == 'workbench.view.explorer' && sideBarFocus" },
+
     // Source Control view (alt+2)
     { "command": "-workbench.action.openEditorAtIndex2", "key": "alt+2" },
     { "command": "-workbench.action.toggleSidebarVisibility", "key": "alt+numpad9", "when": "activeViewlet == 'workbench.view.scm'" },
@@ -787,8 +791,7 @@
 
     { "command": "workbench.files.action.collapseExplorerFolders", "key": "ctrl+shift+numpad_subtract", "when": "filesExplorerFocus" },
 
-    // Free alt+1,4,6,7,8,9 from "open editor at index N" defaults
-    { "command": "-workbench.action.openEditorAtIndex1", "key": "alt+1" },
+    // Free alt+4,6,7,8,9 from "open editor at index N" defaults
     { "command": "-workbench.action.openEditorAtIndex4", "key": "alt+4" },
     { "command": "-workbench.action.openEditorAtIndex6", "key": "alt+6" },
     { "command": "-workbench.action.openEditorAtIndex7", "key": "alt+7" },
