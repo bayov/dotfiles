@@ -86,7 +86,7 @@ TEXT_COLORS = [
 ]
 COLOR_CYCLE_SPEED = 0.3  # cycles per second through TEXT_COLORS
 WHITE_RGB = (255, 255, 255)
-TAIL_LEN = 5
+TAIL_LEN = 7
 RESET = "\033[0m"
 CLEAR_LINE = "\r\033[K"
 
