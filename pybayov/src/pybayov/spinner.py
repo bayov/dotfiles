@@ -380,7 +380,7 @@ def main() -> None:
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE if capture_stdout else sys.stdout,
-        stderr=subprocess.DEVNULL if show_spinner else sys.stderr,
+        stderr=subprocess.PIPE if show_spinner else sys.stderr,
         stdin=sys.stdin,
     )
 
@@ -393,6 +393,15 @@ def main() -> None:
     if show_spinner:
         reader: threading.Thread | None = None
         captured: list[bytes] = []
+        captured_err: list[bytes] = []
+
+        assert proc.stderr is not None
+
+        def read_stderr() -> None:
+            captured_err.append(proc.stderr.read())  # type: ignore[union-attr]
+
+        err_reader = threading.Thread(target=read_stderr, daemon=True)
+        err_reader.start()
 
         if capture_stdout:
             assert proc.stdout is not None
@@ -437,6 +446,57 @@ def main() -> None:
         proc.wait()
         stop.set()
         t.join()
+        err_reader.join()
+
+        if proc.returncode != 0:
+            if reader is not None:
+                reader.join()
+            if args.box:
+                RED = "#cc4444"
+                GREY = "#888888"
+                cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
+                error_msg = (
+                    fg_esc(RED)
+                    + f"command exited with {proc.returncode} exit code"
+                    + RESET
+                )
+                mt, mb = _resolve_margins(_box_args)
+                total_box_lines = (
+                    mt
+                    + _box_args.box_pad_top
+                    + _box_args.box_pad_bottom
+                    + mb
+                    + 3
+                )
+                sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+                sys.stderr.write(
+                    _eb.render_box(
+                        [cmd_line, error_msg],
+                        _box_args.box_width,
+                        _box_args.box_bg,
+                        margin_top=mt,
+                        margin_right=_box_args.box_margin,
+                        margin_bottom=mb,
+                        margin_left=_box_args.box_margin,
+                        pad_top=_box_args.box_pad_top,
+                        pad_right=_box_args.box_pad_right,
+                        pad_bottom=_box_args.box_pad_bottom,
+                        pad_left=_box_args.box_pad_left,
+                        title=_box_args.box_title,
+                        title_bg=lighten(_box_args.box_bg),
+                    )
+                    + "\n"
+                )
+                sys.stderr.flush()
+            else:
+                if captured and captured[0]:
+                    sys.stdout.buffer.write(captured[0])
+                    sys.stdout.flush()
+            if captured_err and captured_err[0]:
+                sys.stderr.buffer.write(captured_err[0])
+                sys.stderr.flush()
+            signal.signal(signal.SIGINT, original_sigint)
+            sys.exit(proc.returncode)
 
         if args.box and capture_stdout:
             assert reader is not None
