@@ -541,6 +541,11 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
     no_formatter: list[Path] = []
     for f in files:
         resolved: Path
+        if not f.exists():
+            logger().debug(
+                f"File {repr(f)} does not exist (deleted?), skipping."
+            )
+            continue
         try:
             resolved = f.resolve(strict=True)
         except OSError:

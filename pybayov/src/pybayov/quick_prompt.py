@@ -18,10 +18,10 @@ DOTFILES_DIR: Path = Path(
 )
 
 # --- Configuration & Constants ---
-STATS_DIR: Path = Path.home() / ".local/share/quick_prompt"
+STATS_DIR: Path = Path.home() / ".local/share/quick-prompt"
 DAILY_STATS_DIR: Path = STATS_DIR / "daily"
 AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
-MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/quick_prompt_models.json"
+MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/quick-prompt-models.json"
 
 
 def get_model_config() -> List[Dict[str, Any]]:
@@ -59,11 +59,19 @@ def load_model_pool() -> List[str]:
     return pool
 
 
-MODEL_POOL: List[str] = load_model_pool()
-
 # Rolling window of results for invoking models. Used to determine which models
 # to select for best latency.
 STATS_ROLLING_WINDOW_SIZE = 100
+
+_model_pool_cache: Optional[List[str]] = None
+
+
+def _get_model_pool() -> List[str]:
+    global _model_pool_cache
+    if _model_pool_cache is None:
+        _model_pool_cache = load_model_pool()
+    return _model_pool_cache
+
 
 # How many samples of recent history to display in the stats table.
 STATS_HISTORY_COUNT = 30
@@ -739,7 +747,7 @@ def get_model_weights() -> Dict[str, float]:
     # Cap the default duration to keep it competitive but not dominant
     default_duration = max(3.0, min(7.0, default_duration))
 
-    for model in MODEL_POOL:
+    for model in _get_model_pool():
         stats = stats_data.get(model, {})
         avg = (
             stats.get("avg", default_duration)
@@ -776,10 +784,11 @@ def get_model_weights() -> Dict[str, float]:
     return weights
 
 
-async def race_models(prompt: str) -> None:
+async def race_models(prompt: str) -> str:
     """
     Races multiple models in parallel using detached internal worker processes.
     The first one to return a successful response wins.
+    Returns the winning response text, or raises RuntimeError if all models fail.
     """
     # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick N weighted random ones.
     override = os.getenv("QUICK_PROMPT_MODEL")
@@ -797,7 +806,7 @@ async def race_models(prompt: str) -> None:
 
         # Weighted sampling without replacement
         selected_models = []
-        target_count = min(len(MODEL_POOL), DEFAULT_MODEL_COUNT)
+        target_count = min(len(_get_model_pool()), DEFAULT_MODEL_COUNT)
         temp_models = models[:]
         temp_weights = weights[:]
 
@@ -813,6 +822,7 @@ async def race_models(prompt: str) -> None:
     # 2. Start workers as detached processes
     # We use start_new_session=True so they outlive the parent script.
     # They communicate their result via stdout.
+    worker_procs = []
     worker_tasks = []
     for model in selected_models:
         cmd = [sys.executable, __file__, "--internal-worker", model]
@@ -832,12 +842,14 @@ async def race_models(prompt: str) -> None:
         proc.stdin.close()
 
         # Capture output from worker
+        worker_procs.append(proc)
         worker_tasks.append(asyncio.create_task(proc.stdout.read(), name=model))
 
     # 3. Wait for the first worker to produce output
+    winner = None
     try:
         while worker_tasks:
-            done, pending = await asyncio.wait(
+            done, _ = await asyncio.wait(
                 worker_tasks, return_when=asyncio.FIRST_COMPLETED
             )
 
@@ -847,39 +859,48 @@ async def race_models(prompt: str) -> None:
 
                 if res_text:
                     # Winner!
-                    print(res_text)
                     debug(f"Model {model} won the race.")
-                    # Flush and exit. Detached workers will finish on their own.
-                    sys.stdout.flush()
-                    sys.stderr.flush()
-                    os._exit(0)
+                    winner = res_text
+                    break
                 else:
                     # This worker failed or returned empty.
                     debug(f"Model {model} failed or returned no text.")
                     worker_tasks.remove(task)
 
-        # If we get here, all workers failed
-        print(
-            "Error: All models failed to produce a response.", file=sys.stderr
-        )
-        os._exit(1)
+            if winner:
+                break
+    finally:
+        # Cancel remaining read tasks and close subprocess transports explicitly
+        # while the event loop is still running. Without this, transports are
+        # closed by GC after the loop shuts down, causing "Event loop is closed"
+        # errors from BaseSubprocessTransport.__del__.
+        remaining = [t for t in worker_tasks if not t.done()]
+        for t in remaining:
+            t.cancel()
+        if remaining:
+            await asyncio.gather(*remaining, return_exceptions=True)
+        for proc in worker_procs:
+            try:
+                proc._transport.close()
+            except Exception:
+                pass
+        await asyncio.sleep(0)  # let close callbacks run before loop shuts down
 
-    except Exception as e:
-        debug(f"Race implementation failed: {e}")
-        print(f"Race failed: {e}", file=sys.stderr)
-        os._exit(1)
+    if winner is None:
+        raise RuntimeError("All models failed to produce a response.")
+    return winner
 
 
 async def verify_models() -> None:
     """
     Utility to check the health and latency of all models in the pool.
     """
-    print(f"Verifying {len(MODEL_POOL)} models...")
-    tasks = [run_model(m, "hi") for m in MODEL_POOL]
+    print(f"Verifying {len(_get_model_pool())} models...")
+    tasks = [run_model(m, "hi") for m in _get_model_pool()]
     results = await asyncio.gather(*tasks)
 
     all_ok = True
-    for model, res in zip(MODEL_POOL, results):
+    for model, res in zip(_get_model_pool(), results):
         if res.get("success"):
             print(f"\033[92m[OK]\033[0m {model} ({res['duration']}s)")
         else:
@@ -894,6 +915,11 @@ async def verify_models() -> None:
 
 
 # --- Entry Point ---
+
+
+def run(prompt: str) -> str:
+    """Run the model race and return the winning response text. Raises RuntimeError on failure."""
+    return asyncio.run(race_models(prompt))
 
 
 def main() -> None:
@@ -956,7 +982,16 @@ def main() -> None:
         sys.exit(1)
 
     debug("Script initialized, starting race...")
-    asyncio.run(race_models(user_prompt))
+    try:
+        result = asyncio.run(race_models(user_prompt))
+    except Exception as e:
+        debug(f"Race failed: {e}")
+        print(f"Race failed: {e}", file=sys.stderr)
+        os._exit(1)
+    print(result)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

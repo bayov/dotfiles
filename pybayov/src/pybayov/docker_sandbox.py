@@ -126,8 +126,8 @@ MOUNTS = [
     Mount("~/.config/delta", ro=not IS_IN_DOTFILES),
     Mount("~/.config/eza", ro=not IS_IN_DOTFILES),
     Mount("~/.config/fresh", ro=not IS_IN_DOTFILES),
-    # `quick_prompt` stats
-    Mount("~/.local/share/quick_prompt", ro=False),
+    # `quick-prompt` stats
+    Mount("~/.local/share/quick-prompt", ro=False),
     # Cargo cache (registry and git dependencies)
     Mount("~/.cargo/registry", ro=False),
     Mount("~/.cargo/git", ro=False),

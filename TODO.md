@@ -1,3 +1,5 @@
 - Support different dev/link.py environment configurations
 - handle home/.claude/statusline.py
 - handle VScode config in different envs
+- wezterm support numpad keys (alt+numpad)
+- fix wezterm imgcat

@@ -5,13 +5,13 @@ Usage: spinner --title <title> -- <command> [args...]
 """
 
 import argparse
-import importlib.machinery
-import importlib.util
 import os
 import signal
 import subprocess
 import sys
 import threading
+
+from pybayov import echo_box as _eb
 
 FRAMES = ["∙∙∙", "●∙∙", "∙●∙", "∙∙●"]
 FPS = 20
@@ -21,12 +21,6 @@ WHITE_RGB = (255, 255, 255)
 TAIL_LEN = 5
 RESET = "\033[0m"
 CLEAR_LINE = "\r\033[K"
-
-_eb_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "echo_box")
-_eb_loader = importlib.machinery.SourceFileLoader("echo_box", _eb_path)
-_spec = importlib.util.spec_from_loader("echo_box", _eb_loader)
-_eb = importlib.util.module_from_spec(_spec)
-_eb_loader.exec_module(_eb)
 
 DEFAULT_BOX_BG = _eb.DEFAULT_BG
 DEFAULT_BOX_WIDTH = _eb.DEFAULT_WIDTH
@@ -227,6 +221,115 @@ def print_box(args):
     for _ in range(mb):
         sys.stderr.write("\n")
     sys.stderr.flush()
+
+
+def run_with_spinner(
+    fn,
+    *,
+    title="",
+    box=False,
+    box_title=None,
+    box_bg=DEFAULT_BOX_BG,
+    box_width=DEFAULT_BOX_WIDTH,
+    box_margin=DEFAULT_BOX_MARGIN,
+    box_margin_top=None,
+    box_margin_bottom=None,
+    box_pad_left=DEFAULT_BOX_PAD_LEFT,
+    box_pad_right=DEFAULT_BOX_PAD_RIGHT,
+    box_pad_top=DEFAULT_BOX_PAD_TOP,
+    box_pad_bottom=DEFAULT_BOX_PAD_BOTTOM,
+):
+    """Run fn() with a spinner on stderr. In box mode, fn's string return value is shown in the box."""
+    show_spinner = sys.stderr.isatty()
+    result = [None]
+    exc = [None]
+
+    def target():
+        try:
+            result[0] = fn()
+        except BaseException as e:
+            exc[0] = e
+
+    thread = threading.Thread(target=target)
+
+    mt = box_margin_top if box_margin_top is not None else box_margin
+    mb = box_margin_bottom if box_margin_bottom is not None else box_margin
+
+    if show_spinner:
+        box_params = None
+        if box:
+
+            class _Args:
+                pass
+
+            _a = _Args()
+            _a.box_title = box_title
+            _a.box_bg = box_bg
+            _a.box_width = box_width
+            _a.box_margin = box_margin
+            _a.box_margin_top = box_margin_top
+            _a.box_margin_bottom = box_margin_bottom
+            _a.box_pad_left = box_pad_left
+            _a.box_pad_right = box_pad_right
+            _a.box_pad_top = box_pad_top
+            _a.box_pad_bottom = box_pad_bottom
+            print_box(_a)
+            box_params = (
+                box_bg,
+                box_width,
+                box_pad_left,
+                box_pad_right,
+                box_margin,
+                box_pad_bottom,
+                mb,
+            )
+
+        stop = threading.Event()
+        spin_t = threading.Thread(
+            target=spin, args=(title, stop, box_params), daemon=True
+        )
+        spin_t.start()
+        thread.start()
+        thread.join()
+        stop.set()
+        spin_t.join()
+
+        if box and result[0] is not None:
+            result_text = str(result[0]).rstrip("\n")
+            inner_width = box_width - box_pad_left - box_pad_right
+            lines = [
+                w
+                for raw in (result_text.splitlines() or [""])
+                for w in _eb.word_wrap(raw, inner_width)
+            ]
+            total_box_lines = mt + box_pad_top + box_pad_bottom + mb + 3
+            sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+            sys.stderr.write(
+                _eb.render_box(
+                    lines,
+                    box_width,
+                    box_bg,
+                    margin_top=mt,
+                    margin_right=box_margin,
+                    margin_bottom=mb,
+                    margin_left=box_margin,
+                    pad_top=box_pad_top,
+                    pad_right=box_pad_right,
+                    pad_bottom=box_pad_bottom,
+                    pad_left=box_pad_left,
+                    title=box_title,
+                    title_bg=lighten(box_bg),
+                )
+                + "\n"
+            )
+            sys.stderr.flush()
+    else:
+        thread.start()
+        thread.join()
+
+    if exc[0] is not None:
+        raise exc[0]
+    return result[0]
 
 
 def main():

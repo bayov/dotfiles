@@ -13,7 +13,7 @@ function s
     end
 end
 
-alias gm=generate_commit_description_interactive
+alias gm=generate-commit-description-interactive
 
 function cm --description "Generates AI description for the current commit and starts a new change"
     gm || return

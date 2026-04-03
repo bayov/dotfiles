@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print text in a styled box with optional title.
 
-Usage: echo_box [TEXT] [OPTIONS]
+Usage: echo-box [TEXT] [OPTIONS]
 """
 
 import argparse
@@ -174,7 +174,7 @@ def render_box(
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="echo_box",
+        prog="echo-box",
         description="Print text in a styled box with optional title.",
         epilog="Content is read from --content or stdin.",
     )
