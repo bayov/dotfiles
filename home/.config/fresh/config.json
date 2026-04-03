@@ -191,6 +191,18 @@
             "modifiers": ["ctrl"],
             "action": "noop",
             "when": "prompt"
+        },
+        {
+            "key": "q",
+            "modifiers": ["alt"],
+            "action": "quit",
+            "when": "global"
+        },
+        {
+            "key": "q",
+            "modifiers": ["ctrl"],
+            "action": "noop",
+            "when": "global"
         }
     ]
 }

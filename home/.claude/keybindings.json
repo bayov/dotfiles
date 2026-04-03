@@ -5,6 +5,7 @@
         {
             "context": "Global",
             "bindings": {
+                "alt+q": "app:quit",
                 "alt+j": "app:toggleTodos",
                 "alt+v": "app:toggleTranscript",
                 "ctrl+o": null,
