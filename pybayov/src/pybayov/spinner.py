@@ -4,12 +4,17 @@
 Usage: spinner --title <title> -- <command> [args...]
 """
 
+from __future__ import annotations
+
 import argparse
-import os
+import dataclasses
 import signal
 import subprocess
 import sys
 import threading
+import types
+from collections.abc import Callable
+from typing import Any
 
 from pybayov import echo_box as _eb
 
@@ -36,15 +41,17 @@ lighten = _eb.lighten
 ITALIC = _eb.ITALIC
 
 
-def rgb(r, g, b):
+def rgb(r: int, g: int, b: int) -> str:
     return f"\033[38;2;{r};{g};{b}m"
 
 
-def lerp_rgb(c1, c2, t):
+def lerp_rgb(
+    c1: tuple[int, int, int], c2: tuple[int, int, int], t: float
+) -> tuple[int, ...]:
     return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
 
-def parse_args(argv):
+def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     # Split on '--' to separate spinner args from command
     try:
         sep = argv.index("--")
@@ -98,8 +105,8 @@ def parse_args(argv):
     return args, cmd
 
 
-def colorize_text(text, lead):
-    parts = []
+def colorize_text(text: str, lead: int | None) -> str:
+    parts: list[str] = []
     for j, ch in enumerate(text):
         dist = lead - j if lead is not None else TAIL_LEN + 1
         if 0 <= dist <= TAIL_LEN:
@@ -110,11 +117,27 @@ def colorize_text(text, lead):
     return "".join(parts)
 
 
-def spin(title, stop_event, box=None):
+_BoxParams = tuple[int | str, int, int, int, int, int, int]
+
+
+def spin(
+    title: str,
+    stop_event: threading.Event,
+    box: _BoxParams | None = None,
+) -> None:
     """Animate spinner. box=(bg, width, pad_left, pad_right, margin, pad_bottom, margin_bottom) or None."""
     interval = 1.0 / FPS
     frame_acc = 0.0
     slide_acc = 0.0
+
+    up = ""
+    down = ""
+    blank = ""
+    inner_width = 0
+    ml = ""
+    bg_c = ""
+    pad_left = 0
+    pad_right = 0
 
     if box:
         (
@@ -166,7 +189,7 @@ def spin(title, stop_event, box=None):
     sys.stderr.flush()
 
 
-def _resolve_margins(args):
+def _resolve_margins(args: _Args) -> tuple[int, int]:
     mt = (
         args.box_margin_top
         if args.box_margin_top is not None
@@ -180,7 +203,7 @@ def _resolve_margins(args):
     return mt, mb
 
 
-def print_box(args):
+def print_box(args: _Args) -> None:
     box_bg = args.box_bg
     width = args.box_width
     margin = args.box_margin
@@ -223,28 +246,42 @@ def print_box(args):
     sys.stderr.flush()
 
 
+@dataclasses.dataclass
+class _Args:
+    box_title: str | None
+    box_bg: int | str
+    box_width: int
+    box_margin: int
+    box_margin_top: int | None
+    box_margin_bottom: int | None
+    box_pad_left: int
+    box_pad_right: int
+    box_pad_top: int
+    box_pad_bottom: int
+
+
 def run_with_spinner(
-    fn,
+    fn: Callable[[], Any],
     *,
-    title="",
-    box=False,
-    box_title=None,
-    box_bg=DEFAULT_BOX_BG,
-    box_width=DEFAULT_BOX_WIDTH,
-    box_margin=DEFAULT_BOX_MARGIN,
-    box_margin_top=None,
-    box_margin_bottom=None,
-    box_pad_left=DEFAULT_BOX_PAD_LEFT,
-    box_pad_right=DEFAULT_BOX_PAD_RIGHT,
-    box_pad_top=DEFAULT_BOX_PAD_TOP,
-    box_pad_bottom=DEFAULT_BOX_PAD_BOTTOM,
-):
+    title: str = "",
+    box: bool = False,
+    box_title: str | None = None,
+    box_bg: int | str = DEFAULT_BOX_BG,
+    box_width: int = DEFAULT_BOX_WIDTH,
+    box_margin: int = DEFAULT_BOX_MARGIN,
+    box_margin_top: int | None = None,
+    box_margin_bottom: int | None = None,
+    box_pad_left: int = DEFAULT_BOX_PAD_LEFT,
+    box_pad_right: int = DEFAULT_BOX_PAD_RIGHT,
+    box_pad_top: int = DEFAULT_BOX_PAD_TOP,
+    box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM,
+) -> Any:
     """Run fn() with a spinner on stderr. In box mode, fn's string return value is shown in the box."""
     show_spinner = sys.stderr.isatty()
-    result = [None]
-    exc = [None]
+    result: list[Any] = [None]
+    exc: list[BaseException | None] = [None]
 
-    def target():
+    def target() -> None:
         try:
             result[0] = fn()
         except BaseException as e:
@@ -256,23 +293,20 @@ def run_with_spinner(
     mb = box_margin_bottom if box_margin_bottom is not None else box_margin
 
     if show_spinner:
-        box_params = None
+        box_params: _BoxParams | None = None
         if box:
-
-            class _Args:
-                pass
-
-            _a = _Args()
-            _a.box_title = box_title
-            _a.box_bg = box_bg
-            _a.box_width = box_width
-            _a.box_margin = box_margin
-            _a.box_margin_top = box_margin_top
-            _a.box_margin_bottom = box_margin_bottom
-            _a.box_pad_left = box_pad_left
-            _a.box_pad_right = box_pad_right
-            _a.box_pad_top = box_pad_top
-            _a.box_pad_bottom = box_pad_bottom
+            _a = _Args(
+                box_title=box_title,
+                box_bg=box_bg,
+                box_width=box_width,
+                box_margin=box_margin,
+                box_margin_top=box_margin_top,
+                box_margin_bottom=box_margin_bottom,
+                box_pad_left=box_pad_left,
+                box_pad_right=box_pad_right,
+                box_pad_top=box_pad_top,
+                box_pad_bottom=box_pad_bottom,
+            )
             print_box(_a)
             box_params = (
                 box_bg,
@@ -332,7 +366,7 @@ def run_with_spinner(
     return result[0]
 
 
-def main():
+def main() -> None:
     args, cmd = parse_args(sys.argv[1:])
     if not cmd:
         sys.stderr.write(
@@ -350,33 +384,48 @@ def main():
         stdin=sys.stdin,
     )
 
-    def forward_sigint(sig, frame):
+    def forward_sigint(sig: int, frame: types.FrameType | None) -> None:
         proc.send_signal(signal.SIGINT)
 
     original_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, forward_sigint)
 
     if show_spinner:
-        if capture_stdout:
-            captured = []
+        reader: threading.Thread | None = None
+        captured: list[bytes] = []
 
-            def read_stdout():
-                captured.append(proc.stdout.read())
+        if capture_stdout:
+            assert proc.stdout is not None
+
+            def read_stdout() -> None:
+                captured.append(proc.stdout.read())  # type: ignore[union-attr]
 
             reader = threading.Thread(target=read_stdout, daemon=True)
             reader.start()
 
-        box = None
+        _box_args = _Args(
+            box_title=args.box_title,
+            box_bg=args.box_bg,
+            box_width=args.box_width,
+            box_margin=args.box_margin,
+            box_margin_top=args.box_margin_top,
+            box_margin_bottom=args.box_margin_bottom,
+            box_pad_left=args.box_pad_left,
+            box_pad_right=args.box_pad_right,
+            box_pad_top=args.box_pad_top,
+            box_pad_bottom=args.box_pad_bottom,
+        )
+        box: _BoxParams | None = None
         if args.box:
-            print_box(args)
-            _, mb = _resolve_margins(args)
+            print_box(_box_args)
+            _, mb = _resolve_margins(_box_args)
             box = (
-                args.box_bg,
-                args.box_width,
-                args.box_pad_left,
-                args.box_pad_right,
-                args.box_margin,
-                args.box_pad_bottom,
+                _box_args.box_bg,
+                _box_args.box_width,
+                _box_args.box_pad_left,
+                _box_args.box_pad_right,
+                _box_args.box_margin,
+                _box_args.box_pad_bottom,
                 mb,
             )
 
@@ -390,6 +439,7 @@ def main():
         t.join()
 
         if args.box and capture_stdout:
+            assert reader is not None
             reader.join()
             result_text = (
                 (captured[0] if captured else b"")
@@ -397,38 +447,41 @@ def main():
                 .rstrip("\n")
             )
             inner_width = (
-                args.box_width - args.box_pad_left - args.box_pad_right
+                _box_args.box_width
+                - _box_args.box_pad_left
+                - _box_args.box_pad_right
             )
-            lines = []
+            lines: list[str] = []
             for raw in result_text.splitlines() or [""]:
                 for wrapped in _eb.word_wrap(raw, inner_width):
                     lines.append(wrapped)
             # move to top of box (including margins), clear, redraw with results
-            mt, mb = _resolve_margins(args)
+            mt, mb = _resolve_margins(_box_args)
             total_box_lines = (
-                mt + args.box_pad_top + args.box_pad_bottom + mb + 3
+                mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
             )
             sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
             sys.stderr.write(
                 _eb.render_box(
                     lines,
-                    args.box_width,
-                    args.box_bg,
+                    _box_args.box_width,
+                    _box_args.box_bg,
                     margin_top=mt,
-                    margin_right=args.box_margin,
+                    margin_right=_box_args.box_margin,
                     margin_bottom=mb,
-                    margin_left=args.box_margin,
-                    pad_top=args.box_pad_top,
-                    pad_right=args.box_pad_right,
-                    pad_bottom=args.box_pad_bottom,
-                    pad_left=args.box_pad_left,
-                    title=args.box_title,
-                    title_bg=lighten(args.box_bg),
+                    margin_left=_box_args.box_margin,
+                    pad_top=_box_args.box_pad_top,
+                    pad_right=_box_args.box_pad_right,
+                    pad_bottom=_box_args.box_pad_bottom,
+                    pad_left=_box_args.box_pad_left,
+                    title=_box_args.box_title,
+                    title_bg=lighten(_box_args.box_bg),
                 )
                 + "\n"
             )
             sys.stderr.flush()
         elif capture_stdout:
+            assert reader is not None
             reader.join()
             if captured and captured[0]:
                 sys.stdout.buffer.write(captured[0])

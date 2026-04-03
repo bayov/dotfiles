@@ -3,3 +3,4 @@
 - handle VScode config in different envs
 - wezterm support numpad keys (alt+numpad)
 - fix wezterm imgcat
+- support interrupts in spinner
