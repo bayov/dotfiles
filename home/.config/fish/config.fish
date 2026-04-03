@@ -13,6 +13,8 @@ alias cat=batcat
 alias bat=batcat
 alias bayov-format="uv run python -m pybayov.format"
 alias bayov-test="uv run python -m pybayov.test"
+alias precommit=bayov-format
+alias prepush="bayov-test --quiet --show-failures"
 
 # $PATH
 fish_add_path $DOTFILES_DIR/bin
