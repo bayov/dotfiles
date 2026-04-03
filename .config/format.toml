@@ -1,12 +1,12 @@
 [ignore]
 exts = [".lock", ".lnk", ".ahk", ".kdl", ".Dockerfile", ".gitconfig"]
-shebangs = []
-filenames = [
-    ".gitignore",
-    ".python-version",
-    ".gitconfig",
-    ".bayov-personal-project",
-    "py.typed",
+globs = [
+    "**/.gitignore",
+    "**/.python-version",
+    "**/.gitconfig",
+    "**/.bayov-personal-project",
+    "**/py.typed",
+    "**/Code/User/keybindings.json",
 ]
 
 [[formatter]]
