@@ -5,3 +5,16 @@ command = "uv run pyright"
 [[test_suite]]
 name = "python_lint"
 command = "uv run ruff check pybayov"
+
+[[test_suite]]
+name = "cargo_tests"
+# TODO: remove --no-tests=pass once we have at least one test
+command = "cargo nextest run --workspace --all-targets --all-features --no-tests=pass"
+
+[[test_suite]]
+name = "clippy"
+command = "cargo clippy --workspace --all-targets -- -D warnings"
+
+[[test_suite]]
+name = "clippy_all_features"
+command = "cargo clippy --workspace --all-features --all-targets -- -D warnings"

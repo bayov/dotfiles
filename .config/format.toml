@@ -45,6 +45,12 @@ cmd = ["dprint", "fmt"]
 max_files_per_format = 1000
 
 [[formatter]]
+name = "rustfmt"
+exts = [".rs"]
+cmd = ["rustfmt"]
+max_files_per_format = 20
+
+[[formatter]]
 name = "dprint-python-shebang"
 exts = []
 shebangs = ["python3", "python"]
