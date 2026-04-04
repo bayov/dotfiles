@@ -301,9 +301,6 @@ awf/
       resolve.rs       # Find .awf/ dir, resolve state_dir, implicit flow-id
 ```
 
-**Dependencies:** `clap` (derive), `serde` + `serde_json`, `toml`, `chrono`,
-`anyhow`, `rand`
-
 Implementation Order
 --------------------
 

@@ -1,0 +1,22 @@
+edition = "2024"
+
+# Line-width
+max_width = 80
+error_on_line_overflow = true
+use_small_heuristics = "Max"
+
+# Line-breaks
+wrap_comments = true
+fn_single_line = true
+overflow_delimited_expr = true
+inline_attribute_width = 80
+
+# imports & modules
+group_imports = "StdExternalCrate"
+imports_granularity = "Item"
+imports_layout = "HorizontalVertical"
+reorder_imports = true
+reorder_modules = true
+
+# misc
+use_field_init_shorthand = true
