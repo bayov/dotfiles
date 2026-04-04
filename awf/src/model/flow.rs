@@ -123,6 +123,15 @@ pub struct FlowState {
     /// `"implement"`).
     pub current_stage: String,
 
+    /// The UTC instant at which the flow entered its current stage.
+    ///
+    /// Recorded when the flow is created (for the initial stage) and updated
+    /// each time [`advance_stage`] moves the flow forward. Used to populate
+    /// [`StageHistoryEntry::entered_at`] when the stage is later exited.
+    ///
+    /// [`advance_stage`]: crate::engine::state::advance_stage
+    pub stage_entered_at: DateTime<Utc>,
+
     /// The UTC instant at which this flow was first created.
     pub created_at: DateTime<Utc>,
 

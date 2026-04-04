@@ -32,6 +32,7 @@ fn full_flow_state_round_trip() {
         workflow: "feature".to_owned(),
         workflow_version: 1,
         current_stage: "implement".to_owned(),
+        stage_entered_at: ts("2026-04-04T12:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T14:32:00Z"),
         archived: false,
@@ -106,6 +107,7 @@ fn parse_canonical_toml_format() {
         workflow = "feature"
         workflow_version = 1
         current_stage = "implement"
+        stage_entered_at = "2026-04-04T12:00:00Z"
         created_at = "2026-04-04T10:00:00Z"
         updated_at = "2026-04-04T14:32:00Z"
         archived = false
@@ -208,6 +210,7 @@ fn step_status_serializes_as_lowercase() {
         workflow: "w".to_owned(),
         workflow_version: 1,
         current_stage: "s".to_owned(),
+        stage_entered_at: ts("2026-04-04T10:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
@@ -264,6 +267,7 @@ fn stage_history_entry_without_exited_at_omits_field() {
         workflow: "w".to_owned(),
         workflow_version: 1,
         current_stage: "implement".to_owned(),
+        stage_entered_at: ts("2026-04-04T12:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T12:00:00Z"),
         archived: false,

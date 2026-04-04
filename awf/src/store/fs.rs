@@ -201,6 +201,7 @@ pub fn create_flow(
         workflow: workflow.to_string(),
         workflow_version: 1,
         current_stage: first_stage.to_string(),
+        stage_entered_at: now,
         created_at: now,
         updated_at: now,
         archived: false,

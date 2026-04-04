@@ -22,6 +22,7 @@ id = "add-oauth"
 workflow = "feature"
 workflow_version = 1
 current_stage = "design"
+stage_entered_at = "2026-04-04T10:00:00Z"
 created_at = "2026-04-04T10:00:00Z"
 updated_at = "2026-04-04T10:00:00Z"
 archived = false
@@ -250,6 +251,9 @@ fn save_flow_round_trips_through_load_flow() {
         workflow: "feature".to_string(),
         workflow_version: 1,
         current_stage: "design".to_string(),
+        stage_entered_at: DateTime::parse_from_rfc3339("2026-04-04T10:00:00Z")
+            .unwrap()
+            .to_utc(),
         created_at: DateTime::parse_from_rfc3339("2026-04-04T10:00:00Z")
             .unwrap()
             .to_utc(),
