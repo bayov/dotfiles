@@ -2,6 +2,7 @@ use assert_fs::TempDir;
 use assert_fs::prelude::*;
 
 use super::find_awf_root;
+use super::resolve_flow_id;
 use super::resolve_state_dir;
 use crate::result::Error;
 
@@ -104,4 +105,63 @@ fn resolve_state_dir_falls_back_to_project_local_awf() {
 
     // Then: The project-local `.awf/` directory is returned
     assert_eq!(result.unwrap(), root.path().join(".awf"));
+}
+
+#[test]
+fn resolve_flow_id_uses_flag_when_provided() {
+    // Given: A flow ID supplied via the --flow flag, and an env var that would
+    // also supply a value (to confirm the flag takes priority)
+    // SAFETY: single-threaded test; no other thread reads this env var.
+    unsafe {
+        std::env::set_var("AWF_ACTIVE_FLOW", "env-flow");
+    }
+
+    // When: resolve_flow_id is called with a flag value
+    let result = resolve_flow_id(Some("add-oauth"));
+
+    // SAFETY: single-threaded test; no other thread reads this env var.
+    unsafe {
+        std::env::remove_var("AWF_ACTIVE_FLOW");
+    }
+
+    // Then: The flag value is returned, ignoring the env var
+    assert_eq!(result.unwrap(), "add-oauth");
+}
+
+#[test]
+fn resolve_flow_id_uses_env_var_when_flag_absent() {
+    // Given: No flag value, but AWF_ACTIVE_FLOW is set in the environment
+    // SAFETY: single-threaded test; no other thread reads this env var.
+    unsafe {
+        std::env::set_var("AWF_ACTIVE_FLOW", "env-flow");
+    }
+
+    // When: resolve_flow_id is called with no flag
+    let result = resolve_flow_id(None);
+
+    // SAFETY: single-threaded test; no other thread reads this env var.
+    unsafe {
+        std::env::remove_var("AWF_ACTIVE_FLOW");
+    }
+
+    // Then: The env var value is returned
+    assert_eq!(result.unwrap(), "env-flow");
+}
+
+#[test]
+fn resolve_flow_id_returns_error_when_no_source_available() {
+    // Given: No flag value and AWF_ACTIVE_FLOW is not set
+    // SAFETY: single-threaded test; no other thread reads this env var.
+    unsafe {
+        std::env::remove_var("AWF_ACTIVE_FLOW");
+    }
+
+    // When: resolve_flow_id is called with no flag
+    let result = resolve_flow_id(None);
+
+    // Then: FlowIdRequired error is returned
+    assert!(
+        matches!(result, Err(Error::FlowIdRequired)),
+        "expected FlowIdRequired, got {result:?}",
+    );
 }

@@ -118,6 +118,39 @@ pub fn resolve_state_dir(awf_root: &Path) -> Result<PathBuf> {
     Ok(awf_root.join(".awf"))
 }
 
+/// Resolves the active flow ID from the given sources, in priority order.
+///
+/// The resolution order is:
+///
+/// 1. **`flag` argument** — if `Some(id)` is passed, that value is returned
+///    immediately (e.g. the value of the `--flow` CLI flag).
+/// 2. **`AWF_ACTIVE_FLOW` environment variable** — if set and non-empty, its
+///    value is returned.
+/// 3. **Error** — if neither source provides a value, [`Error::FlowIdRequired`]
+///    is returned.
+///
+/// # Errors
+///
+/// Returns [`Error::FlowIdRequired`] when no flow ID can be determined from
+/// the flag or the environment.
+#[instrument]
+pub fn resolve_flow_id(flag: Option<&str>) -> Result<String> {
+    // Priority 1: explicit flag value (e.g. --flow <id>).
+    if let Some(id) = flag {
+        return Ok(id.to_string());
+    }
+
+    // Priority 2: active flow set in the environment.
+    if let Ok(id) = std::env::var("AWF_ACTIVE_FLOW")
+        && !id.is_empty()
+    {
+        return Ok(id);
+    }
+
+    // Priority 3: no source provided a flow ID.
+    Err(Error::FlowIdRequired)
+}
+
 #[cfg(test)]
 #[path = "resolve.tests.rs"]
 mod tests;
