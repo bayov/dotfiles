@@ -1,6 +1,3 @@
-// TODO: Remove once implementation is complete.
-#![allow(dead_code)]
-
 mod cli;
 mod engine;
 mod model;

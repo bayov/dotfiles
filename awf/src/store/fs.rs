@@ -416,6 +416,7 @@ pub fn put_artifact(
 /// Checks whether `<state_dir>/flows/active/<flow_id>/artifacts/<name>` is
 /// present on the filesystem. This function is infallible: any I/O error (e.g.
 /// the flow directory does not exist) is treated as the artifact being absent.
+#[allow(dead_code)]
 pub fn artifact_exists(state_dir: &Path, flow_id: &str, name: &str) -> bool {
     state_dir
         .join("flows/active")
@@ -434,6 +435,7 @@ pub fn artifact_exists(state_dir: &Path, flow_id: &str, name: &str) -> bool {
 ///
 /// - Returns [`Error::Io`] if the file does not exist, cannot be read, or
 ///   contains bytes that are not valid UTF-8.
+#[allow(dead_code)]
 #[instrument(fields(flow_id = flow_id, name = name))]
 pub fn read_artifact(
     state_dir: &Path,
