@@ -2,6 +2,7 @@ TODO
 ----
 
 - handle home/.claude/statusline.py
+- Remove unnecessary ruff lint rules
 
 Infeasible
 ----------
