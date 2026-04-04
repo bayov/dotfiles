@@ -4,4 +4,10 @@ version = "0.1.0"
 requires-python = ">=3.11"
 
 [dependency-groups]
-dev = ["pyright"]
+dev = ["pyright", "ruff"]
+
+[tool.ruff]
+line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]

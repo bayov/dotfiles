@@ -1,3 +1,7 @@
 [[test_suite]]
 name = "python_type_check"
 command = "uv run pyright"
+
+[[test_suite]]
+name = "python_lint"
+command = "uv run ruff check pybayov"
