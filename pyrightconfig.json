@@ -1,10 +1,6 @@
 {
     "include": ["pybayov"],
+    "pythonVersion": "3.11",
     "typeCheckingMode": "strict",
-    "reportUnknownVariableType": "error",
-    "reportUnknownMemberType": "error",
-    "reportUnknownArgumentType": "error",
-    "reportUnknownParameterType": "error",
-    "reportUnknownLambdaType": "error",
-    "reportMissingTypeArgument": "error"
+    "reportImplicitOverride": "error"
 }

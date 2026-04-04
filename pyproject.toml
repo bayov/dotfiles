@@ -10,4 +10,10 @@ dev = ["pyright", "ruff"]
 line-length = 80
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "RUF"]
+select = ["ALL"]
+ignore = [
+    "COM812", # conflicts with ruff formatter
+    "ISC001", # conflicts with ruff formatter
+    "D203", # conflicts with D211
+    "D213", # conflicts with D212
+]
