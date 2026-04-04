@@ -128,6 +128,43 @@ pub fn create_workflow_template(awf_root: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Saves a flow state to the active flows directory atomically.
+///
+/// The state is serialized to TOML and written to a temporary file
+/// (`state.toml.tmp`) in the same directory as the target, then renamed to
+/// `state.toml`. The write-then-rename pattern ensures that any reader of
+/// `state.toml` always sees a complete, consistent snapshot — a crash or
+/// power loss mid-write leaves the previous `state.toml` intact.
+///
+/// The target path is `<state_dir>/flows/active/<state.id>/state.toml`. The
+/// directory is created automatically if it does not yet exist.
+///
+/// # Errors
+///
+/// - Returns [`Error::TomlSer`] if the state cannot be serialized to TOML.
+/// - Returns [`Error::Io`] for any I/O failure (directory creation, write, or
+///   rename).
+#[instrument(fields(flow_id = %state.id))]
+pub fn save_flow(state_dir: &Path, state: &FlowState) -> Result<()> {
+    let flow_dir = state_dir.join("flows/active").join(&state.id);
+    let target_path = flow_dir.join("state.toml");
+    let tmp_path = flow_dir.join("state.toml.tmp");
+
+    // Create the directory tree if it does not already exist.
+    std::fs::create_dir_all(&flow_dir).map_err(Error::Io)?;
+
+    // Serialize the state to a TOML string before touching the filesystem so
+    // that a serialization failure never leaves a partial file on disk.
+    let contents = toml::to_string(state)?;
+
+    // Write to the temp file, then atomically rename to the final path so
+    // readers always see a complete snapshot.
+    std::fs::write(&tmp_path, contents).map_err(Error::Io)?;
+    std::fs::rename(&tmp_path, &target_path).map_err(Error::Io)?;
+
+    Ok(())
+}
+
 /// Loads a flow state from the active flows directory.
 ///
 /// The file is expected at

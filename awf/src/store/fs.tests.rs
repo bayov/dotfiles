@@ -1,10 +1,13 @@
 use assert_fs::TempDir;
 use assert_fs::prelude::*;
+use chrono::DateTime;
 
 use super::create_workflow_template;
 use super::list_workflows;
 use super::load_flow;
 use super::load_workflow;
+use super::save_flow;
+use crate::model::flow::FlowState;
 use crate::result::Error;
 
 const ADD_OAUTH_STATE_TOML: &str = r#"
@@ -229,6 +232,34 @@ fn returns_flow_not_found_for_missing_flow() {
         matches!(result, Err(Error::FlowNotFound { ref id }) if id == "nonexistent"),
         "expected FlowNotFound {{ id: \"nonexistent\" }}, got {result:?}",
     );
+}
+
+#[test]
+fn save_flow_round_trips_through_load_flow() {
+    // Given: A temp state directory and a minimal FlowState in memory
+    let state_dir = TempDir::new().unwrap();
+    let original = FlowState {
+        id: "test-flow".to_string(),
+        workflow: "feature".to_string(),
+        workflow_version: 1,
+        current_stage: "design".to_string(),
+        created_at: DateTime::parse_from_rfc3339("2026-04-04T10:00:00Z")
+            .unwrap()
+            .to_utc(),
+        updated_at: DateTime::parse_from_rfc3339("2026-04-04T10:00:00Z")
+            .unwrap()
+            .to_utc(),
+        archived: false,
+        stage_history: vec![],
+        step_log: vec![],
+    };
+
+    // When: We save the flow state and then load it back
+    save_flow(state_dir.path(), &original).unwrap();
+    let loaded = load_flow(state_dir.path(), "test-flow").unwrap();
+
+    // Then: The loaded state is identical to the original
+    assert_eq!(loaded, original);
 }
 
 #[test]
