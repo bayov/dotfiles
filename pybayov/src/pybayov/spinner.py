@@ -192,7 +192,7 @@ def colorize_text(
 def spin(
     title: str,
     stop_event: threading.Event,
-    box: _Args | None = None,
+    box: BoxArgs | None = None,
 ) -> None:
     """Animate spinner. Pass box args to render spinner inside a box."""
     interval = 1.0 / FPS
@@ -277,7 +277,7 @@ def spin(
     sys.stderr.flush()
 
 
-def _make_box_config(args: _Args, mt: int, mb: int) -> _eb.BoxConfig:
+def _make_box_config(args: BoxArgs, mt: int, mb: int) -> _eb.BoxConfig:
     return _eb.BoxConfig(
         bg_color=args.box_bg,
         width=args.box_width,
@@ -294,7 +294,7 @@ def _make_box_config(args: _Args, mt: int, mb: int) -> _eb.BoxConfig:
     )
 
 
-def _resolve_margins(args: _Args) -> tuple[int, int]:
+def _resolve_margins(args: BoxArgs) -> tuple[int, int]:
     mt = (
         args.box_margin_top
         if args.box_margin_top is not None
@@ -308,7 +308,7 @@ def _resolve_margins(args: _Args) -> tuple[int, int]:
     return mt, mb
 
 
-def print_box(args: _Args) -> None:
+def print_box(args: BoxArgs) -> None:
     """Print the static box frame (borders and blank lines) to stderr."""
     box_bg = args.box_bg
     width = args.box_width
@@ -359,39 +359,46 @@ class _ThreadResult:
 
 
 @dataclasses.dataclass
-class _Args:
-    box_title: str | None
-    box_bg: int | str
-    box_width: int
-    box_margin: int
-    box_margin_top: int | None
-    box_margin_bottom: int | None
-    box_pad_left: int
-    box_pad_right: int
-    box_pad_top: int
-    box_pad_bottom: int
+class BoxArgs:
+    """Configuration for the spinner box display."""
+
+    box_title: str | None = None
+    box_bg: int | str = DEFAULT_BOX_BG
+    box_width: int = DEFAULT_BOX_WIDTH
+    box_margin: int = DEFAULT_BOX_MARGIN
+    box_margin_top: int | None = None
+    box_margin_bottom: int | None = None
+    box_pad_left: int = DEFAULT_BOX_PAD_LEFT
+    box_pad_right: int = DEFAULT_BOX_PAD_RIGHT
+    box_pad_top: int = DEFAULT_BOX_PAD_TOP
+    box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM
+
+
+@dataclasses.dataclass
+class _ProcContext:
+    proc: subprocess.Popen[bytes]
+    cmd: list[str]
+    interrupted: bool
+
+
+@dataclasses.dataclass
+class _CaptureState:
+    reader: threading.Thread | None
+    captured: list[bytes]
+    captured_err: list[bytes]
 
 
 def run_with_spinner(
     fn: Callable[[], _T],
     *,
     title: str = "",
-    box: bool = False,
-    box_title: str | None = None,
-    box_bg: int | str = DEFAULT_BOX_BG,
-    box_width: int = DEFAULT_BOX_WIDTH,
-    box_margin: int = DEFAULT_BOX_MARGIN,
-    box_margin_top: int | None = None,
-    box_margin_bottom: int | None = None,
-    box_pad_left: int = DEFAULT_BOX_PAD_LEFT,
-    box_pad_right: int = DEFAULT_BOX_PAD_RIGHT,
-    box_pad_top: int = DEFAULT_BOX_PAD_TOP,
-    box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM,
+    box_args: BoxArgs | None = None,
 ) -> _T:
     """
     Run fn() with a spinner on stderr.
 
     In box mode, fn's string return value is shown in the box.
+    Pass box_args=BoxArgs(...) to enable box mode.
     """
     show_spinner = sys.stderr.isatty()
     r = _ThreadResult()
@@ -404,26 +411,17 @@ def run_with_spinner(
 
     thread = threading.Thread(target=target)
 
-    _a = _Args(
-        box_title=box_title,
-        box_bg=box_bg,
-        box_width=box_width,
-        box_margin=box_margin,
-        box_margin_top=box_margin_top,
-        box_margin_bottom=box_margin_bottom,
-        box_pad_left=box_pad_left,
-        box_pad_right=box_pad_right,
-        box_pad_top=box_pad_top,
-        box_pad_bottom=box_pad_bottom,
-    )
+    _a = box_args or BoxArgs()
 
     if show_spinner:
-        if box:
+        if box_args is not None:
             print_box(_a)
 
         stop = threading.Event()
         spin_t = threading.Thread(
-            target=spin, args=(title, stop, _a if box else None), daemon=True
+            target=spin,
+            args=(title, stop, _a if box_args is not None else None),
+            daemon=True,
         )
         spin_t.start()
         thread.start()
@@ -431,7 +429,7 @@ def run_with_spinner(
         stop.set()
         spin_t.join()
 
-        if box and r.value is not None:
+        if box_args is not None and r.value is not None:
             mt, mb = _resolve_margins(_a)
             result_text = str(r.value).rstrip("\n")
             inner_width = _a.box_width - _a.box_pad_left - _a.box_pad_right
@@ -456,28 +454,24 @@ def run_with_spinner(
 
 
 def _handle_spinner_failure(
-    proc: subprocess.Popen[bytes],
-    cmd: list[str],
-    interrupted: bool,
+    ctx: _ProcContext,
     use_box: bool,
-    reader: threading.Thread | None,
-    captured: list[bytes],
-    captured_err: list[bytes],
-    box_args: _Args,
+    capture: _CaptureState,
+    box_args: BoxArgs,
 ) -> None:
     """Redraw box (or flush captured output) after a non-zero exit."""
-    if reader is not None:
-        reader.join()
+    if capture.reader is not None:
+        capture.reader.join()
     if use_box:
-        if interrupted:
+        if ctx.interrupted:
             box_lines = [fg_esc(11) + "interrupted" + RESET]
         else:
             RED = "#cc4444"
             GREY = "#888888"
-            cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
+            cmd_line = fg_esc(GREY) + " ".join(ctx.cmd) + RESET
             error_msg = (
                 fg_esc(RED)
-                + f"command exited with {proc.returncode} exit code"
+                + f"command exited with {ctx.proc.returncode} exit code"
                 + RESET
             )
             box_lines = [cmd_line, error_msg]
@@ -490,11 +484,11 @@ def _handle_spinner_failure(
             _eb.render_box(box_lines, _make_box_config(box_args, mt, mb)) + "\n"
         )
         sys.stderr.flush()
-    elif captured and captured[0]:
-        sys.stdout.buffer.write(captured[0])
+    elif capture.captured and capture.captured[0]:
+        sys.stdout.buffer.write(capture.captured[0])
         sys.stdout.flush()
-    if captured_err and captured_err[0]:
-        sys.stderr.buffer.write(captured_err[0])
+    if capture.captured_err and capture.captured_err[0]:
+        sys.stderr.buffer.write(capture.captured_err[0])
         sys.stderr.flush()
 
 
@@ -503,7 +497,7 @@ def _handle_spinner_success(
     capture_stdout: bool,
     reader: threading.Thread | None,
     captured: list[bytes],
-    box_args: _Args,
+    box_args: BoxArgs,
 ) -> None:
     """Redraw box with command output (or flush captured stdout) on success."""
     if use_box and capture_stdout:
@@ -591,7 +585,7 @@ def main() -> None:
             reader = threading.Thread(target=read_stdout, daemon=True)
             reader.start()
 
-        _box_args = _Args(
+        _box_args = BoxArgs(
             box_title=args.box_title,
             box_bg=args.box_bg,
             box_width=args.box_width,
@@ -620,13 +614,11 @@ def main() -> None:
 
         if proc.returncode != 0:
             _handle_spinner_failure(
-                proc,
-                cmd,
-                interrupted,
+                _ProcContext(proc=proc, cmd=cmd, interrupted=interrupted),
                 args.box,
-                reader,
-                captured,
-                captured_err,
+                _CaptureState(
+                    reader=reader, captured=captured, captured_err=captured_err
+                ),
                 _box_args,
             )
             signal.signal(signal.SIGINT, original_sigint)

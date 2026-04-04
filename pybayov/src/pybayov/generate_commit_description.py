@@ -159,8 +159,7 @@ def _interactive_main() -> None:
         description = _spinner.run_with_spinner(
             lambda: generate()["commit_description"],
             title="generating commit description...",
-            box=True,
-            box_title="Commit Description",
+            box_args=_spinner.BoxArgs(box_title="Commit Description"),
         )
     except GenerateError as e:
         sys.stderr.write(f"{e}\n")

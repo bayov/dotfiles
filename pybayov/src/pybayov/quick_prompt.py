@@ -232,7 +232,6 @@ def update_aggregated_stats(
 def log_stats(
     model: str,
     duration: float,
-    success: bool,
     start_timestamp: str,
     end_timestamp: str,
     error: str | None = None,
@@ -667,7 +666,6 @@ async def run_worker(model: str, prompt: str) -> None:
         log_stats(
             model,
             result["duration"],
-            result["success"],
             result["start_timestamp"],
             result["end_timestamp"],
             result.get("error"),

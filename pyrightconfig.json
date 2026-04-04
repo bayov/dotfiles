@@ -1,5 +1,6 @@
 {
     "include": ["pybayov"],
+    "extraPaths": ["pybayov/src"],
     "pythonVersion": "3.12",
     "typeCheckingMode": "strict",
     "reportImplicitOverride": "error"

@@ -34,7 +34,6 @@ ignore = [
     "FBT003",
 
     # Complexity thresholds — too strict
-    "PLR0913",
     "PLR0915",
 
     # Subprocess / security rules noisy for personal scripts
