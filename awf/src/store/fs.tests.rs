@@ -1,6 +1,7 @@
 use assert_fs::TempDir;
 use assert_fs::prelude::*;
 
+use super::list_workflows;
 use super::load_workflow;
 use crate::result::Error;
 
@@ -27,6 +28,48 @@ steps = [
     { name = "test", type = "command", command = "test" },
 ]
 "#;
+
+#[test]
+fn list_workflows_returns_empty_for_empty_dir() {
+    // Given: A temp `.awf/` directory with an empty `workflows/` subdirectory
+    let awf_root = TempDir::new().unwrap();
+    awf_root.child("workflows").create_dir_all().unwrap();
+
+    // When: We list all workflows
+    let result = list_workflows(awf_root.path());
+
+    // Then: An empty list is returned
+    assert_eq!(result.unwrap(), Vec::<String>::new());
+}
+
+#[test]
+fn list_workflows_returns_sorted_stems() {
+    // Given: A temp `.awf/` directory with three workflow files
+    let awf_root = TempDir::new().unwrap();
+    awf_root.child("workflows").create_dir_all().unwrap();
+    awf_root.child("workflows/feature.toml").write_str("").unwrap();
+    awf_root.child("workflows/hotfix.toml").write_str("").unwrap();
+    awf_root.child("workflows/deploy.toml").write_str("").unwrap();
+
+    // When: We list all workflows
+    let result = list_workflows(awf_root.path());
+
+    // Then: The names are returned sorted alphabetically, without the .toml
+    // suffix
+    assert_eq!(result.unwrap(), vec!["deploy", "feature", "hotfix"]);
+}
+
+#[test]
+fn list_workflows_returns_empty_when_dir_missing() {
+    // Given: A temp `.awf/` directory with no `workflows/` subdirectory
+    let awf_root = TempDir::new().unwrap();
+
+    // When: We list all workflows
+    let result = list_workflows(awf_root.path());
+
+    // Then: An empty list is returned rather than an error
+    assert_eq!(result.unwrap(), Vec::<String>::new());
+}
 
 #[test]
 fn loads_valid_workflow_from_fixture() {
