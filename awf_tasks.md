@@ -21,7 +21,7 @@ Conventions from `AGENTS.md`:
 Layer 1: Model
 --------------
 
-- [ ] **M1** Init Rust project — `cargo new --bin awf`; add deps: `clap`,
+- [x] **M1** Init Rust project — `cargo new --bin awf`; add deps: `clap`,
       `serde`, `toml`, `chrono`, `thiserror`, `tracing`; confirm `cargo build`
       clean
 - [ ] **M2** `result.rs` — `#[non_exhaustive] enum Error` with `thiserror`;
