@@ -24,7 +24,7 @@ Layer 1: Model
 - [x] **M1** Init Rust project — `cargo new --bin awf`; add deps: `clap`,
       `serde`, `toml`, `chrono`, `thiserror`, `tracing`; confirm `cargo build`
       clean
-- [ ] **M2** `result.rs` — `#[non_exhaustive] enum Error` with `thiserror`;
+- [x] **M2** `result.rs` — `#[non_exhaustive] enum Error` with `thiserror`;
       `pub type Result<T> = std::result::Result<T, Error>`; add variants as
       needed in later tasks
 - [ ] **M3** `model/id.rs` — `validate_id(s: &str) -> Result<()>` enforcing
@@ -235,3 +235,13 @@ directly.
       stable across runs
 - [ ] **T14** `awf flow archive` moves dirs; subsequent `awf flow status` errors
       with not-found; `awf flow list --all` shows archived entry
+
+---
+
+Cleanup
+-------
+
+- [ ] **X1** Remove `#![allow(dead_code)]` from `awf/src/main.rs` once all
+      implementation layers are complete and no dead-code warnings remain
+- [ ] **X2** Remove `--no-tests=pass` flag from the `cargo_tests` entry in
+      `.config/test.toml` once at least one test exists (first added in **M3**)
