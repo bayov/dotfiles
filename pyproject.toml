@@ -33,9 +33,6 @@ ignore = [
     "FBT002",
     "FBT003",
 
-    # Complexity thresholds — too strict
-    "PLR0915",
-
     # Subprocess / security rules noisy for personal scripts
     "S101", # assert
     "S311", # standard pseudo-random generators

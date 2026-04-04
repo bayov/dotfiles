@@ -189,6 +189,46 @@ def colorize_text(
     return "".join(parts)
 
 
+def _init_box_drawing(box: BoxArgs) -> tuple[str, str, int, str, str, str]:
+    """Compute box drawing state: (bg_c, ml, inner_width, blank, up, down)."""
+    _, margin_bottom = _resolve_margins(box)
+    bg_c = bg_esc(box.box_bg)
+    ml = " " * box.box_margin
+    inner_width = box.box_width - box.box_pad_left - box.box_pad_right
+    blank = ml + bg_c + " " * box.box_width + RESET
+    # spinner line is pad_bottom + 1 (border) + margin_bottom
+    # + 1 (cursor gap) lines above cursor
+    lines_below = box.box_pad_bottom + margin_bottom + 2
+    up = f"\033[{lines_below}A"
+    down = f"\033[{lines_below}B"
+    return bg_c, ml, inner_width, blank, up, down
+
+
+def _render_spin_frame(
+    frame_acc: float, slide_acc: float, color_acc: float, title: str
+) -> tuple[str, str]:
+    """Render one spinner frame. Returns (colored, text)."""
+    t = color_acc % len(TEXT_COLORS)
+    i = int(t)
+    base_color: tuple[int, int, int] = lerp_rgb(  # type: ignore[assignment]
+        TEXT_COLORS[i], TEXT_COLORS[(i + 1) % len(TEXT_COLORS)], t - i
+    )
+    frame = SPINNER_FRAMES[int(frame_acc) % len(SPINNER_FRAMES)]
+    frame_colored = rgb(*base_color) + frame
+    if title:
+        title_text = " " + title
+        cycle = len(title_text) + TAIL_LEN + FPS // 2
+        pos = int(slide_acc) % cycle
+        lead = pos if pos < len(title_text) + TAIL_LEN else None
+        colored = (
+            frame_colored + colorize_text(title_text, lead, base_color) + RESET
+        )
+    else:
+        colored = frame_colored + RESET
+    text = frame + (" " + title if title else "")
+    return colored, text
+
+
 def spin(
     title: str,
     stop_event: threading.Event,
@@ -210,45 +250,14 @@ def spin(
     pad_right = 0
 
     if box:
-        box_bg = box.box_bg
-        width = box.box_width
+        bg_c, ml, inner_width, blank, up, down = _init_box_drawing(box)
         pad_left = box.box_pad_left
         pad_right = box.box_pad_right
-        margin = box.box_margin
-        pad_bottom = box.box_pad_bottom
-        _, margin_bottom = _resolve_margins(box)
-        bg_c = bg_esc(box_bg)
-        ml = " " * margin
-        inner_width = width - pad_left - pad_right
-        blank = ml + bg_c + " " * width + RESET
-        # spinner line is pad_bottom + 1 (border) + margin_bottom
-        # + 1 (cursor gap) lines above cursor
-        lines_below = pad_bottom + margin_bottom + 2
-        up = f"\033[{lines_below}A"
-        down = f"\033[{lines_below}B"
 
     while True:
-        t = color_acc % len(TEXT_COLORS)
-        i = int(t)
-        base_color: tuple[int, int, int] = lerp_rgb(  # type: ignore[assignment]
-            TEXT_COLORS[i], TEXT_COLORS[(i + 1) % len(TEXT_COLORS)], t - i
+        colored, text = _render_spin_frame(
+            frame_acc, slide_acc, color_acc, title
         )
-        frame = SPINNER_FRAMES[int(frame_acc) % len(SPINNER_FRAMES)]
-        frame_colored = rgb(*base_color) + frame
-        if title:
-            title_text = " " + title
-            cycle = len(title_text) + TAIL_LEN + FPS // 2
-            pos = int(slide_acc) % cycle
-            lead = pos if pos < len(title_text) + TAIL_LEN else None
-            colored = (
-                frame_colored
-                + colorize_text(title_text, lead, base_color)
-                + RESET
-            )
-        else:
-            cycle = TAIL_LEN + FPS // 2
-            colored = frame_colored + RESET
-        text = frame + (" " + title if title else "")
 
         if box:
             vis = len(text)

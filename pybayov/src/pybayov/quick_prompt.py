@@ -367,6 +367,25 @@ def _avg_color(avg: float, all_averages: list[float]) -> str:
     return f"\033[38;2;{r};{g};{b}m"
 
 
+def _ensure_all_models_in_data(
+    data: dict[str, Any], model_config: list[dict[str, Any]]
+) -> None:
+    """Ensure each configured model has an entry in data."""
+    for m_info in model_config:
+        model_name = m_info["model"]
+        if model_name not in data:
+            data[model_name] = {
+                "runs": 0,
+                "wins": 0,
+                "fails": 0,
+                "last_run_results": [],
+                "avg": 0,
+                "min": None,
+                "max": 0,
+                "histogram": {},
+            }
+
+
 def print_stats() -> None:
     """Print aggregated statistics for all models in a pretty table."""
     if not AGGREGATED_STATS_FILE.exists():
@@ -395,19 +414,7 @@ def print_stats() -> None:
     }
 
     # Ensure all configured models are in data, even if they haven't run yet
-    for m_info in model_config:
-        model_name = m_info["model"]
-        if model_name not in data:
-            data[model_name] = {
-                "runs": 0,
-                "wins": 0,
-                "fails": 0,
-                "last_run_results": [],
-                "avg": 0,
-                "min": None,
-                "max": 0,
-                "histogram": {},
-            }
+    _ensure_all_models_in_data(data, model_config)
 
     def _window_avg(stats: dict[str, Any]) -> float:
         win_durations = [
