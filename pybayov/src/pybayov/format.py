@@ -17,6 +17,8 @@ from typing import Protocol, cast
 from .util import (
     GRAY,
     GREEN,
+    YELLOW,
+    RESET,
     LogModule,
     Logger,
     git_repo_root,
@@ -155,12 +157,10 @@ def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
         config_path = project_root() / ".config" / "format.toml"
     if not config_path.exists():
         print(
-            f"error: formatter config not found: {config_path}\n\n"
-            f"Create .config/format.toml in your project root.\n"
-            f"See examples/format.toml in the devscripts repo for the schema.",
+            f"{YELLOW}warning: formatter config not found: {config_path}, skipping.{RESET}",
             file=sys.stderr,
         )
-        sys.exit(1)
+        sys.exit(0)
     with open(config_path, "rb") as f:
         data = tomllib.load(f)
     formatters: list[CmdFormatter] = []

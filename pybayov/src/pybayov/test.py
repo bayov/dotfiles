@@ -23,6 +23,7 @@ from .util import (
     GREEN,
     RED,
     RESET,
+    YELLOW,
     LogModule,
     Logger,
     logger,
@@ -73,10 +74,10 @@ def load_test_suites() -> list[_TestSuiteConfig]:
     """
     if not CONFIG_PATH.exists():
         print(
-            f"error: config file not found: {CONFIG_PATH}",
+            f"{YELLOW}warning: config file not found: {CONFIG_PATH}, skipping.{RESET}",
             file=sys.stderr,
         )
-        sys.exit(1)
+        sys.exit(0)
     with open(CONFIG_PATH, "rb") as f:
         config = tomllib.load(f)
     suites: list[_TestSuiteConfig] = config.get("test_suite", [])
