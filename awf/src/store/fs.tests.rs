@@ -1,6 +1,7 @@
 use assert_fs::TempDir;
 use assert_fs::prelude::*;
 
+use super::create_workflow_template;
 use super::list_workflows;
 use super::load_workflow;
 use crate::result::Error;
@@ -122,5 +123,64 @@ fn returns_workflow_parse_failed_for_invalid_toml() {
     assert!(
         matches!(result, Err(Error::WorkflowParseFailed { ref name, .. }) if name == "broken"),
         "expected WorkflowParseFailed {{ name: \"broken\", .. }}, got {result:?}",
+    );
+}
+
+#[test]
+fn create_workflow_template_writes_file_with_correct_name() {
+    // Given: A temp `.awf/` directory with no workflows yet
+    let awf_root = TempDir::new().unwrap();
+
+    // When: We create a workflow template named "my-workflow"
+    let result = create_workflow_template(awf_root.path(), "my-workflow");
+
+    // Then: The call succeeds and the file exists containing the workflow name
+    result.unwrap();
+    let toml_path = awf_root.path().join("workflows/my-workflow.toml");
+    assert!(
+        toml_path.exists(),
+        "expected workflow file to exist at {toml_path:?}"
+    );
+    let contents = std::fs::read_to_string(&toml_path).unwrap();
+    assert!(
+        contents.contains(r#"name = "my-workflow""#),
+        "expected file to contain workflow name, got:\n{contents}",
+    );
+}
+
+#[test]
+fn create_workflow_template_returns_already_exists_on_duplicate() {
+    // Given: A temp `.awf/` directory where "my-workflow" has already been
+    // created
+    let awf_root = TempDir::new().unwrap();
+    create_workflow_template(awf_root.path(), "my-workflow").unwrap();
+
+    // When: We attempt to create the same workflow a second time
+    let result = create_workflow_template(awf_root.path(), "my-workflow");
+
+    // Then: WorkflowAlreadyExists is returned with the correct name
+    assert!(
+        matches!(result, Err(Error::WorkflowAlreadyExists { ref name }) if name == "my-workflow"),
+        "expected WorkflowAlreadyExists {{ name: \"my-workflow\" }}, got {result:?}",
+    );
+}
+
+#[test]
+fn create_workflow_template_returns_invalid_id_for_name_with_space() {
+    // Given: A temp `.awf/` directory
+    let awf_root = TempDir::new().unwrap();
+
+    // When: We attempt to create a workflow whose name contains a space
+    let result = create_workflow_template(awf_root.path(), "has space");
+
+    // Then: InvalidId is returned and no file is written
+    assert!(
+        matches!(result, Err(Error::InvalidId { ref id, .. }) if id == "has space"),
+        "expected InvalidId {{ id: \"has space\", .. }}, got {result:?}",
+    );
+    let bad_path = awf_root.path().join("workflows/has space.toml");
+    assert!(
+        !bad_path.exists(),
+        "expected no file to be created for invalid name"
     );
 }

@@ -87,6 +87,74 @@ pub fn load_workflow(awf_root: &Path, name: &str) -> Result<Workflow> {
     })
 }
 
+/// Creates a new workflow template file in the `.awf/workflows/` directory.
+///
+/// Writes a stub TOML file at `<awf_root>/workflows/<name>.toml` with
+/// commented-out placeholder sections so the user has a ready-to-edit
+/// starting point. The `workflows/` directory is created automatically if
+/// it does not yet exist.
+///
+/// # Errors
+///
+/// - Returns [`Error::InvalidId`] if `name` contains characters outside the
+///   allowed set (`[a-zA-Z0-9_/\-]+`).
+/// - Returns [`Error::WorkflowAlreadyExists`] if a file for `name` already
+///   exists in the `workflows/` directory.
+/// - Returns [`Error::Io`] for any other I/O failure (e.g. permission denied).
+#[instrument(fields(name = name))]
+pub fn create_workflow_template(awf_root: &Path, name: &str) -> Result<()> {
+    use crate::model::id::validate_id;
+
+    // Reject names that violate the identifier rules before touching the
+    // filesystem.
+    validate_id(name)?;
+
+    let workflows_dir = awf_root.join("workflows");
+    let path = workflows_dir.join(format!("{name}.toml"));
+
+    // Guard against silently overwriting an existing workflow definition.
+    if path.exists() {
+        return Err(Error::WorkflowAlreadyExists { name: name.to_string() });
+    }
+
+    // Create the workflows directory only if it is missing; ignore the error
+    // if it already exists (that is the common case).
+    std::fs::create_dir_all(&workflows_dir).map_err(Error::Io)?;
+
+    let contents = build_workflow_template(name);
+    std::fs::write(&path, contents).map_err(Error::Io)?;
+
+    Ok(())
+}
+
+/// Renders the stub TOML template for a new workflow named `name`.
+fn build_workflow_template(name: &str) -> String {
+    format!(
+        r#"name = "{name}"
+version = 1
+description = "TODO: describe this workflow."
+
+# Optional: define reusable shell commands.
+# [commands]
+# test = "cargo test"
+# lint = "cargo clippy -- -D warnings"
+
+[[stages]]
+name = "first-stage"
+description = "TODO: describe this stage."
+# produces = ["artifact.md"]
+steps = [
+    # {{ name = "write-something", type = "agent", prompt = "first-stage.md" }},
+    # {{ name = "run-tests", type = "command", command = "test" }},
+]
+
+# [[stages]]
+# name = "done"
+# description = "Complete."
+"#
+    )
+}
+
 #[cfg(test)]
 #[path = "fs.tests.rs"]
 mod tests;
