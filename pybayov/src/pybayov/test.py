@@ -24,8 +24,8 @@ from .util import (
     RED,
     RESET,
     YELLOW,
-    LogModule,
     Logger,
+    LogModule,
     logger,
     project_root,
     require_project_root,
@@ -68,13 +68,15 @@ def load_test_suites() -> list[_TestSuiteConfig]:
     """Loads test commands from `.config/test.toml` in the current directory.
 
     The config file must define a `[[test_suite]]` array where each entry has:
-    - `name`: display name for the command (must be alphanumeric with underscores)
+    - `name`: display name for the command (must be alphanumeric with
+      underscores)
     - `command`: shell command string to execute
     - `cwd` (optional): working directory relative to the project root
     """
     if not CONFIG_PATH.exists():
         print(
-            f"{YELLOW}warning: config file not found: {CONFIG_PATH}, skipping.{RESET}",
+            f"{YELLOW}warning: config file not found:"
+            f" {CONFIG_PATH}, skipping.{RESET}",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -85,7 +87,8 @@ def load_test_suites() -> list[_TestSuiteConfig]:
         name = suite["name"]
         if not _VALID_SUITE_NAME.match(name):
             print(
-                f"error: test suite name must be alphanumeric with underscores, got: {name!r}",
+                f"error: test suite name must be alphanumeric"
+                f" with underscores, got: {name!r}",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -93,7 +96,8 @@ def load_test_suites() -> list[_TestSuiteConfig]:
 
 
 def _make_log_dir() -> Path:
-    """Creates and returns a per-invocation log directory under /tmp/test_logs."""
+    """Creates and returns a per-invocation log directory under
+    /tmp/test_logs."""
     root_name = project_root().name
     timestamp = datetime.now().strftime("%Y-%m-%d.%H-%M-%S")
     invocation_id = "".join(
@@ -379,12 +383,14 @@ def main():
 
                         if code == 0:
                             logger().info(
-                                f"✓ {name} passed {GRAY}({duration:.2f}s){RESET}",
+                                f"✓ {name} passed"
+                                f" {GRAY}({duration:.2f}s){RESET}",
                                 color=GREEN,
                             )
                         else:
                             logger().error(
-                                f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}"
+                                f"✗ {name} failed"
+                                f" {GRAY}({duration:.2f}s){RESET}"
                             )
 
     # Summary

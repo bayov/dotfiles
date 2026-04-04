@@ -84,7 +84,11 @@ def lighten(color: int | str, amount: int = 60) -> int | str:
     if isinstance(color, int):
         return color  # can't lighten palette colors
     r, g, b = hex_to_rgb(color)
-    return f"#{min(r + amount, 255):02x}{min(g + amount, 255):02x}{min(b + amount, 255):02x}"
+    return (
+        f"#{min(r + amount, 255):02x}"
+        f"{min(g + amount, 255):02x}"
+        f"{min(b + amount, 255):02x}"
+    )
 
 
 def fg(color: int | str) -> str:
@@ -113,7 +117,9 @@ def word_wrap(line: str, max_width: int) -> list[str]:
     return result
 
 
-def render_box(lines: list[str], config: BoxConfig = BoxConfig()) -> str:
+def render_box(lines: list[str], config: BoxConfig | None = None) -> str:
+    if config is None:
+        config = BoxConfig()
     bg_code = bg(config.bg_color)
     inner_width = config.width - config.pad_left - config.pad_right
     blank = bg_code + " " * config.width + RESET
@@ -257,7 +263,10 @@ def main():
         metavar="INT",
         type=int,
         default=None,
-        help=f"All padding (default: top/bottom={DEFAULT_PAD_TOP}, left/right={DEFAULT_PAD_RIGHT})",
+        help=(
+            f"All padding (default: top/bottom={DEFAULT_PAD_TOP},"
+            f" left/right={DEFAULT_PAD_RIGHT})"
+        ),
     )
     parser.add_argument("--padding-top", metavar="INT", type=int, default=None)
     parser.add_argument(

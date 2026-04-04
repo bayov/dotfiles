@@ -3,14 +3,14 @@
 Run a command or shell in a general-purpose Docker sandbox.
 """
 
-import os
-import subprocess
-import sys
-import shlex
 import argparse
 import hashlib
-from pathlib import Path
+import os
+import shlex
+import subprocess
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 # ==============================================================================
 # CONFIGURATION
@@ -47,7 +47,8 @@ class Mount:
 
 
 def get_linked_project_path() -> Path | None:
-    """If in a jj/git workspace under ~/workspaces, return the linked project root."""
+    """If in a jj/git workspace under ~/workspaces, return the linked project
+    root."""
     if not IS_IN_WORKSPACES:
         return None
 
@@ -68,7 +69,8 @@ def get_linked_project_path() -> Path | None:
         if project_path.exists():
             return project_path
 
-    # git worktree: .git is a file with "gitdir: <project>/.git/worktrees/<name>"
+    # git worktree: .git is a file with
+    # "gitdir: <project>/.git/worktrees/<name>"
     git_file = WORKSPACE_PATH / ".git"
     if git_file.is_file():
         content = git_file.read_text().strip()
@@ -76,7 +78,8 @@ def get_linked_project_path() -> Path | None:
             gitdir = Path(content[len("gitdir:") :].strip())
             if not gitdir.is_absolute():
                 gitdir = (WORKSPACE_PATH / gitdir).resolve()
-            # gitdir = <project>/.git/worktrees/<name> → project root is 3 levels up
+            # gitdir = <project>/.git/worktrees/<name>
+            # → project root is 3 levels up
             project_path = gitdir.parents[2]
             if project_path.exists():
                 return project_path
@@ -92,7 +95,8 @@ MOUNTS = [
     # The current project workspace at its absolute host path.
     Mount(".", container_path=str(WORKSPACE_PATH), ro=False),
     # If in a ~/workspaces/* jj/git workspace, also mount the linked project
-    # at its exact host path (read-only) so symlinks inside the workspace resolve.
+    # at its exact host path (read-only) so symlinks inside the workspace
+    # resolve.
     Mount(
         str(LINKED_PROJECT_PATH) if LINKED_PROJECT_PATH else ".",
         ro=True,
@@ -100,8 +104,9 @@ MOUNTS = [
     ),
     # Claude Code settings (must be writable as CC modifies these).
     Mount("~/.claude", ro=False),
-    # Also mount at the host path so absolute paths recorded by tools (e.g. plugin
-    # installPath) remain valid inside the container regardless of username.
+    # Also mount at the host path so absolute paths recorded by tools
+    # (e.g. plugin installPath) remain valid inside the container regardless
+    # of username.
     Mount(
         str(Path.home() / ".claude"),
         container_path=str(Path.home() / ".claude"),
@@ -213,11 +218,13 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
 
     if rebuild:
         print(
-            f"\033[33mRebuilding sandbox image ({IMAGE_TAG}) as requested...\033[0m"
+            f"\033[33mRebuilding sandbox image ({IMAGE_TAG})"
+            f" as requested...\033[0m"
         )
     elif not image_exists:
         print(
-            f"\033[33mBuilding sandbox image ({IMAGE_TAG}) for the first time...\033[0m"
+            f"\033[33mBuilding sandbox image ({IMAGE_TAG})"
+            f" for the first time...\033[0m"
         )
     else:
         # Image exists, check if hash matches
@@ -226,7 +233,8 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False):
             return  # Hash matches, no need to rebuild
         else:
             print(
-                f"\033[33mEnvironment configuration changed. Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
+                f"\033[33mEnvironment configuration changed."
+                f" Rebuilding sandbox image ({IMAGE_TAG})...\033[0m"
             )
 
     build_cmd = [
@@ -290,7 +298,8 @@ def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
             args.extend(["--env", "SSH_AUTH_SOCK=/tmp/ssh-agent.sock"])
         else:
             print(
-                "\033[33mWarning: --with-ssh was provided but SSH_AUTH_SOCK is not set.\033[0m"
+                "\033[33mWarning: --with-ssh was provided but"
+                " SSH_AUTH_SOCK is not set.\033[0m"
             )
 
     return args
@@ -298,7 +307,9 @@ def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run a command or shell in a general-purpose Docker sandbox."
+        description=(
+            "Run a command or shell in a general-purpose Docker sandbox."
+        )
     )
     parser.add_argument(
         "--rebuild", action="store_true", help="Rebuild the sandbox image"
@@ -311,7 +322,9 @@ def main():
     parser.add_argument(
         "--with-ssh",
         action="store_true",
-        help="Enable SSH agent forwarding (allows git push from within sandbox)",
+        help=(
+            "Enable SSH agent forwarding (allows git push from within sandbox)"
+        ),
     )
     parser.add_argument(
         "command",
@@ -329,27 +342,28 @@ def main():
     mount_args = get_mount_args()
     env_and_ssh_args = get_env_and_ssh_args(args.with_ssh)
 
-    cmd = (
-        [
-            "docker",
-            "run",
-            "-it",
-            "--rm",
-            "--cap-drop=ALL",
-            "--security-opt=no-new-privileges",
-            "--env",
-            f"CARGO_TARGET_DIR={WORKSPACE_PATH}/target/docker-sandbox",
-        ]
-        + mount_args
-        + env_and_ssh_args
-        + ["--workdir", str(WORKSPACE_PATH), IMAGE_TAG]
-    )
+    cmd = [
+        "docker",
+        "run",
+        "-it",
+        "--rm",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "--env",
+        f"CARGO_TARGET_DIR={WORKSPACE_PATH}/target/docker-sandbox",
+        *mount_args,
+        *env_and_ssh_args,
+        "--workdir",
+        str(WORKSPACE_PATH),
+        IMAGE_TAG,
+    ]
 
     if args.command:
         # Quote and join the arguments, as we pass them to fish -i -c
         cmd_str = " ".join(shlex.quote(a) for a in args.command)
         print(
-            f"\033[33mStarting '{cmd_str}' in docker-sandbox container...\033[0m"
+            f"\033[33mStarting '{cmd_str}'"
+            f" in docker-sandbox container...\033[0m"
         )
         cmd.extend(["/usr/bin/fish", "-i", "-c", cmd_str])
     else:

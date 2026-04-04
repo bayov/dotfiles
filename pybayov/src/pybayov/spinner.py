@@ -111,7 +111,7 @@ def rgb(r: int, g: int, b: int) -> str:
 def lerp_rgb(
     c1: tuple[int, int, int], c2: tuple[int, int, int], t: float
 ) -> tuple[int, ...]:
-    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
+    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2, strict=False))
 
 
 def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
@@ -214,7 +214,8 @@ def spin(
         ml = " " * margin
         inner_width = width - pad_left - pad_right
         blank = ml + bg_c + " " * width + RESET
-        # spinner line is pad_bottom + 1 (border) + margin_bottom + 1 (cursor gap) lines above cursor
+        # spinner line is pad_bottom + 1 (border) + margin_bottom
+        # + 1 (cursor gap) lines above cursor
         lines_below = pad_bottom + margin_bottom + 2
         up = f"\033[{lines_below}A"
         down = f"\033[{lines_below}B"
@@ -245,7 +246,10 @@ def spin(
         if box:
             vis = len(text)
             fill = " " * max(0, inner_width - vis)
-            content = f"{ml}{bg_c}{' ' * pad_left}{colored}{bg_c}{fill}{' ' * pad_right}{RESET}"
+            content = (
+                f"{ml}{bg_c}{' ' * pad_left}{colored}"
+                f"{bg_c}{fill}{' ' * pad_right}{RESET}"
+            )
             line = f"{up}\r{content}{down}\r"
         else:
             line = f"{CLEAR_LINE} {colored}"
@@ -376,7 +380,8 @@ def run_with_spinner(
     box_pad_top: int = DEFAULT_BOX_PAD_TOP,
     box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM,
 ) -> Any:
-    """Run fn() with a spinner on stderr. In box mode, fn's string return value is shown in the box."""
+    """Run fn() with a spinner on stderr. In box mode, fn's string return
+    value is shown in the box."""
     show_spinner = sys.stderr.isatty()
     r = _ThreadResult()
 

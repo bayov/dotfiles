@@ -9,9 +9,9 @@ import os
 import random
 import sys
 import time
+from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
-from collections.abc import Callable
 from typing import Any, cast
 
 DOTFILES_DIR: Path = Path(
@@ -37,9 +37,9 @@ def get_model_config() -> list[dict[str, Any]]:
         sys.exit(1)
 
     try:
-        with open(config_file, "r") as f:
+        with open(config_file) as f:
             return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         print(
             f"Error: Failed to load configuration from {config_file}: {e}",
             file=sys.stderr,
@@ -124,7 +124,8 @@ def get_histogram_bucket(duration: float) -> str:
 def _update_json_file(
     path: Path, default: Any, fn: Callable[[Any], None]
 ) -> None:
-    """Lock path exclusively, load JSON (or use default on decode error), call fn(data), write back."""
+    """Lock path exclusively, load JSON (or use default on decode error),
+    call fn(data), write back."""
     if not path.exists():
         path.write_text(json.dumps(default))
     with open(path, "r+") as f:
@@ -161,7 +162,8 @@ def update_aggregated_stats(
                 "runs": 0,
                 "wins": 0,
                 "fails": 0,
-                "last_run_results": [],  # FIFO: [{start, end, duration, error}, ...]
+                # FIFO: [{start, end, duration, error}, ...]
+                "last_run_results": [],
                 "avg": 0,
                 "min": None,
                 "max": 0,
@@ -220,8 +222,9 @@ def log_stats(
     error: str | None = None,
 ) -> None:
     """
-    Logs individual model results to a daily JSON file and updates global aggregates.
-    Uses file locking to prevent corruption from concurrent worker writes.
+    Logs individual model results to a daily JSON file and updates global
+    aggregates. Uses file locking to prevent corruption from concurrent
+    worker writes.
     """
     DAILY_STATS_DIR.mkdir(parents=True, exist_ok=True)
     today = date.today().isoformat()
@@ -254,12 +257,12 @@ def print_stats() -> None:
         print("No statistics found.")
         return
 
-    with open(AGGREGATED_STATS_FILE, "r") as f:
+    with open(AGGREGATED_STATS_FILE) as f:
         try:
             # Shared lock for reading
             fcntl.flock(f, fcntl.LOCK_SH)
             data: dict[str, Any] = json.load(f)
-        except (json.JSONDecodeError, IOError):
+        except (OSError, json.JSONDecodeError):
             print("Error: Could not read statistics.")
             return
         finally:
@@ -342,7 +345,8 @@ def print_stats() -> None:
         + f"┐{reset}"
     )
     print(
-        f"{gray}│{reset} \033[1m{'Model':<{model_col_width}}\033[0m {gray}│{reset} "
+        f"{gray}│{reset} \033[1m{'Model':<{model_col_width}}\033[0m"
+        f" {gray}│{reset} "
         f"\033[1m{'Avg':>{avg_col_width}}\033[0m {gray}│{reset} "
         f"\033[1m{'History':<{history_col_width}}\033[0m {gray}│{reset}"
     )
@@ -356,7 +360,8 @@ def print_stats() -> None:
         + f"┤{reset}"
     )
 
-    # Collect all successful durations across all models for global percentile comparison (History graph)
+    # Collect all successful durations across all models for global
+    # percentile comparison (History graph)
     all_durations: list[float] = []
     # Also collect all non-zero averages for a separate Avg distribution
     all_averages: list[float] = []
@@ -443,8 +448,9 @@ def print_stats() -> None:
                         history_graph += "\033[38;2;222;112;112m█\033[0m"
                     else:
                         d = res["duration"]
-                        # Find rank in global distribution using bisect_right to ensure
-                        # identical max values all reach the 100th percentile.
+                        # Find rank in global distribution using
+                        # bisect_right to ensure identical max values
+                        # all reach the 100th percentile.
                         rank = bisect.bisect_right(all_durations, d)
 
                         # Percentile rank (0 to 100) mapped such that:
@@ -474,7 +480,10 @@ def print_stats() -> None:
 
         # Pad history graph to STATS_HISTORY_COUNT spaces
         padding = " " * (STATS_HISTORY_COUNT - num_symbols)
-        combined_history = f"{gray}{first_ts}{reset} {history_graph}{padding} {gray}{last_ts}{reset}"
+        combined_history = (
+            f"{gray}{first_ts}{reset} {history_graph}"
+            f"{padding} {gray}{last_ts}{reset}"
+        )
 
         # Model display name and color (gray if disabled)
         is_enabled = model in enabled_models
@@ -485,7 +494,9 @@ def print_stats() -> None:
             name_color = gray
 
         print(
-            f"{gray}│{reset} {name_color}{display_name:<{model_col_width}}{reset} {gray}│{reset} "
+            f"{gray}│{reset} {name_color}"
+            f"{display_name:<{model_col_width}}{reset}"
+            f" {gray}│{reset} "
             f"{avg_color}{avg_str:>{avg_col_width}}{reset} {gray}│{reset} "
             f"{combined_history} {gray}│{reset}"
         )
@@ -557,7 +568,8 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
         duration = time.perf_counter() - start_time
         end_timestamp = datetime.now().isoformat()
         debug(
-            f"Model {model} finished in {duration:.3f}s with exit code {proc.returncode}"
+            f"Model {model} finished in {duration:.3f}s"
+            f" with exit code {proc.returncode}"
         )
 
         if proc.returncode != 0:
@@ -610,7 +622,7 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
             "start_timestamp": start_timestamp,
             "end_timestamp": end_timestamp,
         }
-    except asyncio.TimeoutError:
+    except TimeoutError:
         end_timestamp = datetime.now().isoformat()
         debug(f"Model {model} timed out after {TIMEOUT_DURATION}s")
         if proc.returncode is None:
@@ -663,8 +675,8 @@ async def run_worker(model: str, prompt: str) -> None:
         )
 
         if result["success"]:
-            # Print text for parent to capture. Use try/except to ignore BrokenPipeError
-            # if the parent has already exited.
+            # Print text for parent to capture. Use try/except to ignore
+            # BrokenPipeError if the parent has already exited.
             try:
                 print(result["text"])
                 sys.stdout.flush()
@@ -676,17 +688,18 @@ async def run_worker(model: str, prompt: str) -> None:
 
 def get_model_weights() -> dict[str, float]:
     """
-    Calculates weights for each model in MODEL_POOL based on historical average duration.
-    Weight = 1 / (avg_duration^2). Models without stats get a default weight.
+    Calculates weights for each model in MODEL_POOL based on historical
+    average duration. Weight = 1 / (avg_duration^2). Models without stats
+    get a default weight.
     """
     stats_data: dict[str, Any] = {}
     if AGGREGATED_STATS_FILE.exists():
-        with open(AGGREGATED_STATS_FILE, "r") as f:
+        with open(AGGREGATED_STATS_FILE) as f:
             try:
                 # Shared lock
                 fcntl.flock(f, fcntl.LOCK_SH)
                 stats_data = cast(dict[str, Any], json.load(f))
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 pass
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
@@ -745,9 +758,11 @@ async def race_models(prompt: str) -> str:
     """
     Races multiple models in parallel using detached internal worker processes.
     The first one to return a successful response wins.
-    Returns the winning response text, or raises RuntimeError if all models fail.
+    Returns the winning response text, or raises RuntimeError if all
+    models fail.
     """
-    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise pick N weighted random ones.
+    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise
+    # pick N weighted random ones.
     override = os.getenv("QUICK_PROMPT_MODEL")
     if override:
         selected_models = [override]
@@ -863,7 +878,7 @@ async def verify_models() -> None:
     results = await asyncio.gather(*tasks)
 
     all_ok = True
-    for model, res in zip(_get_model_pool(), results):
+    for model, res in zip(_get_model_pool(), results, strict=False):
         if res.get("success"):
             print(f"\033[92m[OK]\033[0m {model} ({res['duration']}s)")
         else:
@@ -881,7 +896,8 @@ async def verify_models() -> None:
 
 
 def run(prompt: str) -> str:
-    """Run the model race and return the winning response text. Raises RuntimeError on failure."""
+    """Run the model race and return the winning response text.
+    Raises RuntimeError on failure."""
     return asyncio.run(race_models(prompt))
 
 

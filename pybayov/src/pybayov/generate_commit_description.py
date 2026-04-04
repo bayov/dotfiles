@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generates an AI commit description for the current jj commit and prints it to stdout.
+"""Generates an AI commit description for the current jj commit and
+prints it to stdout.
 
-With --interactive: shows a spinner, prompts before overriding an existing description,
-and applies the result via `jj describe`.
+With --interactive: shows a spinner, prompts before overriding an existing
+description, and applies the result via `jj describe`.
 """
 
 import argparse
@@ -67,7 +68,7 @@ def generate() -> dict[str, str]:
     try:
         output_text = _qp.run(prompt)
     except RuntimeError as e:
-        raise GenerateError({"error": f"quick-prompt failed: {e}"})
+        raise GenerateError({"error": f"quick-prompt failed: {e}"}) from e
     if not output_text.strip():
         raise GenerateError({"error": "quick-prompt returned empty output"})
     output_file.write_text(output_text)
@@ -81,7 +82,9 @@ def generate() -> dict[str, str]:
     if not match:
         raise GenerateError(
             {
-                "error": "Failed to extract commit description from prompt output.",
+                "error": (
+                    "Failed to extract commit description from prompt output."
+                ),
                 "prompt_input_file": str(input_file),
                 "prompt_output_file": str(output_file),
             }

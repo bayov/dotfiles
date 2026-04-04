@@ -1,13 +1,12 @@
 import contextvars
+import os
+import subprocess
+import sys
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-import os
 from pathlib import Path
-import subprocess
-import sys
 from typing import TextIO
-
 
 # ANSI escape sequences for coloring output.
 USE_COLOR = sys.stdout.isatty() or "FORCE_COLOR" in os.environ
@@ -94,7 +93,8 @@ class Logger:
         return LogModule.DEBUG in self.enabled_log_modules
 
     def color(self, color: str) -> str:
-        """Return `color` if color output is enabled, otherwise an empty string."""
+        """Return `color` if color output is enabled, otherwise empty
+        string."""
         if not self.use_color:
             return ""
         return color
@@ -111,7 +111,8 @@ class Logger:
         }[m]
 
     def _max_log_module_len(self) -> int:
-        """Return the length of the longest log module name, used for alignment."""
+        """Return the length of the longest log module name, used for
+        alignment."""
         return max(len(m.value) for m in LogModule)
 
 
@@ -119,13 +120,14 @@ _logger_ctx: contextvars.ContextVar[Logger] = contextvars.ContextVar("logger")
 
 
 def logger() -> Logger:
-    """Return the current context's logger. Raises LookupError if none is set."""
+    """Return the current context's logger. Raises LookupError if none
+    is set."""
     return _logger_ctx.get()
 
 
-def set_logger(l: Logger):
+def set_logger(log: Logger):
     """Set the logger for the current context."""
-    _logger_ctx.set(l)
+    _logger_ctx.set(log)
 
 
 @lru_cache(maxsize=1)
@@ -143,8 +145,8 @@ def jj_repo_root() -> Path:
         if log := _logger_ctx.get(None):
             log.debug(f"Detected jj repository root: {root}")
         return Path(root)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        raise ValueError("Not in a jj repository")
+    except (subprocess.CalledProcessError, FileNotFoundError) as err:
+        raise ValueError("Not in a jj repository") from err
 
 
 @lru_cache(maxsize=1)
@@ -162,8 +164,8 @@ def git_repo_root() -> Path:
         if log := _logger_ctx.get(None):
             log.debug(f"Detected git repository root: {root}")
         return Path(root)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        raise ValueError("Not in a git repository")
+    except (subprocess.CalledProcessError, FileNotFoundError) as err:
+        raise ValueError("Not in a git repository") from err
 
 
 def project_root() -> Path:
@@ -195,7 +197,8 @@ def project_root() -> Path:
 
 
 def require_project_root() -> None:
-    """Exits with an error if the current working directory is not `project_root()`."""
+    """Exits with an error if the current working directory is not
+    `project_root()`."""
     root = project_root()
     if Path.cwd().resolve() != root:
         print(

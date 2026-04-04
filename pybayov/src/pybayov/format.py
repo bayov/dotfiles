@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 
 import argparse
-from collections.abc import Iterable, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
 import fnmatch
-from functools import lru_cache
 import os
 import subprocess
 import sys
 import time
 import tomllib
+from collections.abc import Iterable, Sequence
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Protocol, cast
 
 from .util import (
     GRAY,
     GREEN,
-    YELLOW,
     RESET,
-    LogModule,
+    YELLOW,
     Logger,
+    LogModule,
     git_repo_root,
     jj_repo_root,
     logger,
@@ -59,7 +59,8 @@ class Formatter:
     globs: set[str] = field(default_factory=set[str])
 
     def format_files(self, files: Sequence[Path]) -> None:
-        """Format the given files in place. Must be implemented by subclasses."""
+        """Format the given files in place. Must be implemented by
+        subclasses."""
         raise NotImplementedError
 
 
@@ -104,14 +105,16 @@ def _run_formatter_command(
 class CmdFormatter(Formatter):
     cmd: list[str] = field(default_factory=list[str])
 
-    # Working directory for the subprocess. Supports `{project_root}` placeholder.
+    # Working directory for the subprocess. Supports `{project_root}`
+    # placeholder.
     cwd: Path | None = None
 
     # When True, the command outputs the formatted content to stdout rather than
     # modifying the file in place. The script writes back to the file only if
     # the content differs from the original, to avoid spurious mtime updates.
     #
-    # Required for formatters like `bean-format` that do not support `--in-place`.
+    # Required for formatters like `bean-format` that do not support
+    # `--in-place`.
     stdout_mode: bool = False
 
     def format_files(self, files: Sequence[Path]):
@@ -157,7 +160,8 @@ def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
         config_path = project_root() / ".config" / "format.toml"
     if not config_path.exists():
         print(
-            f"{YELLOW}warning: formatter config not found: {config_path}, skipping.{RESET}",
+            f"{YELLOW}warning: formatter config not found:"
+            f" {config_path}, skipping.{RESET}",
             file=sys.stderr,
         )
         sys.exit(0)
@@ -168,7 +172,8 @@ def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
         for required in ("name", "exts", "cmd", "max_files_per_format"):
             if required not in entry:
                 print(
-                    f"error: formatter[{i}] missing required field '{required}'",
+                    f"error: formatter[{i}] missing required"
+                    f" field '{required}'",
                     file=sys.stderr,
                 )
                 sys.exit(1)
@@ -316,7 +321,8 @@ def _validate_formatters(
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
-                f"Shebang {shebang!r} is claimed by multiple formatters: {names}"
+                f"Shebang {shebang!r} is claimed by multiple"
+                f" formatters: {names}"
             )
     for glob in supported_globs:
         handlers = [f for f in formatters if glob in f.globs]
@@ -388,13 +394,18 @@ def collect_all_tracked_files() -> Iterable[Path]:
             command = ["git", "ls-files"]
             out = subprocess.check_output(command, cwd=root, text=True)
             logger().debug(
-                f"`{' '.join(command)}` returned {len(out.splitlines())} file(s)"
+                f"`{' '.join(command)}` returned"
+                f" {len(out.splitlines())} file(s)"
             )
             files = (Path(root) / f for f in out.splitlines())
-        except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            ValueError,
+        ) as err:
             raise ValueError(
                 "Not in a jj or git repository, cannot use --all-tracked"
-            )
+            ) from err
     return files
 
 
@@ -420,8 +431,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
             yield path
         else:
             raise ValueError(
-                f"File {repr(path)} has unsupported extension: "
-                f"{repr(path.suffix)}"
+                f"File {path!r} has unsupported extension: {path.suffix!r}"
             )
     elif path.is_dir():
         for ext in reg.supported_exts:
@@ -433,7 +443,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
             ):
                 yield f
     else:
-        raise ValueError(f"Path {repr(path)} is not a file or directory")
+        raise ValueError(f"Path {path!r} is not a file or directory")
 
 
 def collect_git_staged_files() -> Iterable[Path]:
@@ -549,17 +559,15 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
     for f in files:
         resolved: Path
         if not f.exists():
-            logger().debug(
-                f"File {repr(f)} does not exist (deleted?), skipping."
-            )
+            logger().debug(f"File {f!r} does not exist (deleted?), skipping.")
             continue
         if f.is_symlink():
-            logger().debug(f"File {repr(f)} is a symlink, skipping.")
+            logger().debug(f"File {f!r} is a symlink, skipping.")
             continue
         try:
             resolved = f.resolve(strict=True)
         except OSError:
-            logger().warn(f"File {repr(f)} cannot be resolved, skipping.")
+            logger().warn(f"File {f!r} cannot be resolved, skipping.")
             continue
         formatter = find_formatter(resolved)
         if formatter is None:
@@ -567,8 +575,8 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
             continue
         if resolved.suffix != f.suffix:
             logger().warn(
-                f"File {repr(f)} has extension {repr(f.suffix)}, but resolves "
-                f"to {repr(resolved)} with extension {repr(resolved.suffix)}. "
+                f"File {f!r} has extension {f.suffix!r}, but resolves "
+                f"to {resolved!r} with extension {resolved.suffix!r}. "
                 f"Selected formatter: {formatter.name}."
             )
         result.add(resolved)
@@ -680,8 +688,7 @@ def main():
             # Should not happen since resolve_files already skips files with
             # no applicable formatter.
             raise ValueError(
-                f"No formatter found for file {repr(f)} with extension "
-                f"{repr(f.suffix)}"
+                f"No formatter found for file {f!r} with extension {f.suffix!r}"
             )
         files_by_formatter.setdefault(formatter, []).append(f)
 
