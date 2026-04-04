@@ -3,8 +3,19 @@ use assert_fs::prelude::*;
 
 use super::create_workflow_template;
 use super::list_workflows;
+use super::load_flow;
 use super::load_workflow;
 use crate::result::Error;
+
+const ADD_OAUTH_STATE_TOML: &str = r#"
+id = "add-oauth"
+workflow = "feature"
+workflow_version = 1
+current_stage = "design"
+created_at = "2026-04-04T10:00:00Z"
+updated_at = "2026-04-04T10:00:00Z"
+archived = false
+"#;
 
 const FEATURE_TOML: &str = r#"
 name = "feature"
@@ -182,5 +193,60 @@ fn create_workflow_template_returns_invalid_id_for_name_with_space() {
     assert!(
         !bad_path.exists(),
         "expected no file to be created for invalid name"
+    );
+}
+
+#[test]
+fn loads_valid_flow_state_from_fixture() {
+    // Given: A temp state directory with a valid `state.toml` for the
+    // "add-oauth" flow
+    let state_dir = TempDir::new().unwrap();
+    state_dir
+        .child("flows/active/add-oauth/state.toml")
+        .write_str(ADD_OAUTH_STATE_TOML)
+        .unwrap();
+
+    // When: We load the "add-oauth" flow state
+    let result = load_flow(state_dir.path(), "add-oauth");
+
+    // Then: The flow state is parsed correctly with the expected fields
+    let flow = result.unwrap();
+    assert_eq!(flow.id, "add-oauth");
+    assert_eq!(flow.workflow, "feature");
+    assert_eq!(flow.current_stage, "design");
+}
+
+#[test]
+fn returns_flow_not_found_for_missing_flow() {
+    // Given: A temp state directory with no flows
+    let state_dir = TempDir::new().unwrap();
+
+    // When: We attempt to load a flow that does not exist
+    let result = load_flow(state_dir.path(), "nonexistent");
+
+    // Then: FlowNotFound is returned with the correct id
+    assert!(
+        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "nonexistent"),
+        "expected FlowNotFound {{ id: \"nonexistent\" }}, got {result:?}",
+    );
+}
+
+#[test]
+fn returns_flow_parse_failed_for_invalid_toml() {
+    // Given: A temp state directory with a malformed `state.toml` for the
+    // "broken-flow" flow
+    let state_dir = TempDir::new().unwrap();
+    state_dir
+        .child("flows/active/broken-flow/state.toml")
+        .write_str("this is not valid toml ][[[")
+        .unwrap();
+
+    // When: We attempt to load the malformed flow state
+    let result = load_flow(state_dir.path(), "broken-flow");
+
+    // Then: FlowParseFailed is returned with the correct id
+    assert!(
+        matches!(result, Err(Error::FlowParseFailed { ref id, .. }) if id == "broken-flow"),
+        "expected FlowParseFailed {{ id: \"broken-flow\", .. }}, got {result:?}",
     );
 }

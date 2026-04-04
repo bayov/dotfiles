@@ -4,6 +4,7 @@ use std::path::Path;
 
 use tracing::instrument;
 
+use crate::model::flow::FlowState;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::result::Result;
@@ -125,6 +126,38 @@ pub fn create_workflow_template(awf_root: &Path, name: &str) -> Result<()> {
     std::fs::write(&path, contents).map_err(Error::Io)?;
 
     Ok(())
+}
+
+/// Loads a flow state from the active flows directory.
+///
+/// The file is expected at
+/// `<state_dir>/flows/active/<flow_id>/state.toml`. After reading, the raw
+/// TOML is deserialized into a [`FlowState`].
+///
+/// # Errors
+///
+/// - Returns [`Error::FlowNotFound`] when no file exists at the expected path.
+/// - Returns [`Error::FlowParseFailed`] when the file exists but cannot be
+///   parsed as a valid [`FlowState`].
+/// - Returns [`Error::Io`] for any other I/O failure (e.g. permission denied).
+#[instrument(fields(flow_id = flow_id))]
+pub fn load_flow(state_dir: &Path, flow_id: &str) -> Result<FlowState> {
+    let path = state_dir.join("flows/active").join(flow_id).join("state.toml");
+
+    // Distinguish "file not found" from other I/O errors so callers receive a
+    // descriptive FlowNotFound rather than a raw Io error.
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(Error::FlowNotFound { id: flow_id.to_string() });
+        }
+        Err(e) => return Err(Error::Io(e)),
+    };
+
+    toml::from_str(&contents).map_err(|source| Error::FlowParseFailed {
+        id: flow_id.to_string(),
+        source,
+    })
 }
 
 /// Renders the stub TOML template for a new workflow named `name`.
