@@ -8,8 +8,7 @@ command = "uv run ruff check pybayov"
 
 [[test_suite]]
 name = "cargo_tests"
-# TODO: remove --no-tests=pass once we have at least one test
-command = "cargo nextest run --workspace --all-targets --all-features --no-tests=pass"
+command = "cargo nextest run --workspace --all-targets --all-features"
 
 [[test_suite]]
 name = "clippy"

@@ -13,6 +13,7 @@ Conventions from `AGENTS.md`:
 - **Tracing**: `#[instrument]` on every significant function; structured fields,
   no dynamic strings in messages
 - **Format**: run `bayov-format` before marking done
+- **Test**: run `bayov-test` before marking done
 - **SLAP**: each function operates at one abstraction level; separate logic from
   I/O
 
@@ -27,7 +28,7 @@ Layer 1: Model
 - [x] **M2** `result.rs` — `#[non_exhaustive] enum Error` with `thiserror`;
       `pub type Result<T> = std::result::Result<T, Error>`; add variants as
       needed in later tasks
-- [ ] **M3** `model/id.rs` — `validate_id(s: &str) -> Result<()>` enforcing
+- [x] **M3** `model/id.rs` — `validate_id(s: &str) -> Result<()>` enforcing
       `[a-zA-Z0-9_/\-]+`; doc-comment with format and error conditions; tests in
       `id.tests.rs`: valid/invalid inputs with concrete examples (`"add-oauth"`,
       `"infra/deploy"`, `""`, `"has space"`)
