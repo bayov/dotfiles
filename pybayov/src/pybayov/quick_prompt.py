@@ -11,6 +11,7 @@ import sys
 import time
 from datetime import date, datetime
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Dict, List, Optional, cast
 
 DOTFILES_DIR: Path = Path(
@@ -120,111 +121,20 @@ def get_histogram_bucket(duration: float) -> str:
 # --- Stats & Telemetry ---
 
 
-def update_aggregated_stats(
-    model: str,
-    duration: float,
-    start_timestamp: str,
-    end_timestamp: str,
-    error: Optional[str] = None,
+def _update_json_file(
+    path: Path, default: Any, fn: Callable[[Any], None]
 ) -> None:
-    """
-    Updates the global aggregated statistics file for a single model run.
-    Tracks performance and results in a rolling window.
-    """
-    AGGREGATED_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-    # Ensure the file exists before attempting to lock it
-    if not AGGREGATED_STATS_FILE.exists():
-        with open(AGGREGATED_STATS_FILE, "w") as f:
-            json.dump({}, f)
-
-    with open(AGGREGATED_STATS_FILE, "r+") as f:
+    """Lock path exclusively, load JSON (or use default on decode error), call fn(data), write back."""
+    if not path.exists():
+        path.write_text(json.dumps(default))
+    with open(path, "r+") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
         try:
-            # Exclusive lock to prevent concurrent write issues
-            fcntl.flock(f, fcntl.LOCK_EX)
             try:
-                data: Dict[str, Any] = json.load(f)
+                data = json.load(f)
             except json.JSONDecodeError:
-                data = {}
-
-            stats = data.setdefault(
-                model,
-                {
-                    "runs": 0,
-                    "wins": 0,
-                    "fails": 0,
-                    "last_run_results": [],  # FIFO: [{start, end, duration, error}, ...]
-                    "avg": 0,
-                    "min": None,
-                    "max": 0,
-                    "histogram": {},
-                },
-            )
-
-            # Backward compatibility / Consolidation
-            if "last_run_results" not in stats:
-                stats["last_run_results"] = []
-                # Migrating from old 'history' if it exists: [duration, success]
-                if "history" in stats:
-                    for d, success in stats["history"]:
-                        stats["last_run_results"].append(
-                            {
-                                "duration": d,
-                                "error": None if success else "Legacy Error",
-                                "start_timestamp": None,
-                                "end_timestamp": None,
-                            }
-                        )
-
-            # Remove old fields
-            stats.pop("outcomes", None)
-            stats.pop("history", None)
-            stats.pop("durations", None)
-            stats.pop("last_run", None)
-            stats.pop("median", None)
-
-            entry = {
-                "start_timestamp": start_timestamp,
-                "end_timestamp": end_timestamp,
-                "duration": duration,
-                "error": error,
-            }
-
-            stats["runs"] += 1
-            stats["last_run_results"].append(entry)
-
-            if len(stats["last_run_results"]) > STATS_ROLLING_WINDOW_SIZE:
-                stats["last_run_results"].pop(0)
-
-            # Recalculate rolling average from window
-            win_durations = [
-                r["duration"]
-                for r in stats["last_run_results"]
-                if r["error"] is None
-            ]
-            if win_durations:
-                stats["avg"] = round(sum(win_durations) / len(win_durations), 3)
-            else:
-                stats["avg"] = 0
-
-            if error is None:
-                stats["wins"] += 1
-                d = duration
-
-                # Update historical min/max
-                if stats["min"] is None or d < stats["min"]:
-                    stats["min"] = d
-                stats["max"] = max(stats["max"], d)
-
-                # Update Histogram (historical/all-time)
-                bucket = get_histogram_bucket(d)
-                stats["histogram"][bucket] = (
-                    stats["histogram"].get(bucket, 0) + 1
-                )
-            else:
-                stats["fails"] += 1
-
-            # Save updated data back to file
+                data = default
+            fn(data)
             f.seek(0)
             f.truncate()
             json.dump(data, f, indent=2)
@@ -232,6 +142,73 @@ def update_aggregated_stats(
             os.fsync(f.fileno())
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def update_aggregated_stats(
+    model: str,
+    duration: float,
+    start_timestamp: str,
+    end_timestamp: str,
+    error: Optional[str] = None,
+) -> None:
+    """Updates the global aggregated statistics file for a single model run."""
+    AGGREGATED_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    def _update(data: Dict[str, Any]) -> None:
+        stats = data.setdefault(
+            model,
+            {
+                "runs": 0,
+                "wins": 0,
+                "fails": 0,
+                "last_run_results": [],  # FIFO: [{start, end, duration, error}, ...]
+                "avg": 0,
+                "min": None,
+                "max": 0,
+                "histogram": {},
+            },
+        )
+
+        entry = {
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+            "duration": duration,
+            "error": error,
+        }
+
+        stats["runs"] += 1
+        stats["last_run_results"].append(entry)
+
+        if len(stats["last_run_results"]) > STATS_ROLLING_WINDOW_SIZE:
+            stats["last_run_results"].pop(0)
+
+        # Recalculate rolling average from window
+        win_durations = [
+            r["duration"]
+            for r in stats["last_run_results"]
+            if r["error"] is None
+        ]
+        if win_durations:
+            stats["avg"] = round(sum(win_durations) / len(win_durations), 3)
+        else:
+            stats["avg"] = 0
+
+        if error is None:
+            stats["wins"] += 1
+            d = duration
+
+            # Update historical min/max
+            if stats["min"] is None or d < stats["min"]:
+                stats["min"] = d
+            stats["max"] = max(stats["max"], d)
+
+            # Update Histogram (historical/all-time)
+            bucket = get_histogram_bucket(d)
+            stats["histogram"][bucket] = stats["histogram"].get(bucket, 0) + 1
+        else:
+            stats["fails"] += 1
+
+    _update_json_file(AGGREGATED_STATS_FILE, {}, _update)
 
 
 def log_stats(
@@ -258,30 +235,10 @@ def log_stats(
         "error": error,
     }
 
-    # Ensure the file exists before attempting to lock it
-    if not daily_file.exists():
-        with open(daily_file, "w") as f:
-            json.dump([], f)
-
-    with open(daily_file, "r+") as f:
-        try:
-            # Exclusive lock for writing to daily stats
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                data: List[Dict[str, Any]] = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-
-            data.append(entry)
-            f.seek(0)
-            f.truncate()
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        except Exception as e:
-            debug(f"Failed to log to daily stats: {e}")
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    try:
+        _update_json_file(daily_file, [], lambda data: data.append(entry))
+    except Exception as e:
+        debug(f"Failed to log to daily stats: {e}")
 
     # Update global aggregates with robust locking
     update_aggregated_stats(

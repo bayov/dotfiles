@@ -122,19 +122,15 @@ def _interactive_main() -> None:
         print(
             _eb.render_box(
                 lines,
-                _eb.DEFAULT_WIDTH,
-                _eb.DEFAULT_BG,
-                margin_top=_eb.DEFAULT_MARGIN,
-                margin_right=_eb.DEFAULT_MARGIN,
-                margin_bottom=0,
-                margin_left=_eb.DEFAULT_MARGIN,
-                pad_top=_eb.DEFAULT_PAD_TOP,
-                pad_right=_eb.DEFAULT_PAD_RIGHT,
-                pad_bottom=_eb.DEFAULT_PAD_BOTTOM,
-                pad_left=_eb.DEFAULT_PAD_LEFT,
-                title="Existing Commit Description",
-                title_color=3,
-                title_bg=_eb.lighten(_eb.DEFAULT_BG),
+                _eb.BoxConfig(
+                    margin_top=_eb.DEFAULT_MARGIN,
+                    margin_right=_eb.DEFAULT_MARGIN,
+                    margin_bottom=0,
+                    margin_left=_eb.DEFAULT_MARGIN,
+                    title="Existing Commit Description",
+                    title_color=3,
+                    title_bg=_eb.lighten(_eb.DEFAULT_BG),
+                ),
             )
         )
         confirm_result: subprocess.CompletedProcess[bytes] = subprocess.run(

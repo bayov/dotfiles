@@ -182,15 +182,12 @@ def colorize_text(
     return "".join(parts)
 
 
-_BoxParams = tuple[int | str, int, int, int, int, int, int]
-
-
 def spin(
     title: str,
     stop_event: threading.Event,
-    box: _BoxParams | None = None,
+    box: _Args | None = None,
 ) -> None:
-    """Animate spinner. box=(bg, width, pad_left, pad_right, margin, pad_bottom, margin_bottom) or None."""
+    """Animate spinner. Pass box args to render spinner inside a box."""
     interval = 1.0 / FPS
     frame_acc = 0.0
     slide_acc = 0.0
@@ -206,15 +203,13 @@ def spin(
     pad_right = 0
 
     if box:
-        (
-            box_bg,
-            width,
-            pad_left,
-            pad_right,
-            margin,
-            pad_bottom,
-            margin_bottom,
-        ) = box
+        box_bg = box.box_bg
+        width = box.box_width
+        pad_left = box.box_pad_left
+        pad_right = box.box_pad_right
+        margin = box.box_margin
+        pad_bottom = box.box_pad_bottom
+        _, margin_bottom = _resolve_margins(box)
         bg_c = bg_esc(box_bg)
         ml = " " * margin
         inner_width = width - pad_left - pad_right
@@ -269,6 +264,23 @@ def spin(
     else:
         sys.stderr.write(CLEAR_LINE)
     sys.stderr.flush()
+
+
+def _make_box_config(args: _Args, mt: int, mb: int) -> _eb.BoxConfig:
+    return _eb.BoxConfig(
+        bg_color=args.box_bg,
+        width=args.box_width,
+        margin_top=mt,
+        margin_right=args.box_margin,
+        margin_bottom=mb,
+        margin_left=args.box_margin,
+        pad_top=args.box_pad_top,
+        pad_right=args.box_pad_right,
+        pad_bottom=args.box_pad_bottom,
+        pad_left=args.box_pad_left,
+        title=args.box_title,
+        title_bg=lighten(args.box_bg),
+    )
 
 
 def _resolve_margins(args: _Args) -> tuple[int, int]:
@@ -371,38 +383,26 @@ def run_with_spinner(
 
     thread = threading.Thread(target=target)
 
-    mt = box_margin_top if box_margin_top is not None else box_margin
-    mb = box_margin_bottom if box_margin_bottom is not None else box_margin
+    _a = _Args(
+        box_title=box_title,
+        box_bg=box_bg,
+        box_width=box_width,
+        box_margin=box_margin,
+        box_margin_top=box_margin_top,
+        box_margin_bottom=box_margin_bottom,
+        box_pad_left=box_pad_left,
+        box_pad_right=box_pad_right,
+        box_pad_top=box_pad_top,
+        box_pad_bottom=box_pad_bottom,
+    )
 
     if show_spinner:
-        box_params: _BoxParams | None = None
         if box:
-            _a = _Args(
-                box_title=box_title,
-                box_bg=box_bg,
-                box_width=box_width,
-                box_margin=box_margin,
-                box_margin_top=box_margin_top,
-                box_margin_bottom=box_margin_bottom,
-                box_pad_left=box_pad_left,
-                box_pad_right=box_pad_right,
-                box_pad_top=box_pad_top,
-                box_pad_bottom=box_pad_bottom,
-            )
             print_box(_a)
-            box_params = (
-                box_bg,
-                box_width,
-                box_pad_left,
-                box_pad_right,
-                box_margin,
-                box_pad_bottom,
-                mb,
-            )
 
         stop = threading.Event()
         spin_t = threading.Thread(
-            target=spin, args=(title, stop, box_params), daemon=True
+            target=spin, args=(title, stop, _a if box else None), daemon=True
         )
         spin_t.start()
         thread.start()
@@ -411,33 +411,17 @@ def run_with_spinner(
         spin_t.join()
 
         if box and result[0] is not None:
+            mt, mb = _resolve_margins(_a)
             result_text = str(result[0]).rstrip("\n")
-            inner_width = box_width - box_pad_left - box_pad_right
+            inner_width = _a.box_width - _a.box_pad_left - _a.box_pad_right
             lines = [
                 w
                 for raw in (result_text.splitlines() or [""])
                 for w in _eb.word_wrap(raw, inner_width)
             ]
-            total_box_lines = mt + box_pad_top + box_pad_bottom + mb + 3
+            total_box_lines = mt + _a.box_pad_top + _a.box_pad_bottom + mb + 3
             sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-            sys.stderr.write(
-                _eb.render_box(
-                    lines,
-                    box_width,
-                    box_bg,
-                    margin_top=mt,
-                    margin_right=box_margin,
-                    margin_bottom=mb,
-                    margin_left=box_margin,
-                    pad_top=box_pad_top,
-                    pad_right=box_pad_right,
-                    pad_bottom=box_pad_bottom,
-                    pad_left=box_pad_left,
-                    title=box_title,
-                    title_bg=lighten(box_bg),
-                )
-                + "\n"
-            )
+            sys.stderr.write(_eb.render_box(lines, _make_box_config(_a, mt, mb)) + "\n")
             sys.stderr.flush()
     else:
         thread.start()
@@ -509,23 +493,14 @@ def main() -> None:
             box_pad_top=args.box_pad_top,
             box_pad_bottom=args.box_pad_bottom,
         )
-        box: _BoxParams | None = None
         if args.box:
             print_box(_box_args)
-            _, mb = _resolve_margins(_box_args)
-            box = (
-                _box_args.box_bg,
-                _box_args.box_width,
-                _box_args.box_pad_left,
-                _box_args.box_pad_right,
-                _box_args.box_margin,
-                _box_args.box_pad_bottom,
-                mb,
-            )
 
         stop = threading.Event()
         t = threading.Thread(
-            target=spin, args=(args.title, stop, box), daemon=True
+            target=spin,
+            args=(args.title, stop, _box_args if args.box else None),
+            daemon=True,
         )
         t.start()
         proc.wait()
@@ -550,32 +525,9 @@ def main() -> None:
                     )
                     box_lines = [cmd_line, error_msg]
                 mt, mb = _resolve_margins(_box_args)
-                total_box_lines = (
-                    mt
-                    + _box_args.box_pad_top
-                    + _box_args.box_pad_bottom
-                    + mb
-                    + 3
-                )
+                total_box_lines = mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
                 sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-                sys.stderr.write(
-                    _eb.render_box(
-                        box_lines,
-                        _box_args.box_width,
-                        _box_args.box_bg,
-                        margin_top=mt,
-                        margin_right=_box_args.box_margin,
-                        margin_bottom=mb,
-                        margin_left=_box_args.box_margin,
-                        pad_top=_box_args.box_pad_top,
-                        pad_right=_box_args.box_pad_right,
-                        pad_bottom=_box_args.box_pad_bottom,
-                        pad_left=_box_args.box_pad_left,
-                        title=_box_args.box_title,
-                        title_bg=lighten(_box_args.box_bg),
-                    )
-                    + "\n"
-                )
+                sys.stderr.write(_eb.render_box(box_lines, _make_box_config(_box_args, mt, mb)) + "\n")
                 sys.stderr.flush()
             else:
                 if captured and captured[0]:
@@ -595,39 +547,16 @@ def main() -> None:
                 .decode(errors="replace")
                 .rstrip("\n")
             )
-            inner_width = (
-                _box_args.box_width
-                - _box_args.box_pad_left
-                - _box_args.box_pad_right
-            )
+            inner_width = _box_args.box_width - _box_args.box_pad_left - _box_args.box_pad_right
             lines: list[str] = []
             for raw in result_text.splitlines() or [""]:
                 for wrapped in _eb.word_wrap(raw, inner_width):
                     lines.append(wrapped)
             # move to top of box (including margins), clear, redraw with results
             mt, mb = _resolve_margins(_box_args)
-            total_box_lines = (
-                mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
-            )
+            total_box_lines = mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
             sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-            sys.stderr.write(
-                _eb.render_box(
-                    lines,
-                    _box_args.box_width,
-                    _box_args.box_bg,
-                    margin_top=mt,
-                    margin_right=_box_args.box_margin,
-                    margin_bottom=mb,
-                    margin_left=_box_args.box_margin,
-                    pad_top=_box_args.box_pad_top,
-                    pad_right=_box_args.box_pad_right,
-                    pad_bottom=_box_args.box_pad_bottom,
-                    pad_left=_box_args.box_pad_left,
-                    title=_box_args.box_title,
-                    title_bg=lighten(_box_args.box_bg),
-                )
-                + "\n"
-            )
+            sys.stderr.write(_eb.render_box(lines, _make_box_config(_box_args, mt, mb)) + "\n")
             sys.stderr.flush()
         elif capture_stdout:
             assert reader is not None

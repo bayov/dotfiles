@@ -5,6 +5,7 @@ Usage: echo-box [TEXT] [OPTIONS]
 """
 
 import argparse
+import dataclasses
 import re
 import sys
 
@@ -22,6 +23,24 @@ DEFAULT_PAD_LEFT = 2
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mK]")
 SGR_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+@dataclasses.dataclass
+class BoxConfig:
+    bg_color: int | str = DEFAULT_BG
+    width: int = DEFAULT_WIDTH
+    margin_top: int = 0
+    margin_right: int = 0
+    margin_bottom: int = 0
+    margin_left: int = 0
+    pad_top: int = DEFAULT_PAD_TOP
+    pad_right: int = DEFAULT_PAD_RIGHT
+    pad_bottom: int = DEFAULT_PAD_BOTTOM
+    pad_left: int = DEFAULT_PAD_LEFT
+    title: str | None = None
+    title_color: int | str = DEFAULT_TITLE_COLOR
+    title_bg: int | str | None = None
+    title_padding: int = DEFAULT_TITLE_PADDING
 
 
 def strip_ansi(s: str) -> str:
@@ -94,57 +113,41 @@ def word_wrap(line: str, max_width: int) -> list[str]:
     return result
 
 
-def render_box(
-    lines: list[str],
-    width: int,
-    bg_color: int | str,
-    margin_top: int = 0,
-    margin_right: int = 0,
-    margin_bottom: int = 0,
-    margin_left: int = 0,
-    pad_top: int = DEFAULT_PAD_TOP,
-    pad_right: int = DEFAULT_PAD_RIGHT,
-    pad_bottom: int = DEFAULT_PAD_BOTTOM,
-    pad_left: int = DEFAULT_PAD_LEFT,
-    title: str | None = None,
-    title_color: int | str = DEFAULT_TITLE_COLOR,
-    title_bg: int | str | None = None,
-    title_padding: int = DEFAULT_TITLE_PADDING,
-) -> str:
-    bg_code = bg(bg_color)
-    inner_width = width - pad_left - pad_right
-    blank = bg_code + " " * width + RESET
-    mleft = " " * margin_left
-    mright = " " * margin_right
+def render_box(lines: list[str], config: BoxConfig = BoxConfig()) -> str:
+    bg_code = bg(config.bg_color)
+    inner_width = config.width - config.pad_left - config.pad_right
+    blank = bg_code + " " * config.width + RESET
+    mleft = " " * config.margin_left
+    mright = " " * config.margin_right
     out: list[str] = []
 
-    if title:
-        title_vis = len(strip_ansi(title)) + 2 * title_padding
-        title_start = (width - title_vis) // 2
+    if config.title:
+        title_vis = len(strip_ansi(config.title)) + 2 * config.title_padding
+        title_start = (config.width - title_vis) // 2
         title_end = title_start + title_vis
-        left_fill = fg(bg_color) + "▄" * title_start
-        title_bg_safe = title_bg if title_bg is not None else bg_color
+        left_fill = fg(config.bg_color) + "▄" * title_start
+        title_bg_safe = config.title_bg if config.title_bg is not None else config.bg_color
         title_cell = (
             bg(title_bg_safe)
-            + fg(title_color)
+            + fg(config.title_color)
             + ITALIC
-            + " " * title_padding
-            + title
-            + " " * title_padding
+            + " " * config.title_padding
+            + config.title
+            + " " * config.title_padding
             + RESET
         )
-        right_fill = fg(bg_color) + "▄" * max(0, width - title_end) + RESET
+        right_fill = fg(config.bg_color) + "▄" * max(0, config.width - title_end) + RESET
         border_top = mleft + left_fill + title_cell + right_fill + mright
     else:
-        border_top = mleft + fg(bg_color) + "▄" * width + RESET + mright
-    border_bot = mleft + fg(bg_color) + "▀" * width + RESET + mright
+        border_top = mleft + fg(config.bg_color) + "▄" * config.width + RESET + mright
+    border_bot = mleft + fg(config.bg_color) + "▀" * config.width + RESET + mright
 
-    for _ in range(margin_top):
+    for _ in range(config.margin_top):
         out.append("")
 
     out.append(border_top)
 
-    for _ in range(pad_top):
+    for _ in range(config.pad_top):
         out.append(mleft + blank + mright)
 
     for line in lines:
@@ -154,20 +157,20 @@ def render_box(
         out.append(
             mleft
             + bg_code
-            + " " * pad_left
+            + " " * config.pad_left
             + content
             + fill
-            + " " * pad_right
+            + " " * config.pad_right
             + RESET
             + mright
         )
 
-    for _ in range(pad_bottom):
+    for _ in range(config.pad_bottom):
         out.append(mleft + blank + mright)
 
     out.append(border_bot)
 
-    for _ in range(margin_bottom):
+    for _ in range(config.margin_bottom):
         out.append("")
 
     return "\n".join(out)
@@ -267,61 +270,31 @@ def main():
             )
         text = sys.stdin.read()
 
-    mt = args.margin_top if args.margin_top is not None else args.margin
-    mr = args.margin_right if args.margin_right is not None else args.margin
-    mb = args.margin_bottom if args.margin_bottom is not None else args.margin
-    ml = args.margin_left if args.margin_left is not None else args.margin
-
-    pt = (
-        args.padding_top
-        if args.padding_top is not None
-        else (args.padding if args.padding is not None else DEFAULT_PAD_TOP)
-    )
-    pr = (
-        args.padding_right
-        if args.padding_right is not None
-        else (args.padding if args.padding is not None else DEFAULT_PAD_RIGHT)
-    )
-    pb = (
-        args.padding_bottom
-        if args.padding_bottom is not None
-        else (args.padding if args.padding is not None else DEFAULT_PAD_BOTTOM)
-    )
-    pl = (
-        args.padding_left
-        if args.padding_left is not None
-        else (args.padding if args.padding is not None else DEFAULT_PAD_LEFT)
+    pad = args.padding
+    config = BoxConfig(
+        bg_color=args.box_bg,
+        width=args.width,
+        margin_top=args.margin_top if args.margin_top is not None else args.margin,
+        margin_right=args.margin_right if args.margin_right is not None else args.margin,
+        margin_bottom=args.margin_bottom if args.margin_bottom is not None else args.margin,
+        margin_left=args.margin_left if args.margin_left is not None else args.margin,
+        pad_top=args.padding_top if args.padding_top is not None else (pad if pad is not None else DEFAULT_PAD_TOP),
+        pad_right=args.padding_right if args.padding_right is not None else (pad if pad is not None else DEFAULT_PAD_RIGHT),
+        pad_bottom=args.padding_bottom if args.padding_bottom is not None else (pad if pad is not None else DEFAULT_PAD_BOTTOM),
+        pad_left=args.padding_left if args.padding_left is not None else (pad if pad is not None else DEFAULT_PAD_LEFT),
+        title=args.title,
+        title_color=args.title_color,
+        title_bg=args.title_bg if args.title_bg is not None else lighten(args.box_bg),
+        title_padding=args.title_padding,
     )
 
-    title_bg = (
-        args.title_bg if args.title_bg is not None else lighten(args.box_bg)
-    )
-
-    inner_width = args.width - pl - pr
+    inner_width = config.width - config.pad_left - config.pad_right
     lines: list[str] = []
     for raw_line in text.splitlines() or [""]:
         for wrapped in word_wrap(raw_line, inner_width):
             lines.append(wrapped)
 
-    print(
-        render_box(
-            lines,
-            args.width,
-            args.box_bg,
-            margin_top=mt,
-            margin_right=mr,
-            margin_bottom=mb,
-            margin_left=ml,
-            pad_top=pt,
-            pad_right=pr,
-            pad_bottom=pb,
-            pad_left=pl,
-            title=args.title,
-            title_color=args.title_color,
-            title_bg=title_bg,
-            title_padding=args.title_padding,
-        )
-    )
+    print(render_box(lines, config))
 
 
 if __name__ == "__main__":
