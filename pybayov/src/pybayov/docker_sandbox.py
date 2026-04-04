@@ -22,7 +22,6 @@ DOCKERFILE_PATH = DOTFILES_DIR / "config" / "sandbox.Dockerfile"
 HASH_LABEL = "com.docker-sandbox.dockerfile-hash"
 SANDBOX_USER_HOME_DIR = "/home/sandbox"
 WORKSPACE_PATH = Path.cwd().resolve()
-IS_IN_DOTFILES = WORKSPACE_PATH == DOTFILES_DIR
 WORKSPACES_DIR = Path.home() / "workspaces"
 IS_IN_WORKSPACES = str(WORKSPACE_PATH).startswith(str(WORKSPACES_DIR) + "/")
 
@@ -92,6 +91,16 @@ def get_linked_project_path() -> Path | None:
 
 
 LINKED_PROJECT_PATH = get_linked_project_path()
+IS_IN_DOTFILES = (
+    WORKSPACE_PATH == DOTFILES_DIR or LINKED_PROJECT_PATH == DOTFILES_DIR
+)
+if IS_IN_DOTFILES:
+    print(
+        f"\033[36mDebug: IS_IN_DOTFILES=True"
+        f" (workspace={WORKSPACE_PATH},"
+        f" linked={LINKED_PROJECT_PATH})\033[0m",
+        file=sys.stderr,
+    )
 
 # Volumes to mount
 # Paths starting with ~ will be expanded to the host user's home directory.
@@ -103,7 +112,7 @@ MOUNTS = [
     # resolve.
     Mount(
         str(LINKED_PROJECT_PATH) if LINKED_PROJECT_PATH else ".",
-        ro=True,
+        ro=not IS_IN_DOTFILES,
         disabled=LINKED_PROJECT_PATH is None,
     ),
     # Claude Code settings (must be writable as CC modifies these).
