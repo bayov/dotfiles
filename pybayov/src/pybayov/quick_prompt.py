@@ -123,8 +123,8 @@ def get_histogram_bucket(duration: float) -> str:
 
 def _update_json_file(
     path: Path,
-    default: Any,
-    fn: Callable[[Any], None],  # noqa: ANN401
+    default: Any,  # noqa: ANN401
+    fn: Callable[[Any], None],
 ) -> None:
     """Lock path exclusively, load JSON (or use default on decode error),
     call fn(data), write back."""
