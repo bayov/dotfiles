@@ -18,9 +18,14 @@ use chrono::Utc;
 use serde::Serialize;
 
 use crate::cli::output::OutputFormat;
+use crate::engine::actions::AdvanceBlocker;
 use crate::engine::actions::NextAction;
+use crate::engine::actions::can_advance;
 use crate::engine::actions::next_action;
 use crate::engine::command::run_command;
+use crate::engine::state::EnterResult;
+use crate::engine::state::advance_stage;
+use crate::engine::state::can_enter_stage;
 use crate::engine::state::record_step_fail;
 use crate::engine::state::record_step_pass;
 use crate::model::flow::FlowState;
@@ -565,8 +570,335 @@ pub fn step_done(
 }
 
 // ---------------------------------------------------------------------------
+// C12 — `awf flow artifact put <name> <file> [--flow <id>]`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow artifact put <name> <file> [--flow <id>]`.
+///
+/// Resolves the active flow ID, locates the `.awf/` root and state directory,
+/// copies the given file into the flow's `artifacts/` directory under the
+/// provided name, and prints a confirmation message.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures, if no `.awf/` root can be
+/// found, or if the source file cannot be copied.
+pub fn artifact_put(
+    name: &str,
+    file: &std::path::Path,
+    flow_flag: Option<&str>,
+) -> color_eyre::Result<()> {
+    let flow_id = resolve_or_exit(flow_flag)?;
+
+    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
+    let state_dir = resolve_state_dir(&awf_root)?;
+
+    fs::put_artifact(&state_dir, &flow_id, name, file)?;
+
+    println!("Artifact {name} registered.");
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// C13 — `awf flow advance [--force] [--flow <id>]`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow advance [--force] [--flow <id>]`.
+///
+/// Resolves the active flow, loads the workflow and flow state, then:
+///
+/// 1. Unless `--force` is given, calls [`can_advance`] to ensure all steps have
+///    passed and all required artifacts are present. Prints a descriptive error
+///    and exits with code 1 on any blocker.
+/// 2. Calls [`can_enter_stage`] for the next stage to check entry conditions:
+///    - [`EnterResult::MissingRequires`]: prints a friendly error and exits
+///      with code 1 (not bypassed by `--force`).
+///    - [`EnterResult::AlreadyCompleted`]: prints a warning and proceeds (v1
+///      does not support interactive confirmation prompts).
+/// 3. Calls [`advance_stage`] to produce the updated flow state.
+/// 4. Saves the updated flow and prints `Entered stage: <name>`.
+///
+/// If the flow is already on its last stage, `advance_stage` returns
+/// [`Error::AlreadyOnLastStage`]; this is propagated as an error to the
+/// caller.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures, if no `.awf/` root can be
+/// found, or if the workflow or flow state cannot be loaded.
+pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
+    let flow_id = resolve_or_exit(flow_flag)?;
+
+    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
+    let state_dir = resolve_state_dir(&awf_root)?;
+
+    let flow = fs::load_flow(&state_dir, &flow_id)?;
+    let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
+
+    let artifacts = collect_artifacts(&state_dir, &flow_id);
+
+    // Step 1: check that the current stage is complete (unless --force).
+    if !force && let Err(blocker) = can_advance(&workflow, &flow, &artifacts) {
+        match blocker {
+            AdvanceBlocker::StepFailed(step) => {
+                eprintln!(
+                    "ERROR: `{step}` failed. Fix the error then run \
+                     `awf flow run {step}` before advancing."
+                );
+            }
+            AdvanceBlocker::StepIncomplete(step) => {
+                eprintln!(
+                    "ERROR: `{step}` is not complete. Complete it before \
+                     advancing."
+                );
+            }
+            AdvanceBlocker::MissingArtifact(name) => {
+                eprintln!(
+                    "ERROR: Missing artifact `{name}`. Register it with \
+                     `awf flow artifact put {name} <file>` before \
+                     advancing."
+                );
+            }
+        }
+        process::exit(1);
+    }
+
+    // Step 2: determine the next stage and check entry conditions.
+    let next_stage_name = {
+        let current_idx = workflow
+            .stages
+            .iter()
+            .position(|s| s.name == flow.current_stage)
+            .unwrap_or_else(|| {
+                eprintln!(
+                    "error: current stage {:?} not found in workflow",
+                    flow.current_stage
+                );
+                process::exit(1);
+            });
+
+        // Ensure there is a next stage to enter.
+        let Some(next) = workflow.stages.get(current_idx + 1) else {
+            eprintln!(
+                "error: already on the last stage; nothing to advance to"
+            );
+            process::exit(1);
+        };
+
+        next.name.clone()
+    };
+
+    match can_enter_stage(&workflow, &flow, &next_stage_name, &artifacts) {
+        EnterResult::Ok => {}
+
+        // Missing required inputs: block even with --force since the next
+        // stage cannot execute without them.
+        EnterResult::MissingRequires(missing) => {
+            eprintln!(
+                "ERROR: Cannot enter stage `{next_stage_name}`. Missing \
+                 required artifacts: {}",
+                missing.join(", ")
+            );
+            process::exit(1);
+        }
+
+        // Already completed: warn and proceed (v1 omits interactive prompt).
+        EnterResult::AlreadyCompleted { produces } => {
+            eprintln!(
+                "WARNING: Stage `{next_stage_name}` has already been \
+                 completed (produces: {}). Re-entering it will overwrite \
+                 previous results.",
+                produces.join(", ")
+            );
+        }
+    }
+
+    // Step 3: perform the stage transition.
+    let updated_flow = match advance_stage(&workflow, flow) {
+        Ok(f) => f,
+        Err(Error::AlreadyOnLastStage) => {
+            eprintln!(
+                "error: already on the last stage; nothing to advance to"
+            );
+            process::exit(1);
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    // Step 4: persist and report.
+    let new_stage = updated_flow.current_stage.clone();
+    fs::save_flow(&state_dir, &updated_flow)?;
+
+    println!("Entered stage: {new_stage}");
+
+    // If the new stage is the last one in the workflow, hint that we are done.
+    let is_last = workflow.stages.last().is_some_and(|s| s.name == new_stage);
+    if is_last {
+        println!("This is the final stage.");
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// C14 — `awf flow history [--flow <id>]`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow history [--flow <id>]`.
+///
+/// Resolves the active flow, loads its state, and prints a chronological
+/// history of stage transitions and step executions grouped by stage.
+///
+/// Output format (human-readable):
+///
+/// ```text
+/// [design] entered 2026-04-04T10:00:00Z
+///   write-design  pass  2026-04-04T13:00:00Z
+/// [design] exited  2026-04-04T14:00:00Z
+/// [implement] entered ...
+///   format  pass  320ms
+///   lint    fail  ...
+///   lint    pass  ...
+/// ```
+///
+/// Completed stages are drawn from `stage_history`; the current (in-progress)
+/// stage is appended at the end using `current_stage` and `stage_entered_at`.
+/// Step log entries are filtered per stage by the `stage` field on each entry.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures, if no `.awf/` root can be
+/// found, or if the flow state cannot be loaded.
+pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+    let flow_id = resolve_or_exit(flow_flag)?;
+
+    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
+    let state_dir = resolve_state_dir(&awf_root)?;
+
+    let flow = fs::load_flow(&state_dir, &flow_id)?;
+
+    // Iterate completed stages from history.
+    for entry in &flow.stage_history {
+        println!(
+            "[{}] entered {}",
+            entry.stage,
+            entry.entered_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
+
+        // Print all step log entries that belong to this stage.
+        print_step_log_for_stage(&flow, &entry.stage);
+
+        if let Some(exited_at) = entry.exited_at {
+            println!(
+                "[{}] exited  {}",
+                entry.stage,
+                exited_at.format("%Y-%m-%dT%H:%M:%SZ")
+            );
+        }
+    }
+
+    // Print the current (in-progress) stage, unless it was already in history
+    // (which would happen only for repeatable stages re-entered after
+    // completion — in practice the current stage is always the active one).
+    let current_already_shown =
+        flow.stage_history.iter().any(|e| e.stage == flow.current_stage);
+
+    if !current_already_shown {
+        println!(
+            "[{}] entered {}",
+            flow.current_stage,
+            flow.stage_entered_at.format("%Y-%m-%dT%H:%M:%SZ")
+        );
+
+        print_step_log_for_stage(&flow, &flow.current_stage);
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// C15 — `awf flow archive [--flow <id>]`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow archive [--flow <id>]`.
+///
+/// Resolves the active flow ID, locates the state directory, and calls
+/// [`fs::archive_flow`] to move the flow from `flows/active/` to
+/// `flows/archived/` and mark it as archived.
+///
+/// On success prints:
+/// `Archived flow <flow_id> → <state_dir>/flows/archived/<flow_id>/`
+///
+/// On [`Error::FlowNotFound`] a friendly message is printed and the process
+/// exits with code 1.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures or if no `.awf/` root can be
+/// found.
+pub fn archive(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+    let flow_id = resolve_or_exit(flow_flag)?;
+
+    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
+    let state_dir = resolve_state_dir(&awf_root)?;
+
+    match fs::archive_flow(&state_dir, &flow_id) {
+        Ok(()) => {
+            let archived_path = state_dir.join("flows/archived").join(&flow_id);
+            println!("Archived flow {flow_id} → {}", archived_path.display());
+            Ok(())
+        }
+        Err(Error::FlowNotFound { id }) => {
+            eprintln!("error: flow {id:?} not found");
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
+
+/// Prints all step log entries for `stage_name` from the flow's step log.
+///
+/// Each entry is indented two spaces and rendered as:
+/// `  <step>  <pass|fail>  <timestamp or duration>`
+///
+/// For command steps (`step_type == "command"`), the duration in milliseconds
+/// is shown when available; otherwise the `started_at` timestamp is used.
+/// For agent steps (`step_type == "agent"`), `completed_at` is shown.
+fn print_step_log_for_stage(flow: &FlowState, stage_name: &str) {
+    for entry in flow.step_log.iter().filter(|e| e.stage == stage_name) {
+        let status_str = match entry.status {
+            StepStatus::Pass => "pass",
+            StepStatus::Fail => "fail",
+        };
+
+        // Build a timing string that is as informative as possible.
+        let timing = if entry.step_type == "command" {
+            entry.duration_ms.map_or_else(
+                || {
+                    entry.started_at.map_or_else(String::new, |ts| {
+                        ts.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+                    })
+                },
+                |ms| format!("{ms}ms"),
+            )
+        } else {
+            entry.completed_at.map_or_else(String::new, |ts| {
+                ts.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+            })
+        };
+
+        if timing.is_empty() {
+            println!("  {}  {status_str}", entry.step);
+        } else {
+            println!("  {}  {status_str}  {timing}", entry.step);
+        }
+    }
+}
 
 /// Resolves the flow ID from the flag or environment, printing a friendly
 /// error message and exiting with code 1 if no ID can be determined.

@@ -195,14 +195,7 @@ fn dispatch_workflow(
 }
 
 /// Dispatches `awf flow` subcommands.
-///
-/// C6–C11 are fully implemented; the remaining variants are stubs that will be
-/// filled in during C12–C15.
-#[allow(
-    clippy::unnecessary_wraps,
-    clippy::match_same_arms,
-    clippy::needless_pass_by_value
-)]
+#[allow(clippy::needless_pass_by_value)]
 fn dispatch_flow(
     command: FlowCommands,
     fmt: OutputFormat,
@@ -221,9 +214,15 @@ fn dispatch_flow(
         }
         FlowCommands::Step { command } => dispatch_step(command),
         FlowCommands::Artifact { command } => dispatch_artifact(command),
-        FlowCommands::Advance { flow: _, force: _ } => Ok(()),
-        FlowCommands::History { flow: _ } => Ok(()),
-        FlowCommands::Archive { flow: _ } => Ok(()),
+        FlowCommands::Advance { flow: flow_flag, force } => {
+            flow::advance(flow_flag.as_deref(), force)
+        }
+        FlowCommands::History { flow: flow_flag } => {
+            flow::history(flow_flag.as_deref())
+        }
+        FlowCommands::Archive { flow: flow_flag } => {
+            flow::archive(flow_flag.as_deref())
+        }
     }
 }
 
@@ -238,11 +237,11 @@ fn dispatch_step(command: StepCommands) -> color_eyre::Result<()> {
 }
 
 /// Dispatches `awf flow artifact` subcommands.
-///
-/// Stub — will be implemented in C3–C15.
-#[allow(clippy::unnecessary_wraps, clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn dispatch_artifact(command: ArtifactCommands) -> color_eyre::Result<()> {
     match command {
-        ArtifactCommands::Put { name: _, file: _, flow: _ } => Ok(()),
+        ArtifactCommands::Put { name, file, flow: flow_flag } => {
+            flow::artifact_put(&name, &file, flow_flag.as_deref())
+        }
     }
 }
