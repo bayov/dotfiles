@@ -10,6 +10,7 @@
 //! [`output::render`].
 
 pub mod output;
+pub mod workflow;
 
 use std::path::PathBuf;
 
@@ -180,23 +181,15 @@ pub fn dispatch(cli: Cli) -> color_eyre::Result<()> {
 }
 
 /// Dispatches `awf workflow` subcommands.
-///
-/// The `Result` return type and exhaustive match are intentional stubs — real
-/// implementations added in C3–C15 will consume the variants and return
-/// meaningful errors.
-#[allow(
-    clippy::unnecessary_wraps,
-    clippy::match_same_arms,
-    clippy::needless_pass_by_value
-)]
+#[allow(clippy::needless_pass_by_value)]
 fn dispatch_workflow(
     command: WorkflowCommands,
     _fmt: OutputFormat,
 ) -> color_eyre::Result<()> {
     match command {
-        WorkflowCommands::New { name: _ } => Ok(()),
-        WorkflowCommands::Validate { name: _ } => Ok(()),
-        WorkflowCommands::List => Ok(()),
+        WorkflowCommands::New { name } => workflow::new(&name),
+        WorkflowCommands::Validate { name } => workflow::validate(&name),
+        WorkflowCommands::List => workflow::list(),
     }
 }
 
