@@ -41,7 +41,7 @@ name = "design"
 description = "Produce a design doc."
 produces = ["design.md"]
 steps = [
-    { name = "write-design", type = "agent", skill = "design.md" },
+    { name = "write-design", type = "agent", prompt = "design.md" },
 ]
 
 [[stages]]
@@ -49,7 +49,7 @@ name = "implement"
 description = "Write the code."
 requires = ["design.md"]
 steps = [
-    { name = "write-code", type = "agent", skill = "implement.md" },
+    { name = "write-code", type = "agent", prompt = "implement.md" },
     { name = "format", type = "command", command = "format" },
     { name = "lint", type = "command", command = "lint" },
     { name = "test", type = "command", command = "test" },
@@ -62,7 +62,7 @@ repeatable = true
 produces = ["changelog-entry.md"]
 steps = [
     { name = "pre-review-test", type = "command", command = "test" },
-    { name = "do-review", type = "agent", skill = "review.md" },
+    { name = "do-review", type = "agent", prompt = "review.md" },
     { name = "post-review-test", type = "command", command = "test" },
 ]
 
@@ -84,19 +84,19 @@ description = "Complete."
   that should appear as next steps even after completion.
 - **Stage ordering** — Defined by TOML array order. Stages advance in sequence.
 - **`produces` / `requires`** — Explicit artifact flow between stages. A stage
-  cannot start if its `requires` artifacts don't exist. Artifacts are stored in
-  the flow's artifact directory.
+  cannot start if its `requires` artifacts don't exist. Agents register
+  artifacts via `awf flow artifact put <name> <file>` — never by writing to the
+  artifact directory directly.
 - **`steps`** — Inline array of step objects on each stage. Each step is either
   `type = "command"` (shell command, pass/fail by exit code) or `type = "agent"`
   (human/LLM task). Command steps reference `[commands]` via `command = "key"`
   or define inline with `run = "..."`. Agent steps reference a SKILL.md via
-  `skill = "filename.md"` (relative to `.awf/workflows/<workflow>/`) or define
-  inline with `instructions = "..."`. Order is explicit by position in the
-  array.
-- **Stage SKILL.md files** — Human/agent guidance lives in
-  `.awf/workflows/feature/implement.md`. Referenced by agent steps via the
-  `skill` field; the engine uses this path to display guidance in
-  `awf flow next`.
+  `prompt = "filename.md"` (any .md file, relative to
+  `.awf/workflows/<workflow>/`) or inline with `instructions = "..."`. Order is
+  explicit by position in the array.
+- **Prompt files** — Any .md file (skill, checklist, instructions) can be
+  referenced via the `prompt` field. The engine reads and displays the file
+  content in `awf flow next`.
 - **`continue_on_error`** (future) — Not in v1, but the schema can accommodate
   it.
 
@@ -157,7 +157,7 @@ project-root/
   .awf/
     workflows/              # Workflow definitions (committed)
       feature.toml
-      feature/              # Stage skill files (committed)
+      feature/              # Stage prompt files (committed)
         design.md
         implement.md
         review.md
@@ -196,22 +196,28 @@ CLI Surface
 -----------
 
 All commands support `--output-format {human|json|toml|xml}` (default: `human`).
-When only one active flow exists, `<flow-id>` is optional.
 
-| Command                                     | Purpose                                              |
-| ------------------------------------------- | ---------------------------------------------------- |
-| `awf workflow new <name>`                   | Create workflow template                             |
-| `awf workflow validate <name>`              | Validate workflow definition                         |
-| `awf workflow list`                         | List available workflow definitions                  |
-| `awf flow new <name> --workflow <workflow>` | Create flow instance; name used as-is as the flow ID |
-| `awf flow list [--all]`                     | List flows (--all includes archived)                 |
-| `awf flow status [<id>]`                    | Show current state                                   |
-| `awf flow next [<id>]`                      | Show next required action                            |
-| `awf flow run <step> [<id>]`                | Execute a command step, log result                   |
-| `awf flow step done <step> [<id>]`          | Mark an agent step complete                          |
-| `awf flow advance [<id>] [--force]`         | Move to next stage if all steps pass                 |
-| `awf flow history [<id>]`                   | Show transition/command log                          |
-| `awf flow archive [<id>]`                   | Archive completed flow                               |
+Flow-scoped commands require a flow ID, resolved in order:
+
+1. `--flow <id>` flag
+2. `AWF_ACTIVE_FLOW` env var
+3. Error if neither is set
+
+| Command                                             | Purpose                                              |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| `awf workflow new <name>`                           | Create workflow template                             |
+| `awf workflow validate <name>`                      | Validate workflow definition                         |
+| `awf workflow list`                                 | List available workflow definitions                  |
+| `awf flow new <name> --workflow <workflow>`         | Create flow instance; name used as-is as the flow ID |
+| `awf flow list [--all]`                             | List flows (--all includes archived)                 |
+| `awf flow status [--flow <id>]`                     | Show current state                                   |
+| `awf flow next [--flow <id>]`                       | Show next required action                            |
+| `awf flow run <step> [--flow <id>]`                 | Execute a command step, log result                   |
+| `awf flow step done <step> [--flow <id>]`           | Mark an agent step complete                          |
+| `awf flow artifact put <name> <file> [--flow <id>]` | Register a file as a named artifact                  |
+| `awf flow advance [--flow <id>] [--force]`          | Move to next stage if all steps pass                 |
+| `awf flow history [--flow <id>]`                    | Show transition/command log                          |
+| `awf flow archive [--flow <id>]`                    | Archive completed flow                               |
 
 ### Example invocations
 
@@ -239,41 +245,133 @@ awf flow list
 # List all flows including archived
 awf flow list --all
 
-# See current stage and gate status (implicit flow-id when only one exists)
-awf flow status
-awf flow status add-oauth
+# See current stage and gate status
+awf flow status --flow add-oauth
+export AWF_ACTIVE_FLOW=add-oauth
+awf flow status                    # uses AWF_ACTIVE_FLOW
 
 # Ask what to do next
-awf flow next
-# => Run command: test
-# or: Produce artifact: design.md
-# or: Run `awf flow advance` to move to implement
+awf flow next --flow add-oauth
 
 # Run a command step
-awf flow run test
+awf flow run test --flow add-oauth
 # => PASS  cargo test  (1243ms)
-awf flow run test add-oauth
 
 # Mark an agent step complete
-awf flow step done write-code
-awf flow step done write-code add-oauth
+awf flow step done write-code --flow add-oauth
 
-# Advance to next stage (runs before/after gates)
-awf flow advance
+# Advance to next stage
+awf flow advance --flow add-oauth
 # => ERROR: `lint` failed. Fix lint errors then run `awf flow run lint` before advancing.
-awf flow advance --force   # bypass gates
+awf flow advance --flow add-oauth --force   # bypass gates
 
-# Show command and transition history
-awf flow history
-awf flow history add-oauth
+# Show transition/command log
+awf flow history --flow add-oauth
 
 # Archive a completed flow
-awf flow archive
-awf flow archive add-oauth
+awf flow archive --flow add-oauth
 
 # Structured output for agent consumption
-awf flow status --output-format json
-awf flow next --output-format toml
+awf flow status --flow add-oauth --output-format json
+awf flow next --flow add-oauth --output-format toml
+```
+
+End-to-End Example
+------------------
+
+Full walkthrough using the `feature` workflow.
+
+```
+# Create the workflow definition
+$ awf workflow new feature
+Created .awf/workflows/feature.toml
+Edit it to define your stages, then run `awf workflow validate feature`.
+
+# Start a new flow
+$ awf flow new add-oauth --workflow feature
+Created flow add-oauth (workflow: feature, stage: design)
+
+# Pin the active flow for this session
+$ export AWF_ACTIVE_FLOW=add-oauth
+
+# See where we are
+$ awf flow status
+Flow:    add-oauth
+Stage:   design
+Steps:   write-design [pending]
+
+# Ask what to do next
+$ awf flow next
+[agent] write-design — see .awf/workflows/feature/design.md
+Mark complete with: awf flow step done write-design
+
+# Agent writes design.md then registers it as an artifact
+$ awf flow artifact put design.md ./design.md
+Artifact design.md registered.
+
+$ awf flow step done write-design
+Step write-design marked complete.
+
+$ awf flow next
+All steps complete. Run `awf flow advance` to move to implement.
+
+$ awf flow advance
+Entered stage: implement
+
+# Agent reads implement.md and writes the code ...
+
+$ awf flow step done write-code
+Step write-code marked complete.
+
+$ awf flow next
+[command] format — next step to run: awf flow run format
+
+$ awf flow run format
+PASS  cargo fmt --check  (320ms)
+
+$ awf flow run lint
+FAIL  cargo clippy -- -D warnings  (1.2s)
+  error[E0502]: cannot borrow ...
+
+# Fix the lint error, then rerun
+
+$ awf flow run lint
+PASS  cargo clippy -- -D warnings  (1.1s)
+
+$ awf flow run test
+PASS  cargo test  (4.3s)
+
+$ awf flow next
+All steps complete. Run `awf flow advance` to move to review.
+
+$ awf flow advance
+Entered stage: review
+
+$ awf flow run pre-review-test
+PASS  cargo test  (4.3s)
+
+$ awf flow step done do-review
+Step do-review marked complete.
+
+$ awf flow run post-review-test
+PASS  cargo test  (4.3s)
+
+$ awf flow next
+All steps complete. Produce artifact: changelog-entry.md
+Register it with: awf flow artifact put changelog-entry.md <file>
+
+# Agent writes changelog-entry.md then registers it
+$ awf flow artifact put changelog-entry.md ./changelog-entry.md
+Artifact changelog-entry.md registered.
+
+$ awf flow next
+All steps complete. Run `awf flow advance` to move to done.
+
+$ awf flow advance
+Entered stage: done
+
+$ awf flow archive
+Archived flow add-oauth → .awf/flows/archived/add-oauth/
 ```
 
 State Machine Rules
@@ -309,7 +407,7 @@ awf/
     cli/
       mod.rs
       init.rs, new.rs, status.rs, next.rs, run.rs,
-      step.rs, advance.rs, history.rs, archive.rs, list.rs,
+      step.rs, artifact.rs, advance.rs, history.rs, archive.rs, list.rs,
       validate.rs, output.rs
     engine/
       mod.rs
@@ -324,7 +422,7 @@ awf/
     store/
       mod.rs
       fs.rs            # Read/write workflows, flows, archive ops
-      resolve.rs       # Find .awf/ dir, resolve state_dir, implicit flow-id
+      resolve.rs       # Find .awf/ dir, resolve state_dir, resolve flow-id (--flow / AWF_ACTIVE_FLOW)
 ```
 
 Implementation Order
