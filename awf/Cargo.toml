@@ -11,7 +11,7 @@ path = "src/main.rs"
 [dependencies]
 # keep-sorted start
 anstream = "1.0.0"
-chrono = "0.4.44"
+chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.57", features = ["derive"] }
 color-eyre = "0.6.5"
 owo-colors = "4.2.3"
