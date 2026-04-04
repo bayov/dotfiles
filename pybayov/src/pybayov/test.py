@@ -186,7 +186,7 @@ def run_command(
     )
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     """Parse arguments and run the configured test suites."""
     require_project_root()
 

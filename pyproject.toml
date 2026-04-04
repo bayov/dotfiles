@@ -16,9 +16,9 @@ ignore = [
     "ISC001", # conflicts with ruff formatter
     "D203", # conflicts with D211
 
-    # Docstring style, `"""` on separate lines:
-    "D203", # disable as we use D211 instead
-    "D212", # disable as we use D213 instead
+    # Docstring style:
+    "D203", # disable as we use D211 instead (no empty line after class)
+    "D212", # disable as we use D213 instead (`"""` on separate lines)
 
     # Print is legitimate in CLI scripts
     "T20",
@@ -34,7 +34,6 @@ ignore = [
     "FBT003",
 
     # Complexity thresholds — too strict
-    "C901",
     "PLR0912",
     "PLR0913",
     "PLR0915",

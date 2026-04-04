@@ -79,6 +79,14 @@ def _get_model_pool() -> list[str]:
 # How many samples of recent history to display in the stats table.
 STATS_HISTORY_COUNT = 30
 
+# ANSI color codes used in the stats table.
+_STATS_RESET = "\033[0m"
+_STATS_GRAY = "\033[90m"
+_STATS_MODEL_COLOR = "\033[36m"
+# Gradient endpoints: 0th percentile = warm green, 100th = warm yellow
+_G0 = (131, 206, 56)
+_G100 = (255, 210, 124)
+
 # How many samples to use when calculating model weight.
 MODEL_WEIGHT_SAMPLE_COUNT = 10
 
@@ -257,6 +265,109 @@ def log_stats(
     )
 
 
+def _compute_global_distributions(
+    data: dict[str, Any],
+) -> tuple[list[float], list[float]]:
+    """Return (sorted all_durations, sorted all_averages) across all models."""
+    all_durations: list[float] = []
+    all_averages: list[float] = []
+    for s in data.values():
+        results: list[dict[str, Any]] = s.get("last_run_results", [])
+        win_durations: list[float] = [
+            r["duration"] for r in results if r.get("error") is None
+        ]
+        if win_durations:
+            all_averages.append(sum(win_durations) / len(win_durations))
+            all_durations.extend(win_durations)
+    all_durations.sort()
+    all_averages.sort()
+    return all_durations, all_averages
+
+
+def _format_ts(raw: Any) -> str:  # noqa: ANN401
+    """Format an ISO timestamp to 'YYYY-MM-DD HH:MM:SS' (19 chars)."""
+    if not raw:
+        return " " * 19
+    try:
+        dt = datetime.fromisoformat(raw)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return str(raw)[:19].replace("T", " ").ljust(19)
+
+
+def _render_history_cell(
+    results: list[dict[str, Any]],
+    all_durations: list[float],
+) -> str:
+    """Render the timestamped history-graph cell for one model table row."""
+    gray = _STATS_GRAY
+    reset = _STATS_RESET
+    G0_R, G0_G, G0_B = _G0
+    G100_R, G100_G, G100_B = _G100
+    global_n = len(all_durations)
+    num_symbols = 0
+    first_ts = " " * 19
+    last_ts = " " * 19
+    history_graph = ""
+
+    if results:
+        recent = results[-STATS_HISTORY_COUNT:]
+        num_symbols = len(recent)
+        first_ts = _format_ts(
+            recent[0].get("end_timestamp") or recent[0].get("start_timestamp")
+        )
+        last_ts = _format_ts(
+            recent[-1].get("end_timestamp") or recent[-1].get("start_timestamp")
+        )
+
+        if global_n > 0:
+            symbols = ["▂", "▃", "▄", "▅", "▆", "▇", "█"]
+            for res in recent:
+                if res.get("error") is not None:
+                    history_graph += "\033[38;2;222;112;112m█\033[0m"
+                else:
+                    d = res["duration"]
+                    rank = bisect.bisect_right(all_durations, d)
+                    percentile = (
+                        ((rank - 1) / (global_n - 1)) * 100
+                        if global_n > 1
+                        else 0
+                    )
+                    bucket = min(int(percentile // (100 / 7)), 6)
+                    ratio = percentile / 100
+                    r = int(G0_R + (G100_R - G0_R) * ratio)
+                    g = int(G0_G + (G100_G - G0_G) * ratio)
+                    b = int(G0_B + (G100_B - G0_B) * ratio)
+                    color = f"\033[38;2;{r};{g};{b}m"
+                    history_graph += f"{color}{symbols[bucket]}\033[0m"
+        else:
+            for res in recent:
+                if res.get("error") is not None:
+                    history_graph += "\033[38;2;255;0;0mx\033[0m"
+
+    padding = " " * (STATS_HISTORY_COUNT - num_symbols)
+    return (
+        f"{gray}{first_ts}{reset} {history_graph}"
+        f"{padding} {gray}{last_ts}{reset}"
+    )
+
+
+def _avg_color(avg: float, all_averages: list[float]) -> str:
+    """Return an ANSI RGB color code for avg relative to all_averages."""
+    avg_n = len(all_averages)
+    if avg <= 0 or avg_n == 0:
+        return _STATS_GRAY
+    G0_R, G0_G, G0_B = _G0
+    G100_R, G100_G, G100_B = _G100
+    avg_rank = bisect.bisect_right(all_averages, avg)
+    avg_percentile = ((avg_rank - 1) / (avg_n - 1)) * 100 if avg_n > 1 else 0
+    ratio = avg_percentile / 100
+    r = int(G0_R + (G100_R - G0_R) * ratio)
+    g = int(G0_G + (G100_G - G0_G) * ratio)
+    b = int(G0_B + (G100_B - G0_B) * ratio)
+    return f"\033[38;2;{r};{g};{b}m"
+
+
 def print_stats() -> None:
     """Print aggregated statistics for all models in a pretty table."""
     if not AGGREGATED_STATS_FILE.exists():
@@ -299,30 +410,19 @@ def print_stats() -> None:
                 "histogram": {},
             }
 
-    # Sort models by average duration in the rolling window (fastest first)
-    # Models with no wins in the window are placed at the end
-    def get_window_avg(stats: dict[str, Any]) -> float:
-        results: list[dict[str, Any]] = stats.get("last_run_results", [])
-        win_durations: list[float] = [
-            r["duration"] for r in results if r.get("error") is None
+    def _window_avg(stats: dict[str, Any]) -> float:
+        win_durations = [
+            r["duration"]
+            for r in stats.get("last_run_results", [])
+            if r.get("error") is None
         ]
-        if not win_durations:
-            return 1e9
-        return sum(win_durations) / len(win_durations)
+        return sum(win_durations) / len(win_durations) if win_durations else 1e9
 
-    sorted_items = sorted(
-        data.items(),
-        key=lambda item: get_window_avg(item[1]),
-    )
+    sorted_items = sorted(data.items(), key=lambda item: _window_avg(item[1]))
 
-    # Colors
-    model_color = "\033[36m"  # Cyan
-    reset = "\033[0m"
-    gray = "\033[90m"  # Gray for borders and timestamps
-
-    # Gradient colors (RGB)
-    G0_R, G0_G, G0_B = 131, 206, 56  # 0th percentile (Warm Green)
-    G100_R, G100_G, G100_B = 255, 210, 124  # 100th percentile (Warm Yellow)
+    gray = _STATS_GRAY
+    reset = _STATS_RESET
+    model_color = _STATS_MODEL_COLOR
 
     # Calculate column widths
     model_names = [m["model"] for m in model_config]
@@ -332,9 +432,7 @@ def print_stats() -> None:
         len("Model"),
     )
     avg_col_width = 7  # Sufficient for "12.345s"
-    history_col_width = (
-        19 + 1 + STATS_HISTORY_COUNT + 1 + 19
-    )  # timestamps (19) + spaces (1) + symbols
+    history_col_width = 19 + 1 + STATS_HISTORY_COUNT + 1 + 19
 
     model_sep_width = model_col_width + 2
     avg_sep_width = avg_col_width + 2
@@ -366,144 +464,32 @@ def print_stats() -> None:
         + f"┤{reset}"
     )
 
-    # Collect all successful durations across all models for global
-    # percentile comparison (History graph)
-    all_durations: list[float] = []
-    # Also collect all non-zero averages for a separate Avg distribution
-    all_averages: list[float] = []
-
-    for s in data.values():
-        results: list[dict[str, Any]] = s.get("last_run_results", [])
-        win_durations: list[float] = [
-            r["duration"] for r in results if r.get("error") is None
-        ]
-        if win_durations:
-            avg = sum(win_durations) / len(win_durations)
-            all_averages.append(avg)
-            all_durations.extend(win_durations)
-
-    all_durations.sort()
-    global_n = len(all_durations)
-
-    all_averages.sort()
-    avg_n = len(all_averages)
+    all_durations, all_averages = _compute_global_distributions(data)
 
     for i, (model, stats) in enumerate(sorted_items):
-        results = stats.get("last_run_results", [])
         win_durations = [
-            r["duration"] for r in results if r.get("error") is None
+            r["duration"]
+            for r in stats.get("last_run_results", [])
+            if r.get("error") is None
         ]
         wins_in_window = len(win_durations)
         avg = sum(win_durations) / wins_in_window if wins_in_window > 0 else 0
-
-        # Formatting values
         avg_str = f"{avg:.3f}s" if wins_in_window > 0 else "N/A"
+        color = _avg_color(avg, all_averages) if wins_in_window > 0 else gray
 
-        # Colors
-        if wins_in_window > 0 and avg_n > 0:
-            # Color Avg using its own separate distribution
-            avg_rank = bisect.bisect_right(all_averages, avg)
-            if avg_n > 1:
-                avg_percentile = ((avg_rank - 1) / (avg_n - 1)) * 100
-            else:
-                avg_percentile = 0
-
-            avg_ratio = avg_percentile / 100
-            avg_r = int(G0_R + (G100_R - G0_R) * avg_ratio)
-            avg_g = int(G0_G + (G100_G - G0_G) * avg_ratio)
-            avg_b = int(G0_B + (G100_B - G0_B) * avg_ratio)
-            avg_color = f"\033[38;2;{avg_r};{avg_g};{avg_b}m"
-        else:
-            avg_color = gray  # Gray for N/A or no successes
-
-        # History graph and timestamps
-        history_graph = ""
-        num_symbols = 0
-        first_ts = " " * 19
-        last_ts = " " * 19
-
-        if results:
-            recent = results[-STATS_HISTORY_COUNT:]
-            num_symbols = len(recent)
-
-            # Extract timestamps for the window
-            def format_ts(raw: Any) -> str:  # noqa: ANN401
-                if not raw:
-                    return " " * 19
-                try:
-                    dt = datetime.fromisoformat(raw)
-                    return dt.strftime("%Y-%m-%d %H:%M:%S")
-                except (ValueError, TypeError):
-                    return str(raw)[:19].replace("T", " ").ljust(19)
-
-            first_ts = format_ts(
-                recent[0].get("end_timestamp")
-                or recent[0].get("start_timestamp")
-            )
-            last_ts = format_ts(
-                recent[-1].get("end_timestamp")
-                or recent[-1].get("start_timestamp")
-            )
-
-            if global_n > 0:
-                symbols = ["▂", "▃", "▄", "▅", "▆", "▇", "█"]
-
-                for res in recent:
-                    if res.get("error") is not None:
-                        # Red 'x' for failure (True Color 255, 0, 0)
-                        history_graph += "\033[38;2;222;112;112m█\033[0m"
-                    else:
-                        d = res["duration"]
-                        # Find rank in global distribution using
-                        # bisect_right to ensure identical max values
-                        # all reach the 100th percentile.
-                        rank = bisect.bisect_right(all_durations, d)
-
-                        # Percentile rank (0 to 100) mapped such that:
-                        # Fastest success is 0%
-                        # Slowest success is 100%
-                        if global_n > 1:
-                            percentile = ((rank - 1) / (global_n - 1)) * 100
-                        else:
-                            percentile = 0
-
-                        # Bucket index (0 to 6) for symbol selection
-                        bucket = min(int(percentile // (100 / 7)), 6)
-
-                        # Gradient from 0th percentile to 100th percentile RGB
-                        ratio = percentile / 100
-                        r = int(G0_R + (G100_R - G0_R) * ratio)
-                        g = int(G0_G + (G100_G - G0_G) * ratio)
-                        b = int(G0_B + (G100_B - G0_B) * ratio)
-                        color = f"\033[38;2;{r};{g};{b}m"
-
-                        history_graph += f"{color}{symbols[bucket]}\033[0m"
-            else:
-                # All fails in recent history
-                for res in recent:
-                    if res.get("error") is not None:
-                        history_graph += "\033[38;2;255;0;0mx\033[0m"
-
-        # Pad history graph to STATS_HISTORY_COUNT spaces
-        padding = " " * (STATS_HISTORY_COUNT - num_symbols)
-        combined_history = (
-            f"{gray}{first_ts}{reset} {history_graph}"
-            f"{padding} {gray}{last_ts}{reset}"
-        )
-
-        # Model display name and color (gray if disabled)
         is_enabled = model in enabled_models
-        display_name = model
-        name_color = model_color
-        if not is_enabled:
-            display_name = f"{model} (disabled)"
-            name_color = gray
+        display_name = model if is_enabled else f"{model} (disabled)"
+        name_color = model_color if is_enabled else gray
+
+        combined_history = _render_history_cell(
+            stats.get("last_run_results", []), all_durations
+        )
 
         print(
             f"{gray}│{reset} {name_color}"
             f"{display_name:<{model_col_width}}{reset}"
             f" {gray}│{reset} "
-            f"{avg_color}{avg_str:>{avg_col_width}}{reset} {gray}│{reset} "
+            f"{color}{avg_str:>{avg_col_width}}{reset} {gray}│{reset} "
             f"{combined_history} {gray}│{reset}"
         )
 
@@ -530,6 +516,24 @@ def print_stats() -> None:
 
 
 # --- Core Logic ---
+
+
+def _parse_ndjson_output(stdout: bytes) -> tuple[str, str | None]:
+    """Parse NDJSON lines from opencode; return (text, error_msg)."""
+    res_text = ""
+    error_msg = None
+    for line in stdout.decode().splitlines():
+        try:
+            res_json = json.loads(line)
+            if res_json.get("type") == "text":
+                res_text += res_json.get("part", {}).get("text", "")
+            elif res_json.get("type") == "error":
+                error_msg = res_json.get("error", {}).get("data", {}).get(
+                    "message"
+                ) or res_json.get("error", {}).get("name")
+        except json.JSONDecodeError:
+            continue
+    return res_text, error_msg
 
 
 async def run_model(model: str, prompt: str) -> dict[str, Any]:
@@ -593,20 +597,7 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
             }
 
         # Parse NDJSON output (multiple JSON objects, one per line)
-        res_text = ""
-        error_msg = None
-        for line in stdout.decode().splitlines():
-            try:
-                res_json = json.loads(line)
-                if res_json.get("type") == "text":
-                    res_text += res_json.get("part", {}).get("text", "")
-                elif res_json.get("type") == "error":
-                    # Extract descriptive error message from opencode JSON
-                    error_msg = res_json.get("error", {}).get("data", {}).get(
-                        "message"
-                    ) or res_json.get("error", {}).get("name")
-            except json.JSONDecodeError:
-                continue
+        res_text, error_msg = _parse_ndjson_output(stdout)
 
         if error_msg and not res_text:
             debug(f"Model {model} returned logic error: {error_msg}")
@@ -762,6 +753,77 @@ def get_model_weights() -> dict[str, float]:
     return weights
 
 
+def _select_models() -> list[str]:
+    """Select models for a race via env override or weighted sampling."""
+    override = os.getenv("QUICK_PROMPT_MODEL")
+    if override:
+        return [override]
+
+    weights_dict = get_model_weights()
+    models = list(weights_dict.keys())
+    weights = [weights_dict[m] for m in models]
+
+    if _verbose:
+        debug("Model weights for selection:")
+        for m, w in weights_dict.items():
+            debug(f"  {m}: {w:.4f}")
+
+    # Weighted sampling without replacement
+    selected: list[str] = []
+    target_count = min(len(_get_model_pool()), DEFAULT_MODEL_COUNT)
+    temp_models = models[:]
+    temp_weights = weights[:]
+    while len(selected) < target_count and temp_models:
+        choice = random.choices(temp_models, weights=temp_weights, k=1)[0]
+        selected.append(choice)
+        idx = temp_models.index(choice)
+        temp_models.pop(idx)
+        temp_weights.pop(idx)
+    return selected
+
+
+async def _await_first_winner(
+    worker_tasks: list[asyncio.Task[bytes]],
+    worker_procs: list[asyncio.subprocess.Process],
+) -> str | None:
+    """Wait for the first task to return non-empty output; clean up the rest."""
+    winner = None
+    try:
+        while worker_tasks:
+            done, _ = await asyncio.wait(
+                worker_tasks, return_when=asyncio.FIRST_COMPLETED
+            )
+            for task in done:
+                res_text: str = task.result().decode().strip()
+                model: str = task.get_name()
+                if res_text:
+                    debug(f"Model {model} won the race.")
+                    winner = res_text
+                    break
+                else:
+                    debug(f"Model {model} failed or returned no text.")
+                    worker_tasks.remove(task)
+            if winner:
+                break
+    finally:
+        remaining: list[asyncio.Task[bytes]] = [
+            t for t in worker_tasks if not t.done()
+        ]
+        for t in remaining:
+            t.cancel()
+        if remaining:
+            await asyncio.gather(*remaining, return_exceptions=True)
+        for proc in worker_procs:
+            try:
+                transport = getattr(proc, "_transport", None)
+                if transport is not None:
+                    transport.close()
+            except Exception:
+                pass
+        await asyncio.sleep(0)  # let close callbacks run before loop shuts down
+    return winner
+
+
 async def race_models(prompt: str) -> str:
     """
     Race multiple models in parallel using detached internal worker processes.
@@ -769,34 +831,7 @@ async def race_models(prompt: str) -> str:
     The first one to return a successful response wins.
     Returns the winning response text, or raises RuntimeError if all fail.
     """
-    # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise
-    # pick N weighted random ones.
-    override = os.getenv("QUICK_PROMPT_MODEL")
-    if override:
-        selected_models = [override]
-    else:
-        weights_dict = get_model_weights()
-        models = list(weights_dict.keys())
-        weights = [weights_dict[m] for m in models]
-
-        if _verbose:
-            debug("Model weights for selection:")
-            for m, w in weights_dict.items():
-                debug(f"  {m}: {w:.4f}")
-
-        # Weighted sampling without replacement
-        selected_models: list[str] = []
-        target_count = min(len(_get_model_pool()), DEFAULT_MODEL_COUNT)
-        temp_models = models[:]
-        temp_weights = weights[:]
-
-        while len(selected_models) < target_count and temp_models:
-            choice = random.choices(temp_models, weights=temp_weights, k=1)[0]
-            selected_models.append(choice)
-            idx = temp_models.index(choice)
-            temp_models.pop(idx)
-            temp_weights.pop(idx)
-
+    selected_models = _select_models()
     debug(f"Selected models for race: {selected_models}")
 
     # 2. Start workers as detached processes
@@ -828,50 +863,11 @@ async def race_models(prompt: str) -> str:
         worker_tasks.append(asyncio.create_task(proc.stdout.read(), name=model))
 
     # 3. Wait for the first worker to produce output
-    winner = None
-    try:
-        while worker_tasks:
-            done, _ = await asyncio.wait(
-                worker_tasks, return_when=asyncio.FIRST_COMPLETED
-            )
-
-            for task in done:
-                res_text: str = task.result().decode().strip()
-                model: str = task.get_name()
-
-                if res_text:
-                    # Winner!
-                    debug(f"Model {model} won the race.")
-                    winner = res_text
-                    break
-                else:
-                    # This worker failed or returned empty.
-                    debug(f"Model {model} failed or returned no text.")
-                    worker_tasks.remove(task)
-
-            if winner:
-                break
-    finally:
-        # Cancel remaining read tasks and close subprocess transports explicitly
-        # while the event loop is still running. Without this, transports are
-        # closed by GC after the loop shuts down, causing "Event loop is closed"
-        # errors from BaseSubprocessTransport.__del__.
-        remaining: list[asyncio.Task[bytes]] = [
-            t for t in worker_tasks if not t.done()
-        ]
-        for t in remaining:
-            t.cancel()
-        if remaining:
-            await asyncio.gather(*remaining, return_exceptions=True)
-        for proc in worker_procs:
-            try:
-                transport = getattr(proc, "_transport", None)
-                if transport is not None:
-                    transport.close()
-            except Exception:
-                pass
-        await asyncio.sleep(0)  # let close callbacks run before loop shuts down
-
+    # Cancel remaining read tasks and close subprocess transports explicitly
+    # while the event loop is still running. Without this, transports are
+    # closed by GC after the loop shuts down, causing "Event loop is closed"
+    # errors from BaseSubprocessTransport.__del__.
+    winner = await _await_first_winner(worker_tasks, worker_procs)
     if winner is None:
         raise RuntimeError("All models failed to produce a response.")
     return winner

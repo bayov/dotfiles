@@ -455,7 +455,7 @@ def run_with_spinner(
     return r.value
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     """Parse arguments, run the wrapped command, and animate a spinner."""
     args, cmd = parse_args(sys.argv[1:])
     if not cmd:

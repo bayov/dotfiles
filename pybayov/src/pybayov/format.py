@@ -507,6 +507,39 @@ class _CollectArgs(Protocol):
     jj: bool
 
 
+def _filter_by_extension(
+    all_files: set[Path],
+    reg: _FormatRegistry,
+) -> tuple[set[Path], list[Path]]:
+    """Split files into supported and unsupported-extension buckets."""
+    files: set[Path] = set()
+    unsupported_ext_files: list[Path] = []
+    for f in all_files:
+        if (
+            f.suffix in reg.supported_exts
+            or f.suffix == ""
+            or any(f.match(g) for g in reg.supported_globs)
+        ):
+            files.add(f)
+        else:
+            unsupported_ext_files.append(f)
+    return files, unsupported_ext_files
+
+
+def _filter_binary_files(
+    files: set[Path],
+    binary_patterns: list[str],
+) -> set[Path]:
+    """Remove files marked as binary in .gitattributes."""
+    result: set[Path] = set()
+    for f in files:
+        if _is_binary_file(f, binary_patterns):
+            logger().debug(f"Skipping binary file: {f}")
+        else:
+            result.add(f)
+    return result
+
+
 def collect_files(args: _CollectArgs) -> tuple[set[Path], list[Path]] | None:
     """
     Collect files from all input sources provided in `args` into a single set.
@@ -538,30 +571,13 @@ def collect_files(args: _CollectArgs) -> tuple[set[Path], list[Path]] | None:
     # Split into formattable files and those with an unsupported extension.
     # Extensionless files and exact-filename matches are always passed through;
     # shebang matching happens later in find_formatter / resolve_files.
-    reg = _registry()
-    files: set[Path] = set()
-    unsupported_ext_files: list[Path] = []
-    for f in all_files:
-        if (
-            f.suffix in reg.supported_exts
-            or f.suffix == ""
-            or any(f.match(g) for g in reg.supported_globs)
-        ):
-            files.add(f)
-        else:
-            unsupported_ext_files.append(f)
+    files, unsupported_ext_files = _filter_by_extension(all_files, _registry())
 
     # Exclude files marked as binary in .gitattributes — they should not be
     # reformatted as text.
     binary_patterns = _gitattributes_binary_patterns()
     if binary_patterns:
-        filtered: set[Path] = set()
-        for f in files:
-            if _is_binary_file(f, binary_patterns):
-                logger().debug(f"Skipping binary file: {f}")
-            else:
-                filtered.add(f)
-        files = filtered
+        files = _filter_binary_files(files, binary_patterns)
 
     return files, unsupported_ext_files
 
@@ -650,7 +666,7 @@ def format_files(
     )
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901
     """Entry point. Parses arguments, collects files, and runs formatters."""
     require_project_root()
 
