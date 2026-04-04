@@ -5,6 +5,7 @@ With --interactive: shows a spinner, prompts before overriding an existing descr
 and applies the result via `jj describe`.
 """
 
+import argparse
 import json
 import os
 import re
@@ -165,7 +166,14 @@ def _interactive_main() -> None:
 
 
 def main() -> None:
-    if "--interactive" in sys.argv:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Show spinner, prompt before override, apply via `jj describe`",
+    )
+    args = parser.parse_args()
+    if args.interactive:
         _interactive_main()
         return
     try:

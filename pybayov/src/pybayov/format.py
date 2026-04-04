@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
+from collections.abc import Iterable, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 import fnmatch
+from functools import lru_cache
 import os
 import subprocess
 import sys
 import time
 import tomllib
 from pathlib import Path
-from typing import Iterable, Optional, Protocol, Sequence, cast
+from typing import Protocol, cast
 
 from .util import (
     GRAY,
@@ -62,7 +64,7 @@ class Formatter:
 def _run_formatter_command(
     cmd: list[str],
     files: Sequence[Path],
-    cwd: Optional[Path] = None,
+    cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a formatter command with the given files appended as arguments.
 
@@ -101,7 +103,7 @@ class CmdFormatter(Formatter):
     cmd: list[str] = field(default_factory=list[str])
 
     # Working directory for the subprocess. Supports `{project_root}` placeholder.
-    cwd: Optional[Path] = None
+    cwd: Path | None = None
 
     # When True, the command outputs the formatted content to stdout rather than
     # modifying the file in place. The script writes back to the file only if
@@ -139,7 +141,7 @@ class CmdFormatter(Formatter):
             _run_formatter_command(resolved_cmd, files, cwd=resolved_cwd)
 
 
-def load_formatters(config_path: Optional[Path] = None) -> list[CmdFormatter]:
+def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
     """Loads formatter definitions from a TOML config file.
 
     Reads `[[formatter]]` entries and constructs `CmdFormatter` instances.
@@ -196,7 +198,7 @@ class IgnoreConfig:
         return _file_matches(file, self.exts, self.shebangs, self.globs)
 
 
-def load_ignore(config_path: Optional[Path] = None) -> IgnoreConfig:
+def load_ignore(config_path: Path | None = None) -> IgnoreConfig:
     """Loads the `[ignore]` section from the formatter config file.
 
     Optional fields: `exts` (list of extensions, e.g. `[".lock"]`),
@@ -219,22 +221,25 @@ def load_ignore(config_path: Optional[Path] = None) -> IgnoreConfig:
     )
 
 
-FORMATTERS: list[CmdFormatter] = load_formatters()
-IGNORE: IgnoreConfig = load_ignore()
+@dataclass(frozen=True)
+class _FormatRegistry:
+    formatters: list[CmdFormatter]
+    ignore: IgnoreConfig
+    supported_exts: frozenset[str]
+    supported_globs: frozenset[str]
 
 
-def _all_supported_exts() -> set[str]:
-    """Return the union of all file extensions claimed by any formatter."""
-    return {ext for fmt in FORMATTERS for ext in fmt.exts}
+@lru_cache(maxsize=1)
+def _registry() -> _FormatRegistry:
+    formatters = load_formatters()
+    ignore = load_ignore()
+    exts = frozenset(ext for fmt in formatters for ext in fmt.exts)
+    globs = frozenset(g for fmt in formatters for g in fmt.globs)
+    _validate_formatters(formatters, exts, globs)
+    return _FormatRegistry(formatters, ignore, exts, globs)
 
 
-# All file extensions/globs handled by at least one formatter. Used to
-# pre-filter files before path-aware routing via `find_formatter`.
-supported_exts = _all_supported_exts()
-supported_globs = {g for fmt in FORMATTERS for g in fmt.globs}
-
-
-def _read_shebang(file: Path) -> Optional[str]:
+def _read_shebang(file: Path) -> str | None:
     """Returns the raw shebang line (e.g. `#!/usr/bin/env python3`), or None."""
     try:
         with open(file, "rb") as f:
@@ -246,7 +251,7 @@ def _read_shebang(file: Path) -> Optional[str]:
     return first_line if first_line.startswith("#!") else None
 
 
-def _shebang_interpreter(file: Path) -> Optional[str]:
+def _shebang_interpreter(file: Path) -> str | None:
     """Returns the interpreter name from the shebang, or None.
 
     Handles both `#!/usr/bin/env python3` (returns `python3`) and
@@ -284,41 +289,42 @@ def _file_matches(
     return interpreter is not None and interpreter in shebangs
 
 
-def find_formatter(file: Path) -> Optional[CmdFormatter]:
+def find_formatter(file: Path) -> CmdFormatter | None:
     """Returns the formatter for `file`, or `None` if none applies."""
-    for fmt in FORMATTERS:
+    for fmt in _registry().formatters:
         if _file_matches(file, fmt.exts, fmt.shebangs, fmt.globs):
             return fmt
     return None
 
 
-def _validate_formatters() -> None:
+def _validate_formatters(
+    formatters: list[CmdFormatter],
+    supported_exts: frozenset[str],
+    supported_globs: frozenset[str],
+) -> None:
     """Ensures no two formatters claim the same extension, shebang, or glob."""
     for ext in supported_exts:
-        handlers = [f for f in FORMATTERS if ext in f.exts]
+        handlers = [f for f in formatters if ext in f.exts]
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
                 f"Extension {ext!r} is claimed by multiple formatters: {names}"
             )
-    all_shebangs = [s for fmt in FORMATTERS for s in fmt.shebangs]
+    all_shebangs = [s for fmt in formatters for s in fmt.shebangs]
     for shebang in all_shebangs:
-        handlers = [f for f in FORMATTERS if shebang in f.shebangs]
+        handlers = [f for f in formatters if shebang in f.shebangs]
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
                 f"Shebang {shebang!r} is claimed by multiple formatters: {names}"
             )
     for glob in supported_globs:
-        handlers = [f for f in FORMATTERS if glob in f.globs]
+        handlers = [f for f in formatters if glob in f.globs]
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
                 f"Glob {glob!r} is claimed by multiple formatters: {names}"
             )
-
-
-_validate_formatters()
 
 
 def _gitattributes_binary_patterns() -> list[str]:
@@ -404,11 +410,12 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
 
     If it's neither, we raise an error.
     """
+    reg = _registry()
     if path.is_file():
         if (
-            path.suffix in supported_exts
+            path.suffix in reg.supported_exts
             or path.suffix == ""
-            or any(path.match(g) for g in supported_globs)
+            or any(path.match(g) for g in reg.supported_globs)
         ):
             yield path
         else:
@@ -417,12 +424,12 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
                 f"{repr(path.suffix)}"
             )
     elif path.is_dir():
-        for ext in supported_exts:
+        for ext in reg.supported_exts:
             for f in path.rglob(f"*{ext}"):
                 yield f
         for f in path.rglob("*"):
             if f.is_file() and (
-                f.suffix == "" or any(f.match(g) for g in supported_globs)
+                f.suffix == "" or any(f.match(g) for g in reg.supported_globs)
             ):
                 yield f
     else:
@@ -471,7 +478,7 @@ class _CollectArgs(Protocol):
     jj: bool
 
 
-def collect_files(args: _CollectArgs) -> Optional[tuple[set[Path], list[Path]]]:
+def collect_files(args: _CollectArgs) -> tuple[set[Path], list[Path]] | None:
     """
     Collects files from all input sources provided in `args` into a single set.
 
@@ -502,13 +509,14 @@ def collect_files(args: _CollectArgs) -> Optional[tuple[set[Path], list[Path]]]:
     # Split into formattable files and those with an unsupported extension.
     # Extensionless files and exact-filename matches are always passed through;
     # shebang matching happens later in find_formatter / resolve_files.
+    reg = _registry()
     files: set[Path] = set()
     unsupported_ext_files: list[Path] = []
     for f in all_files:
         if (
-            f.suffix in supported_exts
+            f.suffix in reg.supported_exts
             or f.suffix == ""
-            or any(f.match(g) for g in supported_globs)
+            or any(f.match(g) for g in reg.supported_globs)
         ):
             files.add(f)
         else:
@@ -575,7 +583,7 @@ class FormatResult:
     # wall-clock time per formatter across parallel chunks.
     start_time: float
     end_time: float
-    error: Optional[FormatterError]
+    error: FormatterError | None
 
 
 def format_files(
@@ -590,7 +598,7 @@ def format_files(
     set_logger(log)
     start = time.perf_counter()
     mtimes = {f: os.path.getmtime(f) for f in chunk}
-    error: Optional[FormatterError] = None
+    error: FormatterError | None = None
     try:
         formatter.format_files(chunk)
     except FormatterError as e:
@@ -655,7 +663,7 @@ def main():
 
     files, unsupported_ext_files = result
     files, no_shebang_files = resolve_files(files)
-    files = {f for f in files if not IGNORE.matches(f)}
+    files = {f for f in files if not _registry().ignore.matches(f)}
 
     if not files:
         logger().info("No files to format.", color=GREEN)
@@ -730,7 +738,7 @@ def main():
     no_formatter_files = [
         f
         for f in unsupported_ext_files + no_shebang_files
-        if not IGNORE.matches(f)
+        if not _registry().ignore.matches(f)
     ]
     if no_formatter_files:
         exts = sorted(

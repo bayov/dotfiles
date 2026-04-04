@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from typing import Optional, TextIO
+from typing import TextIO
 
 
 # ANSI escape sequences for coloring output.
@@ -54,7 +54,7 @@ class Logger:
         m: LogModule,
         msg: str,
         file: TextIO = sys.stdout,
-        color: Optional[str] = None,
+        color: str | None = None,
     ):
         """Emit a log message for module `m` if that module is enabled."""
         if m not in self.enabled_log_modules:
@@ -72,19 +72,19 @@ class Logger:
         prefix = f"{m.value:>{self._max_log_module_len()}} | "
         print(f"{ts}{color}{prefix}{msg}{reset}", file=file, flush=True)
 
-    def debug(self, msg: str, color: Optional[str] = None):
+    def debug(self, msg: str, color: str | None = None):
         """Emit a DEBUG-level message."""
         self.log(LogModule.DEBUG, msg, color=color)
 
-    def info(self, msg: str, color: Optional[str] = None):
+    def info(self, msg: str, color: str | None = None):
         """Emit an INFO-level message."""
         self.log(LogModule.INFO, msg, color=color)
 
-    def error(self, msg: str, color: Optional[str] = None):
+    def error(self, msg: str, color: str | None = None):
         """Emit an ERROR-level message to stderr."""
         self.log(LogModule.ERROR, msg, file=sys.stderr, color=color)
 
-    def warn(self, msg: str, color: Optional[str] = None):
+    def warn(self, msg: str, color: str | None = None):
         """Emit a WARN-level message to stderr."""
         self.log(LogModule.WARN, msg, file=sys.stderr, color=color)
 

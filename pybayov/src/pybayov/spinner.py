@@ -341,6 +341,12 @@ def print_box(args: _Args) -> None:
 
 
 @dataclasses.dataclass
+class _ThreadResult:
+    value: Any = None
+    exc: BaseException | None = None
+
+
+@dataclasses.dataclass
 class _Args:
     box_title: str | None
     box_bg: int | str
@@ -372,14 +378,13 @@ def run_with_spinner(
 ) -> Any:
     """Run fn() with a spinner on stderr. In box mode, fn's string return value is shown in the box."""
     show_spinner = sys.stderr.isatty()
-    result: list[Any] = [None]
-    exc: list[BaseException | None] = [None]
+    r = _ThreadResult()
 
     def target() -> None:
         try:
-            result[0] = fn()
+            r.value = fn()
         except BaseException as e:
-            exc[0] = e
+            r.exc = e
 
     thread = threading.Thread(target=target)
 
@@ -410,9 +415,9 @@ def run_with_spinner(
         stop.set()
         spin_t.join()
 
-        if box and result[0] is not None:
+        if box and r.value is not None:
             mt, mb = _resolve_margins(_a)
-            result_text = str(result[0]).rstrip("\n")
+            result_text = str(r.value).rstrip("\n")
             inner_width = _a.box_width - _a.box_pad_left - _a.box_pad_right
             lines = [
                 w
@@ -429,9 +434,9 @@ def run_with_spinner(
         thread.start()
         thread.join()
 
-    if exc[0] is not None:
-        raise exc[0]
-    return result[0]
+    if r.exc is not None:
+        raise r.exc
+    return r.value
 
 
 def main() -> None:
@@ -452,10 +457,11 @@ def main() -> None:
         stdin=sys.stdin,
     )
 
-    interrupted = [False]
+    interrupted = False
 
     def forward_sigint(sig: int, frame: types.FrameType | None) -> None:
-        interrupted[0] = True
+        nonlocal interrupted
+        interrupted = True
         proc.send_signal(signal.SIGINT)
 
     original_sigint = signal.getsignal(signal.SIGINT)
@@ -514,7 +520,7 @@ def main() -> None:
             if reader is not None:
                 reader.join()
             if args.box:
-                if interrupted[0]:
+                if interrupted:
                     box_lines = [fg_esc(11) + "interrupted" + RESET]
                 else:
                     RED = "#cc4444"

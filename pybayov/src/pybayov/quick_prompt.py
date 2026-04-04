@@ -12,7 +12,7 @@ import time
 from datetime import date, datetime
 from pathlib import Path
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 DOTFILES_DIR: Path = Path(
     os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
@@ -25,7 +25,7 @@ AGGREGATED_STATS_FILE: Path = STATS_DIR / "aggregated_stats.json"
 MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/quick-prompt-models.json"
 
 
-def get_model_config() -> List[Dict[str, Any]]:
+def get_model_config() -> list[dict[str, Any]]:
     """Loads the model configuration from the configuration file."""
     config_file = MODELS_CONFIG_FILE if MODELS_CONFIG_FILE.exists() else None
 
@@ -47,7 +47,7 @@ def get_model_config() -> List[Dict[str, Any]]:
         sys.exit(1)
 
 
-def load_model_pool() -> List[str]:
+def load_model_pool() -> list[str]:
     """Loads the model pool from the configuration file."""
     config = get_model_config()
     pool = [m["model"] for m in config if m.get("enabled", True)]
@@ -64,10 +64,10 @@ def load_model_pool() -> List[str]:
 # to select for best latency.
 STATS_ROLLING_WINDOW_SIZE = 100
 
-_model_pool_cache: Optional[List[str]] = None
+_model_pool_cache: list[str] | None = None
 
 
-def _get_model_pool() -> List[str]:
+def _get_model_pool() -> list[str]:
     global _model_pool_cache
     if _model_pool_cache is None:
         _model_pool_cache = load_model_pool()
@@ -149,12 +149,12 @@ def update_aggregated_stats(
     duration: float,
     start_timestamp: str,
     end_timestamp: str,
-    error: Optional[str] = None,
+    error: str | None = None,
 ) -> None:
     """Updates the global aggregated statistics file for a single model run."""
     AGGREGATED_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    def _update(data: Dict[str, Any]) -> None:
+    def _update(data: dict[str, Any]) -> None:
         stats = data.setdefault(
             model,
             {
@@ -217,7 +217,7 @@ def log_stats(
     success: bool,
     start_timestamp: str,
     end_timestamp: str,
-    error: Optional[str] = None,
+    error: str | None = None,
 ) -> None:
     """
     Logs individual model results to a daily JSON file and updates global aggregates.
@@ -258,7 +258,7 @@ def print_stats() -> None:
         try:
             # Shared lock for reading
             fcntl.flock(f, fcntl.LOCK_SH)
-            data: Dict[str, Any] = json.load(f)
+            data: dict[str, Any] = json.load(f)
         except (json.JSONDecodeError, IOError):
             print("Error: Could not read statistics.")
             return
@@ -292,9 +292,9 @@ def print_stats() -> None:
 
     # Sort models by average duration in the rolling window (fastest first)
     # Models with no wins in the window are placed at the end
-    def get_window_avg(stats: Dict[str, Any]) -> float:
-        results: List[Dict[str, Any]] = stats.get("last_run_results", [])
-        win_durations: List[float] = [
+    def get_window_avg(stats: dict[str, Any]) -> float:
+        results: list[dict[str, Any]] = stats.get("last_run_results", [])
+        win_durations: list[float] = [
             r["duration"] for r in results if r.get("error") is None
         ]
         if not win_durations:
@@ -357,13 +357,13 @@ def print_stats() -> None:
     )
 
     # Collect all successful durations across all models for global percentile comparison (History graph)
-    all_durations: List[float] = []
+    all_durations: list[float] = []
     # Also collect all non-zero averages for a separate Avg distribution
-    all_averages: List[float] = []
+    all_averages: list[float] = []
 
     for _, s in data.items():
-        results: List[Dict[str, Any]] = s.get("last_run_results", [])
-        win_durations: List[float] = [
+        results: list[dict[str, Any]] = s.get("last_run_results", [])
+        win_durations: list[float] = [
             r["duration"] for r in results if r.get("error") is None
         ]
         if win_durations:
@@ -515,7 +515,7 @@ def print_stats() -> None:
 # --- Core Logic ---
 
 
-async def run_model(model: str, prompt: str) -> Dict[str, Any]:
+async def run_model(model: str, prompt: str) -> dict[str, Any]:
     """
     Invokes the opencode CLI for a specific model and returns the result.
     Parses NDJSON output and handles errors/timeouts.
@@ -674,26 +674,26 @@ async def run_worker(model: str, prompt: str) -> None:
         debug(f"Worker for {model} failed: {e}")
 
 
-def get_model_weights() -> Dict[str, float]:
+def get_model_weights() -> dict[str, float]:
     """
     Calculates weights for each model in MODEL_POOL based on historical average duration.
     Weight = 1 / (avg_duration^2). Models without stats get a default weight.
     """
-    stats_data: Dict[str, Any] = {}
+    stats_data: dict[str, Any] = {}
     if AGGREGATED_STATS_FILE.exists():
         with open(AGGREGATED_STATS_FILE, "r") as f:
             try:
                 # Shared lock
                 fcntl.flock(f, fcntl.LOCK_SH)
-                stats_data = cast(Dict[str, Any], json.load(f))
+                stats_data = cast(dict[str, Any], json.load(f))
             except (json.JSONDecodeError, IOError):
                 pass
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
 
-    weights: Dict[str, float] = {}
+    weights: dict[str, float] = {}
     # Use existing averages to determine a baseline for new models
-    known_averages: List[float] = [
+    known_averages: list[float] = [
         s["avg"] for s in stats_data.values() if s.get("wins", 0) > 0
     ]
     # Default to 4.5s if no stats exist, otherwise use the average of averages
@@ -762,7 +762,7 @@ async def race_models(prompt: str) -> str:
                 debug(f"  {m}: {w:.4f}")
 
         # Weighted sampling without replacement
-        selected_models: List[str] = []
+        selected_models: list[str] = []
         target_count = min(len(_get_model_pool()), DEFAULT_MODEL_COUNT)
         temp_models = models[:]
         temp_weights = weights[:]
@@ -779,8 +779,8 @@ async def race_models(prompt: str) -> str:
     # 2. Start workers as detached processes
     # We use start_new_session=True so they outlive the parent script.
     # They communicate their result via stdout.
-    worker_procs: List[asyncio.subprocess.Process] = []
-    worker_tasks: List[asyncio.Task[bytes]] = []
+    worker_procs: list[asyncio.subprocess.Process] = []
+    worker_tasks: list[asyncio.Task[bytes]] = []
     for model in selected_models:
         cmd = [sys.executable, __file__, "--internal-worker", model]
         if _verbose:
@@ -833,7 +833,7 @@ async def race_models(prompt: str) -> str:
         # while the event loop is still running. Without this, transports are
         # closed by GC after the loop shuts down, causing "Event loop is closed"
         # errors from BaseSubprocessTransport.__del__.
-        remaining: List[asyncio.Task[bytes]] = [
+        remaining: list[asyncio.Task[bytes]] = [
             t for t in worker_tasks if not t.done()
         ]
         for t in remaining:

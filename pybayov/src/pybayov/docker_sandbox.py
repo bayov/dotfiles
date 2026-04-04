@@ -11,7 +11,6 @@ import argparse
 import hashlib
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
 
 # ==============================================================================
 # CONFIGURATION
@@ -33,7 +32,7 @@ IS_IN_WORKSPACES = str(WORKSPACE_PATH).startswith(str(WORKSPACES_DIR) + "/")
 @dataclass
 class Mount:
     host_path: str
-    container_path: Optional[str] = None
+    container_path: str | None = None
     ro: bool = True  # `ro` flag (read-only)
     disabled: bool = False
 
@@ -47,7 +46,7 @@ class Mount:
                 self.container_path = self.host_path
 
 
-def get_linked_project_path() -> Optional[Path]:
+def get_linked_project_path() -> Path | None:
     """If in a jj/git workspace under ~/workspaces, return the linked project root."""
     if not IS_IN_WORKSPACES:
         return None
