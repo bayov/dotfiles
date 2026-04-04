@@ -5,5 +5,8 @@
 //!
 //! - **Resolution**: Walking up the directory tree to find the nearest `.awf/`
 //!   root ([`resolve::find_awf_root`]).
+//! - **Workflows**: Reading workflow definitions from `.awf/workflows/`
+//!   ([`fs::load_workflow`]).
 
+pub mod fs;
 pub mod resolve;
