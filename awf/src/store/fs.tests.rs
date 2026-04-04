@@ -4,6 +4,7 @@ use chrono::DateTime;
 
 use super::create_flow;
 use super::create_workflow_template;
+use super::list_flows;
 use super::list_workflows;
 use super::load_flow;
 use super::load_workflow;
@@ -332,4 +333,57 @@ fn create_flow_returns_already_exists_when_archived_dir_exists() {
         matches!(result, Err(Error::FlowAlreadyExists { ref id }) if id == "add-oauth"),
         "expected FlowAlreadyExists {{ id: \"add-oauth\" }}, got {result:?}",
     );
+}
+
+#[test]
+fn list_flows_returns_active_flows_sorted_by_id() {
+    // Given: A temp state directory with two active flows
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "fix-bug", "hotfix", "patch").unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // When: We list flows with include_archived = false
+    let summaries = list_flows(state_dir.path(), false).unwrap();
+
+    // Then: Both active flows are returned, sorted alphabetically by id
+    assert_eq!(summaries.len(), 2);
+    assert_eq!(summaries[0].id, "add-oauth");
+    assert_eq!(summaries[0].workflow, "feature");
+    assert_eq!(summaries[0].current_stage, "design");
+    assert!(!summaries[0].archived);
+    assert_eq!(summaries[1].id, "fix-bug");
+    assert_eq!(summaries[1].workflow, "hotfix");
+    assert_eq!(summaries[1].current_stage, "patch");
+    assert!(!summaries[1].archived);
+}
+
+#[test]
+fn list_flows_includes_archived_when_requested() {
+    // Given: A temp state directory with one active flow and one archived flow
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+    create_flow(state_dir.path(), "fix-bug", "hotfix", "patch").unwrap();
+
+    // Move "fix-bug" to the archived directory to simulate archiving
+    let active_dir = state_dir.path().join("flows/active/fix-bug");
+    let archived_parent = state_dir.path().join("flows/archived");
+    std::fs::create_dir_all(&archived_parent).unwrap();
+    std::fs::rename(&active_dir, archived_parent.join("fix-bug")).unwrap();
+
+    // When: We list flows with include_archived = true
+    let all_summaries = list_flows(state_dir.path(), true).unwrap();
+
+    // Then: Both flows are returned, sorted by id; archived flow is flagged
+    assert_eq!(all_summaries.len(), 2);
+    assert_eq!(all_summaries[0].id, "add-oauth");
+    assert!(!all_summaries[0].archived);
+    assert_eq!(all_summaries[1].id, "fix-bug");
+    assert!(all_summaries[1].archived);
+
+    // When: We list flows with include_archived = false
+    let active_only = list_flows(state_dir.path(), false).unwrap();
+
+    // Then: Only the active flow is returned
+    assert_eq!(active_only.len(), 1);
+    assert_eq!(active_only[0].id, "add-oauth");
 }

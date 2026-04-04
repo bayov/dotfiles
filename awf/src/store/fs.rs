@@ -9,6 +9,26 @@ use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::result::Result;
 
+/// A lightweight summary of a flow, used for listing flows without loading
+/// their full state.
+///
+/// Returned by [`list_flows`] for each flow found in the state directory.
+pub struct FlowSummary {
+    /// The unique identifier of the flow (e.g. `"add-oauth"`).
+    pub id: String,
+
+    /// The name of the workflow this flow is an instance of (e.g.
+    /// `"feature"`).
+    pub workflow: String,
+
+    /// The name of the stage the flow is currently executing (e.g.
+    /// `"design"`).
+    pub current_stage: String,
+
+    /// Whether the flow has been archived.
+    pub archived: bool,
+}
+
 /// Lists all workflow names defined in the `.awf/workflows/` directory.
 ///
 /// Scans `<awf_root>/workflows/` for files with a `.toml` extension and
@@ -260,6 +280,95 @@ pub fn load_flow(state_dir: &Path, flow_id: &str) -> Result<FlowState> {
         id: flow_id.to_string(),
         source,
     })
+}
+
+/// Lists all flows in the state directory, optionally including archived flows.
+///
+/// Scans `<state_dir>/flows/active/` for subdirectories; for each, loads the
+/// flow state and produces a [`FlowSummary`]. If `include_archived` is `true`,
+/// also scans `<state_dir>/flows/archived/` and includes those flows with
+/// `archived: true`.
+///
+/// If either the `active/` or `archived/` directory does not exist, it is
+/// treated as empty rather than returning an error — this is expected for a
+/// freshly initialised state directory. Results are returned sorted
+/// alphabetically by flow id.
+///
+/// # Errors
+///
+/// - Returns [`Error::Io`] if reading a directory fails for any reason other
+///   than the directory not existing (e.g. permission denied).
+/// - Returns [`Error::FlowParseFailed`] if a flow's `state.toml` cannot be
+///   parsed.
+/// - Returns [`Error::FlowNotFound`] if a flow's `state.toml` is missing after
+///   the directory entry was found.
+#[instrument(fields(
+    state_dir = ?state_dir,
+    include_archived = include_archived,
+))]
+pub fn list_flows(
+    state_dir: &Path,
+    include_archived: bool,
+) -> Result<Vec<FlowSummary>> {
+    let mut summaries = Vec::new();
+
+    // Collect summaries from a single flows subdirectory (active or archived).
+    // Returns Ok(()) and skips the directory entirely if it does not exist.
+    let mut collect_from_dir = |dir: &Path, archived: bool| -> Result<()> {
+        let read_dir = match std::fs::read_dir(dir) {
+            Ok(rd) => rd,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(());
+            }
+            Err(e) => return Err(Error::Io(e)),
+        };
+
+        for entry in read_dir {
+            let entry = entry.map_err(Error::Io)?;
+
+            // Only process directory entries; skip any stray files.
+            if !entry.file_type().map_err(Error::Io)?.is_dir() {
+                continue;
+            }
+
+            let flow_id = entry.file_name().into_string().unwrap_or_default();
+
+            // Load state.toml directly from the entry path so we work with
+            // both active and archived directories.
+            let state_path = entry.path().join("state.toml");
+            let contents = match std::fs::read_to_string(&state_path) {
+                Ok(s) => s,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Err(Error::FlowNotFound { id: flow_id });
+                }
+                Err(e) => return Err(Error::Io(e)),
+            };
+
+            let state: FlowState =
+                toml::from_str(&contents).map_err(|source| {
+                    Error::FlowParseFailed { id: flow_id.clone(), source }
+                })?;
+
+            summaries.push(FlowSummary {
+                id: state.id,
+                workflow: state.workflow,
+                current_stage: state.current_stage,
+                archived,
+            });
+        }
+
+        Ok(())
+    };
+
+    collect_from_dir(&state_dir.join("flows/active"), false)?;
+
+    if include_archived {
+        collect_from_dir(&state_dir.join("flows/archived"), true)?;
+    }
+
+    summaries.sort_by(|a, b| a.id.cmp(&b.id));
+
+    Ok(summaries)
 }
 
 /// Renders the stub TOML template for a new workflow named `name`.
