@@ -3,6 +3,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use serde::Deserialize;
 use tracing::instrument;
 
 use crate::result::Error;
@@ -45,6 +46,76 @@ pub fn find_awf_root(start: &Path) -> Result<PathBuf> {
             }
         }
     }
+}
+
+/// Partial deserialisation target for `.awf/config.toml`.
+///
+/// Only the fields relevant to state-dir resolution are captured; all other
+/// keys are ignored by `serde`.
+#[derive(Deserialize)]
+struct AwfConfig {
+    state_dir: Option<String>,
+}
+
+/// Replaces a leading `~` with the value of the `HOME` environment variable.
+///
+/// If the path does not begin with `~`, it is returned unchanged. If `HOME` is
+/// not set the tilde is left in place so that callers receive the raw value
+/// rather than a silent failure.
+fn expand_tilde(path: &str) -> PathBuf {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home).join(rest);
+        }
+    } else if path == "~"
+        && let Ok(home) = std::env::var("HOME")
+    {
+        return PathBuf::from(home);
+    }
+
+    PathBuf::from(path)
+}
+
+/// Resolves the state directory for the given `awf_root`.
+///
+/// The resolution order is:
+///
+/// 1. **`AWF_STATE_DIR` environment variable** — if set, its value is
+///    `~`-expanded and returned immediately.
+/// 2. **`.awf/config.toml` `state_dir` field** — if the file
+///    `<awf_root>/.awf/config.toml` exists and contains a `state_dir` key, the
+///    value is `~`-expanded and returned.
+/// 3. **Project-local default** — `<awf_root>/.awf` is returned when neither of
+///    the above sources provides a value.
+///
+/// # Errors
+///
+/// Returns [`Error::Io`] if the config file exists but cannot be read.
+/// Returns [`Error::ConfigParseFailed`] if the config file cannot be parsed as
+/// TOML.
+#[instrument]
+pub fn resolve_state_dir(awf_root: &Path) -> Result<PathBuf> {
+    // Priority 1: explicit override via environment variable.
+    if let Ok(raw) = std::env::var("AWF_STATE_DIR") {
+        return Ok(expand_tilde(&raw));
+    }
+
+    // Priority 2: optional `state_dir` field inside `.awf/config.toml`.
+    let config_path = awf_root.join(".awf").join("config.toml");
+    if config_path.is_file() {
+        let contents = std::fs::read_to_string(&config_path)?;
+        let config: AwfConfig =
+            toml::from_str(&contents).map_err(|source| {
+                Error::ConfigParseFailed { path: config_path, source }
+            })?;
+
+        if let Some(raw) = config.state_dir {
+            return Ok(expand_tilde(&raw));
+        }
+    }
+
+    // Priority 3: fall back to the project-local `.awf/` directory.
+    Ok(awf_root.join(".awf"))
 }
 
 #[cfg(test)]

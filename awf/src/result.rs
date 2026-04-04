@@ -73,6 +73,14 @@ pub enum Error {
     /// A serialisation error wrapping `toml::ser::Error`.
     #[error("TOML serialisation error: {0}")]
     TomlSer(#[from] toml::ser::Error),
+
+    /// The `.awf/config.toml` file could not be parsed.
+    #[error("failed to parse config at {path:?}: {source}")]
+    ConfigParseFailed {
+        path: std::path::PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
 }
 
 /// Convenience alias so callers can write `Result<T>` instead of
