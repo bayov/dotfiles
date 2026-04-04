@@ -1,8 +1,14 @@
 TODO
-----
+====
 
 - handle home/.claude/statusline.py
 - Remove unnecessary ruff lint rules
+
+Awf
+---
+
+- Better control for how to define output directory for a workflow (state and
+  artifacts).
 
 Infeasible
 ----------
