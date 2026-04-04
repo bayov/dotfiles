@@ -371,6 +371,165 @@ pub fn list_flows(
     Ok(summaries)
 }
 
+/// Copies a file into the `artifacts/` directory for an active flow.
+///
+/// The artifact is written to
+/// `<state_dir>/flows/active/<flow_id>/artifacts/<name>`.
+///
+/// The `artifacts/` directory is created automatically if it does not yet
+/// exist, so callers do not need to ensure it is present before calling this
+/// function.
+///
+/// # Name convention
+///
+/// `name` must be a plain filename — it must not contain path separators (e.g.
+/// `/` or `\`). Passing a path component such as `"subdir/file.md"` is not
+/// supported and will result in the file being placed in an unexpected location
+/// or an I/O error if the intermediate directory does not exist.
+///
+/// # Errors
+///
+/// - Returns [`Error::Io`] if the source file cannot be read, the artifact
+///   directory cannot be created, or the copy fails.
+#[instrument(fields(flow_id = flow_id, name = name, src = ?src))]
+pub fn put_artifact(
+    state_dir: &Path,
+    flow_id: &str,
+    name: &str,
+    src: &Path,
+) -> Result<()> {
+    let artifact_dir =
+        state_dir.join("flows/active").join(flow_id).join("artifacts");
+
+    // Create the artifacts directory if it does not already exist.
+    std::fs::create_dir_all(&artifact_dir).map_err(Error::Io)?;
+
+    let target = artifact_dir.join(name);
+    std::fs::copy(src, &target).map_err(Error::Io)?;
+
+    Ok(())
+}
+
+/// Returns `true` if the named artifact exists for the given active flow.
+///
+/// Checks whether `<state_dir>/flows/active/<flow_id>/artifacts/<name>` is
+/// present on the filesystem. This function is infallible: any I/O error (e.g.
+/// the flow directory does not exist) is treated as the artifact being absent.
+pub fn artifact_exists(state_dir: &Path, flow_id: &str, name: &str) -> bool {
+    state_dir
+        .join("flows/active")
+        .join(flow_id)
+        .join("artifacts")
+        .join(name)
+        .exists()
+}
+
+/// Reads the contents of a named artifact for an active flow as a UTF-8 string.
+///
+/// The file is expected at
+/// `<state_dir>/flows/active/<flow_id>/artifacts/<name>`.
+///
+/// # Errors
+///
+/// - Returns [`Error::Io`] if the file does not exist, cannot be read, or
+///   contains bytes that are not valid UTF-8.
+#[instrument(fields(flow_id = flow_id, name = name))]
+pub fn read_artifact(
+    state_dir: &Path,
+    flow_id: &str,
+    name: &str,
+) -> Result<String> {
+    let path = state_dir
+        .join("flows/active")
+        .join(flow_id)
+        .join("artifacts")
+        .join(name);
+
+    std::fs::read_to_string(&path).map_err(Error::Io)
+}
+
+/// Moves an active flow into the archived flows directory and marks it as
+/// archived.
+///
+/// Performs the following steps atomically from the perspective of the
+/// directory tree:
+///
+/// 1. Loads the current flow state from `flows/active/<flow_id>/state.toml`
+///    (returning [`Error::FlowNotFound`] if it is absent).
+/// 2. Creates `flows/archived/` if it does not yet exist.
+/// 3. Renames `flows/active/<flow_id>` → `flows/archived/<flow_id>`.
+/// 4. Sets `archived = true` and `updated_at = Utc::now()` on the state, then
+///    writes the updated state to `flows/archived/<flow_id>/state.toml`.
+///
+/// After this call succeeds, [`load_flow`] for the same `flow_id` will return
+/// [`Error::FlowNotFound`] because it only looks in the active directory.
+///
+/// # Errors
+///
+/// - Returns [`Error::FlowNotFound`] if no active flow with `flow_id` exists.
+/// - Returns [`Error::TomlSer`] if the updated state cannot be serialised.
+/// - Returns [`Error::Io`] for any other I/O failure (rename, directory
+///   creation, or file write).
+#[instrument(fields(flow_id = flow_id))]
+pub fn archive_flow(state_dir: &Path, flow_id: &str) -> Result<()> {
+    use chrono::Utc;
+
+    let active_dir = state_dir.join("flows/active").join(flow_id);
+
+    // Fail fast with a descriptive error if the active flow does not exist.
+    if !active_dir.exists() {
+        return Err(Error::FlowNotFound { id: flow_id.to_string() });
+    }
+
+    // Load the current state before moving the directory so any parse failure
+    // is reported before the rename takes place.
+    let mut state = load_flow(state_dir, flow_id)?;
+
+    // Ensure the archived parent directory exists.
+    let archived_parent = state_dir.join("flows/archived");
+    std::fs::create_dir_all(&archived_parent).map_err(Error::Io)?;
+
+    let archived_dir = archived_parent.join(flow_id);
+
+    // Rename the flow directory from active → archived.
+    std::fs::rename(&active_dir, &archived_dir).map_err(Error::Io)?;
+
+    // Update the state to reflect the archive and write it to the new location
+    // directly — save_flow always writes to flows/active/, which no longer
+    // exists after the rename.
+    state.archived = true;
+    state.updated_at = Utc::now();
+
+    let contents = toml::to_string(&state)?;
+    let state_path = archived_dir.join("state.toml");
+    std::fs::write(&state_path, contents).map_err(Error::Io)?;
+
+    Ok(())
+}
+
+/// Reads a prompt file from a workflow's directory inside `.awf/`.
+///
+/// The file is expected at
+/// `<awf_root>/workflows/<workflow_name>/<filename>`.
+///
+/// `awf_root` is the `.awf/` directory itself (the same convention used by
+/// [`load_workflow`] and [`list_workflows`]).
+///
+/// # Errors
+///
+/// - Returns [`Error::Io`] if the file does not exist, cannot be read, or
+///   contains invalid UTF-8.
+#[instrument(fields(workflow_name = workflow_name, filename = filename))]
+pub fn load_prompt_file(
+    awf_root: &Path,
+    workflow_name: &str,
+    filename: &str,
+) -> Result<String> {
+    let path = awf_root.join("workflows").join(workflow_name).join(filename);
+
+    std::fs::read_to_string(&path).map_err(Error::Io)
+}
+
 /// Renders the stub TOML template for a new workflow named `name`.
 fn build_workflow_template(name: &str) -> String {
     format!(

@@ -2,12 +2,17 @@ use assert_fs::TempDir;
 use assert_fs::prelude::*;
 use chrono::DateTime;
 
+use super::archive_flow;
+use super::artifact_exists;
 use super::create_flow;
 use super::create_workflow_template;
 use super::list_flows;
 use super::list_workflows;
 use super::load_flow;
+use super::load_prompt_file;
 use super::load_workflow;
+use super::put_artifact;
+use super::read_artifact;
 use super::save_flow;
 use crate::model::flow::FlowState;
 use crate::result::Error;
@@ -386,4 +391,216 @@ fn list_flows_includes_archived_when_requested() {
     // Then: Only the active flow is returned
     assert_eq!(active_only.len(), 1);
     assert_eq!(active_only[0].id, "add-oauth");
+}
+
+// ---------------------------------------------------------------------------
+// S11: put_artifact
+// ---------------------------------------------------------------------------
+
+#[test]
+fn put_artifact_copies_file_into_artifact_dir() {
+    // Given: An active "add-oauth" flow and a source file to store
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("# Design\nHello.").unwrap();
+    let src_path = src.path().join("design.md");
+
+    // When: We store the source file as the "design.md" artifact
+    put_artifact(state_dir.path(), "add-oauth", "design.md", &src_path)
+        .unwrap();
+
+    // Then: The file exists at the expected location with the original content
+    let artifact_path =
+        state_dir.path().join("flows/active/add-oauth/artifacts/design.md");
+    assert!(
+        artifact_path.exists(),
+        "artifact file should exist at {artifact_path:?}"
+    );
+    let contents = std::fs::read_to_string(&artifact_path).unwrap();
+    assert_eq!(contents, "# Design\nHello.");
+}
+
+// ---------------------------------------------------------------------------
+// S12: artifact_exists
+// ---------------------------------------------------------------------------
+
+#[test]
+fn artifact_exists_returns_true_when_artifact_is_present() {
+    // Given: An active "add-oauth" flow with a stored "design.md" artifact
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("content").unwrap();
+    put_artifact(
+        state_dir.path(),
+        "add-oauth",
+        "design.md",
+        &src.path().join("design.md"),
+    )
+    .unwrap();
+
+    // When / Then: artifact_exists returns true for the stored artifact
+    assert!(artifact_exists(state_dir.path(), "add-oauth", "design.md"));
+}
+
+#[test]
+fn artifact_exists_returns_false_when_artifact_is_absent() {
+    // Given: An active "add-oauth" flow with no artifacts
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // When / Then: artifact_exists returns false for a name that was never
+    // stored
+    assert!(!artifact_exists(state_dir.path(), "add-oauth", "missing.md"));
+}
+
+// ---------------------------------------------------------------------------
+// S13: read_artifact
+// ---------------------------------------------------------------------------
+
+#[test]
+fn read_artifact_returns_content_of_stored_artifact() {
+    // Given: An active "add-oauth" flow with a "design.md" artifact containing
+    // known text
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("# My Design\nDetails here.").unwrap();
+    put_artifact(
+        state_dir.path(),
+        "add-oauth",
+        "design.md",
+        &src.path().join("design.md"),
+    )
+    .unwrap();
+
+    // When: We read the artifact back
+    let contents =
+        read_artifact(state_dir.path(), "add-oauth", "design.md").unwrap();
+
+    // Then: The returned string matches the original file content
+    assert_eq!(contents, "# My Design\nDetails here.");
+}
+
+#[test]
+fn read_artifact_returns_io_error_for_missing_artifact() {
+    // Given: An active "add-oauth" flow with no artifacts
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // When: We attempt to read an artifact that was never stored
+    let result = read_artifact(state_dir.path(), "add-oauth", "missing.md");
+
+    // Then: An Io error is returned (file not found)
+    assert!(
+        matches!(result, Err(Error::Io(_))),
+        "expected Err(Error::Io(_)), got {result:?}",
+    );
+}
+
+// ---------------------------------------------------------------------------
+// S14: archive_flow
+// ---------------------------------------------------------------------------
+
+#[test]
+fn archive_flow_moves_flow_to_archived_dir_and_sets_archived_flag() {
+    // Given: An active "add-oauth" flow
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // When: We archive the flow
+    archive_flow(state_dir.path(), "add-oauth").unwrap();
+
+    // Then: The active directory no longer exists
+    let active_dir = state_dir.path().join("flows/active/add-oauth");
+    assert!(
+        !active_dir.exists(),
+        "active directory should be gone after archiving"
+    );
+
+    // Then: The archived state.toml exists and has archived = true
+    let archived_state_path =
+        state_dir.path().join("flows/archived/add-oauth/state.toml");
+    assert!(
+        archived_state_path.exists(),
+        "archived state.toml should exist at {archived_state_path:?}"
+    );
+    let contents = std::fs::read_to_string(&archived_state_path).unwrap();
+    assert!(
+        contents.contains("archived = true"),
+        "archived state.toml should contain `archived = true`, got:\n{contents}",
+    );
+}
+
+#[test]
+fn archive_flow_makes_load_flow_return_not_found() {
+    // Given: An active "add-oauth" flow that we then archive
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+    archive_flow(state_dir.path(), "add-oauth").unwrap();
+
+    // When: We try to load the flow via the normal active-only path
+    let result = load_flow(state_dir.path(), "add-oauth");
+
+    // Then: FlowNotFound is returned because load_flow only checks active/
+    assert!(
+        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "add-oauth"),
+        "expected FlowNotFound {{ id: \"add-oauth\" }}, got {result:?}",
+    );
+}
+
+#[test]
+fn archive_flow_returns_flow_not_found_for_nonexistent_flow() {
+    // Given: A state directory with no flows
+    let state_dir = TempDir::new().unwrap();
+
+    // When: We attempt to archive a flow that does not exist
+    let result = archive_flow(state_dir.path(), "ghost-flow");
+
+    // Then: FlowNotFound is returned with the correct id
+    assert!(
+        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "ghost-flow"),
+        "expected FlowNotFound {{ id: \"ghost-flow\" }}, got {result:?}",
+    );
+}
+
+// ---------------------------------------------------------------------------
+// S15: load_prompt_file
+// ---------------------------------------------------------------------------
+
+#[test]
+fn load_prompt_file_returns_content_of_workflow_prompt() {
+    // Given: An awf root directory with a "feature/design.md" prompt file
+    let awf_root = TempDir::new().unwrap();
+    awf_root
+        .child("workflows/feature/design.md")
+        .write_str("# Design Prompt\nDo the thing.")
+        .unwrap();
+
+    // When: We load the prompt file
+    let contents =
+        load_prompt_file(awf_root.path(), "feature", "design.md").unwrap();
+
+    // Then: The full file content is returned
+    assert_eq!(contents, "# Design Prompt\nDo the thing.");
+}
+
+#[test]
+fn load_prompt_file_returns_io_error_for_missing_file() {
+    // Given: An awf root directory with no prompt files under "feature"
+    let awf_root = TempDir::new().unwrap();
+    awf_root.child("workflows/feature").create_dir_all().unwrap();
+
+    // When: We attempt to load a prompt file that does not exist
+    let result = load_prompt_file(awf_root.path(), "feature", "missing.md");
+
+    // Then: An Io error is returned (file not found)
+    assert!(
+        matches!(result, Err(Error::Io(_))),
+        "expected Err(Error::Io(_)), got {result:?}",
+    );
 }
