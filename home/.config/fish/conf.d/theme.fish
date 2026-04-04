@@ -19,6 +19,7 @@ set --global fish_color_keyword cf8e6d
 # Misc
 set --global fish_color_error red
 set --global fish_color_autosuggestion 666666
+set --global fish_color_search_match --bold --background=333333
 
 # Pager (options)
 set --global fish_pager_color_completion brblack
@@ -44,7 +45,6 @@ set --global fish_pager_color_progress brwhite --bold --background=cyan
 set --global fish_color_cancel --reverse
 set --global fish_color_history_current --bold
 set --global fish_color_match F28779
-set --global fish_color_search_match --bold --background=FFCC66
 set --global fish_color_selection --bold --background=FFCC66
 
 # Not using default prompt
