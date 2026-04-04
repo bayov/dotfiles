@@ -15,22 +15,10 @@ ignore = [
     "COM812", # conflicts with ruff formatter
     "ISC001", # conflicts with ruff formatter
     "D203", # conflicts with D211
-    "D213", # conflicts with D212
 
-    # Docstring style — too pedantic for a personal project
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107", # missing docstrings
-    "D200",
-    "D205",
-    "D209",
-    "D212", # docstring formatting
-    "D401", # imperative mood
+    # Docstring style, `"""` on separate lines:
+    "D203", # disable as we use D211 instead
+    "D212", # disable as we use D213 instead
 
     # Print is legitimate in CLI scripts
     "T20",
