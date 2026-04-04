@@ -455,7 +455,92 @@ def run_with_spinner(
     return r.value
 
 
-def main() -> None:  # noqa: C901
+def _handle_spinner_failure(
+    proc: subprocess.Popen[bytes],
+    cmd: list[str],
+    interrupted: bool,
+    use_box: bool,
+    reader: threading.Thread | None,
+    captured: list[bytes],
+    captured_err: list[bytes],
+    box_args: _Args,
+) -> None:
+    """Redraw box (or flush captured output) after a non-zero exit."""
+    if reader is not None:
+        reader.join()
+    if use_box:
+        if interrupted:
+            box_lines = [fg_esc(11) + "interrupted" + RESET]
+        else:
+            RED = "#cc4444"
+            GREY = "#888888"
+            cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
+            error_msg = (
+                fg_esc(RED)
+                + f"command exited with {proc.returncode} exit code"
+                + RESET
+            )
+            box_lines = [cmd_line, error_msg]
+        mt, mb = _resolve_margins(box_args)
+        total_box_lines = (
+            mt + box_args.box_pad_top + box_args.box_pad_bottom + mb + 3
+        )
+        sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+        sys.stderr.write(
+            _eb.render_box(box_lines, _make_box_config(box_args, mt, mb)) + "\n"
+        )
+        sys.stderr.flush()
+    elif captured and captured[0]:
+        sys.stdout.buffer.write(captured[0])
+        sys.stdout.flush()
+    if captured_err and captured_err[0]:
+        sys.stderr.buffer.write(captured_err[0])
+        sys.stderr.flush()
+
+
+def _handle_spinner_success(
+    use_box: bool,
+    capture_stdout: bool,
+    reader: threading.Thread | None,
+    captured: list[bytes],
+    box_args: _Args,
+) -> None:
+    """Redraw box with command output (or flush captured stdout) on success."""
+    if use_box and capture_stdout:
+        assert reader is not None
+        reader.join()
+        result_text = (
+            (captured[0] if captured else b"")
+            .decode(errors="replace")
+            .rstrip("\n")
+        )
+        inner_width = (
+            box_args.box_width - box_args.box_pad_left - box_args.box_pad_right
+        )
+        lines = [
+            w
+            for raw in (result_text.splitlines() or [""])
+            for w in _eb.word_wrap(raw, inner_width)
+        ]
+        # move to top of box (including margins), clear, redraw with results
+        mt, mb = _resolve_margins(box_args)
+        total_box_lines = (
+            mt + box_args.box_pad_top + box_args.box_pad_bottom + mb + 3
+        )
+        sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+        sys.stderr.write(
+            _eb.render_box(lines, _make_box_config(box_args, mt, mb)) + "\n"
+        )
+        sys.stderr.flush()
+    elif capture_stdout:
+        assert reader is not None
+        reader.join()
+        if captured and captured[0]:
+            sys.stdout.buffer.write(captured[0])
+            sys.stdout.flush()
+
+
+def main() -> None:
     """Parse arguments, run the wrapped command, and animate a spinner."""
     args, cmd = parse_args(sys.argv[1:])
     if not cmd:
@@ -534,80 +619,22 @@ def main() -> None:  # noqa: C901
         err_reader.join()
 
         if proc.returncode != 0:
-            if reader is not None:
-                reader.join()
-            if args.box:
-                if interrupted:
-                    box_lines = [fg_esc(11) + "interrupted" + RESET]
-                else:
-                    RED = "#cc4444"
-                    GREY = "#888888"
-                    cmd_line = fg_esc(GREY) + " ".join(cmd) + RESET
-                    error_msg = (
-                        fg_esc(RED)
-                        + f"command exited with {proc.returncode} exit code"
-                        + RESET
-                    )
-                    box_lines = [cmd_line, error_msg]
-                mt, mb = _resolve_margins(_box_args)
-                total_box_lines = (
-                    mt
-                    + _box_args.box_pad_top
-                    + _box_args.box_pad_bottom
-                    + mb
-                    + 3
-                )
-                sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-                sys.stderr.write(
-                    _eb.render_box(
-                        box_lines, _make_box_config(_box_args, mt, mb)
-                    )
-                    + "\n"
-                )
-                sys.stderr.flush()
-            elif captured and captured[0]:
-                sys.stdout.buffer.write(captured[0])
-                sys.stdout.flush()
-            if captured_err and captured_err[0]:
-                sys.stderr.buffer.write(captured_err[0])
-                sys.stderr.flush()
+            _handle_spinner_failure(
+                proc,
+                cmd,
+                interrupted,
+                args.box,
+                reader,
+                captured,
+                captured_err,
+                _box_args,
+            )
             signal.signal(signal.SIGINT, original_sigint)
             sys.exit(proc.returncode)
 
-        if args.box and capture_stdout:
-            assert reader is not None
-            reader.join()
-            result_text = (
-                (captured[0] if captured else b"")
-                .decode(errors="replace")
-                .rstrip("\n")
-            )
-            inner_width = (
-                _box_args.box_width
-                - _box_args.box_pad_left
-                - _box_args.box_pad_right
-            )
-            lines: list[str] = []
-            for raw in result_text.splitlines() or [""]:
-                for wrapped in _eb.word_wrap(raw, inner_width):
-                    lines.append(wrapped)
-            # move to top of box (including margins), clear, redraw with results
-            mt, mb = _resolve_margins(_box_args)
-            total_box_lines = (
-                mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
-            )
-            sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-            sys.stderr.write(
-                _eb.render_box(lines, _make_box_config(_box_args, mt, mb))
-                + "\n"
-            )
-            sys.stderr.flush()
-        elif capture_stdout:
-            assert reader is not None
-            reader.join()
-            if captured and captured[0]:
-                sys.stdout.buffer.write(captured[0])
-                sys.stdout.flush()
+        _handle_spinner_success(
+            args.box, capture_stdout, reader, captured, _box_args
+        )
     else:
         proc.wait()
 

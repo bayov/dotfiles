@@ -666,7 +666,93 @@ def format_files(
     )
 
 
-def main() -> None:  # noqa: C901
+def _auto_detect_vcs(args: argparse.Namespace) -> None:
+    """Set args.jj or args.git if no input source is explicitly specified."""
+    if args.all_tracked or args.file or args.git or args.jj:
+        return
+    try:
+        jj_repo_root()
+        args.jj = True
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        try:
+            git_repo_root()
+            args.git = True
+        except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+            pass
+
+
+def _run_formatters(
+    files_by_formatter: dict[Formatter, list[Path]],
+    cwd: Path,
+) -> tuple[int, dict[str, tuple[float, float]]]:
+    """
+    Run all formatters in parallel; return (modified_count, formatter_spans).
+
+    Per-formatter spans are (min_start, max_end) across parallel chunks, so
+    reported wall-clock time is not a misleading cumulative sum.
+    """
+    formatter_spans: dict[str, tuple[float, float]] = {}
+    modified_files_count = 0
+
+    with ThreadPoolExecutor() as executor:
+        futures: list[Future[FormatResult]] = []
+        for formatter, group_files in files_by_formatter.items():
+            for i in range(0, len(group_files), formatter.max_files_per_format):
+                chunk = group_files[i : i + formatter.max_files_per_format]
+                futures.append(
+                    executor.submit(format_files, formatter, chunk, logger())
+                )
+
+        for future in as_completed(futures):
+            res = future.result()
+            for f in res.modified_files:
+                logger().info(
+                    f"({res.formatter_name}) Formatted: {f.relative_to(cwd)}"
+                )
+            if res.error:
+                logger().error(str(res.error))
+                sys.exit(1)
+            modified_files_count += len(res.modified_files)
+            prev = formatter_spans.get(res.formatter_name)
+            if prev is None:
+                formatter_spans[res.formatter_name] = (
+                    res.start_time,
+                    res.end_time,
+                )
+            else:
+                formatter_spans[res.formatter_name] = (
+                    min(prev[0], res.start_time),
+                    max(prev[1], res.end_time),
+                )
+
+    return modified_files_count, formatter_spans
+
+
+def _warn_no_formatter_files(
+    unsupported_ext_files: list[Path],
+    no_shebang_files: list[Path],
+    cwd: Path,
+) -> None:
+    """Log a warning for files that had no associated formatter."""
+    no_formatter_files = [
+        f
+        for f in unsupported_ext_files + no_shebang_files
+        if not _registry().ignore.matches(f)
+    ]
+    if not no_formatter_files:
+        return
+    exts = sorted({f.suffix or "<no-extension>" for f in no_formatter_files})
+    logger().warn(
+        f"{len(no_formatter_files)} file(s) had no associated formatter "
+        f"(extensions: {', '.join(exts)})"
+    )
+    for f in sorted(no_formatter_files):
+        shebang = _read_shebang(f)
+        suffix = f"  [{shebang}]" if shebang else ""
+        logger().warn(f"  {f.relative_to(cwd)}{suffix}")
+
+
+def main() -> None:
     """Entry point. Parses arguments, collects files, and runs formatters."""
     require_project_root()
 
@@ -688,20 +774,7 @@ def main() -> None:  # noqa: C901
         log_modules.add(LogModule.DEBUG)
     set_logger(Logger(log_modules))
 
-    if not args.all_tracked and not args.file and not args.git and not args.jj:
-        try:
-            jj_repo_root()
-            args.jj = True
-        except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
-            try:
-                git_repo_root()
-                args.git = True
-            except (
-                subprocess.CalledProcessError,
-                FileNotFoundError,
-                ValueError,
-            ):
-                pass
+    _auto_detect_vcs(args)
 
     result = collect_files(cast(_CollectArgs, args))
     if result is None:
@@ -719,7 +792,6 @@ def main() -> None:  # noqa: C901
 
     start_time = time.perf_counter()
     cwd = Path.cwd()
-    modified_files_count = 0
 
     files_by_formatter: dict[Formatter, list[Path]] = {}
     for f in files:
@@ -732,46 +804,9 @@ def main() -> None:  # noqa: C901
             )
         files_by_formatter.setdefault(formatter, []).append(f)
 
-    # Per-formatter (min_start, max_end) across parallel chunks, so we can
-    # report actual wall-clock time rather than a misleading cumulative sum.
-    formatter_spans: dict[str, tuple[float, float]] = {}
-
-    with ThreadPoolExecutor() as executor:
-        futures: list[Future[FormatResult]] = []
-        for formatter, group_files in files_by_formatter.items():
-            for i in range(0, len(group_files), formatter.max_files_per_format):
-                chunk = group_files[i : i + formatter.max_files_per_format]
-                futures.append(
-                    executor.submit(
-                        format_files,
-                        formatter,
-                        chunk,
-                        logger(),
-                    )
-                )
-
-        for future in as_completed(futures):
-            res = future.result()
-            for f in res.modified_files:
-                relative_to_cwd = f.relative_to(cwd)
-                logger().info(
-                    f"({res.formatter_name}) Formatted: {relative_to_cwd}"
-                )
-            if res.error:
-                logger().error(str(res.error))
-                sys.exit(1)
-            modified_files_count += len(res.modified_files)
-            prev = formatter_spans.get(res.formatter_name)
-            if prev is None:
-                formatter_spans[res.formatter_name] = (
-                    res.start_time,
-                    res.end_time,
-                )
-            else:
-                formatter_spans[res.formatter_name] = (
-                    min(prev[0], res.start_time),
-                    max(prev[1], res.end_time),
-                )
+    modified_files_count, formatter_spans = _run_formatters(
+        files_by_formatter, cwd
+    )
 
     total_duration = time.perf_counter() - start_time
     logger().info(
@@ -782,23 +817,7 @@ def main() -> None:  # noqa: C901
         color=GRAY if modified_files_count == 0 else GREEN,
     )
 
-    no_formatter_files = [
-        f
-        for f in unsupported_ext_files + no_shebang_files
-        if not _registry().ignore.matches(f)
-    ]
-    if no_formatter_files:
-        exts = sorted(
-            {f.suffix or "<no-extension>" for f in no_formatter_files}
-        )
-        logger().warn(
-            f"{len(no_formatter_files)} file(s) had no associated formatter "
-            f"(extensions: {', '.join(exts)})"
-        )
-        for f in sorted(no_formatter_files):
-            shebang = _read_shebang(f)
-            suffix = f"  [{shebang}]" if shebang else ""
-            logger().warn(f"  {f.relative_to(cwd)}{suffix}")
+    _warn_no_formatter_files(unsupported_ext_files, no_shebang_files, cwd)
 
     if logger().is_debug_enabled:
         for name, (start, end) in formatter_spans.items():

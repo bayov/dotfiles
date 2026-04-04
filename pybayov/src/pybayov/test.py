@@ -186,7 +186,200 @@ def run_command(
     )
 
 
-def main() -> None:  # noqa: C901
+def _log_process_result(
+    name: str,
+    code: int,
+    duration: float,
+    raw_output: bytes,
+    args: argparse.Namespace,
+) -> None:
+    """Print indented output and a pass/fail line for a completed test suite."""
+    indented_output = b""
+    if raw_output and (not args.quiet or (args.show_failures and code != 0)):
+        indented_output = b"".join(
+            b"    " + line
+            for line in raw_output.strip().splitlines(keepends=True)
+        )
+    if indented_output:
+        print()
+        logger().info(f"{name} output:")
+        print()
+        sys.stdout.buffer.write(indented_output)
+        print("\n")
+        sys.stdout.buffer.flush()
+    if code == 0:
+        logger().info(
+            f"✓ {name} passed {GRAY}({duration:.2f}s){RESET}", color=GREEN
+        )
+    else:
+        logger().error(f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}")
+
+
+def _run_sequential(
+    test_suites: list[_TestSuiteConfig],
+    args: argparse.Namespace,
+    log_dir: Path,
+) -> list[tuple[str, int, float]]:
+    """
+    Run test suites one at a time.
+
+    Returns list of (name, returncode, duration).
+    """
+    results: list[tuple[str, int, float]] = []
+    for test_suite in test_suites:
+        name = test_suite["name"]
+        command_str = test_suite["command"]
+        cmd_args = shlex.split(command_str)
+        log_file_path = str(log_dir / f"{name}.log")
+
+        with open(log_file_path, "w") as f:
+            f.write(underlined_title(command_str) + "\n\n")
+
+        logger().info(f"Running {name}...")
+        if logger().is_debug_enabled:
+            logger().debug(f"Command: {command_str}")
+
+        capture = args.quiet and args.show_failures
+        start_time = time.time()
+        res = run_command(
+            cmd_args,
+            log_file_path,
+            args.quiet,
+            test_suite.get("cwd"),
+            capture=capture,
+        )
+        duration = time.time() - start_time
+
+        if capture and res.returncode != 0 and res.stdout:
+            indented = b"".join(
+                b"    " + line
+                for line in res.stdout.strip().splitlines(keepends=True)
+            )
+            print()
+            logger().info(f"{name} output:")
+            print()
+            sys.stdout.buffer.write(indented)
+            print("\n")
+            sys.stdout.buffer.flush()
+
+        results.append((name, res.returncode, duration))
+
+        if res.returncode == 0:
+            logger().info(
+                f"✓ {name} passed {GRAY}({duration:.2f}s){RESET}",
+                color=GREEN,
+            )
+        else:
+            logger().error(f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}")
+    return results
+
+
+def _run_parallel(
+    test_suites: list[_TestSuiteConfig],
+    args: argparse.Namespace,
+    log_dir: Path,
+) -> list[tuple[str, int, float]]:
+    """
+    Run test suites concurrently.
+
+    Returns list of (name, returncode, duration).
+    """
+    results: list[tuple[str, int, float]] = []
+    processes: list[_ProcessEntry] = []
+    for test_suite in test_suites:
+        name = test_suite["name"]
+        command_str = test_suite["command"]
+        cmd_args = shlex.split(command_str)
+
+        logger().info(f"Running {name}...")
+        cmd_log_path = str(log_dir / f"{name}.log")
+
+        # Run in background using a pipe (no PTY, suppresses progress bars).
+        # Force colors via env vars since there's no TTY.
+        cwd = test_suite.get("cwd")
+        start_time = time.time()
+        env = os.environ.copy()
+        env["FORCE_COLOR"] = "1"
+        env["CLICOLOR_FORCE"] = "1"
+        proc = subprocess.Popen(
+            cmd_args,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            close_fds=True,
+            cwd=cwd,
+            env=env,
+        )
+        assert proc.stdout is not None
+        read_fd = proc.stdout.fileno()
+
+        log_file = open(cmd_log_path, "wb")
+        log_file.write(underlined_title(command_str).encode() + b"\n\n")
+
+        processes.append(
+            {
+                "name": name,
+                "proc": proc,
+                "stdout": proc.stdout,
+                "start_time": start_time,
+                "log_file": log_file,
+                "log_path": cmd_log_path,
+                "command_str": command_str,
+                "duration": None,
+                "returncode": None,
+                "read_fd": read_fd,
+                "eof": False,
+                "raw_output": bytearray(),
+            }
+        )
+
+    while any(not p["eof"] for p in processes):
+        read_fds = [p["read_fd"] for p in processes if not p["eof"]]
+        r, _, _ = select.select(read_fds, [], [], 0.1)
+
+        for fd in r:
+            p = next(p for p in processes if p["read_fd"] == fd)
+            try:
+                chunk = os.read(fd, 4096)
+                if chunk:
+                    p["log_file"].write(_strip_ansi(chunk))
+                    p["raw_output"].extend(chunk)
+                else:
+                    p["eof"] = True
+            except OSError:
+                # Happens when the slave is closed
+                p["eof"] = True
+
+        for p in processes:
+            if p["returncode"] is None:
+                code = p["proc"].poll()
+                if code is not None:
+                    p["returncode"] = code
+                    duration = time.time() - p["start_time"]
+                    p["duration"] = duration
+
+                    name = p["name"]
+                    results.append((name, code, duration))
+
+                    # Mark EOF before closing so this fd is excluded from
+                    # future select() calls. Child processes that still hold
+                    # the PTY slave fd open (e.g. TypeScript workers) would
+                    # otherwise block the loop forever.
+                    p["eof"] = True
+                    p["log_file"].close()
+                    p["stdout"].close()
+
+                    _log_process_result(
+                        name,
+                        code,
+                        duration,
+                        bytes(p["raw_output"]),
+                        args,
+                    )
+    return results
+
+
+def main() -> None:
     """Parse arguments and run the configured test suites."""
     require_project_root()
 
@@ -224,178 +417,14 @@ def main() -> None:  # noqa: C901
     set_logger(Logger(enabled_modules, show_timestamps=True))
 
     test_suites = load_test_suites()
-
-    results: list[tuple[str, int, float]] = []
-
     suite_start_time = time.time()
-
     log_dir = _make_log_dir()
     logger().info(f"Test logs: {log_dir}")
 
     if args.sequential:
-        for test_suite in test_suites:
-            name = test_suite["name"]
-            command_str = test_suite["command"]
-            cmd_args = shlex.split(command_str)
-            log_file_path = str(log_dir / f"{name}.log")
-
-            with open(log_file_path, "w") as f:
-                f.write(underlined_title(command_str) + "\n\n")
-
-            logger().info(f"Running {name}...")
-            if logger().is_debug_enabled:
-                logger().debug(f"Command: {command_str}")
-
-            capture = args.quiet and args.show_failures
-            start_time = time.time()
-            res = run_command(
-                cmd_args,
-                log_file_path,
-                args.quiet,
-                test_suite.get("cwd"),
-                capture=capture,
-            )
-            duration = time.time() - start_time
-
-            if capture and res.returncode != 0 and res.stdout:
-                indented = b"".join(
-                    b"    " + line
-                    for line in res.stdout.strip().splitlines(keepends=True)
-                )
-                print()
-                logger().info(f"{name} output:")
-                print()
-                sys.stdout.buffer.write(indented)
-                print("\n")
-                sys.stdout.buffer.flush()
-
-            results.append((name, res.returncode, duration))
-
-            if res.returncode == 0:
-                logger().info(
-                    f"✓ {name} passed {GRAY}({duration:.2f}s){RESET}",
-                    color=GREEN,
-                )
-            else:
-                logger().error(
-                    f"✗ {name} failed {GRAY}({duration:.2f}s){RESET}"
-                )
+        results = _run_sequential(test_suites, args, log_dir)
     else:
-        processes: list[_ProcessEntry] = []
-        for test_suite in test_suites:
-            name = test_suite["name"]
-            command_str = test_suite["command"]
-            cmd_args = shlex.split(command_str)
-
-            logger().info(f"Running {name}...")
-            cmd_log_path = str(log_dir / f"{name}.log")
-
-            # Run in background using a pipe (no PTY, suppresses progress bars).
-            # Force colors via env vars since there's no TTY.
-            cwd = test_suite.get("cwd")
-            start_time = time.time()
-            env = os.environ.copy()
-            env["FORCE_COLOR"] = "1"
-            env["CLICOLOR_FORCE"] = "1"
-            proc = subprocess.Popen(
-                cmd_args,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                close_fds=True,
-                cwd=cwd,
-                env=env,
-            )
-            assert proc.stdout is not None
-            read_fd = proc.stdout.fileno()
-
-            log_file = open(cmd_log_path, "wb")
-            log_file.write(underlined_title(command_str).encode() + b"\n\n")
-
-            processes.append(
-                {
-                    "name": name,
-                    "proc": proc,
-                    "stdout": proc.stdout,
-                    "start_time": start_time,
-                    "log_file": log_file,
-                    "log_path": cmd_log_path,
-                    "command_str": command_str,
-                    "duration": None,
-                    "returncode": None,
-                    "read_fd": read_fd,
-                    "eof": False,
-                    "raw_output": bytearray(),
-                }
-            )
-
-        while any(not p["eof"] for p in processes):
-            read_fds = [p["read_fd"] for p in processes if not p["eof"]]
-            r, _, _ = select.select(read_fds, [], [], 0.1)
-
-            for fd in r:
-                p = next(p for p in processes if p["read_fd"] == fd)
-                try:
-                    chunk = os.read(fd, 4096)
-                    if chunk:
-                        p["log_file"].write(_strip_ansi(chunk))
-                        p["raw_output"].extend(chunk)
-                    else:
-                        p["eof"] = True
-                except OSError:
-                    # Happens when the slave is closed
-                    p["eof"] = True
-
-            for p in processes:
-                if p["returncode"] is None:
-                    code = p["proc"].poll()
-                    if code is not None:
-                        p["returncode"] = code
-                        duration = time.time() - p["start_time"]
-                        p["duration"] = duration
-
-                        name = p["name"]
-                        results.append((name, code, duration))
-
-                        # Mark EOF before closing so this fd is excluded from
-                        # future select() calls. Child processes that still hold
-                        # the PTY slave fd open (e.g. TypeScript workers) would
-                        # otherwise block the loop forever.
-                        p["eof"] = True
-                        p["log_file"].close()
-                        p["stdout"].close()
-
-                        raw_output = bytes(p["raw_output"])
-                        indented_output = b""
-                        if raw_output and (
-                            not args.quiet or (args.show_failures and code != 0)
-                        ):
-                            indented_output = b"".join(
-                                b"    " + line
-                                for line in raw_output.strip().splitlines(
-                                    keepends=True
-                                )
-                            )
-
-                        if indented_output:
-                            print()
-                            logger().info(f"{name} output:")
-                            print()
-                            sys.stdout.buffer.write(indented_output)
-                            print("\n")
-                            sys.stdout.buffer.flush()
-
-                        if code == 0:
-                            logger().info(
-                                f"✓ {name} passed"
-                                f" {GRAY}({duration:.2f}s){RESET}",
-                                color=GREEN,
-                            )
-                        else:
-                            logger().error(
-                                f"✗ {name} failed"
-                                f" {GRAY}({duration:.2f}s){RESET}"
-                            )
+        results = _run_parallel(test_suites, args, log_dir)
 
     # Summary
     total_duration = time.time() - suite_start_time
