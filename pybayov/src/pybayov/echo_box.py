@@ -126,7 +126,9 @@ def render_box(lines: list[str], config: BoxConfig = BoxConfig()) -> str:
         title_start = (config.width - title_vis) // 2
         title_end = title_start + title_vis
         left_fill = fg(config.bg_color) + "▄" * title_start
-        title_bg_safe = config.title_bg if config.title_bg is not None else config.bg_color
+        title_bg_safe = (
+            config.title_bg if config.title_bg is not None else config.bg_color
+        )
         title_cell = (
             bg(title_bg_safe)
             + fg(config.title_color)
@@ -136,11 +138,17 @@ def render_box(lines: list[str], config: BoxConfig = BoxConfig()) -> str:
             + " " * config.title_padding
             + RESET
         )
-        right_fill = fg(config.bg_color) + "▄" * max(0, config.width - title_end) + RESET
+        right_fill = (
+            fg(config.bg_color) + "▄" * max(0, config.width - title_end) + RESET
+        )
         border_top = mleft + left_fill + title_cell + right_fill + mright
     else:
-        border_top = mleft + fg(config.bg_color) + "▄" * config.width + RESET + mright
-    border_bot = mleft + fg(config.bg_color) + "▀" * config.width + RESET + mright
+        border_top = (
+            mleft + fg(config.bg_color) + "▄" * config.width + RESET + mright
+        )
+    border_bot = (
+        mleft + fg(config.bg_color) + "▀" * config.width + RESET + mright
+    )
 
     for _ in range(config.margin_top):
         out.append("")
@@ -274,17 +282,35 @@ def main():
     config = BoxConfig(
         bg_color=args.box_bg,
         width=args.width,
-        margin_top=args.margin_top if args.margin_top is not None else args.margin,
-        margin_right=args.margin_right if args.margin_right is not None else args.margin,
-        margin_bottom=args.margin_bottom if args.margin_bottom is not None else args.margin,
-        margin_left=args.margin_left if args.margin_left is not None else args.margin,
-        pad_top=args.padding_top if args.padding_top is not None else (pad if pad is not None else DEFAULT_PAD_TOP),
-        pad_right=args.padding_right if args.padding_right is not None else (pad if pad is not None else DEFAULT_PAD_RIGHT),
-        pad_bottom=args.padding_bottom if args.padding_bottom is not None else (pad if pad is not None else DEFAULT_PAD_BOTTOM),
-        pad_left=args.padding_left if args.padding_left is not None else (pad if pad is not None else DEFAULT_PAD_LEFT),
+        margin_top=args.margin_top
+        if args.margin_top is not None
+        else args.margin,
+        margin_right=args.margin_right
+        if args.margin_right is not None
+        else args.margin,
+        margin_bottom=args.margin_bottom
+        if args.margin_bottom is not None
+        else args.margin,
+        margin_left=args.margin_left
+        if args.margin_left is not None
+        else args.margin,
+        pad_top=args.padding_top
+        if args.padding_top is not None
+        else (pad if pad is not None else DEFAULT_PAD_TOP),
+        pad_right=args.padding_right
+        if args.padding_right is not None
+        else (pad if pad is not None else DEFAULT_PAD_RIGHT),
+        pad_bottom=args.padding_bottom
+        if args.padding_bottom is not None
+        else (pad if pad is not None else DEFAULT_PAD_BOTTOM),
+        pad_left=args.padding_left
+        if args.padding_left is not None
+        else (pad if pad is not None else DEFAULT_PAD_LEFT),
         title=args.title,
         title_color=args.title_color,
-        title_bg=args.title_bg if args.title_bg is not None else lighten(args.box_bg),
+        title_bg=args.title_bg
+        if args.title_bg is not None
+        else lighten(args.box_bg),
         title_padding=args.title_padding,
     )
 

@@ -421,7 +421,9 @@ def run_with_spinner(
             ]
             total_box_lines = mt + _a.box_pad_top + _a.box_pad_bottom + mb + 3
             sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-            sys.stderr.write(_eb.render_box(lines, _make_box_config(_a, mt, mb)) + "\n")
+            sys.stderr.write(
+                _eb.render_box(lines, _make_box_config(_a, mt, mb)) + "\n"
+            )
             sys.stderr.flush()
     else:
         thread.start()
@@ -525,9 +527,20 @@ def main() -> None:
                     )
                     box_lines = [cmd_line, error_msg]
                 mt, mb = _resolve_margins(_box_args)
-                total_box_lines = mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
+                total_box_lines = (
+                    mt
+                    + _box_args.box_pad_top
+                    + _box_args.box_pad_bottom
+                    + mb
+                    + 3
+                )
                 sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-                sys.stderr.write(_eb.render_box(box_lines, _make_box_config(_box_args, mt, mb)) + "\n")
+                sys.stderr.write(
+                    _eb.render_box(
+                        box_lines, _make_box_config(_box_args, mt, mb)
+                    )
+                    + "\n"
+                )
                 sys.stderr.flush()
             else:
                 if captured and captured[0]:
@@ -547,16 +560,25 @@ def main() -> None:
                 .decode(errors="replace")
                 .rstrip("\n")
             )
-            inner_width = _box_args.box_width - _box_args.box_pad_left - _box_args.box_pad_right
+            inner_width = (
+                _box_args.box_width
+                - _box_args.box_pad_left
+                - _box_args.box_pad_right
+            )
             lines: list[str] = []
             for raw in result_text.splitlines() or [""]:
                 for wrapped in _eb.word_wrap(raw, inner_width):
                     lines.append(wrapped)
             # move to top of box (including margins), clear, redraw with results
             mt, mb = _resolve_margins(_box_args)
-            total_box_lines = mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
+            total_box_lines = (
+                mt + _box_args.box_pad_top + _box_args.box_pad_bottom + mb + 3
+            )
             sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
-            sys.stderr.write(_eb.render_box(lines, _make_box_config(_box_args, mt, mb)) + "\n")
+            sys.stderr.write(
+                _eb.render_box(lines, _make_box_config(_box_args, mt, mb))
+                + "\n"
+            )
             sys.stderr.flush()
         elif capture_stdout:
             assert reader is not None
