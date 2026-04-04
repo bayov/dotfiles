@@ -91,9 +91,7 @@ def get_linked_project_path() -> Path | None:
 
 
 LINKED_PROJECT_PATH = get_linked_project_path()
-IS_IN_DOTFILES = (
-    WORKSPACE_PATH == DOTFILES_DIR or LINKED_PROJECT_PATH == DOTFILES_DIR
-)
+IS_IN_DOTFILES = DOTFILES_DIR in {WORKSPACE_PATH, LINKED_PROJECT_PATH}
 if IS_IN_DOTFILES:
     print(
         f"\033[33mWarning: Dotfiles directory detected"
