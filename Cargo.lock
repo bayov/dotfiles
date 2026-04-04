@@ -139,6 +139,7 @@ dependencies = [
  "color-eyre",
  "owo-colors",
  "serde",
+ "serde_json",
  "thiserror",
  "toml",
  "tracing",
