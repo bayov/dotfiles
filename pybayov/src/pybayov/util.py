@@ -1,3 +1,5 @@
+"""Shared utilities: ANSI colors, logging, and project root detection."""
+
 import contextvars
 import os
 import subprocess
@@ -21,6 +23,8 @@ GRAY = "\033[90m" if USE_COLOR else ""
 
 
 class LogModule(Enum):
+    """Log verbosity levels."""
+
     # Verbose debug logs.
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -29,6 +33,8 @@ class LogModule(Enum):
 
 
 class Logger:
+    """Structured logger with per-module enable/disable and optional color."""
+
     enabled_log_modules: set[LogModule]
     use_color: bool
     show_timestamps: bool
@@ -38,7 +44,8 @@ class Logger:
         enabled_log_modules: set[LogModule],
         show_timestamps: bool = False,
     ) -> None:
-        """Initialize the logger with the given modules enabled.
+        """
+        Initialize the logger with the given modules enabled.
 
         WARN and ERROR are always enabled regardless of `enabled_log_modules`.
         """
@@ -93,8 +100,7 @@ class Logger:
         return LogModule.DEBUG in self.enabled_log_modules
 
     def color(self, color: str) -> str:
-        """Return `color` if color output is enabled, otherwise empty
-        string."""
+        """Return `color` if color output is enabled, otherwise empty string."""
         if not self.use_color:
             return ""
         return color
@@ -111,8 +117,7 @@ class Logger:
         }[m]
 
     def _max_log_module_len(self) -> int:
-        """Return the length of the longest log module name, used for
-        alignment."""
+        """Return the longest log module name length, for alignment."""
         return max(len(m.value) for m in LogModule)
 
 
@@ -120,8 +125,11 @@ _logger_ctx: contextvars.ContextVar[Logger] = contextvars.ContextVar("logger")
 
 
 def logger() -> Logger:
-    """Return the current context's logger. Raises LookupError if none
-    is set."""
+    """
+    Return the current context's logger.
+
+    Raises LookupError if none is set.
+    """
     return _logger_ctx.get()
 
 
@@ -132,7 +140,8 @@ def set_logger(log: Logger) -> None:
 
 @lru_cache(maxsize=1)
 def jj_repo_root() -> Path:
-    """Return the root of the current jj workspace.
+    """
+    Return the root of the current jj workspace.
 
     Raises ValueError if not in a jj repository.
     """
@@ -151,7 +160,8 @@ def jj_repo_root() -> Path:
 
 @lru_cache(maxsize=1)
 def git_repo_root() -> Path:
-    """Return the root of the current git repository.
+    """
+    Return the root of the current git repository.
 
     Raises ValueError if not in a git repository.
     """
@@ -169,7 +179,8 @@ def git_repo_root() -> Path:
 
 
 def project_root() -> Path:
-    """Detect and return the project root directory.
+    """
+    Detect and return the project root directory.
 
     Tries in order: jj workspace root, git repository root, then walks up
     from CWD looking for a `.bayov-personal-project` marker file. Falls back
@@ -197,8 +208,7 @@ def project_root() -> Path:
 
 
 def require_project_root() -> None:
-    """Exits with an error if the current working directory is not
-    `project_root()`."""
+    """Exit with an error if cwd is not `project_root()`."""
     root = project_root()
     if Path.cwd().resolve() != root:
         print(

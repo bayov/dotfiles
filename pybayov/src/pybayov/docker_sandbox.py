@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Run a command or shell in a general-purpose Docker sandbox.
-"""
+"""Run a command or shell in a general-purpose Docker sandbox."""
 
 import argparse
 import hashlib
@@ -31,12 +29,15 @@ IS_IN_WORKSPACES = str(WORKSPACE_PATH).startswith(str(WORKSPACES_DIR) + "/")
 
 @dataclass
 class Mount:
+    """Mount specification for a Docker volume."""
+
     host_path: str
     container_path: str | None = None
     ro: bool = True  # `ro` flag (read-only)
     disabled: bool = False
 
     def __post_init__(self) -> None:
+        """Derive container_path from host_path if not set."""
         if self.container_path is None:
             if self.host_path.startswith("~"):
                 self.container_path = self.host_path.replace(
@@ -47,8 +48,11 @@ class Mount:
 
 
 def get_linked_project_path() -> Path | None:
-    """If in a jj/git workspace under ~/workspaces, return the linked project
-    root."""
+    """
+    Return the linked project root if in a jj/git workspace under ~/workspaces.
+
+    Otherwise returns None.
+    """
     if not IS_IN_WORKSPACES:
         return None
 
@@ -167,6 +171,7 @@ ENV_VARS_TO_FORWARD = [
 
 
 def expand_path(p: str) -> Path:
+    """Expand a path string to an absolute Path."""
     if p == ".":
         return Path.cwd().resolve()
     return Path(p).expanduser().resolve()
@@ -257,6 +262,7 @@ def build_image(rebuild: bool = False, no_rebuild: bool = False) -> None:
 
 
 def get_mount_args() -> list[str]:
+    """Build the --volume arguments for all configured mounts."""
     args: list[str] = []
     seen_container_paths: set[str | None] = set()
 
@@ -283,6 +289,7 @@ def get_mount_args() -> list[str]:
 
 
 def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
+    """Build --env arguments and optional SSH socket forwarding args."""
     args: list[str] = []
 
     # Pass configured environment variables
@@ -306,6 +313,7 @@ def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
 
 
 def main() -> None:
+    """Parse arguments and launch the Docker sandbox container."""
     parser = argparse.ArgumentParser(
         description=(
             "Run a command or shell in a general-purpose Docker sandbox."

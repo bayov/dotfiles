@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Run a command with a spinner animation on stderr.
+"""
+Run a command with a spinner animation on stderr.
 
 Usage: spinner --title <title> -- <command> [args...]
 """
@@ -107,16 +108,19 @@ ITALIC = _eb.ITALIC
 
 
 def rgb(r: int, g: int, b: int) -> str:
+    """Return an ANSI true-color foreground escape sequence."""
     return f"\033[38;2;{r};{g};{b}m"
 
 
 def lerp_rgb(
     c1: tuple[int, int, int], c2: tuple[int, int, int], t: float
 ) -> tuple[int, ...]:
+    """Linearly interpolate between two RGB colors."""
     return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2, strict=False))
 
 
 def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
+    """Parse spinner arguments and split off the wrapped command."""
     # Split on '--' to separate spinner args from command
     try:
         sep = argv.index("--")
@@ -173,6 +177,7 @@ def parse_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
 def colorize_text(
     text: str, lead: int | None, base_color: tuple[int, int, int]
 ) -> str:
+    """Colorize text with a comet-tail effect at the lead position."""
     parts: list[str] = []
     for j, ch in enumerate(text):
         dist = lead - j if lead is not None else TAIL_LEN + 1
@@ -304,6 +309,7 @@ def _resolve_margins(args: _Args) -> tuple[int, int]:
 
 
 def print_box(args: _Args) -> None:
+    """Print the static box frame (borders and blank lines) to stderr."""
     box_bg = args.box_bg
     width = args.box_width
     margin = args.box_margin
@@ -382,8 +388,11 @@ def run_with_spinner(
     box_pad_top: int = DEFAULT_BOX_PAD_TOP,
     box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM,
 ) -> _T:
-    """Run fn() with a spinner on stderr. In box mode, fn's string return
-    value is shown in the box."""
+    """
+    Run fn() with a spinner on stderr.
+
+    In box mode, fn's string return value is shown in the box.
+    """
     show_spinner = sys.stderr.isatty()
     r = _ThreadResult()
 
@@ -447,6 +456,7 @@ def run_with_spinner(
 
 
 def main() -> None:
+    """Parse arguments, run the wrapped command, and animate a spinner."""
     args, cmd = parse_args(sys.argv[1:])
     if not cmd:
         sys.stderr.write(

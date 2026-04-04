@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generates an AI commit description for the current jj commit and
-prints it to stdout.
+"""
+Generate an AI commit description for the current jj commit.
 
-With --interactive: shows a spinner, prompts before overriding an existing
-description, and applies the result via `jj describe`.
+Prints the description to stdout. With --interactive: shows a spinner,
+prompts before overriding an existing description, and applies the result
+via `jj describe`.
 """
 
 import argparse
@@ -26,13 +27,17 @@ DOTFILES_DIR: Path = Path(
 
 
 class GenerateError(Exception):
+    """Raised when commit description generation fails."""
+
     def __init__(self, error_info: dict[str, str]) -> None:
+        """Initialize with a dict containing error details."""
         self.error_info = error_info
         super().__init__(error_info.get("error", "Unknown error"))
 
 
 def generate() -> dict[str, str]:
-    """Generate a commit description and return the result dict.
+    """
+    Generate a commit description and return the result dict.
 
     Raises GenerateError on failure.
     """
@@ -169,6 +174,7 @@ def _interactive_main() -> None:
 
 
 def main() -> None:
+    """Parse arguments and run in interactive or JSON output mode."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--interactive",

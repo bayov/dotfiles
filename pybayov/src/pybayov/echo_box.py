@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Print text in a styled box with optional title.
+"""
+Print text in a styled box with optional title.
 
 Usage: echo-box [TEXT] [OPTIONS]
 """
@@ -27,6 +28,8 @@ SGR_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 @dataclasses.dataclass
 class BoxConfig:
+    """Configuration for a rendered box."""
+
     bg_color: int | str = DEFAULT_BG
     width: int = DEFAULT_WIDTH
     margin_top: int = 0
@@ -44,6 +47,7 @@ class BoxConfig:
 
 
 def strip_ansi(s: str) -> str:
+    """Strip ANSI escape sequences from a string."""
     return ANSI_RE.sub("", s)
 
 
@@ -76,11 +80,13 @@ def parse_color(s: str) -> int | str:
 
 
 def hex_to_rgb(color: str) -> tuple[int, int, int]:
+    """Convert a hex color string to an (r, g, b) tuple."""
     h = color.lstrip("#")
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
 def lighten(color: int | str, amount: int = 60) -> int | str:
+    """Lighten a hex color by adding `amount` to each channel."""
     if isinstance(color, int):
         return color  # can't lighten palette colors
     r, g, b = hex_to_rgb(color)
@@ -92,6 +98,7 @@ def lighten(color: int | str, amount: int = 60) -> int | str:
 
 
 def fg(color: int | str) -> str:
+    """Return an ANSI foreground escape sequence for the given color."""
     if isinstance(color, int):
         return f"\x1b[38;5;{color}m"
     r, g, b = hex_to_rgb(color)
@@ -99,6 +106,7 @@ def fg(color: int | str) -> str:
 
 
 def bg(color: int | str) -> str:
+    """Return an ANSI background escape sequence for the given color."""
     if isinstance(color, int):
         return f"\x1b[48;5;{color}m"
     r, g, b = hex_to_rgb(color)
@@ -106,6 +114,7 @@ def bg(color: int | str) -> str:
 
 
 def word_wrap(line: str, max_width: int) -> list[str]:
+    """Wrap a line to fit within max_width visible characters."""
     result: list[str] = []
     while len(strip_ansi(line)) > max_width:
         cut = line.rfind(" ", 0, max_width)
@@ -118,6 +127,7 @@ def word_wrap(line: str, max_width: int) -> list[str]:
 
 
 def render_box(lines: list[str], config: BoxConfig | None = None) -> str:
+    """Render lines into a styled terminal box string."""
     if config is None:
         config = BoxConfig()
     bg_code = bg(config.bg_color)
@@ -191,6 +201,7 @@ def render_box(lines: list[str], config: BoxConfig | None = None) -> str:
 
 
 def main() -> None:
+    """Parse arguments and print text in a styled terminal box."""
     parser = argparse.ArgumentParser(
         prog="echo-box",
         description="Print text in a styled box with optional title.",

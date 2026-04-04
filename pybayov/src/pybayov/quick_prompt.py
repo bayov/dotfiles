@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Race multiple LLM models and return the fastest successful response."""
+
 import argparse
 import asyncio
 import bisect
@@ -26,7 +28,7 @@ MODELS_CONFIG_FILE: Path = DOTFILES_DIR / "config/quick-prompt-models.json"
 
 
 def get_model_config() -> list[dict[str, Any]]:
-    """Loads the model configuration from the configuration file."""
+    """Load the model configuration from the configuration file."""
     config_file = MODELS_CONFIG_FILE if MODELS_CONFIG_FILE.exists() else None
 
     if not config_file:
@@ -48,7 +50,7 @@ def get_model_config() -> list[dict[str, Any]]:
 
 
 def load_model_pool() -> list[str]:
-    """Loads the model pool from the configuration file."""
+    """Load the model pool from the configuration file."""
     config = get_model_config()
     pool = [m["model"] for m in config if m.get("enabled", True)]
     if not pool:
@@ -94,7 +96,7 @@ _verbose: bool = False
 
 
 def debug(msg: str) -> None:
-    """Prints a debug message to stderr if VERBOSE is enabled."""
+    """Print a debug message to stderr if VERBOSE is enabled."""
     if _verbose:
         # Gray color using ANSI escape codes for subtle output
         print(f"\033[90m[debug] {msg}\033[0m", file=sys.stderr)
@@ -102,7 +104,8 @@ def debug(msg: str) -> None:
 
 def get_histogram_bucket(duration: float) -> str:
     """
-    Calculates an exponential histogram bucket for a given duration.
+    Calculate an exponential histogram bucket for a given duration.
+
     Buckets follow the formula: 0.1 * (1.1^n)
     """
     if duration < 0.1:
@@ -126,8 +129,11 @@ def _update_json_file(
     default: Any,  # noqa: ANN401
     fn: Callable[[Any], None],
 ) -> None:
-    """Lock path exclusively, load JSON (or use default on decode error),
-    call fn(data), write back."""
+    """
+    Lock path exclusively and update JSON data.
+
+    Load JSON (or use default on decode error), call fn(data), write back.
+    """
     if not path.exists():
         path.write_text(json.dumps(default))
     with open(path, "r+") as f:
@@ -154,7 +160,7 @@ def update_aggregated_stats(
     end_timestamp: str,
     error: str | None = None,
 ) -> None:
-    """Updates the global aggregated statistics file for a single model run."""
+    """Update the global aggregated statistics file for a single model run."""
     AGGREGATED_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     def _update(data: dict[str, Any]) -> None:
@@ -224,9 +230,9 @@ def log_stats(
     error: str | None = None,
 ) -> None:
     """
-    Logs individual model results to a daily JSON file and updates global
-    aggregates. Uses file locking to prevent corruption from concurrent
-    worker writes.
+    Log individual model results to a daily JSON file and update global stats.
+
+    Uses file locking to prevent corruption from concurrent worker writes.
     """
     DAILY_STATS_DIR.mkdir(parents=True, exist_ok=True)
     today = date.today().isoformat()
@@ -252,9 +258,7 @@ def log_stats(
 
 
 def print_stats() -> None:
-    """
-    Prints aggregated statistics for all models in a pretty, colorized table.
-    """
+    """Print aggregated statistics for all models in a pretty table."""
     if not AGGREGATED_STATS_FILE.exists():
         print("No statistics found.")
         return
@@ -530,7 +534,8 @@ def print_stats() -> None:
 
 async def run_model(model: str, prompt: str) -> dict[str, Any]:
     """
-    Invokes the opencode CLI for a specific model and returns the result.
+    Invoke the opencode CLI for a specific model and return the result.
+
     Parses NDJSON output and handles errors/timeouts.
     """
     debug(f"Starting model: {model}")
@@ -660,8 +665,9 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
 
 async def run_worker(model: str, prompt: str) -> None:
     """
-    Entry point for internal worker process. Runs model, updates stats,
-    and outputs result if successful.
+    Entry point for internal worker process.
+
+    Run model, update stats, and output result if successful.
     """
     try:
         result = await run_model(model, prompt)
@@ -690,9 +696,9 @@ async def run_worker(model: str, prompt: str) -> None:
 
 def get_model_weights() -> dict[str, float]:
     """
-    Calculates weights for each model in MODEL_POOL based on historical
-    average duration. Weight = 1 / (avg_duration^2). Models without stats
-    get a default weight.
+    Calculate weights for each model in MODEL_POOL based on historical stats.
+
+    Weight = 1 / (avg_duration^2). Models without stats get a default weight.
     """
     stats_data: dict[str, Any] = {}
     if AGGREGATED_STATS_FILE.exists():
@@ -758,10 +764,10 @@ def get_model_weights() -> dict[str, float]:
 
 async def race_models(prompt: str) -> str:
     """
-    Races multiple models in parallel using detached internal worker processes.
+    Race multiple models in parallel using detached internal worker processes.
+
     The first one to return a successful response wins.
-    Returns the winning response text, or raises RuntimeError if all
-    models fail.
+    Returns the winning response text, or raises RuntimeError if all fail.
     """
     # 1. Selection Logic: Prefer QUICK_PROMPT_MODEL env var, otherwise
     # pick N weighted random ones.
@@ -872,9 +878,7 @@ async def race_models(prompt: str) -> str:
 
 
 async def verify_models() -> None:
-    """
-    Utility to check the health and latency of all models in the pool.
-    """
+    """Check the health and latency of all models in the pool."""
     print(f"Verifying {len(_get_model_pool())} models...")
     tasks = [run_model(m, "hi") for m in _get_model_pool()]
     results = await asyncio.gather(*tasks)
@@ -898,12 +902,16 @@ async def verify_models() -> None:
 
 
 def run(prompt: str) -> str:
-    """Run the model race and return the winning response text.
-    Raises RuntimeError on failure."""
+    """
+    Run the model race and return the winning response text.
+
+    Raises RuntimeError on failure.
+    """
     return asyncio.run(race_models(prompt))
 
 
 def main() -> None:
+    """Parse arguments and run the model race or a stats/ping subcommand."""
     parser = argparse.ArgumentParser(
         description="Race LLM models for the fastest response."
     )

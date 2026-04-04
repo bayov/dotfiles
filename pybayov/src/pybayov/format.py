@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Format source files using per-extension formatter commands."""
 
 import argparse
 import fnmatch
@@ -31,11 +32,13 @@ from .util import (
 
 
 class FormatterError(Exception):
-    pass
+    """Raised when a formatter command fails."""
 
 
 @dataclass(eq=False)
 class Formatter:
+    """Base class for file formatters."""
+
     name: str
     exts: set[str]
 
@@ -59,8 +62,11 @@ class Formatter:
     globs: set[str] = field(default_factory=set[str])
 
     def format_files(self, files: Sequence[Path]) -> None:
-        """Format the given files in place. Must be implemented by
-        subclasses."""
+        """
+        Format the given files in place.
+
+        Must be implemented by subclasses.
+        """
         raise NotImplementedError
 
 
@@ -69,7 +75,8 @@ def _run_formatter_command(
     files: Sequence[Path],
     cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a formatter command with the given files appended as arguments.
+    """
+    Run a formatter command with the given files appended as arguments.
 
     Logs the command at DEBUG level. Raises FormatterError on non-zero exit.
     """
@@ -103,6 +110,8 @@ def _run_formatter_command(
 
 @dataclass(eq=False)
 class CmdFormatter(Formatter):
+    """Formatter that runs an external command."""
+
     cmd: list[str] = field(default_factory=list[str])
 
     # Working directory for the subprocess. Supports `{project_root}`
@@ -119,10 +128,11 @@ class CmdFormatter(Formatter):
 
     @override
     def format_files(self, files: Sequence[Path]) -> None:
-        """Format files using the configured command.
+        """
+        Format files using the configured command.
 
-        Resolves `{project_root}` placeholders in `cmd` and `cwd`. In
-        `stdout_mode`, runs the command per-file and writes back only if the
+        Resolve `{project_root}` placeholders in `cmd` and `cwd`. In
+        `stdout_mode`, run the command per-file and write back only if the
         output differs from the original content.
         """
         resolved_cmd = [
@@ -148,7 +158,8 @@ class CmdFormatter(Formatter):
 
 
 def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
-    """Loads formatter definitions from a TOML config file.
+    """
+    Load formatter definitions from a TOML config file.
 
     Reads `[[formatter]]` entries and constructs `CmdFormatter` instances.
     Each entry must have `name`, `exts`, `cmd`, and `max_files_per_format`.
@@ -195,6 +206,8 @@ def load_formatters(config_path: Path | None = None) -> list[CmdFormatter]:
 
 @dataclass(frozen=True)
 class IgnoreConfig:
+    """Ignore patterns that exclude files from formatter warnings."""
+
     exts: set[str]
     shebangs: set[str]
     globs: set[str]
@@ -205,7 +218,8 @@ class IgnoreConfig:
 
 
 def load_ignore(config_path: Path | None = None) -> IgnoreConfig:
-    """Loads the `[ignore]` section from the formatter config file.
+    """
+    Load the `[ignore]` section from the formatter config file.
 
     Optional fields: `exts` (list of extensions, e.g. `[".lock"]`),
     `shebangs` (list of interpreter names, e.g. `["bash"]`),
@@ -246,7 +260,7 @@ def _registry() -> _FormatRegistry:
 
 
 def _read_shebang(file: Path) -> str | None:
-    """Returns the raw shebang line (e.g. `#!/usr/bin/env python3`), or None."""
+    """Return the raw shebang line (e.g. `#!/usr/bin/env python3`), or None."""
     try:
         with open(file, "rb") as f:
             first_line = (
@@ -258,7 +272,8 @@ def _read_shebang(file: Path) -> str | None:
 
 
 def _shebang_interpreter(file: Path) -> str | None:
-    """Returns the interpreter name from the shebang, or None.
+    """
+    Return the interpreter name from the shebang, or None.
 
     Handles both `#!/usr/bin/env python3` (returns `python3`) and
     `#!/usr/bin/python3` (returns `python3`).
@@ -280,7 +295,8 @@ def _file_matches(
     shebangs: set[str],
     globs: set[str],
 ) -> bool:
-    """Return True if `file` matches any of the given patterns.
+    """
+    Return True if `file` matches any of the given patterns.
 
     Glob patterns take priority and match against the full file path.
     Extension patterns only apply to files that have an extension.
@@ -296,7 +312,7 @@ def _file_matches(
 
 
 def find_formatter(file: Path) -> CmdFormatter | None:
-    """Returns the formatter for `file`, or `None` if none applies."""
+    """Return the formatter for `file`, or `None` if none applies."""
     for fmt in _registry().formatters:
         if _file_matches(file, fmt.exts, fmt.shebangs, fmt.globs):
             return fmt
@@ -308,7 +324,7 @@ def _validate_formatters(
     supported_exts: frozenset[str],
     supported_globs: frozenset[str],
 ) -> None:
-    """Ensures no two formatters claim the same extension, shebang, or glob."""
+    """Ensure no two formatters claim the same extension, shebang, or glob."""
     for ext in supported_exts:
         handlers = [f for f in formatters if ext in f.exts]
         if len(handlers) > 1:
@@ -335,7 +351,8 @@ def _validate_formatters(
 
 
 def _gitattributes_binary_patterns() -> list[str]:
-    """Returns glob patterns marked as `binary` in the project's .gitattributes.
+    """
+    Return glob patterns marked as `binary` in the project's .gitattributes.
 
     Only patterns with the `binary` attribute (a shorthand for
     `-text -diff merge=binary`) are returned. Patterns without this attribute
@@ -356,7 +373,8 @@ def _gitattributes_binary_patterns() -> list[str]:
 
 
 def _is_binary_file(file: Path, binary_patterns: list[str]) -> bool:
-    """Returns True if `file` matches any binary pattern from .gitattributes.
+    """
+    Return True if `file` matches any binary pattern from .gitattributes.
 
     Matches are attempted against both the filename and the path relative to
     `project_root()`, so patterns like `uv.lock` and `docs/*.pdf` both work.
@@ -373,7 +391,7 @@ def _is_binary_file(file: Path, binary_patterns: list[str]) -> bool:
 
 def collect_all_tracked_files() -> Iterable[Path]:
     """
-    Collects files when `--all-tracked` is specified.
+    Collect files when `--all-tracked` is specified.
 
     If we are within a jj repository, we use `jj file list` to collect all
     tracked files with supported extensions.
@@ -412,7 +430,7 @@ def collect_all_tracked_files() -> Iterable[Path]:
 
 def collect_file_or_directory(path: Path) -> Iterable[Path]:
     """
-    Collects files when `--file {path}` is specified.
+    Collect files when `--file {path}` is specified.
 
     If `{path}` is a file, we yield it if it has a supported extension, and
     raise an error otherwise.
@@ -449,7 +467,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
 
 def collect_git_staged_files() -> Iterable[Path]:
     """
-    Collects files when `--git` is specified.
+    Collect files when `--git` is specified.
 
     We use `git diff --cached --name-only` to get the list of staged files,
     and yield those that have supported extensions.
@@ -467,7 +485,7 @@ def collect_git_staged_files() -> Iterable[Path]:
 
 def collect_jj_commit_diff() -> Iterable[Path]:
     """
-    Collects files when `--jj` is specified.
+    Collect files when `--jj` is specified.
 
     We use `jj diff --name-only` to get the list of changed files in the
     current commit, and yield those that have supported extensions.
@@ -491,7 +509,7 @@ class _CollectArgs(Protocol):
 
 def collect_files(args: _CollectArgs) -> tuple[set[Path], list[Path]] | None:
     """
-    Collects files from all input sources provided in `args` into a single set.
+    Collect files from all input sources provided in `args` into a single set.
 
     Returns `None` if no input sources were specified. Otherwise returns a tuple
     of (formattable files, files skipped due to unsupported extension).
@@ -549,7 +567,8 @@ def collect_files(args: _CollectArgs) -> tuple[set[Path], list[Path]] | None:
 
 
 def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
-    """Resolve each path to its canonical form, filtering out unusable entries.
+    """
+    Resolve each path to its canonical form, filtering out unusable entries.
 
     Skips paths that cannot be resolved (e.g. broken symlinks) or that have
     no applicable formatter after resolution. Warns on either condition, and
@@ -586,6 +605,8 @@ def resolve_files(files: set[Path]) -> tuple[set[Path], list[Path]]:
 
 @dataclass(frozen=True)
 class FormatResult:
+    """Result of formatting a chunk of files."""
+
     formatter_name: str
     modified_files: list[Path]
     # Absolute perf_counter timestamps for this chunk, used to compute
@@ -601,8 +622,10 @@ def format_files(
     log: Logger,
 ) -> FormatResult:
     """
-    Formats a chunk of files and returns the result including modified files
-    count, the time taken, and the formatter name.
+    Format a chunk of files and return the result.
+
+    The result includes modified files count, the time taken, and the
+    formatter name.
     """
     set_logger(log)
     start = time.perf_counter()

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Run project test suites defined in `.config/test.toml`."""
 
 import argparse
 import os
@@ -65,7 +66,8 @@ def _strip_ansi(data: bytes) -> bytes:
 
 
 def load_test_suites() -> list[_TestSuiteConfig]:
-    """Loads test commands from `.config/test.toml` in the current directory.
+    """
+    Load test commands from `.config/test.toml` in the current directory.
 
     The config file must define a `[[test_suite]]` array where each entry has:
     - `name`: display name for the command (must be alphanumeric with
@@ -96,8 +98,7 @@ def load_test_suites() -> list[_TestSuiteConfig]:
 
 
 def _make_log_dir() -> Path:
-    """Creates and returns a per-invocation log directory under
-    /tmp/test_logs."""
+    """Create and return a per-invocation log directory under /tmp/test_logs."""
     root_name = project_root().name
     timestamp = datetime.now().strftime("%Y-%m-%d.%H-%M-%S")
     invocation_id = "".join(
@@ -109,6 +110,7 @@ def _make_log_dir() -> Path:
 
 
 def underlined_title(text: str) -> str:
+    """Return text followed by a dash underline of equal length."""
     return f"{text}\n{'-' * len(text)}"
 
 
@@ -119,7 +121,8 @@ def run_command(
     cwd: str | None = None,
     capture: bool = False,
 ) -> subprocess.CompletedProcess[bytes | None]:
-    """Runs a command, teeing output to the log file and optionally stdout.
+    """
+    Run a command, teeing output to the log file and optionally stdout.
 
     If not quiet and stdout is a TTY, uses a pseudo-terminal to preserve colors.
     `cwd` sets the working directory for the subprocess; defaults to the current
@@ -184,6 +187,7 @@ def run_command(
 
 
 def main() -> None:
+    """Parse arguments and run the configured test suites."""
     require_project_root()
 
     parser = argparse.ArgumentParser(description="Run project test suite.")
