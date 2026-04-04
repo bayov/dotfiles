@@ -60,6 +60,9 @@ function ws -d "Manage jj workspaces in ~/workspaces/"
                 else
                     echo "Workspace '$name' forgotten, but directory $base_dir/$name was not found."
                 end
+
+                # Spawn background process: wait 5s, then remove dir if empty
+                fish -c 'sleep 5; rmdir "$base_dir/$name" 2>/dev/null' &
             end
 
         case rm-current
