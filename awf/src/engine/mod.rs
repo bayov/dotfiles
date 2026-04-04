@@ -6,4 +6,5 @@
 //! the next stage.
 
 pub mod actions;
+pub mod command;
 pub mod state;
