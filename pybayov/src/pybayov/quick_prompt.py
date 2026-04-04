@@ -366,7 +366,7 @@ def print_stats() -> None:
     # Also collect all non-zero averages for a separate Avg distribution
     all_averages: list[float] = []
 
-    for _, s in data.items():
+    for s in data.values():
         results: list[dict[str, Any]] = s.get("last_run_results", [])
         win_durations: list[float] = [
             r["duration"] for r in results if r.get("error") is None

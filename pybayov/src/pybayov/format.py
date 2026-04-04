@@ -12,7 +12,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Protocol, cast, override
 
 from .util import (
     GRAY,
@@ -117,6 +117,7 @@ class CmdFormatter(Formatter):
     # `--in-place`.
     stdout_mode: bool = False
 
+    @override
     def format_files(self, files: Sequence[Path]):
         """Format files using the configured command.
 
@@ -749,10 +750,7 @@ def main():
     ]
     if no_formatter_files:
         exts = sorted(
-            {
-                f.suffix if f.suffix else "<no-extension>"
-                for f in no_formatter_files
-            }
+            {f.suffix or "<no-extension>" for f in no_formatter_files}
         )
         logger().warn(
             f"{len(no_formatter_files)} file(s) had no associated formatter "

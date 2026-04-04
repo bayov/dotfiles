@@ -553,10 +553,9 @@ def main() -> None:
                     + "\n"
                 )
                 sys.stderr.flush()
-            else:
-                if captured and captured[0]:
-                    sys.stdout.buffer.write(captured[0])
-                    sys.stdout.flush()
+            elif captured and captured[0]:
+                sys.stdout.buffer.write(captured[0])
+                sys.stdout.flush()
             if captured_err and captured_err[0]:
                 sys.stderr.buffer.write(captured_err[0])
                 sys.stderr.flush()

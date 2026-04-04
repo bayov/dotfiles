@@ -16,4 +16,77 @@ ignore = [
     "ISC001", # conflicts with ruff formatter
     "D203", # conflicts with D211
     "D213", # conflicts with D212
+
+    # Docstring style — too pedantic for a personal project
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107", # missing docstrings
+    "D200",
+    "D205",
+    "D209",
+    "D212", # docstring formatting
+    "D401", # imperative mood
+
+    # Print is legitimate in CLI scripts
+    "T20",
+
+    # Exception/error message style — too pedantic
+    "TRY003",
+    "EM101",
+    "EM102",
+
+    # Boolean arguments are fine
+    "FBT001",
+    "FBT002",
+    "FBT003",
+
+    # Type annotations — too strict for scripts
+    "ANN",
+
+    # Complexity thresholds — too strict
+    "C901",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+
+    # Subprocess / security rules noisy for personal scripts
+    "S101", # assert
+    "S311", # standard pseudo-random generators
+    "S603",
+    "S607",
+    "S606", # subprocess security
+    "S108", # temp file
+    "S110", # try-except-pass
+    "PLW1510", # subprocess.run without explicit check
+
+    # Style preferences we don't share
+    "G004", # logging f-string (allow f-strings in log calls)
+    "DTZ005", # timezone-aware datetimes
+    "BLE001", # blind except
+    "ERA001", # commented-out code
+    "N806", # uppercase variable in function
+    "ARG001", # unused function argument
+    "PLW0603", # global statement
+    "PLR2004", # magic values
+    "PERF401",
+    "PERF402", # manual list patterns
+    "SIM105",
+    "SIM112",
+    "SIM115", # simplify patterns
+    "PTH123",
+    "PTH204", # pathlib vs os.path
+    "TC003",
+    "TC006", # TYPE_CHECKING imports
+    "RET505",
+    "RET508", # unnecessary else after return
+    "DTZ011", # date.today() without timezone
+    "PLW2901", # loop variable overwritten by assignment
+    "PTH115", # os.readlink vs Path.readlink
+    "D400",
+    "D415", # docstring punctuation
 ]
