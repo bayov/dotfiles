@@ -14,9 +14,11 @@ import sys
 import threading
 import types
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
 
 from pybayov import echo_box as _eb
+
+_T = TypeVar("_T")
 
 FPS = 60
 SPINNER_FRAMES = [
@@ -365,7 +367,7 @@ class _Args:
 
 
 def run_with_spinner(
-    fn: Callable[[], Any],
+    fn: Callable[[], _T],
     *,
     title: str = "",
     box: bool = False,
@@ -379,7 +381,7 @@ def run_with_spinner(
     box_pad_right: int = DEFAULT_BOX_PAD_RIGHT,
     box_pad_top: int = DEFAULT_BOX_PAD_TOP,
     box_pad_bottom: int = DEFAULT_BOX_PAD_BOTTOM,
-) -> Any:
+) -> _T:
     """Run fn() with a spinner on stderr. In box mode, fn's string return
     value is shown in the box."""
     show_spinner = sys.stderr.isatty()

@@ -183,7 +183,7 @@ def run_command(
     )
 
 
-def main():
+def main() -> None:
     require_project_root()
 
     parser = argparse.ArgumentParser(description="Run project test suite.")

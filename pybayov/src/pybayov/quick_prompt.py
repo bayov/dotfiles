@@ -122,7 +122,9 @@ def get_histogram_bucket(duration: float) -> str:
 
 
 def _update_json_file(
-    path: Path, default: Any, fn: Callable[[Any], None]
+    path: Path,
+    default: Any,
+    fn: Callable[[Any], None],  # noqa: ANN401
 ) -> None:
     """Lock path exclusively, load JSON (or use default on decode error),
     call fn(data), write back."""
@@ -421,7 +423,7 @@ def print_stats() -> None:
             num_symbols = len(recent)
 
             # Extract timestamps for the window
-            def format_ts(raw: Any) -> str:
+            def format_ts(raw: Any) -> str:  # noqa: ANN401
                 if not raw:
                     return " " * 19
                 try:

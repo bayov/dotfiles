@@ -36,7 +36,7 @@ class Mount:
     ro: bool = True  # `ro` flag (read-only)
     disabled: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.container_path is None:
             if self.host_path.startswith("~"):
                 self.container_path = self.host_path.replace(
@@ -190,7 +190,7 @@ def get_sandbox_hash() -> str:
     return hasher.hexdigest()
 
 
-def build_image(rebuild: bool = False, no_rebuild: bool = False):
+def build_image(rebuild: bool = False, no_rebuild: bool = False) -> None:
     """Ensure the sandbox Docker image is built and up to date."""
     if not DOCKERFILE_PATH.exists():
         print(
@@ -305,7 +305,7 @@ def get_env_and_ssh_args(with_ssh: bool = False) -> list[str]:
     return args
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Run a command or shell in a general-purpose Docker sandbox."

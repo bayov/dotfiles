@@ -190,7 +190,7 @@ def render_box(lines: list[str], config: BoxConfig | None = None) -> str:
     return "\n".join(out)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="echo-box",
         description="Print text in a styled box with optional title.",

@@ -45,9 +45,6 @@ ignore = [
     "FBT002",
     "FBT003",
 
-    # Type annotations — too strict for scripts
-    "ANN",
-
     # Complexity thresholds — too strict
     "C901",
     "PLR0912",

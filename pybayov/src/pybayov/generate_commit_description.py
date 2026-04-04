@@ -26,7 +26,7 @@ DOTFILES_DIR: Path = Path(
 
 
 class GenerateError(Exception):
-    def __init__(self, error_info: dict[str, str]):
+    def __init__(self, error_info: dict[str, str]) -> None:
         self.error_info = error_info
         super().__init__(error_info.get("error", "Unknown error"))
 

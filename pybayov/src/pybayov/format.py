@@ -118,7 +118,7 @@ class CmdFormatter(Formatter):
     stdout_mode: bool = False
 
     @override
-    def format_files(self, files: Sequence[Path]):
+    def format_files(self, files: Sequence[Path]) -> None:
         """Format files using the configured command.
 
         Resolves `{project_root}` placeholders in `cmd` and `cwd`. In
@@ -627,7 +627,7 @@ def format_files(
     )
 
 
-def main():
+def main() -> None:
     """Entry point. Parses arguments, collects files, and runs formatters."""
     require_project_root()
 
