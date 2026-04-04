@@ -7,8 +7,24 @@ TODO
 Awf
 ---
 
-- Better control for how to define output directory for a workflow (state and
-  artifacts).
+- Better control for how to define output directory for a flow (state and
+  artifacts). Currently there is a big? where its stored in
+  `.awf/.awf/flows/...`
+- awf should be configurable using a file (.config/awf.toml) and env vars.
+- --output-format should work for all commands.
+- awf should support changing --output-format as config & env var.
+- --output-format should print newline at the end
+- workflow default directory should be .agents/workflows/
+- instead of workflows/foo.toml and workflows/foo/agent_instructions.md, have
+  workflows/foo/WORKFLOW.toml.
+- `awf workflow validate` should validate all workflows.
+- WORKFLOW.toml should support repo-wide commands (e.g. `format`, `test`)
+  defined in .config/awf.toml.
+- Implement `dynamic_task_lists_plan.md`
+- Agent should have .awf-staging/ folder to write artifacts to before
+  `awf artifact put` moves them into the flow directory.
+- `awf flow next` -> `awf flow next-step`
+- `awf flow advance` -> `awf flow next-stage`
 
 Infeasible
 ----------
