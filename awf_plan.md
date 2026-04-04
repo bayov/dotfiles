@@ -39,23 +39,32 @@ build = "cargo build --release"
 [[stages]]
 name = "design"
 description = "Produce a design doc."
-# Artifacts this stage produces
 produces = ["design.md"]
+steps = [
+    { name = "write-design", type = "agent", skill = "design.md" },
+]
 
 [[stages]]
 name = "implement"
 description = "Write the code."
-# Requires design.md artifact to exist before stage can start
 requires = ["design.md"]
-after = ["format", "lint", "test"]
+steps = [
+    { name = "write-code", type = "agent", skill = "implement.md" },
+    { name = "format", type = "command", command = "format" },
+    { name = "lint", type = "command", command = "lint" },
+    { name = "test", type = "command", command = "test" },
+]
 
 [[stages]]
 name = "review"
 description = "Code review and integration."
 repeatable = true
-before = ["test"]
-after = ["test"]
 produces = ["changelog-entry.md"]
+steps = [
+    { name = "pre-review-test", type = "command", command = "test" },
+    { name = "do-review", type = "agent", skill = "review.md" },
+    { name = "post-review-test", type = "command", command = "test" },
+]
 
 [[stages]]
 name = "done"
@@ -77,12 +86,17 @@ description = "Complete."
 - **`produces` / `requires`** — Explicit artifact flow between stages. A stage
   cannot start if its `requires` artifacts don't exist. Artifacts are stored in
   the flow's artifact directory.
-- **`before` / `after`** — Named commands that gate entry/exit. References keys
-  in `[commands]`. On failure, the CLI prints instructions to fix and rerun
-  before proceeding — the stage does not advance.
+- **`steps`** — Inline array of step objects on each stage. Each step is either
+  `type = "command"` (shell command, pass/fail by exit code) or `type = "agent"`
+  (human/LLM task). Command steps reference `[commands]` via `command = "key"`
+  or define inline with `run = "..."`. Agent steps reference a SKILL.md via
+  `skill = "filename.md"` (relative to `.awf/workflows/<workflow>/`) or define
+  inline with `instructions = "..."`. Order is explicit by position in the
+  array.
 - **Stage SKILL.md files** — Human/agent guidance lives in
-  `.awf/workflows/feature/implement.md` (separate from the TOML definition). The
-  engine doesn't parse these; agents read them directly.
+  `.awf/workflows/feature/implement.md`. Referenced by agent steps via the
+  `skill` field; the engine uses this path to display guidance in
+  `awf flow next`.
 - **`continue_on_error`** (future) — Not in v1, but the schema can accommodate
   it.
 
@@ -105,17 +119,26 @@ stage = "design"
 entered_at = "2026-04-04T10:00:00Z"
 exited_at = "2026-04-04T12:00:00Z"
 
-[[command_log]]
-command = "format"
+[[step_log]]
+step = "write-code"
 stage = "implement"
+type = "agent"
+status = "pass"
+completed_at = "2026-04-04T13:00:00Z"
+
+[[step_log]]
+step = "format"
+stage = "implement"
+type = "command"
 status = "pass"
 exit_code = 0
 started_at = "2026-04-04T14:30:00Z"
 duration_ms = 1200
 
-[[command_log]]
-command = "test"
+[[step_log]]
+step = "test"
 stage = "implement"
+type = "command"
 status = "fail"
 exit_code = 1
 started_at = "2026-04-04T14:31:00Z"
@@ -184,8 +207,9 @@ When only one active flow exists, `<flow-id>` is optional.
 | `awf flow list [--all]`                     | List flows (--all includes archived)                 |
 | `awf flow status [<id>]`                    | Show current state                                   |
 | `awf flow next [<id>]`                      | Show next required action                            |
-| `awf flow run <command> [<id>]`             | Execute named command, log result                    |
-| `awf flow advance [<id>] [--force]`         | Move to next stage if gates pass                     |
+| `awf flow run <step> [<id>]`                | Execute a command step, log result                   |
+| `awf flow step done <step> [<id>]`          | Mark an agent step complete                          |
+| `awf flow advance [<id>] [--force]`         | Move to next stage if all steps pass                 |
 | `awf flow history [<id>]`                   | Show transition/command log                          |
 | `awf flow archive [<id>]`                   | Archive completed flow                               |
 
@@ -225,10 +249,14 @@ awf flow next
 # or: Produce artifact: design.md
 # or: Run `awf flow advance` to move to implement
 
-# Run a named command
+# Run a command step
 awf flow run test
 # => PASS  cargo test  (1243ms)
 awf flow run test add-oauth
+
+# Mark an agent step complete
+awf flow step done write-code
+awf flow step done write-code add-oauth
 
 # Advance to next stage (runs before/after gates)
 awf flow advance
@@ -258,19 +286,17 @@ State Machine Rules
 2. **Stage ordering** — TOML array order defines sequence. No DAG logic.
 3. **Can enter stage?** All must hold:
    - All `requires` artifacts exist in flow's artifact dir
-   - All `before` pass (run automatically on advance)
    - If stage was already completed and `repeatable = false`: CLI warns, prints
      existing `produces` artifact contents, and requires explicit confirmation
      to proceed (never blocks — just informs)
 4. **Can exit stage?** All must hold:
-   - Every `after` has a `pass` in command_log _during this stage visit_
+   - Every step has a `pass` in step_log _during this stage visit_
    - Every `produces` artifact exists in flow's artifact dir
-5. **`awf next` priority:** failing `after` command → missing `produces`
-   artifact → `advance` → `done`
+5. **`awf next` priority:** failing command step → incomplete agent step →
+   missing `produces` artifact → `advance` → `done`
 6. **`--force`** bypasses gates (logged as forced)
-7. **`before`/`after` failure** — CLI blocks advancement and prints
-   agent-readable instructions: which command failed, what to fix, and which
-   command to rerun.
+7. **Step failure** — CLI blocks advancement and prints agent-readable
+   instructions: which step failed, what to fix, and which step to rerun.
 
 Rust Project Structure
 ----------------------
@@ -283,7 +309,7 @@ awf/
     cli/
       mod.rs
       init.rs, new.rs, status.rs, next.rs, run.rs,
-      advance.rs, history.rs, archive.rs, list.rs,
+      step.rs, advance.rs, history.rs, archive.rs, list.rs,
       validate.rs, output.rs
     engine/
       mod.rs
@@ -292,8 +318,8 @@ awf/
       command.rs       # Shell execution, timing, exit code
     model/
       mod.rs
-      workflow.rs      # Workflow/Stage types + TOML parsing
-      flow.rs          # FlowState, CommandLogEntry, StageHistoryEntry
+      workflow.rs      # Workflow, Stage, Step types + TOML parsing
+      flow.rs          # FlowState, StepLogEntry, StageHistoryEntry
       id.rs            # Flow ID validation (alphanum, dashes, underscores, slashes)
     store/
       mod.rs

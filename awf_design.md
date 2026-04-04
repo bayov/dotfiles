@@ -52,20 +52,31 @@ build = "cargo build --release"
 name = "design"
 description = "Produce a design doc."
 produces = ["design.md"]
+steps = [
+    { name = "write-design", type = "agent", skill = "design.md" },
+]
 
 [[stages]]
 name = "implement"
 description = "Write the code."
 requires = ["design.md"]
-after = ["format", "lint", "test"]
+steps = [
+    { name = "write-code", type = "agent", skill = "implement.md" },
+    { name = "format", type = "command", command = "format" },
+    { name = "lint", type = "command", command = "lint" },
+    { name = "test", type = "command", command = "test" },
+]
 
 [[stages]]
 name = "review"
 description = "Code review and integration."
 repeatable = true
-before = ["test"]
-after = ["test"]
 produces = ["changelog-entry.md"]
+steps = [
+    { name = "pre-review-test", type = "command", command = "test" },
+    { name = "do-review", type = "agent", skill = "review.md" },
+    { name = "post-review-test", type = "command", command = "test" },
+]
 
 [[stages]]
 name = "done"
@@ -78,11 +89,24 @@ description = "Complete."
 | ------------- | ---------- | ------- | -------------------------------------- |
 | `name`        | string     | —       | Unique within workflow                 |
 | `description` | string     | `""`    | Human-readable label                   |
-| `produces`    | `[string]` | `[]`    | Artifacts this stage writes            |
+| `produces`    | `[string]` | `[]`    | Artifacts this stage must produce      |
 | `requires`    | `[string]` | `[]`    | Artifacts that must exist before entry |
-| `before`      | `[string]` | `[]`    | Commands that gate stage entry         |
-| `after`       | `[string]` | `[]`    | Commands that gate stage exit          |
 | `repeatable`  | bool       | `false` | Show in `next` even after completion   |
+| `steps`       | `[Step]`   | `[]`    | Ordered steps to complete this stage   |
+
+### Step fields
+
+| Field          | Type   | Default | Description                                                                |
+| -------------- | ------ | ------- | -------------------------------------------------------------------------- |
+| `name`         | string | —       | Unique within stage                                                        |
+| `type`         | string | —       | `"command"` or `"agent"`                                                   |
+| `command`      | string | —       | Key in `[commands]` table _(command steps)_                                |
+| `run`          | string | —       | Inline shell string _(command steps; mutually exclusive with `command`)_   |
+| `skill`        | string | —       | Path to SKILL.md relative to `.awf/workflows/<workflow>/` _(agent steps)_  |
+| `instructions` | string | —       | Inline agent instructions _(agent steps; mutually exclusive with `skill`)_ |
+
+Command steps complete automatically on execution (pass/fail by exit code).
+Agent steps are marked complete explicitly via `awf flow step done <step>`.
 
 ### Workflow name rules
 
@@ -111,9 +135,17 @@ stage = "design"
 entered_at = "2026-04-04T10:00:00Z"
 exited_at = "2026-04-04T12:00:00Z"
 
-[[command_log]]
-command = "format"
+[[step_log]]
+step = "write-code"
 stage = "implement"
+type = "agent"
+status = "pass"
+completed_at = "2026-04-04T13:00:00Z"
+
+[[step_log]]
+step = "format"
+stage = "implement"
+type = "command"
 status = "pass"
 exit_code = 0
 started_at = "2026-04-04T14:30:00Z"
@@ -138,8 +170,7 @@ State Machine Rules
 All must hold:
 
 1. All `requires` artifacts exist in the flow's artifact dir
-2. All `before` commands pass (run automatically on `advance`)
-3. If stage already appears in `stage_history` and `repeatable = false`: CLI
+2. If stage already appears in `stage_history` and `repeatable = false`: CLI
    warns, prints existing `produces` artifact contents, and requires explicit
    confirmation — never hard-blocks
 
@@ -147,16 +178,16 @@ All must hold:
 
 All must hold:
 
-1. Every `after` command has a `pass` entry in `command_log` during this stage
-   visit
+1. Every step has a `pass` entry in `step_log` during this stage visit
 2. Every `produces` artifact exists in the flow's artifact dir
 
 ### `awf flow next` priority
 
-1. Failing `after` command → instruct to rerun it
-2. Missing `produces` artifact → instruct to create it
-3. All gates clear → suggest `awf flow advance`
-4. On last stage → `done`
+1. Failing command step → instruct to rerun it
+2. Incomplete agent step → print skill/instructions for the agent
+3. Missing `produces` artifact → instruct to create it
+4. All steps pass and artifacts present → suggest `awf flow advance`
+5. On last stage → `done`
 
 ### `--force`
 
@@ -223,8 +254,9 @@ All commands support `--output-format {human|json|toml|xml}` (default:
 | `awf flow list [--all]`                     | List flows (`--all` includes archived) |
 | `awf flow status [<id>]`                    | Show current state                     |
 | `awf flow next [<id>]`                      | Show next required action              |
-| `awf flow run <command> [<id>]`             | Execute named command                  |
-| `awf flow advance [<id>] [--force]`         | Move to next stage if gates pass       |
+| `awf flow run <step> [<id>]`                | Execute a command step                 |
+| `awf flow step done <step> [<id>]`          | Mark an agent step complete            |
+| `awf flow advance [<id>] [--force]`         | Move to next stage if all steps pass   |
 | `awf flow history [<id>]`                   | Show transition/command log            |
 | `awf flow archive [<id>]`                   | Archive a completed flow               |
 
@@ -241,7 +273,7 @@ awf/
     cli/
       mod.rs
       init.rs, new.rs, status.rs, next.rs, run.rs,
-      advance.rs, history.rs, archive.rs, list.rs,
+      step.rs, advance.rs, history.rs, archive.rs, list.rs,
       validate.rs, output.rs
     engine/
       mod.rs
@@ -250,8 +282,8 @@ awf/
       command.rs    # Shell execution, timing, exit code
     model/
       mod.rs
-      workflow.rs   # Workflow/Stage types + TOML parsing
-      flow.rs       # FlowState, CommandLogEntry, StageHistoryEntry
+      workflow.rs   # Workflow, Stage, Step types + TOML parsing
+      flow.rs       # FlowState, StepLogEntry, StageHistoryEntry
       id.rs         # ID validation
     store/
       mod.rs
