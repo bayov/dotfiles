@@ -61,6 +61,11 @@ pub enum Error {
     #[error("already on the last stage; cannot advance further")]
     AlreadyOnLastStage,
 
+    /// A workflow definition violated a structural invariant (e.g. mutual
+    /// exclusivity of fields, duplicate stage or step names).
+    #[error("workflow validation failed: {message}")]
+    WorkflowValidation { message: String },
+
     /// A generic I/O error wrapping `std::io::Error`.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
