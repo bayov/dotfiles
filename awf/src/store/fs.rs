@@ -128,6 +128,71 @@ pub fn create_workflow_template(awf_root: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Creates a new flow in the active flows directory.
+///
+/// Validates the `flow_id`, checks that no flow with the same ID already
+/// exists in either the active or archived directory, creates the flow
+/// directory tree (including an `artifacts/` subdirectory), and writes an
+/// initial `state.toml`.
+///
+/// # Errors
+///
+/// - Returns [`Error::InvalidId`] if `flow_id` contains characters outside the
+///   allowed set (`[a-zA-Z0-9_/\-]+`).
+/// - Returns [`Error::FlowAlreadyExists`] if a directory for `flow_id` already
+///   exists under `<state_dir>/flows/active/` or `<state_dir>/flows/archived/`.
+/// - Returns [`Error::TomlSer`] if the initial state cannot be serialised.
+/// - Returns [`Error::Io`] for any other I/O failure (directory creation or
+///   file write).
+#[instrument(fields(flow_id = flow_id, workflow = workflow))]
+pub fn create_flow(
+    state_dir: &Path,
+    flow_id: &str,
+    workflow: &str,
+    first_stage: &str,
+) -> Result<()> {
+    use chrono::Utc;
+
+    use crate::model::id::validate_id;
+
+    // Reject IDs that violate the identifier rules before touching the
+    // filesystem.
+    validate_id(flow_id)?;
+
+    // Guard against creating a flow that already exists in either directory.
+    let active_dir = state_dir.join("flows/active").join(flow_id);
+    if active_dir.exists() {
+        return Err(Error::FlowAlreadyExists { id: flow_id.to_string() });
+    }
+
+    let archived_dir = state_dir.join("flows/archived").join(flow_id);
+    if archived_dir.exists() {
+        return Err(Error::FlowAlreadyExists { id: flow_id.to_string() });
+    }
+
+    // Create the flow directory and an empty artifacts/ subdirectory.
+    std::fs::create_dir_all(active_dir.join("artifacts")).map_err(Error::Io)?;
+
+    // Build the initial state. Both timestamps are sampled once so that
+    // created_at == updated_at on a freshly created flow.
+    let now = Utc::now();
+    let state = FlowState {
+        id: flow_id.to_string(),
+        workflow: workflow.to_string(),
+        workflow_version: 1,
+        current_stage: first_stage.to_string(),
+        created_at: now,
+        updated_at: now,
+        archived: false,
+        stage_history: vec![],
+        step_log: vec![],
+    };
+
+    save_flow(state_dir, &state)?;
+
+    Ok(())
+}
+
 /// Saves a flow state to the active flows directory atomically.
 ///
 /// The state is serialized to TOML and written to a temporary file

@@ -2,6 +2,7 @@ use assert_fs::TempDir;
 use assert_fs::prelude::*;
 use chrono::DateTime;
 
+use super::create_flow;
 use super::create_workflow_template;
 use super::list_workflows;
 use super::load_flow;
@@ -279,5 +280,56 @@ fn returns_flow_parse_failed_for_invalid_toml() {
     assert!(
         matches!(result, Err(Error::FlowParseFailed { ref id, .. }) if id == "broken-flow"),
         "expected FlowParseFailed {{ id: \"broken-flow\", .. }}, got {result:?}",
+    );
+}
+
+#[test]
+fn create_flow_creates_and_loads_initial_state() {
+    // Given: A fresh temp state directory
+    let state_dir = TempDir::new().unwrap();
+
+    // When: We create the "add-oauth" flow under the "feature" workflow
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // Then: The flow can be loaded back with the expected id, workflow, and
+    // current stage
+    let flow = load_flow(state_dir.path(), "add-oauth").unwrap();
+    assert_eq!(flow.id, "add-oauth");
+    assert_eq!(flow.workflow, "feature");
+    assert_eq!(flow.current_stage, "design");
+}
+
+#[test]
+fn create_flow_returns_already_exists_on_duplicate_active() {
+    // Given: A temp state directory where "add-oauth" has already been created
+    let state_dir = TempDir::new().unwrap();
+    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+
+    // When: We attempt to create the same flow a second time
+    let result =
+        create_flow(state_dir.path(), "add-oauth", "feature", "design");
+
+    // Then: FlowAlreadyExists is returned with the correct id
+    assert!(
+        matches!(result, Err(Error::FlowAlreadyExists { ref id }) if id == "add-oauth"),
+        "expected FlowAlreadyExists {{ id: \"add-oauth\" }}, got {result:?}",
+    );
+}
+
+#[test]
+fn create_flow_returns_already_exists_when_archived_dir_exists() {
+    // Given: A temp state directory where an archived directory for "add-oauth"
+    // already exists
+    let state_dir = TempDir::new().unwrap();
+    state_dir.child("flows/archived/add-oauth").create_dir_all().unwrap();
+
+    // When: We attempt to create the "add-oauth" flow
+    let result =
+        create_flow(state_dir.path(), "add-oauth", "feature", "design");
+
+    // Then: FlowAlreadyExists is returned with the correct id
+    assert!(
+        matches!(result, Err(Error::FlowAlreadyExists { ref id }) if id == "add-oauth"),
+        "expected FlowAlreadyExists {{ id: \"add-oauth\" }}, got {result:?}",
     );
 }
