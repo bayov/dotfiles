@@ -9,6 +9,7 @@
 //! every handler so that all output can be rendered in the requested format via
 //! [`output::render`].
 
+pub mod flow;
 pub mod output;
 pub mod workflow;
 
@@ -195,9 +196,8 @@ fn dispatch_workflow(
 
 /// Dispatches `awf flow` subcommands.
 ///
-/// The `Result` return type and exhaustive match are intentional stubs — real
-/// implementations added in C3–C15 will consume the variants and return
-/// meaningful errors.
+/// C6–C8 are fully implemented; the remaining variants are stubs that will be
+/// filled in during C9–C15.
 #[allow(
     clippy::unnecessary_wraps,
     clippy::match_same_arms,
@@ -205,12 +205,14 @@ fn dispatch_workflow(
 )]
 fn dispatch_flow(
     command: FlowCommands,
-    _fmt: OutputFormat,
+    fmt: OutputFormat,
 ) -> color_eyre::Result<()> {
     match command {
-        FlowCommands::New { name: _, workflow: _ } => Ok(()),
-        FlowCommands::List { all: _ } => Ok(()),
-        FlowCommands::Status { flow: _ } => Ok(()),
+        FlowCommands::New { name, workflow } => flow::new(&name, &workflow),
+        FlowCommands::List { all } => flow::list(all),
+        FlowCommands::Status { flow: flow_flag } => {
+            flow::status(flow_flag.as_deref(), &fmt)
+        }
         FlowCommands::Next { flow: _ } => Ok(()),
         FlowCommands::Run { step: _, flow: _ } => Ok(()),
         FlowCommands::Step { command } => dispatch_step(command),
