@@ -96,7 +96,8 @@ IS_IN_DOTFILES = (
 )
 if IS_IN_DOTFILES:
     print(
-        f"\033[36mDebug: IS_IN_DOTFILES=True"
+        f"\033[33mWarning: Dotfiles directory detected"
+        f" — dotfiles mounts will be writable"
         f" (workspace={WORKSPACE_PATH},"
         f" linked={LINKED_PROJECT_PATH})\033[0m",
         file=sys.stderr,
