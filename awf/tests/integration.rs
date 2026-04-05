@@ -147,9 +147,10 @@ fn setup_flow_config_with_commands(tmp: &TempDir, commands: &[(&str, &str)]) {
         format!("flow_search_dirs = [{:?}]\n", flows_dir.to_string_lossy());
 
     if !commands.is_empty() {
+        use std::fmt::Write as _;
         contents.push_str("\n[commands]\n");
         for (key, shell) in commands {
-            contents.push_str(&format!("{key} = {shell:?}\n"));
+            let _ = writeln!(contents, "{key} = {shell:?}");
         }
     }
 

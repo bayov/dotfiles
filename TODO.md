@@ -8,8 +8,6 @@ Awf
 ---
 
 - Do tests use fake ram filesystem to simulate dir/file creation, etc?
-- WORKFLOW.toml should support repo-wide commands (e.g. `format`, `test`)
-  defined in .config/awf.toml.
 - Implement `dynamic_task_lists_plan.md`
 - Agent should have .awf-staging/ folder to write artifacts to before
   `awf artifact put` moves them into the flow directory.

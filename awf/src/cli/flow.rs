@@ -1226,7 +1226,7 @@ fn resolve_shell_command(
             .commands
             .get(alias.as_str())
             .or_else(|| repo_commands.get(alias.as_str()))
-            .map(String::clone),
+            .cloned(),
         StepKind::Command { run: Some(inline), command: None } => {
             Some(inline.clone())
         }
