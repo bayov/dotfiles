@@ -71,6 +71,6 @@ $ assert_stdout contains
 | write-design
 
 # Step 4: Advance
-$ awf flow advance --flow $FLOWS_DIR/add-oauth
+$ awf flow next-stage --flow $FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | implement

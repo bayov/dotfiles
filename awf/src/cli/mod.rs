@@ -113,7 +113,8 @@ pub enum FlowCommands {
         flow: Option<String>,
     },
     /// Show next required action
-    Next {
+    #[command(name = "next-step")]
+    NextStep {
         #[arg(long)]
         flow: Option<String>,
     },
@@ -134,7 +135,8 @@ pub enum FlowCommands {
         flow: Option<String>,
     },
     /// Advance to the next stage
-    Advance {
+    #[command(name = "next-stage")]
+    NextStage {
         #[arg(long)]
         flow: Option<String>,
         #[arg(long)]
@@ -210,7 +212,7 @@ fn dispatch_flow(
         FlowCommands::Status { flow: flow_flag } => {
             flow::status(flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::Next { flow: flow_flag } => {
+        FlowCommands::NextStep { flow: flow_flag } => {
             flow::next(flow_flag.as_deref(), &fmt)
         }
         FlowCommands::Run { step, flow: flow_flag } => {
@@ -220,7 +222,7 @@ fn dispatch_flow(
         FlowCommands::Validate { flow: flow_flag } => {
             flow::validate(flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::Advance { flow: flow_flag, force } => {
+        FlowCommands::NextStage { flow: flow_flag, force } => {
             flow::advance(flow_flag.as_deref(), force, &fmt)
         }
         FlowCommands::History { flow: flow_flag } => {

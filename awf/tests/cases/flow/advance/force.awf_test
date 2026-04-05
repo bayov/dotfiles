@@ -24,14 +24,14 @@ $ assert_stdout contains
 | force-flow
 
 # Without --force: fails because steps are incomplete
-$ awf flow advance --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not complete
 
 # With --force: step gate bypassed.
 # run-test has only one stage, so this errors with "last stage".
-$ awf flow advance --force --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --force --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage

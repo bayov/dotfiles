@@ -1,4 +1,4 @@
-# Tests for `awf flow next` behavior
+# Tests for `awf flow next-step` behavior
 
 # --- Setup: config ---
 $ write_file .config/awf.toml
@@ -81,7 +81,7 @@ $ awf flow run fail-step --flow $FLOWS_DIR/next-flow
 $ assert_stdout contains
 | FAIL
 
-$ awf flow next --flow $FLOWS_DIR/next-flow
+$ awf flow next-step --flow $FLOWS_DIR/next-flow
 $ assert_stdout contains
 | awf flow run
 
@@ -93,7 +93,7 @@ $ awf flow new $FLOWS_DIR/next-agent --workflow feature
 $ assert_stdout contains
 | next-agent
 
-$ awf flow next --flow $FLOWS_DIR/next-agent
+$ awf flow next-step --flow $FLOWS_DIR/next-agent
 $ assert_stdout contains
 | Mark complete with
 
@@ -109,7 +109,7 @@ $ awf flow step done write-design --flow $FLOWS_DIR/next-artifact
 $ assert_stdout contains
 | write-design
 
-$ awf flow next --flow $FLOWS_DIR/next-artifact
+$ awf flow next-step --flow $FLOWS_DIR/next-artifact
 $ assert_stdout contains
 | design.md
 
@@ -128,6 +128,6 @@ $ awf flow step done write-design --flow $FLOWS_DIR/next-advance
 $ assert_stdout contains
 | write-design
 
-$ awf flow next --flow $FLOWS_DIR/next-advance
+$ awf flow next-step --flow $FLOWS_DIR/next-advance
 $ assert_stdout contains
-| awf flow advance
+| awf flow next-stage

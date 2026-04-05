@@ -31,7 +31,7 @@ $ assert_stdout contains
 | PASS
 
 # --- Advance should fail: special.md is missing ---
-$ awf flow advance --flow $FLOWS_DIR/gate-flow
+$ awf flow next-stage --flow $FLOWS_DIR/gate-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | special.md

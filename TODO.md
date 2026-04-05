@@ -7,10 +7,10 @@ TODO
 Awf
 ---
 
-- `awf flow next` -> `awf flow next-step`
-- `awf flow advance` -> `awf flow next-stage`
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
+- Improve human output format.
+- Coverage for all output format as tests.
 - Add README.md's
 - Implement `dynamic_task_lists_plan.md`
 

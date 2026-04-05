@@ -1,4 +1,4 @@
-# Test: awf flow advance — human and json output
+# Test: awf flow next-stage — human and json output
 # Uses a minimal workflow (two stages, no steps) so advance works immediately.
 
 $ write_file .config/awf.toml
@@ -26,14 +26,14 @@ $ assert_stdout contains
 
 # --- Human ---
 
-$ awf flow advance --flow $FLOWS_DIR/fmt-adv-h --output-format human
+$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h --output-format human
 $ assert_stdout equals
 | ▶ Entered stage: done
 |   This is the final stage.
 
 # --- JSON ---
 
-$ awf flow advance --flow $FLOWS_DIR/fmt-adv-j --output-format json
+$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-j --output-format json
 $ assert_stdout json
 | {
 |   "stage": "done",

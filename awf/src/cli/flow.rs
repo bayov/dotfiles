@@ -215,10 +215,10 @@ impl fmt::Display for FlowStatusOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Output types — `awf flow next`
+// Output types — `awf flow next-step`
 // ---------------------------------------------------------------------------
 
-/// Output payload for `awf flow next`.
+/// Output payload for `awf flow next-step`.
 #[derive(Debug, Serialize)]
 pub struct FlowNextOutput {
     /// Discriminator: `"run_step"`, `"complete_agent_step"`,
@@ -317,10 +317,10 @@ impl fmt::Display for FlowValidateOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Output types — `awf flow advance`
+// Output types — `awf flow next-stage`
 // ---------------------------------------------------------------------------
 
-/// Output payload for `awf flow advance`.
+/// Output payload for `awf flow next-stage`.
 #[derive(Debug, Serialize)]
 pub struct FlowAdvanceOutput {
     pub stage: String,
@@ -634,10 +634,10 @@ pub fn status(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow next [--flow <path>]`
+// `awf flow next-step [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow next [--flow <path>]`.
+/// Handles `awf flow next-step [--flow <path>]`.
 ///
 /// # Errors
 ///
@@ -726,7 +726,7 @@ pub fn next(
                 next_stage: Some(next_stage_name.clone()),
                 prompt: None,
                 message: format!(
-                    "All steps complete. Run `awf flow advance` to move to \
+                    "All steps complete. Run `awf flow next-stage` to move to \
                      {next_stage_name}."
                 ),
             }
@@ -958,10 +958,10 @@ pub fn validate(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow advance [--force] [--flow <path>]`
+// `awf flow next-stage [--force] [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow advance [--force] [--flow <path>]`.
+/// Handles `awf flow next-stage [--force] [--flow <path>]`.
 ///
 /// # Errors
 ///

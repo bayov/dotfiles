@@ -34,7 +34,7 @@ $ assert_stdout contains
 | FAIL
 
 # Advance should fail because fail-step failed
-$ awf flow advance --flow $FLOWS_DIR/blocker-flow
+$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | fail-step
@@ -58,7 +58,7 @@ $ assert_stdout contains
 
 # Advance: no longer blocked by fail-step.
 # run-test has only one stage, so this errors with "last stage".
-$ awf flow advance --flow $FLOWS_DIR/blocker-flow
+$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage

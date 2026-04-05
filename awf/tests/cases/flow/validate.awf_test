@@ -100,7 +100,7 @@ $ awf flow step done write-design --flow $FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | write-design
 
-$ awf flow advance --flow $FLOWS_DIR/validate-ok
+$ awf flow next-stage --flow $FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | implement
 
@@ -117,7 +117,7 @@ $ assert_stdout contains
 | validate-missing
 
 # Force-advance past draft without writing draft.md
-$ awf flow advance --force --flow $FLOWS_DIR/validate-missing
+$ awf flow next-stage --force --flow $FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | done
 
