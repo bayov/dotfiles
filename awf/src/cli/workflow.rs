@@ -10,6 +10,7 @@ use serde::Serialize;
 use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::cli::output::print_output;
+use crate::config::WorkflowSearchEntry;
 use crate::model::workflow::StepKind;
 use crate::result::Error;
 use crate::store::fs;
@@ -125,25 +126,69 @@ pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
 // `awf workflow validate <name>`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf workflow validate <name>`.
+/// Handles `awf workflow validate [name]`.
 ///
-/// Loads the workflow, runs structural validation, then checks:
+/// When `name` is given, validates that workflow.  When omitted, discovers and
+/// validates every workflow across all scopes.
+///
+/// For each workflow, loads it, runs structural validation, then checks:
 /// 1. Every `command` key referenced in a step exists in `workflow.commands`.
 /// 2. Every `prompt` file exists on disk.
 ///
-/// All errors are collected before printing.
+/// All errors are collected before printing.  Exits with code 1 if any
+/// workflow fails validation.
 ///
 /// # Errors
 ///
-/// Returns an error for unexpected I/O failures or if the workflow cannot be
+/// Returns an error for unexpected I/O failures or if a workflow cannot be
 /// loaded/parsed.
-pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
+pub fn validate(
+    name: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
 
-    let workflow = super::load_workflow_or_exit(&entries, name)?;
+    let names: Vec<String> = match name {
+        Some(n) => vec![n.to_string()],
+        None => {
+            let listings = fs::list_workflows(&entries)?;
+            if listings.is_empty() {
+                anstream::eprintln!(
+                    "No workflows found. Create one with: awf workflow new \
+                     <name>"
+                );
+                return Ok(());
+            }
+            listings
+                .into_iter()
+                .map(|l| format!("{}:{}", l.scope, l.name))
+                .collect()
+        }
+    };
+
+    let mut any_failed = false;
+    for n in &names {
+        if validate_single(n, &entries, fmt)? {
+            any_failed = true;
+        }
+    }
+    if any_failed {
+        process::exit(1);
+    }
+    Ok(())
+}
+
+/// Validates a single workflow by name.  Returns `true` if validation failed,
+/// `false` if it passed.
+fn validate_single(
+    name: &str,
+    entries: &[WorkflowSearchEntry],
+    fmt: &OutputFormat,
+) -> color_eyre::Result<bool> {
+    let workflow = super::load_workflow_or_exit(entries, name)?;
 
     let mut errors: Vec<String> = Vec::new();
 
@@ -168,7 +213,7 @@ pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
     }
 
     // Check 2: every `prompt` file must exist on disk.
-    let wf_dir = fs::find_workflow_dir(&entries, name);
+    let wf_dir = fs::find_workflow_dir(entries, name);
 
     if let Some(wf_dir) = wf_dir {
         for stage in &workflow.stages {
@@ -193,12 +238,13 @@ pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
             status: "ok".to_string(),
         };
         print_output(&output, fmt);
-        Ok(())
+        Ok(false)
     } else {
+        anstream::eprintln!("Workflow {}: {}", name, "✗ FAILED".red().bold());
         for error in &errors {
             anstream::eprintln!("  {} {error}", "·".red());
         }
-        process::exit(1);
+        Ok(true)
     }
 }
 

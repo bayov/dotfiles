@@ -71,8 +71,8 @@ pub enum Commands {
 pub enum WorkflowCommands {
     /// Create a new workflow template
     New { name: String },
-    /// Validate a workflow definition
-    Validate { name: String },
+    /// Validate a workflow definition (omit name to validate all)
+    Validate { name: Option<String> },
     /// List available workflow definitions
     List,
 }
@@ -180,7 +180,9 @@ fn dispatch_workflow(
 ) -> color_eyre::Result<()> {
     match command {
         WorkflowCommands::New { name } => workflow::new(&name, &fmt),
-        WorkflowCommands::Validate { name } => workflow::validate(&name, &fmt),
+        WorkflowCommands::Validate { name } => {
+            workflow::validate(name.as_deref(), &fmt)
+        }
         WorkflowCommands::List => workflow::list(&fmt),
     }
 }

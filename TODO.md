@@ -8,10 +8,6 @@ Awf
 ---
 
 - Do tests use fake ram filesystem to simulate dir/file creation, etc?
-- workflow default directory should be .agents/workflows/
-- instead of workflows/foo.toml and workflows/foo/agent_instructions.md, have
-  workflows/foo/WORKFLOW.toml.
-- `awf workflow validate` should validate all workflows.
 - WORKFLOW.toml should support repo-wide commands (e.g. `format`, `test`)
   defined in .config/awf.toml.
 - Implement `dynamic_task_lists_plan.md`
