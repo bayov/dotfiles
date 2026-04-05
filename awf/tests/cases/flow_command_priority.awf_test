@@ -1,0 +1,32 @@
+# Test: workflow_command_takes_priority_over_repo_command
+# A command defined in the workflow should override the same-named repo command.
+
+# --- Setup ---
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+|
+| [commands]
+| shared = "false"
+
+$ write_file .agents/workflows/priority-test/WORKFLOW.toml
+| name = "priority-test"
+| version = 1
+|
+| [commands]
+| shared = "true"
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "check", type = "command", command = "shared" },
+| ]
+
+# --- Test steps ---
+
+$ awf flow new --flow $FLOWS_DIR/priority-flow --workflow priority-test
+$ assert_stdout
+| priority-flow
+
+$ awf flow run check --flow $FLOWS_DIR/priority-flow
+$ assert_stdout
+| PASS

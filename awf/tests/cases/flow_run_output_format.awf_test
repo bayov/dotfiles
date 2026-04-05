@@ -1,0 +1,52 @@
+# Test flow run with all 4 output formats
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "false" },
+| ]
+
+# Create flows for each format test
+$ awf flow new --flow $FLOWS_DIR/fmt-run-h --workflow run-test
+$ assert_stdout
+| fmt-run-h
+
+$ awf flow new --flow $FLOWS_DIR/fmt-run-j --workflow run-test
+$ assert_stdout
+| fmt-run-j
+
+$ awf flow new --flow $FLOWS_DIR/fmt-run-t --workflow run-test
+$ assert_stdout
+| fmt-run-t
+
+$ awf flow new --flow $FLOWS_DIR/fmt-run-x --workflow run-test
+$ assert_stdout
+| fmt-run-x
+
+# Human
+$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-h --output-format human
+$ assert_stdout
+| PASS
+
+# JSON
+$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-j --output-format json
+$ assert_stdout json
+| {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}
+
+# TOML
+$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-t --output-format toml
+$ assert_stdout toml
+| {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}
+
+# XML
+$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-x --output-format xml
+$ assert_stdout xml
+| {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}

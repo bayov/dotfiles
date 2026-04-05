@@ -1,0 +1,46 @@
+# Test: --force bypasses step-completion gate
+# Converts: force_advance_bypasses_incomplete_steps
+
+# --- Setup: run-test workflow ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "false" },
+| ]
+
+# --- Test ---
+
+$ awf flow new --flow $FLOWS_DIR/force-flow --workflow run-test
+$ assert_stdout
+| force-flow
+
+# Without --force: fails because steps are incomplete
+$ awf flow advance --flow $FLOWS_DIR/force-flow
+$ assert_exit_code 1
+$ assert_stderr
+| not complete
+
+# With --force: step gate bypassed.
+# run-test has only one stage, so this errors with "last stage".
+$ awf flow advance --force --flow $FLOWS_DIR/force-flow
+$ assert_exit_code 1
+$ assert_stderr
+| last stage
+$ assert_stderr not_contains
+| pass-step
+$ assert_stderr not_contains
+| fail-step
+
+# History should show the "work" stage
+$ awf flow history --flow $FLOWS_DIR/force-flow
+$ assert_stdout
+| work

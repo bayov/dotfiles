@@ -1,0 +1,31 @@
+# Test: flow run pass and fail
+# Creates a flow with the run-test workflow, runs a passing step and a failing step.
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "false" },
+| ]
+
+# Step 1: Create flow
+$ awf flow new --flow $FLOWS_DIR/run-flow --workflow run-test
+$ assert_stdout
+| run-flow
+
+# Step 2: Run pass-step (should pass)
+$ awf flow run pass-step --flow $FLOWS_DIR/run-flow
+$ assert_stdout
+| PASS
+
+# Step 3: Run fail-step (reports FAIL in stdout, but exits 0)
+$ awf flow run fail-step --flow $FLOWS_DIR/run-flow
+$ assert_stdout
+| FAIL

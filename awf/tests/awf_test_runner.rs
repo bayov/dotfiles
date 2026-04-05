@@ -16,6 +16,26 @@ use assert_fs::TempDir;
 // Data types
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AssertMode {
+    /// Default: string contains (with auto JSON partial-match detection).
+    Contains,
+    /// Negated string contains.
+    NotContains,
+    /// Regex match against full output.
+    Regex,
+    /// Force JSON partial match (panics on parse failure instead of fallback).
+    Json,
+    /// Parse stdout as TOML → JSON, then JSON partial match.
+    Toml,
+    /// Strip `<data>…</data>` XML envelope, parse inner JSON, partial match.
+    Xml,
+    /// Exact string equality (trimmed).
+    Equals,
+    /// Assert output is empty (no content lines needed).
+    Empty,
+}
+
 #[derive(Debug)]
 enum Directive {
     WriteFile { path: String, content: String },
@@ -26,8 +46,8 @@ enum Directive {
     Unset { key: String },
     AwfCommand { args: Vec<String>, line_number: usize },
     AssertExitCode { code: i32 },
-    AssertStdout { content: Option<String> },
-    AssertStderr { content: Option<String> },
+    AssertStdout { mode: AssertMode, content: Option<String> },
+    AssertStderr { mode: AssertMode, content: Option<String> },
 }
 
 #[derive(Debug)]
@@ -56,8 +76,8 @@ enum Action {
         args: Vec<String>,
         line_number: usize,
         expected_exit_code: i32,
-        expected_stdout: Vec<String>,
-        expected_stderr: Vec<String>,
+        expected_stdout: Vec<(AssertMode, String)>,
+        expected_stderr: Vec<(AssertMode, String)>,
     },
 }
 
@@ -108,8 +128,8 @@ fn parse_file(path: &Path) -> TestCase {
                     content.push_str(&body);
                 }
                 Some(
-                    Directive::AssertStdout { content }
-                    | Directive::AssertStderr { content },
+                    Directive::AssertStdout { content, .. }
+                    | Directive::AssertStderr { content, .. },
                 ) => {
                     let c = content.get_or_insert_with(String::new);
                     if !c.is_empty() {
@@ -187,10 +207,20 @@ fn parse_directive(rest: &str, line_number: usize, path: &Path) -> Directive {
             panic!("{}:{}: bad exit code: {e}", path.display(), line_number)
         });
         Directive::AssertExitCode { code }
-    } else if rest == "assert_stdout" {
-        Directive::AssertStdout { content: None }
-    } else if rest == "assert_stderr" {
-        Directive::AssertStderr { content: None }
+    } else if rest == "assert_stdout" || rest.starts_with("assert_stdout ") {
+        let mode = parse_assert_mode(
+            rest.strip_prefix("assert_stdout").unwrap().trim(),
+            line_number,
+            path,
+        );
+        Directive::AssertStdout { mode, content: None }
+    } else if rest == "assert_stderr" || rest.starts_with("assert_stderr ") {
+        let mode = parse_assert_mode(
+            rest.strip_prefix("assert_stderr").unwrap().trim(),
+            line_number,
+            path,
+        );
+        Directive::AssertStderr { mode, content: None }
     } else {
         panic!(
             "{}:{}: unknown directive: {:?}",
@@ -214,6 +244,32 @@ fn validate_path(p: &str, line_number: usize, file: &Path) {
         file.display(),
         line_number
     );
+}
+
+fn parse_assert_mode(
+    mode_str: &str,
+    line_number: usize,
+    file: &Path,
+) -> AssertMode {
+    if mode_str.is_empty() {
+        return AssertMode::Contains;
+    }
+    match mode_str {
+        "contains" => AssertMode::Contains,
+        "not_contains" => AssertMode::NotContains,
+        "regex" => AssertMode::Regex,
+        "json" => AssertMode::Json,
+        "toml" => AssertMode::Toml,
+        "xml" => AssertMode::Xml,
+        "equals" => AssertMode::Equals,
+        "empty" => AssertMode::Empty,
+        other => panic!(
+            "{}:{}: unknown assert mode: {:?} (expected contains, not_contains, regex, json, toml, xml, equals, empty)",
+            file.display(),
+            line_number,
+            other
+        ),
+    }
 }
 
 fn group_into_actions(directives: Vec<Directive>, path: &Path) -> Vec<Action> {
@@ -261,7 +317,7 @@ fn group_into_actions(directives: Vec<Directive>, path: &Path) -> Vec<Action> {
                     ),
                 }
             }
-            Directive::AssertStdout { content } => {
+            Directive::AssertStdout { mode, content } => {
                 let cmd = actions.iter_mut().rev().find_map(|a| match a {
                     Action::RunCommand { expected_stdout, .. } => {
                         Some(expected_stdout)
@@ -270,11 +326,13 @@ fn group_into_actions(directives: Vec<Directive>, path: &Path) -> Vec<Action> {
                 });
                 match cmd {
                     Some(es) => {
-                        if let Some(c) = content {
-                            es.push(c);
+                        if mode == AssertMode::Empty {
+                            es.push((AssertMode::Empty, String::new()));
+                        } else if let Some(c) = content {
+                            es.push((mode, c));
                         }
-                        // None content with no prior content = assert empty
-                        // (default)
+                        // None content with Contains mode = assert empty
+                        // (default, backward compat)
                     }
                     None => panic!(
                         "{}: assert_stdout without preceding awf command",
@@ -282,7 +340,7 @@ fn group_into_actions(directives: Vec<Directive>, path: &Path) -> Vec<Action> {
                     ),
                 }
             }
-            Directive::AssertStderr { content } => {
+            Directive::AssertStderr { mode, content } => {
                 let cmd = actions.iter_mut().rev().find_map(|a| match a {
                     Action::RunCommand { expected_stderr, .. } => {
                         Some(expected_stderr)
@@ -291,8 +349,10 @@ fn group_into_actions(directives: Vec<Directive>, path: &Path) -> Vec<Action> {
                 });
                 match cmd {
                     Some(es) => {
-                        if let Some(c) = content {
-                            es.push(c);
+                        if mode == AssertMode::Empty {
+                            es.push((AssertMode::Empty, String::new()));
+                        } else if let Some(c) = content {
+                            es.push((mode, c));
                         }
                     }
                     None => panic!(
@@ -457,27 +517,10 @@ fn run_test_case(case: &TestCase) {
                         context()
                     );
                 } else {
-                    for expected in expected_stdout {
-                        // Try JSON partial match first
-                        if let (Ok(expected_json), Ok(actual_json)) = (
-                            serde_json::from_str::<serde_json::Value>(expected),
-                            serde_json::from_str::<serde_json::Value>(
-                                stdout.trim(),
-                            ),
-                        ) {
-                            assert_json_contains(
-                                &actual_json,
-                                &expected_json,
-                                &context,
-                            );
-                        } else {
-                            assert!(
-                                stdout.contains(expected.as_str()),
-                                "stdout does not contain expected text\n  expected to contain: {:?}{}",
-                                expected,
-                                context()
-                            );
-                        }
+                    for (mode, expected) in expected_stdout {
+                        check_output_assertion(
+                            "stdout", &stdout, *mode, expected, &context,
+                        );
                     }
                 }
 
@@ -490,16 +533,146 @@ fn run_test_case(case: &TestCase) {
                         context()
                     );
                 } else {
-                    for expected in expected_stderr {
-                        assert!(
-                            stderr.contains(expected.as_str()),
-                            "stderr does not contain expected text\n  expected to contain: {:?}{}",
-                            expected,
-                            context()
+                    for (mode, expected) in expected_stderr {
+                        check_output_assertion(
+                            "stderr", &stderr, *mode, expected, &context,
                         );
                     }
                 }
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output assertion dispatch
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_lines)]
+fn check_output_assertion(
+    stream: &str,
+    actual: &str,
+    mode: AssertMode,
+    expected: &str,
+    context: &dyn Fn() -> String,
+) {
+    match mode {
+        AssertMode::Contains => {
+            // Backward compat: auto-detect JSON when both sides parse.
+            if let (Ok(expected_json), Ok(actual_json)) = (
+                serde_json::from_str::<serde_json::Value>(expected),
+                serde_json::from_str::<serde_json::Value>(actual.trim()),
+            ) {
+                assert_json_contains(&actual_json, &expected_json, context);
+            } else {
+                assert!(
+                    actual.contains(expected),
+                    "{stream} does not contain expected text\n  expected to contain: {expected:?}{}",
+                    context()
+                );
+            }
+        }
+        AssertMode::NotContains => {
+            assert!(
+                !actual.contains(expected),
+                "{stream} contains text that should be absent\n  should not contain: {expected:?}{}",
+                context()
+            );
+        }
+        AssertMode::Regex => {
+            let re = regex::Regex::new(expected).unwrap_or_else(|e| {
+                panic!("invalid regex {expected:?}: {e}{}", context());
+            });
+            assert!(
+                re.is_match(actual),
+                "{stream} does not match regex\n  pattern: {expected:?}{}",
+                context()
+            );
+        }
+        AssertMode::Json => {
+            let expected_json: serde_json::Value =
+                serde_json::from_str(expected).unwrap_or_else(|e| {
+                    panic!(
+                        "expected content is not valid JSON: {e}\n  content: {expected:?}{}",
+                        context()
+                    );
+                });
+            let actual_json: serde_json::Value =
+                serde_json::from_str(actual.trim()).unwrap_or_else(|e| {
+                    panic!(
+                        "{stream} is not valid JSON: {e}\n  {stream}: {:?}{}",
+                        actual.trim(),
+                        context()
+                    );
+                });
+            assert_json_contains(&actual_json, &expected_json, context);
+        }
+        AssertMode::Toml => {
+            let expected_json: serde_json::Value =
+                serde_json::from_str(expected).unwrap_or_else(|e| {
+                    panic!(
+                        "expected content is not valid JSON: {e}\n  content: {expected:?}{}",
+                        context()
+                    );
+                });
+            let toml_val: toml::Value =
+                actual.trim().parse().unwrap_or_else(|e| {
+                    panic!(
+                        "{stream} is not valid TOML: {e}\n  {stream}: {:?}{}",
+                        actual.trim(),
+                        context()
+                    );
+                });
+            let actual_json = serde_json::to_value(&toml_val)
+                .expect("TOML value to serde_json::Value");
+            assert_json_contains(&actual_json, &expected_json, context);
+        }
+        AssertMode::Xml => {
+            let trimmed = actual.trim();
+            assert!(
+                trimmed.starts_with("<data>\n"),
+                "{stream} XML output must start with '<data>\\n': {trimmed:?}{}",
+                context()
+            );
+            assert!(
+                trimmed.ends_with("</data>"),
+                "{stream} XML output must end with '</data>': {trimmed:?}{}",
+                context()
+            );
+            let inner = trimmed
+                .trim_start_matches("<data>\n")
+                .trim_end_matches("</data>")
+                .trim();
+            let expected_json: serde_json::Value =
+                serde_json::from_str(expected).unwrap_or_else(|e| {
+                    panic!(
+                        "expected content is not valid JSON: {e}\n  content: {expected:?}{}",
+                        context()
+                    );
+                });
+            let actual_json: serde_json::Value =
+                serde_json::from_str(inner).unwrap_or_else(|e| {
+                    panic!(
+                        "{stream} XML inner content is not valid JSON: {e}\n  inner: {inner:?}{}",
+                        context()
+                    );
+                });
+            assert_json_contains(&actual_json, &expected_json, context);
+        }
+        AssertMode::Equals => {
+            assert_eq!(
+                actual.trim(),
+                expected.trim(),
+                "{stream} does not equal expected text{}",
+                context()
+            );
+        }
+        AssertMode::Empty => {
+            assert!(
+                actual.trim().is_empty(),
+                "expected empty {stream} but got content{}",
+                context()
+            );
         }
     }
 }

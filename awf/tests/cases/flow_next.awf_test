@@ -1,0 +1,133 @@
+# Tests for `awf flow next` behavior
+
+# --- Setup: config ---
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# --- Setup: feature workflow ---
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a new feature from design through merge."
+|
+| [commands]
+| test = "cargo test"
+| lint = "cargo clippy -- -D warnings"
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| produces = ["design.md"]
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "implement"
+| description = "Write the code."
+| requires = ["design.md"]
+| steps = [
+|     { name = "write-code", type = "agent", prompt = "implement.md" },
+|     { name = "test", type = "command", command = "test" },
+| ]
+|
+| [[stages]]
+| name = "review"
+| description = "Code review and integration."
+| repeatable = true
+| produces = ["changelog-entry.md"]
+| steps = [
+|     { name = "pre-review-test", type = "command", command = "test" },
+|     { name = "do-review", type = "agent", prompt = "review.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+| Write a design document.
+
+$ write_file .agents/workflows/feature/implement.md
+| # Implement
+| Write the implementation.
+
+$ write_file .agents/workflows/feature/review.md
+| # Review
+| Perform code review.
+
+# --- Setup: run-test workflow ---
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "false" },
+| ]
+
+# =============================================================================
+# Test 1: flow_next_failing_step_hints_run
+# =============================================================================
+
+$ awf flow new --flow $FLOWS_DIR/next-flow --workflow run-test
+$ assert_stdout
+| next-flow
+
+$ awf flow run fail-step --flow $FLOWS_DIR/next-flow
+$ assert_stdout
+| FAIL
+
+$ awf flow next --flow $FLOWS_DIR/next-flow
+$ assert_stdout
+| awf flow run
+
+# =============================================================================
+# Test 2: flow_next_incomplete_agent_step_hints_done
+# =============================================================================
+
+$ awf flow new --flow $FLOWS_DIR/next-agent --workflow feature
+$ assert_stdout
+| next-agent
+
+$ awf flow next --flow $FLOWS_DIR/next-agent
+$ assert_stdout
+| Mark complete with
+
+# =============================================================================
+# Test 3: flow_next_missing_artifact_mentions_artifact_name
+# =============================================================================
+
+$ awf flow new --flow $FLOWS_DIR/next-artifact --workflow feature
+$ assert_stdout
+| next-artifact
+
+$ awf flow step done write-design --flow $FLOWS_DIR/next-artifact
+$ assert_stdout
+| write-design
+
+$ awf flow next --flow $FLOWS_DIR/next-artifact
+$ assert_stdout
+| design.md
+
+# =============================================================================
+# Test 4: flow_next_can_advance_mentions_advance_command
+# =============================================================================
+
+$ awf flow new --flow $FLOWS_DIR/next-advance --workflow feature
+$ assert_stdout
+| next-advance
+
+$ write_file flows/next-advance/artifacts/design.md
+| # My design
+
+$ awf flow step done write-design --flow $FLOWS_DIR/next-advance
+$ assert_stdout
+| write-design
+
+$ awf flow next --flow $FLOWS_DIR/next-advance
+$ assert_stdout
+| awf flow advance

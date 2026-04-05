@@ -1,0 +1,89 @@
+# Test: awf flow history --output-format with all 4 formats
+# Uses the feature workflow. History doesn't mutate, so one flow suffices.
+
+# --- Setup: feature workflow preamble ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a new feature from design through merge."
+|
+| [commands]
+| test = "cargo test"
+| lint = "cargo clippy -- -D warnings"
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| produces = ["design.md"]
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "implement"
+| description = "Write the code."
+| requires = ["design.md"]
+| steps = [
+|     { name = "write-code", type = "agent", prompt = "implement.md" },
+|     { name = "test", type = "command", command = "test" },
+| ]
+|
+| [[stages]]
+| name = "review"
+| description = "Code review and integration."
+| repeatable = true
+| produces = ["changelog-entry.md"]
+| steps = [
+|     { name = "pre-review-test", type = "command", command = "test" },
+|     { name = "do-review", type = "agent", prompt = "review.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+| Write a design document.
+
+$ write_file .agents/workflows/feature/implement.md
+| # Implement
+| Write the implementation.
+
+$ write_file .agents/workflows/feature/review.md
+| # Review
+| Perform code review.
+
+# --- Create flow ---
+
+$ awf flow new --flow $FLOWS_DIR/fmt-history --workflow feature
+$ assert_stdout
+| fmt-history
+
+# --- Human ---
+
+$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
+$ assert_stdout
+| entered
+
+# --- JSON ---
+
+$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
+$ assert_stdout json
+| {"entries": "<any_array>"}
+
+# --- TOML ---
+
+$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format toml
+$ assert_stdout toml
+| {"entries": "<any_array>"}
+
+# --- XML ---
+
+$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format xml
+$ assert_stdout xml
+| {"entries": "<any_array>"}

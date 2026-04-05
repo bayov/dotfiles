@@ -1,0 +1,66 @@
+# Test: advance blocked by failed step, then unblocked after fix
+# Converts: advance_blocked_by_failed_step
+
+# --- Setup: run-test workflow ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "false" },
+| ]
+
+# --- Test ---
+
+$ awf flow new --flow $FLOWS_DIR/blocker-flow --workflow run-test
+$ assert_stdout
+| blocker-flow
+
+# Run pass-step: succeeds
+$ awf flow run pass-step --flow $FLOWS_DIR/blocker-flow
+$ assert_stdout
+| PASS
+
+# Run fail-step: reports FAIL (exit 0 — failure is in the step, not the CLI)
+$ awf flow run fail-step --flow $FLOWS_DIR/blocker-flow
+$ assert_stdout
+| FAIL
+
+# Advance should fail because fail-step failed
+$ awf flow advance --flow $FLOWS_DIR/blocker-flow
+$ assert_exit_code 1
+$ assert_stderr
+| fail-step
+
+# Fix the workflow so fail-step now passes
+$ write_file .agents/workflows/run-test/WORKFLOW.toml
+| name = "run-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "pass-step", type = "command", run = "true" },
+|     { name = "fail-step", type = "command", run = "true" },
+| ]
+
+# Re-run fail-step: now passes
+$ awf flow run fail-step --flow $FLOWS_DIR/blocker-flow
+$ assert_stdout
+| PASS
+
+# Advance: no longer blocked by fail-step.
+# run-test has only one stage, so this errors with "last stage".
+$ awf flow advance --flow $FLOWS_DIR/blocker-flow
+$ assert_exit_code 1
+$ assert_stderr
+| last stage
+$ assert_stderr not_contains
+| fail-step

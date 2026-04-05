@@ -1,0 +1,37 @@
+# Test: advance blocked by missing requires artifact
+
+# --- Setup config ---
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# --- Write requires-gate workflow ---
+$ write_file .agents/workflows/requires-gate/WORKFLOW.toml
+| name = "requires-gate"
+| version = 1
+|
+| [[stages]]
+| name = "start"
+| steps = [
+|     { name = "do-thing", type = "command", run = "true" },
+| ]
+|
+| [[stages]]
+| name = "finish"
+| requires = ["special.md"]
+| steps = []
+
+# --- Create a new flow ---
+$ awf flow new --flow $FLOWS_DIR/gate-flow --workflow requires-gate
+$ assert_stdout
+| gate-flow
+
+# --- Run the step ---
+$ awf flow run do-thing --flow $FLOWS_DIR/gate-flow
+$ assert_stdout
+| PASS
+
+# --- Advance should fail: special.md is missing ---
+$ awf flow advance --flow $FLOWS_DIR/gate-flow
+$ assert_exit_code 1
+$ assert_stderr
+| special.md

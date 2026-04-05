@@ -1,0 +1,59 @@
+# Test: awf flow advance --output-format with all 4 formats
+# Uses the minimal workflow (two stages, no steps) so advance works without completing anything.
+
+# --- Setup ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/minimal/WORKFLOW.toml
+| name = "minimal"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+|
+| [[stages]]
+| name = "done"
+
+# Create a separate flow for each format (advance mutates state)
+
+$ awf flow new --flow $FLOWS_DIR/fmt-adv-h --workflow minimal
+$ assert_stdout
+| fmt-adv-h
+
+$ awf flow new --flow $FLOWS_DIR/fmt-adv-j --workflow minimal
+$ assert_stdout
+| fmt-adv-j
+
+$ awf flow new --flow $FLOWS_DIR/fmt-adv-t --workflow minimal
+$ assert_stdout
+| fmt-adv-t
+
+$ awf flow new --flow $FLOWS_DIR/fmt-adv-x --workflow minimal
+$ assert_stdout
+| fmt-adv-x
+
+# --- Human ---
+
+$ awf flow advance --flow $FLOWS_DIR/fmt-adv-h --output-format human
+$ assert_stdout
+| Entered stage:
+
+# --- JSON ---
+
+$ awf flow advance --flow $FLOWS_DIR/fmt-adv-j --output-format json
+$ assert_stdout json
+| {"stage": "<any_string>", "is_final": true}
+
+# --- TOML ---
+
+$ awf flow advance --flow $FLOWS_DIR/fmt-adv-t --output-format toml
+$ assert_stdout toml
+| {"stage": "<any_string>", "is_final": true}
+
+# --- XML ---
+
+$ awf flow advance --flow $FLOWS_DIR/fmt-adv-x --output-format xml
+$ assert_stdout xml
+| {"stage": "<any_string>", "is_final": true}

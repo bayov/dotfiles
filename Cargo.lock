@@ -139,6 +139,7 @@ dependencies = [
  "color-eyre",
  "owo-colors",
  "predicates",
+ "regex",
  "rstest",
  "serde",
  "serde_json",
