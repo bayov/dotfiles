@@ -7,11 +7,11 @@ TODO
 Awf
 ---
 
-- Support out-of-workflow skills (e.g. in `.agents/skills`)
-- Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Improve human output format.
+- Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Coverage for all output format as tests.
 - Add README.md's
+- Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Implement `dynamic_task_lists_plan.md`
 
 Infeasible
