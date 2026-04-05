@@ -27,6 +27,7 @@ use crate::result::Result;
 /// exists in `start` or any of its ancestors.
 #[instrument]
 pub fn find_project_root(start: &Path) -> Result<PathBuf> {
+    assert_safe_path(start);
     let mut current = start;
 
     loop {
@@ -102,6 +103,26 @@ pub fn expand_tilde(path: &str) -> PathBuf {
     }
 
     PathBuf::from(path)
+}
+
+// ---------------------------------------------------------------------------
+// Test-time filesystem safety guard
+// ---------------------------------------------------------------------------
+
+/// Asserts that `path` is located under `/tmp` when running tests.
+///
+/// Prevents accidental reads or writes to real files on the host system during
+/// unit or integration tests. Compiled to a no-op in production builds.
+#[allow(clippy::missing_const_for_fn)]
+fn assert_safe_path(path: &Path) {
+    #[cfg(test)]
+    assert!(
+        path.starts_with("/tmp"),
+        "test accessed path outside /tmp: {}",
+        path.display(),
+    );
+    #[cfg(not(test))]
+    let _ = path;
 }
 
 #[cfg(test)]

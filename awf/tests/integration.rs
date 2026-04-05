@@ -26,6 +26,7 @@ use std::path::PathBuf;
 
 use assert_cmd::Command;
 use assert_fs::TempDir;
+use assert_fs::prelude::*;
 use predicates::prelude::*;
 use rstest::rstest;
 
@@ -77,30 +78,18 @@ description = "Complete."
 
 /// Creates the `feature` workflow fixture inside `<tmp>/.agents/`.
 fn setup_feature_workflow(tmp: &TempDir) {
-    let workflow_dir = tmp.path().join(".agents/workflows/feature");
-    std::fs::create_dir_all(&workflow_dir)
-        .expect("create .agents/workflows/feature/");
-
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), FEATURE_TOML.trim())
+    tmp.child(".agents/workflows/feature/WORKFLOW.toml")
+        .write_str(FEATURE_TOML.trim())
         .expect("write WORKFLOW.toml");
-
-    std::fs::write(
-        workflow_dir.join("design.md"),
-        "# Design\nWrite a design document.\n",
-    )
-    .expect("write design.md");
-
-    std::fs::write(
-        workflow_dir.join("implement.md"),
-        "# Implement\nWrite the implementation.\n",
-    )
-    .expect("write implement.md");
-
-    std::fs::write(
-        workflow_dir.join("review.md"),
-        "# Review\nPerform code review.\n",
-    )
-    .expect("write review.md");
+    tmp.child(".agents/workflows/feature/design.md")
+        .write_str("# Design\nWrite a design document.\n")
+        .expect("write design.md");
+    tmp.child(".agents/workflows/feature/implement.md")
+        .write_str("# Implement\nWrite the implementation.\n")
+        .expect("write implement.md");
+    tmp.child(".agents/workflows/feature/review.md")
+        .write_str("# Review\nPerform code review.\n")
+        .expect("write review.md");
 
     // Write project config so `awf flow list` can find flows.
     setup_flow_config(tmp);
@@ -108,10 +97,6 @@ fn setup_feature_workflow(tmp: &TempDir) {
 
 /// Creates a minimal workflow that uses inline `run` steps.
 fn setup_run_workflow(tmp: &TempDir) {
-    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
-    std::fs::create_dir_all(&workflow_dir)
-        .expect("create run-test workflow dir");
-
     let toml = r#"
 name = "run-test"
 version = 1
@@ -124,7 +109,8 @@ steps = [
 ]
 "#;
 
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), toml.trim())
+    tmp.child(".agents/workflows/run-test/WORKFLOW.toml")
+        .write_str(toml.trim())
         .expect("write run-test WORKFLOW.toml");
 
     setup_flow_config(tmp);
@@ -138,13 +124,13 @@ fn setup_flow_config(tmp: &TempDir) {
 /// Writes `.config/awf.toml` with `flow_search_dirs` and optional repo-wide
 /// `[commands]` entries (each element is a `"key = \"shell\""` string).
 fn setup_flow_config_with_commands(tmp: &TempDir, commands: &[(&str, &str)]) {
-    let config_dir = tmp.path().join(".config");
-    std::fs::create_dir_all(&config_dir).expect("create .config/");
-    let flows_dir = tmp.path().join("flows");
-    std::fs::create_dir_all(&flows_dir).expect("create flows/");
+    let flows_dir = tmp.child("flows");
+    flows_dir.create_dir_all().expect("create flows/");
 
-    let mut contents =
-        format!("flow_search_dirs = [{:?}]\n", flows_dir.to_string_lossy());
+    let mut contents = format!(
+        "flow_search_dirs = [{:?}]\n",
+        flows_dir.path().to_string_lossy()
+    );
 
     if !commands.is_empty() {
         use std::fmt::Write as _;
@@ -154,7 +140,8 @@ fn setup_flow_config_with_commands(tmp: &TempDir, commands: &[(&str, &str)]) {
         }
     }
 
-    std::fs::write(config_dir.join("awf.toml"), contents)
+    tmp.child(".config/awf.toml")
+        .write_str(&contents)
         .expect("write .config/awf.toml");
 }
 
@@ -193,7 +180,7 @@ fn create_flow(tmp: &TempDir, name: &str, workflow: &str) {
 fn workflow_new_creates_file() {
     // Given: a temp dir with a bare `.agents/workflows/` directory
     let tmp = TempDir::new().unwrap();
-    std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
+    tmp.child(".agents/workflows").create_dir_all().unwrap();
 
     // When: we run `awf workflow new my-wf`
     awf(tmp.path())
@@ -205,17 +192,15 @@ fn workflow_new_creates_file() {
         ));
 
     // Then: the WORKFLOW.toml exists on disk
-    assert!(
-        tmp.path().join(".agents/workflows/my-wf/WORKFLOW.toml").exists(),
-        "WORKFLOW.toml should have been created"
-    );
+    tmp.child(".agents/workflows/my-wf/WORKFLOW.toml")
+        .assert(predicate::path::exists());
 }
 
 #[test]
 fn workflow_new_duplicate_errors() {
     // Given: a temp dir with an already-created workflow
     let tmp = TempDir::new().unwrap();
-    std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
+    tmp.child(".agents/workflows").create_dir_all().unwrap();
 
     awf(tmp.path()).args(["workflow", "new", "dup"]).assert().success();
 
@@ -247,8 +232,6 @@ fn workflow_validate_passes_on_valid_workflow() {
 #[test]
 fn workflow_validate_reports_missing_command_key() {
     let tmp = TempDir::new().unwrap();
-    let workflow_dir = tmp.path().join(".agents/workflows/bad");
-    std::fs::create_dir_all(&workflow_dir).unwrap();
 
     let bad_toml = r#"
 name = "bad"
@@ -261,7 +244,8 @@ steps = [
 ]
 "#;
 
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), bad_toml.trim())
+    tmp.child(".agents/workflows/bad/WORKFLOW.toml")
+        .write_str(bad_toml.trim())
         .unwrap();
 
     awf(tmp.path())
@@ -274,8 +258,6 @@ steps = [
 #[test]
 fn workflow_validate_reports_missing_prompt_file() {
     let tmp = TempDir::new().unwrap();
-    let workflow_dir = tmp.path().join(".agents/workflows/noprompt");
-    std::fs::create_dir_all(&workflow_dir).unwrap();
 
     let bad_toml = r#"
 name = "noprompt"
@@ -288,7 +270,8 @@ steps = [
 ]
 "#;
 
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), bad_toml.trim())
+    tmp.child(".agents/workflows/noprompt/WORKFLOW.toml")
+        .write_str(bad_toml.trim())
         .unwrap();
 
     awf(tmp.path())
@@ -343,9 +326,9 @@ fn flow_happy_path_design_stage() {
     let fp = flow_path(&tmp, "add-oauth");
     create_flow(&tmp, "add-oauth", "feature");
 
-    let artifact_dir = fp.join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).unwrap();
-    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
+    tmp.child("flows/add-oauth/artifacts/design.md")
+        .write_str("# My design\n")
+        .unwrap();
 
     awf(tmp.path())
         .args([
@@ -414,7 +397,6 @@ fn flow_run_fail_then_rerun_reflects_pass() {
         .stdout(predicate::str::contains("FAIL"));
 
     // Patch workflow so fail-step now passes.
-    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
     let patched_toml = r#"
 name = "run-test"
 version = 1
@@ -426,7 +408,8 @@ steps = [
     { name = "fail-step", type = "command", run = "true" },
 ]
 "#;
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), patched_toml.trim())
+    tmp.child(".agents/workflows/run-test/WORKFLOW.toml")
+        .write_str(patched_toml.trim())
         .unwrap();
 
     awf(tmp.path())
@@ -473,7 +456,6 @@ fn advance_blocked_by_failed_step() {
         .stderr(predicate::str::contains("fail-step"));
 
     // Fix the workflow.
-    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
     let fixed_toml = r#"
 name = "run-test"
 version = 1
@@ -485,7 +467,8 @@ steps = [
     { name = "fail-step", type = "command", run = "true" },
 ]
 "#;
-    std::fs::write(workflow_dir.join("WORKFLOW.toml"), fixed_toml.trim())
+    tmp.child(".agents/workflows/run-test/WORKFLOW.toml")
+        .write_str(fixed_toml.trim())
         .unwrap();
 
     awf(tmp.path())
@@ -539,9 +522,9 @@ fn advance_blocked_by_missing_artifact_then_unblocked() {
         .stderr(predicate::str::contains("design.md"));
 
     // Write the artifact directly then advance.
-    let artifact_dir = fp.join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).unwrap();
-    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
+    tmp.child("flows/add-oauth/artifacts/design.md")
+        .write_str("# My design\n")
+        .unwrap();
 
     awf(tmp.path())
         .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
@@ -571,13 +554,9 @@ steps = []
 "#;
 
 fn setup_requires_gate_workflow(tmp: &TempDir) {
-    let workflow_dir = tmp.path().join(".agents/workflows/requires-gate");
-    std::fs::create_dir_all(&workflow_dir).expect("create requires-gate dir");
-    std::fs::write(
-        workflow_dir.join("WORKFLOW.toml"),
-        REQUIRES_GATE_TOML.trim(),
-    )
-    .expect("write requires-gate WORKFLOW.toml");
+    tmp.child(".agents/workflows/requires-gate/WORKFLOW.toml")
+        .write_str(REQUIRES_GATE_TOML.trim())
+        .expect("write requires-gate WORKFLOW.toml");
     setup_flow_config(tmp);
 }
 
@@ -782,9 +761,9 @@ fn flow_next_can_advance_mentions_advance_command() {
     let fp = flow_path(&tmp, "next-advance");
     create_flow(&tmp, "next-advance", "feature");
 
-    let artifact_dir = fp.join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).unwrap();
-    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
+    tmp.child("flows/next-advance/artifacts/design.md")
+        .write_str("# My design\n")
+        .unwrap();
 
     awf(tmp.path())
         .args([

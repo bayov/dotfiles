@@ -88,6 +88,7 @@ pub fn list_workflows(
     let mut listings = Vec::new();
 
     for entry in entries {
+        assert_safe_path(&entry.dir);
         let read_dir = match std::fs::read_dir(&entry.dir) {
             Ok(rd) => rd,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
@@ -139,6 +140,7 @@ pub fn load_workflow(
         if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
             continue;
         }
+        assert_safe_path(&entry.dir);
         let wf_path = entry.dir.join(bare_name).join("WORKFLOW.toml");
         if wf_path.exists() {
             found.push(wf_path);
@@ -188,6 +190,7 @@ pub fn load_prompt_file(
         if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
             continue;
         }
+        assert_safe_path(&entry.dir);
         let path = entry.dir.join(bare_name).join(filename);
         if path.exists() {
             return std::fs::read_to_string(&path).map_err(Error::Io);
@@ -217,6 +220,7 @@ pub fn load_prompt_file(
 pub fn create_workflow_template(agents_root: &Path, name: &str) -> Result<()> {
     use crate::model::id::validate_id;
 
+    assert_safe_path(agents_root);
     validate_id(name)?;
 
     let workflow_dir = agents_root.join("workflows").join(name);
@@ -248,6 +252,7 @@ pub fn find_workflow_dir(
         if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
             continue;
         }
+        assert_safe_path(&entry.dir);
         let dir = entry.dir.join(bare_name);
         if dir.join("WORKFLOW.toml").exists() {
             return Some(dir);
@@ -283,6 +288,7 @@ pub fn create_flow(
 ) -> Result<()> {
     use chrono::Utc;
 
+    assert_safe_path(flow_dir);
     if flow_dir.join("flow_state.toml").exists() {
         return Err(Error::FlowAlreadyExists { path: flow_dir.to_path_buf() });
     }
@@ -320,6 +326,7 @@ pub fn create_flow(
 /// - [`Error::Io`] — unexpected I/O failure.
 #[instrument(fields(flow_dir = ?flow_dir))]
 pub fn load_flow(flow_dir: &Path) -> Result<FlowState> {
+    assert_safe_path(flow_dir);
     let path = flow_dir.join("flow_state.toml");
 
     let contents = match std::fs::read_to_string(&path) {
@@ -347,6 +354,7 @@ pub fn load_flow(flow_dir: &Path) -> Result<FlowState> {
 /// - [`Error::Io`] — unexpected I/O failure.
 #[instrument(fields(flow_dir = ?flow_dir))]
 pub fn save_flow(flow_dir: &Path, state: &FlowState) -> Result<()> {
+    assert_safe_path(flow_dir);
     let target_path = flow_dir.join("flow_state.toml");
     let tmp_path = flow_dir.join("flow_state.toml.tmp");
 
@@ -375,6 +383,7 @@ pub fn save_flow(flow_dir: &Path, state: &FlowState) -> Result<()> {
 pub fn archive_flow(flow_dir: &Path) -> Result<()> {
     use chrono::Utc;
 
+    assert_safe_path(flow_dir);
     if !flow_dir.join("flow_state.toml").exists() {
         return Err(Error::FlowNotFound { path: flow_dir.to_path_buf() });
     }
@@ -399,6 +408,7 @@ pub fn archive_flow(flow_dir: &Path) -> Result<()> {
 pub fn scan_flows(search_dirs: &[PathBuf]) -> Result<Vec<FlowSummary>> {
     let mut summaries = Vec::new();
     for dir in search_dirs {
+        assert_safe_path(dir);
         scan_dir_for_flows(dir, &mut summaries)?;
     }
     summaries.sort_by(|a, b| a.path.cmp(&b.path));
@@ -412,6 +422,7 @@ pub fn scan_flows(search_dirs: &[PathBuf]) -> Result<Vec<FlowSummary>> {
 /// Returns `true` if `<flow_dir>/artifacts/<name>` exists.
 #[allow(dead_code)]
 pub fn artifact_exists(flow_dir: &Path, name: &str) -> bool {
+    assert_safe_path(flow_dir);
     flow_dir.join("artifacts").join(name).exists()
 }
 
@@ -423,6 +434,7 @@ pub fn artifact_exists(flow_dir: &Path, name: &str) -> bool {
 #[allow(dead_code)]
 #[instrument(fields(flow_dir = ?flow_dir, name = name))]
 pub fn read_artifact(flow_dir: &Path, name: &str) -> Result<String> {
+    assert_safe_path(flow_dir);
     let path = flow_dir.join("artifacts").join(name);
     std::fs::read_to_string(&path).map_err(Error::Io)
 }
@@ -510,6 +522,26 @@ steps = [
 # description = "Complete."
 "#
     )
+}
+
+// ---------------------------------------------------------------------------
+// Test-time filesystem safety guard
+// ---------------------------------------------------------------------------
+
+/// Asserts that `path` is located under `/tmp` when running tests.
+///
+/// Prevents accidental reads or writes to real files on the host system during
+/// unit or integration tests. Compiled to a no-op in production builds.
+#[allow(clippy::missing_const_for_fn)]
+fn assert_safe_path(path: &Path) {
+    #[cfg(test)]
+    assert!(
+        path.starts_with("/tmp"),
+        "test accessed path outside /tmp: {}",
+        path.display(),
+    );
+    #[cfg(not(test))]
+    let _ = path;
 }
 
 #[cfg(test)]

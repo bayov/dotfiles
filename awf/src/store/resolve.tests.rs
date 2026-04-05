@@ -44,14 +44,18 @@ fn returns_error_when_no_agents_dir_exists() {
 fn resolve_flow_path_uses_flag_when_provided() {
     // Given: a flag value and an env var that would also supply a value
     // (to confirm the flag takes priority)
+    let tmp = TempDir::new().unwrap();
+    let env_flow = tmp.path().join("env-flow");
+    let flag_flow = tmp.path().join("flag-flow");
+
     // SAFETY: single-threaded test; no other thread reads this env var.
     unsafe {
-        std::env::set_var("AWF_ACTIVE_FLOW", "/tmp/env-flow");
+        std::env::set_var("AWF_ACTIVE_FLOW", &env_flow);
     }
     let config = Config::default();
 
     // When: resolve_flow_path is called with a flag value
-    let result = resolve_flow_path(Some("/tmp/flag-flow"), &config);
+    let result = resolve_flow_path(Some(flag_flow.to_str().unwrap()), &config);
 
     // SAFETY: single-threaded test; no other thread reads this env var.
     unsafe {
@@ -59,22 +63,22 @@ fn resolve_flow_path_uses_flag_when_provided() {
     }
 
     // Then: the flag value is returned (tilde-expanded)
-    assert_eq!(result.unwrap().to_str().unwrap(), "/tmp/flag-flow");
+    assert_eq!(result.unwrap(), flag_flow);
 }
 
 #[test]
 fn resolve_flow_path_uses_config_active_flow_when_flag_absent() {
     // Given: no flag, but config.active_flow is set
-    let config = Config {
-        active_flow: Some(std::path::PathBuf::from("/tmp/config-flow")),
-        ..Config::default()
-    };
+    let tmp = TempDir::new().unwrap();
+    let config_flow = tmp.path().join("config-flow");
+    let config =
+        Config { active_flow: Some(config_flow.clone()), ..Config::default() };
 
     // When: resolve_flow_path is called with no flag
     let result = resolve_flow_path(None, &config);
 
     // Then: the config path is returned
-    assert_eq!(result.unwrap(), std::path::PathBuf::from("/tmp/config-flow"));
+    assert_eq!(result.unwrap(), config_flow);
 }
 
 #[test]

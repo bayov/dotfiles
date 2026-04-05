@@ -1,6 +1,7 @@
 use assert_fs::TempDir;
 use assert_fs::prelude::*;
 use chrono::DateTime;
+use predicates::prelude::*;
 
 use super::archive_flow;
 use super::artifact_exists;
@@ -92,8 +93,10 @@ fn list_workflows_finds_dirs_with_workflow_toml() {
 
 #[test]
 fn list_workflows_returns_empty_when_dir_missing() {
-    // Given: an entry whose directory doesn't exist
-    let entries = [make_entry("/nonexistent/workflows", "project")];
+    // Given: an entry whose directory doesn't exist (path inside tmp that was
+    // never created)
+    let tmp = TempDir::new().unwrap();
+    let entries = [make_entry(tmp.path().join("nonexistent"), "project")];
 
     // When / Then: empty list, no error
     let result = list_workflows(&entries).unwrap();
@@ -209,13 +212,10 @@ fn create_workflow_template_writes_workflow_toml() {
     create_workflow_template(agents_root.path(), "my-workflow").unwrap();
 
     // Then: WORKFLOW.toml exists with the workflow name
-    let path = agents_root.path().join("workflows/my-workflow/WORKFLOW.toml");
-    assert!(path.exists(), "expected {path:?} to exist");
-    let contents = std::fs::read_to_string(&path).unwrap();
-    assert!(
-        contents.contains(r#"name = "my-workflow""#),
-        "expected name in template, got:\n{contents}",
-    );
+    agents_root
+        .child("workflows/my-workflow/WORKFLOW.toml")
+        .assert(predicate::path::exists())
+        .assert(predicate::str::contains(r#"name = "my-workflow""#));
 }
 
 #[test]
@@ -494,9 +494,9 @@ fn scan_flows_excludes_archived_flows_indirectly() {
 
 #[test]
 fn scan_flows_returns_empty_for_nonexistent_dir() {
-    // Given: nonexistent search dir
-    let result =
-        scan_flows(&[std::path::PathBuf::from("/nonexistent/dir")]).unwrap();
+    // Given: a path inside tmp that was never created
+    let tmp = TempDir::new().unwrap();
+    let result = scan_flows(&[tmp.path().join("nonexistent")]).unwrap();
     assert!(result.is_empty());
 }
 
@@ -508,9 +508,7 @@ fn scan_flows_returns_empty_for_nonexistent_dir() {
 fn artifact_exists_returns_true_when_present() {
     let flow_dir = TempDir::new().unwrap();
     create_flow(flow_dir.path(), "feature", "design").unwrap();
-    let artifact_dir = flow_dir.path().join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).unwrap();
-    std::fs::write(artifact_dir.join("design.md"), "content").unwrap();
+    flow_dir.child("artifacts/design.md").write_str("content").unwrap();
 
     assert!(artifact_exists(flow_dir.path(), "design.md"));
 }
@@ -527,13 +525,10 @@ fn artifact_exists_returns_false_when_absent() {
 fn read_artifact_returns_content() {
     let flow_dir = TempDir::new().unwrap();
     create_flow(flow_dir.path(), "feature", "design").unwrap();
-    let artifact_dir = flow_dir.path().join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).unwrap();
-    std::fs::write(
-        artifact_dir.join("design.md"),
-        "# My Design\nDetails here.",
-    )
-    .unwrap();
+    flow_dir
+        .child("artifacts/design.md")
+        .write_str("# My Design\nDetails here.")
+        .unwrap();
 
     let contents = read_artifact(flow_dir.path(), "design.md").unwrap();
     assert_eq!(contents, "# My Design\nDetails here.");
