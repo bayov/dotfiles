@@ -6,11 +6,13 @@
 //! See the plan at `~/.claude/plans/happy-sparking-quokka.md` for the full
 //! format spec.
 
+use std::fmt::Write as _;
 use std::path::Path;
 use std::path::PathBuf;
 
 use assert_cmd::Command;
 use assert_fs::TempDir;
+use owo_colors::OwoColorize;
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -487,24 +489,97 @@ fn run_test_case(case: &TestCase) {
                     String::from_utf8_lossy(&output.stderr).into_owned();
                 let exit = output.status.code().unwrap_or(-1);
 
+                let case_name =
+                    case.path.file_stem().unwrap_or_default().to_string_lossy();
                 let context = || {
-                    format!(
-                        "\n  file:   {}\n  line:   {}\n  step:   {}\n  cmd:    awf {}\n  exit:   {}\n  stdout: {:?}\n  stderr: {:?}",
+                    let mut s = String::new();
+                    let _ = writeln!(
+                        s,
+                        "\n\n{} {} (step {})",
+                        "FAIL".red().bold(),
+                        case_name.cyan().bold(),
+                        step_number,
+                    );
+                    let _ = writeln!(
+                        s,
+                        "  {} {}:{}",
+                        "at".dimmed(),
                         case.path.display(),
                         line_number,
-                        step_number,
+                    );
+                    let _ = writeln!(
+                        s,
+                        "  {} awf {}",
+                        "cmd".dimmed(),
                         expanded_args.join(" "),
-                        exit,
-                        stdout.trim(),
-                        stderr.trim(),
-                    )
+                    );
+                    let _ = writeln!(
+                        s,
+                        "  {} {}",
+                        "exit".dimmed(),
+                        if exit == *expected_exit_code {
+                            exit.to_string().green().to_string()
+                        } else {
+                            format!("{exit} (expected {expected_exit_code})")
+                                .red()
+                                .to_string()
+                        },
+                    );
+                    if stdout.trim().is_empty() {
+                        let _ = writeln!(
+                            s,
+                            "  {} {}",
+                            "stdout".dimmed(),
+                            "(empty)".dimmed(),
+                        );
+                    } else {
+                        let _ = writeln!(s, "  {}:", "stdout".dimmed());
+                        for line in stdout.trim().lines().take(30) {
+                            let _ = writeln!(s, "    {}", line.yellow());
+                        }
+                        let line_count = stdout.trim().lines().count();
+                        if line_count > 30 {
+                            let _ = writeln!(
+                                s,
+                                "    {} ({} more lines)",
+                                "...".dimmed(),
+                                line_count - 30,
+                            );
+                        }
+                    }
+                    if stderr.trim().is_empty() {
+                        let _ = writeln!(
+                            s,
+                            "  {} {}",
+                            "stderr".dimmed(),
+                            "(empty)".dimmed(),
+                        );
+                    } else {
+                        let _ = writeln!(s, "  {}:", "stderr".dimmed());
+                        for line in stderr.trim().lines().take(15) {
+                            let _ = writeln!(s, "    {}", line.red());
+                        }
+                        let line_count = stderr.trim().lines().count();
+                        if line_count > 15 {
+                            let _ = writeln!(
+                                s,
+                                "    {} ({} more lines)",
+                                "...".dimmed(),
+                                line_count - 15,
+                            );
+                        }
+                    }
+                    s
                 };
 
                 // Check exit code
                 assert_eq!(
                     exit,
                     *expected_exit_code,
-                    "exit code mismatch (expected {expected_exit_code}, got {exit}){}",
+                    "{} expected exit code {}, got {}{}",
+                    "exit code mismatch".red().bold(),
+                    expected_exit_code.green(),
+                    exit.red(),
                     context()
                 );
 
@@ -513,7 +588,8 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stdout is empty
                     assert!(
                         stdout.trim().is_empty(),
-                        "expected empty stdout but got content{}",
+                        "{} expected empty stdout but got content{}",
+                        "implicit assert".red().bold(),
                         context()
                     );
                 } else {
@@ -529,7 +605,8 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stderr is empty
                     assert!(
                         stderr.trim().is_empty(),
-                        "expected empty stderr but got content{}",
+                        "{} expected empty stderr but got content{}",
+                        "implicit assert".red().bold(),
                         context()
                     );
                 } else {
@@ -567,7 +644,11 @@ fn check_output_assertion(
             } else {
                 assert!(
                     actual.contains(expected),
-                    "{stream} does not contain expected text\n  expected to contain: {expected:?}{}",
+                    "{} {} does not contain expected text\n  {}: {:?}{}",
+                    "assert_stdout contains".red().bold(),
+                    stream,
+                    "expected".dimmed(),
+                    expected,
                     context()
                 );
             }
@@ -575,7 +656,11 @@ fn check_output_assertion(
         AssertMode::NotContains => {
             assert!(
                 !actual.contains(expected),
-                "{stream} contains text that should be absent\n  should not contain: {expected:?}{}",
+                "{} {} contains text that should be absent\n  {}: {:?}{}",
+                "assert_stdout not_contains".red().bold(),
+                stream,
+                "unwanted".dimmed(),
+                expected,
                 context()
             );
         }
@@ -585,7 +670,11 @@ fn check_output_assertion(
             });
             assert!(
                 re.is_match(actual),
-                "{stream} does not match regex\n  pattern: {expected:?}{}",
+                "{} {} does not match regex\n  {}: {:?}{}",
+                "assert_stdout regex".red().bold(),
+                stream,
+                "pattern".dimmed(),
+                expected,
                 context()
             );
         }
@@ -631,12 +720,18 @@ fn check_output_assertion(
             let trimmed = actual.trim();
             assert!(
                 trimmed.starts_with("<data>\n"),
-                "{stream} XML output must start with '<data>\\n': {trimmed:?}{}",
+                "{} {stream} XML output must start with '<data>\\n'\n  {}: {:?}{}",
+                "assert xml".red().bold(),
+                "got".dimmed(),
+                &trimmed[..trimmed.len().min(80)],
                 context()
             );
             assert!(
                 trimmed.ends_with("</data>"),
-                "{stream} XML output must end with '</data>': {trimmed:?}{}",
+                "{} {stream} XML output must end with '</data>'\n  {}: {:?}{}",
+                "assert xml".red().bold(),
+                "got".dimmed(),
+                &trimmed[trimmed.len().saturating_sub(80)..],
                 context()
             );
             let inner = trimmed
@@ -663,14 +758,16 @@ fn check_output_assertion(
             assert_eq!(
                 actual.trim(),
                 expected.trim(),
-                "{stream} does not equal expected text{}",
+                "{} {stream} does not equal expected text{}",
+                "assert equals".red().bold(),
                 context()
             );
         }
         AssertMode::Empty => {
             assert!(
                 actual.trim().is_empty(),
-                "expected empty {stream} but got content{}",
+                "{} expected empty {stream} but got content{}",
+                "assert empty".red().bold(),
                 context()
             );
         }
@@ -799,15 +896,39 @@ fn awf_test_cases() {
     }
 
     if !failures.is_empty() {
+        let passed = test_files.len() - failures.len();
         let mut report = format!(
-            "\n{} of {} test case(s) failed:\n",
-            failures.len(),
-            test_files.len()
+            "\n\n{}\n{} {} / {} {}\n\n",
+            "━".repeat(60).dimmed(),
+            failures.len().red().bold(),
+            "failed".red().bold(),
+            passed.green(),
+            "passed".green(),
         );
-        for (path, msg) in &failures {
-            use std::fmt::Write as _;
-            let _ = write!(report, "\n--- {} ---\n{msg}\n", path.display());
+        for (i, (path, msg)) in failures.iter().enumerate() {
+            let name = path.file_stem().unwrap_or_default().to_string_lossy();
+            let _ = writeln!(
+                report,
+                "  {}. {} {}\n     {}",
+                (i + 1).red().bold(),
+                "FAIL".red().bold(),
+                name.cyan().bold(),
+                msg.lines().next().unwrap_or("(no message)").trim().dimmed(),
+            );
         }
+        report.push('\n');
+        // Full details below the summary
+        for (path, msg) in &failures {
+            let name = path.file_stem().unwrap_or_default().to_string_lossy();
+            let _ = writeln!(
+                report,
+                "{}\n{} {}\n{msg}",
+                "─".repeat(60).dimmed(),
+                "FAIL".red().bold(),
+                name.cyan().bold(),
+            );
+        }
+        let _ = writeln!(report, "{}", "━".repeat(60).dimmed());
         panic!("{report}");
     }
 }
