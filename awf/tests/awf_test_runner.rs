@@ -857,11 +857,12 @@ fn assert_json_contains(
 }
 
 // ---------------------------------------------------------------------------
-// Test entry point
+// Test entry point (custom harness via libtest-mimic)
 // ---------------------------------------------------------------------------
 
-#[test]
-fn awf_test_cases() {
+fn main() {
+    let args = libtest_mimic::Arguments::from_args();
+
     let cases_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/cases");
     assert!(
         cases_dir.is_dir(),
@@ -890,58 +891,21 @@ fn awf_test_cases() {
         cases_dir.display()
     );
 
-    let mut failures: Vec<(PathBuf, String)> = vec![];
-
-    for path in &test_files {
-        let result =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let case = parse_file(path);
+    let trials: Vec<libtest_mimic::Trial> = test_files
+        .into_iter()
+        .map(|path| {
+            let name = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            libtest_mimic::Trial::test(name, move || {
+                let case = parse_file(&path);
                 run_test_case(&case);
-            }));
-        if let Err(e) = result {
-            let msg = e
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| e.downcast_ref::<&str>().map(ToString::to_string))
-                .unwrap_or_else(|| "unknown panic".to_string());
-            failures.push((path.clone(), msg));
-        }
-    }
+                Ok(())
+            })
+        })
+        .collect();
 
-    if !failures.is_empty() {
-        let passed = test_files.len() - failures.len();
-        let mut report = format!(
-            "\n\n{}\n{} {} / {} {}\n\n",
-            "━".repeat(60).dimmed(),
-            failures.len().red().bold(),
-            "failed".red().bold(),
-            passed.green(),
-            "passed".green(),
-        );
-        for (i, (path, msg)) in failures.iter().enumerate() {
-            let name = path.file_stem().unwrap_or_default().to_string_lossy();
-            let _ = writeln!(
-                report,
-                "  {}. {} {}\n     {}",
-                (i + 1).red().bold(),
-                "FAIL".red().bold(),
-                name.cyan().bold(),
-                msg.lines().next().unwrap_or("(no message)").trim().dimmed(),
-            );
-        }
-        report.push('\n');
-        // Full details below the summary
-        for (path, msg) in &failures {
-            let name = path.file_stem().unwrap_or_default().to_string_lossy();
-            let _ = writeln!(
-                report,
-                "{}\n{} {}\n{msg}",
-                "─".repeat(60).dimmed(),
-                "FAIL".red().bold(),
-                name.cyan().bold(),
-            );
-        }
-        let _ = writeln!(report, "{}", "━".repeat(60).dimmed());
-        panic!("{report}");
-    }
+    libtest_mimic::run(&args, trials).exit();
 }
