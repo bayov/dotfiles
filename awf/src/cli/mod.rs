@@ -39,7 +39,12 @@ pub struct Cli {
     pub command: Commands,
 
     /// Output format for all command results.
-    #[arg(long, global = true, default_value = "human")]
+    #[arg(
+        long,
+        global = true,
+        default_value = "human",
+        env = "AWF_OUTPUT_FORMAT"
+    )]
     pub output_format: OutputFormat,
 }
 

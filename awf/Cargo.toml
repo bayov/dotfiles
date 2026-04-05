@@ -12,7 +12,7 @@ path = "src/main.rs"
 # keep-sorted start
 anstream = "1.0.0"
 chrono = { version = "0.4.44", features = ["serde"] }
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.57", features = ["derive", "env"] }
 color-eyre = "0.6.5"
 owo-colors = "4.2.3"
 serde = { version = "1.0", features = ["derive"] }
