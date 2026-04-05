@@ -11,7 +11,6 @@ use super::list_workflows;
 use super::load_flow;
 use super::load_prompt_file;
 use super::load_workflow;
-use super::put_artifact;
 use super::read_artifact;
 use super::save_flow;
 use super::scan_flows;
@@ -502,39 +501,16 @@ fn scan_flows_returns_empty_for_nonexistent_dir() {
 }
 
 // ---------------------------------------------------------------------------
-// put_artifact / artifact_exists / read_artifact
+// artifact_exists / read_artifact
 // ---------------------------------------------------------------------------
-
-#[test]
-fn put_artifact_copies_file_into_artifact_dir() {
-    // Given: an active flow and a source file
-    let flow_dir = TempDir::new().unwrap();
-    create_flow(flow_dir.path(), "feature", "design").unwrap();
-
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("# Design\nHello.").unwrap();
-
-    // When: put artifact
-    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
-        .unwrap();
-
-    // Then: file exists with correct content
-    let artifact_path = flow_dir.path().join("artifacts/design.md");
-    assert!(artifact_path.exists());
-    assert_eq!(
-        std::fs::read_to_string(&artifact_path).unwrap(),
-        "# Design\nHello."
-    );
-}
 
 #[test]
 fn artifact_exists_returns_true_when_present() {
     let flow_dir = TempDir::new().unwrap();
     create_flow(flow_dir.path(), "feature", "design").unwrap();
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("content").unwrap();
-    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
-        .unwrap();
+    let artifact_dir = flow_dir.path().join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("design.md"), "content").unwrap();
 
     assert!(artifact_exists(flow_dir.path(), "design.md"));
 }
@@ -551,10 +527,13 @@ fn artifact_exists_returns_false_when_absent() {
 fn read_artifact_returns_content() {
     let flow_dir = TempDir::new().unwrap();
     create_flow(flow_dir.path(), "feature", "design").unwrap();
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("# My Design\nDetails here.").unwrap();
-    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
-        .unwrap();
+    let artifact_dir = flow_dir.path().join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(
+        artifact_dir.join("design.md"),
+        "# My Design\nDetails here.",
+    )
+    .unwrap();
 
     let contents = read_artifact(flow_dir.path(), "design.md").unwrap();
     assert_eq!(contents, "# My Design\nDetails here.");

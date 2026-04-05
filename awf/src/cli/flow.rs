@@ -314,7 +314,9 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         }
         NextAction::ProduceArtifact(name) => {
             println!("All steps complete. Produce artifact: {name}");
-            println!("Register it with: awf flow artifact put {name} <file>");
+            println!(
+                "Write it to the artifacts/ directory inside the flow path."
+            );
         }
         NextAction::CanAdvance => {
             let next_stage_name = workflow
@@ -466,28 +468,76 @@ pub fn step_done(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow artifact put <name> <file> [--flow <path>]`
+// `awf flow validate [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow artifact put <name> <file> [--flow <path>]`.
+/// Handles `awf flow validate [--flow <path>]`.
+///
+/// Checks that:
+/// - All artifacts declared as `produces` by completed stages exist on disk.
+/// - No artifacts exist that are not declared by any completed or current
+///   stage.
 ///
 /// # Errors
 ///
-/// Returns an error for unexpected I/O failures.
-pub fn artifact_put(
-    name: &str,
-    file: &std::path::Path,
-    flow_flag: Option<&str>,
-) -> color_eyre::Result<()> {
+/// Returns an error if validation fails or for unexpected I/O failures.
+pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
+    let entries =
+        crate::config::effective_workflow_entries(&project_root, &config);
 
-    fs::put_artifact(&flow_dir, name, file)?;
+    let flow = load_flow_or_exit(&flow_dir)?;
+    let workflow = fs::load_workflow(&entries, &flow.workflow)?;
 
-    println!("Artifact {name} registered.");
+    let completed_stage_names: HashSet<&str> = flow
+        .stage_history
+        .iter()
+        .filter(|e| e.exited_at.is_some())
+        .map(|e| e.stage.as_str())
+        .collect();
 
-    Ok(())
+    let mut expected: HashSet<String> = HashSet::new();
+    let mut valid: HashSet<String> = HashSet::new();
+
+    for stage in &workflow.stages {
+        let is_completed = completed_stage_names.contains(stage.name.as_str());
+        let is_current = stage.name == flow.current_stage;
+
+        if is_completed {
+            expected.extend(stage.produces.iter().cloned());
+            valid.extend(stage.produces.iter().cloned());
+        } else if is_current {
+            valid.extend(stage.produces.iter().cloned());
+        }
+    }
+
+    let actual = collect_artifacts(&flow_dir);
+    let missing: Vec<&str> = expected
+        .iter()
+        .filter(|a| !actual.contains(a.as_str()))
+        .map(String::as_str)
+        .collect();
+    let redundant: Vec<&str> = actual
+        .iter()
+        .filter(|a| !valid.contains(a.as_str()))
+        .map(String::as_str)
+        .collect();
+
+    if missing.is_empty() && redundant.is_empty() {
+        println!("Flow artifacts valid.");
+        return Ok(());
+    }
+
+    for name in &missing {
+        eprintln!("missing artifact: {name}");
+    }
+    for name in &redundant {
+        eprintln!("redundant artifact: {name}");
+    }
+
+    color_eyre::eyre::bail!("flow artifact validation failed");
 }
 
 // ---------------------------------------------------------------------------

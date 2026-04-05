@@ -7,10 +7,6 @@ TODO
 Awf
 ---
 
-- Flow artifacts should be stored under {flow_path}/artifacts/ directory and
-  should be modified directly by the agent. `awf flow validate` ensures all
-  artifacts that are supposed to exist, do exist (based on stages ran so far),
-  and that redundant artifacts don't exist.
 - Better control for how to define output directory for a flow (state and
   artifacts).
 - --output-format should work for all commands.

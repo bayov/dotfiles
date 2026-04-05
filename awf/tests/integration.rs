@@ -327,22 +327,9 @@ fn t5_happy_path_design_stage() {
     let fp = flow_path(&tmp, "add-oauth");
     create_flow(&tmp, "add-oauth", "feature");
 
-    let design_file = tmp.path().join("design.md");
-    std::fs::write(&design_file, "# My design\n").unwrap();
-
-    awf(tmp.path())
-        .args([
-            "flow",
-            "artifact",
-            "put",
-            "design.md",
-            design_file.to_str().unwrap(),
-            "--flow",
-            fp.to_str().unwrap(),
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("design.md"));
+    let artifact_dir = fp.join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
 
     awf(tmp.path())
         .args([
@@ -535,22 +522,10 @@ fn t8_advance_blocked_by_missing_artifact_then_unblocked() {
         .failure()
         .stderr(predicate::str::contains("design.md"));
 
-    // Put the artifact then advance.
-    let design_file = tmp.path().join("design.md");
-    std::fs::write(&design_file, "# My design\n").unwrap();
-
-    awf(tmp.path())
-        .args([
-            "flow",
-            "artifact",
-            "put",
-            "design.md",
-            design_file.to_str().unwrap(),
-            "--flow",
-            fp.to_str().unwrap(),
-        ])
-        .assert()
-        .success();
+    // Write the artifact directly then advance.
+    let artifact_dir = fp.join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
 
     awf(tmp.path())
         .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
@@ -791,21 +766,9 @@ fn t12_flow_next_can_advance_mentions_advance_command() {
     let fp = flow_path(&tmp, "next-advance");
     create_flow(&tmp, "next-advance", "feature");
 
-    let design_file = tmp.path().join("design.md");
-    std::fs::write(&design_file, "# My design\n").unwrap();
-
-    awf(tmp.path())
-        .args([
-            "flow",
-            "artifact",
-            "put",
-            "design.md",
-            design_file.to_str().unwrap(),
-            "--flow",
-            fp.to_str().unwrap(),
-        ])
-        .assert()
-        .success();
+    let artifact_dir = fp.join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("design.md"), "# My design\n").unwrap();
 
     awf(tmp.path())
         .args([
@@ -935,6 +898,134 @@ fn t14_archive_and_list() {
         .success()
         .stdout(predicate::str::contains("add-oauth"))
         .stdout(predicate::str::contains("yes"));
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow validate`
+// ---------------------------------------------------------------------------
+
+#[test]
+fn t16_flow_validate_passes_when_no_stages_completed() {
+    // Given: a fresh flow in the design stage with no artifacts on disk
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "validate-empty");
+    create_flow(&tmp, "validate-empty", "feature");
+
+    // When: validate is run with an empty artifacts directory
+    // Then: succeeds — nothing is expected yet and nothing is redundant
+    awf(tmp.path())
+        .args(["flow", "validate", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("valid"));
+}
+
+#[test]
+fn t16_flow_validate_passes_when_completed_stage_artifacts_present() {
+    // Given: design stage completed and design.md present in artifacts/
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "validate-ok");
+    create_flow(&tmp, "validate-ok", "feature");
+
+    let artifact_dir = fp.join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("design.md"), "# Design\n").unwrap();
+
+    awf(tmp.path())
+        .args([
+            "flow",
+            "step",
+            "done",
+            "write-design",
+            "--flow",
+            fp.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    awf(tmp.path())
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // When: validate is run after advancing past design
+    // Then: succeeds — design.md is present as expected
+    awf(tmp.path())
+        .args(["flow", "validate", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("valid"));
+}
+
+#[test]
+fn t16_flow_validate_fails_for_missing_artifact() {
+    // Given: a workflow where stage 2 does not `requires` the stage-1 artifact
+    // so --force can advance without the artifact being present.
+    let tmp = TempDir::new().unwrap();
+
+    let workflow_dir = tmp.path().join(".agents/workflows/produces-only");
+    std::fs::create_dir_all(&workflow_dir).unwrap();
+    std::fs::write(
+        workflow_dir.join("WORKFLOW.toml"),
+        r#"name = "produces-only"
+version = 1
+
+[[stages]]
+name = "draft"
+produces = ["draft.md"]
+steps = [{ name = "write", type = "agent", instructions = "Write it." }]
+
+[[stages]]
+name = "done"
+steps = []
+"#,
+    )
+    .unwrap();
+    setup_flow_config(&tmp);
+
+    let fp = flow_path(&tmp, "validate-missing");
+    create_flow(&tmp, "validate-missing", "produces-only");
+
+    // Force-advance past draft without writing draft.md.
+    awf(tmp.path())
+        .args(["flow", "advance", "--force", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // When: validate is run
+    // Then: fails and names the missing artifact
+    awf(tmp.path())
+        .args(["flow", "validate", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("missing artifact: draft.md"));
+}
+
+#[test]
+fn t16_flow_validate_fails_for_redundant_artifact() {
+    // Given: flow is in design stage; an undeclared file is written to
+    // artifacts/
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "validate-redundant");
+    create_flow(&tmp, "validate-redundant", "feature");
+
+    let artifact_dir = fp.join("artifacts");
+    std::fs::create_dir_all(&artifact_dir).unwrap();
+    std::fs::write(artifact_dir.join("stray.txt"), "oops\n").unwrap();
+
+    // When: validate is run
+    // Then: fails and names the redundant artifact
+    awf(tmp.path())
+        .args(["flow", "validate", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("redundant artifact: stray.txt"));
 }
 
 // ---------------------------------------------------------------------------

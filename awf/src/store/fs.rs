@@ -409,21 +409,6 @@ pub fn scan_flows(search_dirs: &[PathBuf]) -> Result<Vec<FlowSummary>> {
 // Artifact functions
 // ---------------------------------------------------------------------------
 
-/// Copies a file into `<flow_dir>/artifacts/<name>`.
-///
-/// # Errors
-///
-/// - [`Error::Io`] — source file unreadable, artifact dir creation failed, or
-///   copy failed.
-#[instrument(fields(flow_dir = ?flow_dir, name = name, src = ?src))]
-pub fn put_artifact(flow_dir: &Path, name: &str, src: &Path) -> Result<()> {
-    let artifact_dir = flow_dir.join("artifacts");
-    std::fs::create_dir_all(&artifact_dir).map_err(Error::Io)?;
-    let target = artifact_dir.join(name);
-    std::fs::copy(src, &target).map_err(Error::Io)?;
-    Ok(())
-}
-
 /// Returns `true` if `<flow_dir>/artifacts/<name>` exists.
 #[allow(dead_code)]
 pub fn artifact_exists(flow_dir: &Path, name: &str) -> bool {

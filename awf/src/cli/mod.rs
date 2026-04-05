@@ -12,8 +12,6 @@ pub mod flow;
 pub mod output;
 pub mod workflow;
 
-use std::path::PathBuf;
-
 use clap::Parser;
 use clap::Subcommand;
 
@@ -111,10 +109,10 @@ pub enum FlowCommands {
         #[command(subcommand)]
         command: StepCommands,
     },
-    /// Register an artifact
-    Artifact {
-        #[command(subcommand)]
-        command: ArtifactCommands,
+    /// Validate flow artifacts
+    Validate {
+        #[arg(long)]
+        flow: Option<String>,
     },
     /// Advance to the next stage
     Advance {
@@ -145,22 +143,6 @@ pub enum StepCommands {
     /// Mark a step as done
     Done {
         step: String,
-        #[arg(long)]
-        flow: Option<String>,
-    },
-}
-
-// ---------------------------------------------------------------------------
-// Artifact subcommands
-// ---------------------------------------------------------------------------
-
-/// Subcommands for `awf flow artifact`.
-#[derive(Subcommand)]
-pub enum ArtifactCommands {
-    /// Register a file as a named artifact
-    Put {
-        name: String,
-        file: PathBuf,
         #[arg(long)]
         flow: Option<String>,
     },
@@ -214,7 +196,9 @@ fn dispatch_flow(
             flow::run(&step, flow_flag.as_deref())
         }
         FlowCommands::Step { command } => dispatch_step(command),
-        FlowCommands::Artifact { command } => dispatch_artifact(command),
+        FlowCommands::Validate { flow: flow_flag } => {
+            flow::validate(flow_flag.as_deref())
+        }
         FlowCommands::Advance { flow: flow_flag, force } => {
             flow::advance(flow_flag.as_deref(), force)
         }
@@ -233,16 +217,6 @@ fn dispatch_step(command: StepCommands) -> color_eyre::Result<()> {
     match command {
         StepCommands::Done { step, flow: flow_flag } => {
             flow::step_done(&step, flow_flag.as_deref())
-        }
-    }
-}
-
-/// Dispatches `awf flow artifact` subcommands.
-#[allow(clippy::needless_pass_by_value)]
-fn dispatch_artifact(command: ArtifactCommands) -> color_eyre::Result<()> {
-    match command {
-        ArtifactCommands::Put { name, file, flow: flow_flag } => {
-            flow::artifact_put(&name, &file, flow_flag.as_deref())
         }
     }
 }
