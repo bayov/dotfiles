@@ -23,7 +23,7 @@ $ write_file .agents/workflows/priority-test/WORKFLOW.toml
 
 # --- Test steps ---
 
-$ awf flow new --flow $FLOWS_DIR/priority-flow --workflow priority-test
+$ awf flow new $FLOWS_DIR/priority-flow --workflow priority-test
 $ assert_stdout
 | priority-flow
 

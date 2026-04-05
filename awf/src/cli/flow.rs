@@ -438,17 +438,18 @@ impl fmt::Display for FlowArchiveOutput {
 /// Returns an error for unexpected I/O failures or if the workflow cannot be
 /// loaded.
 pub fn new(
-    flow_flag: Option<&str>,
+    flow_arg: &str,
     workflow: &str,
     fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
-    let flow_dir = resolve_or_exit(flow_flag, &config)?;
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
 
     let wf = super::load_workflow_or_exit(&entries, workflow)?;
+
+    let flow_dir = resolve_new_flow_dir(flow_arg, &wf, &project_root);
 
     let first_stage = wf.stages.first().map_or_else(
         || {
@@ -479,6 +480,46 @@ pub fn new(
         }
         Err(e) => Err(e.into()),
     }
+}
+
+/// Resolve the flow directory from the positional argument to `flow new`.
+///
+/// - Absolute path (`/…`) or tilde (`~/…`): used directly.
+/// - Relative path (`./…` or `../…`): resolved from the current directory.
+/// - Bare name: joined to the workflow's `default_flow_dir` (which is itself
+///   resolved relative to `project_root` if not absolute).
+fn resolve_new_flow_dir(
+    flow_arg: &str,
+    workflow: &crate::model::workflow::Workflow,
+    project_root: &Path,
+) -> PathBuf {
+    use crate::store::resolve::expand_tilde;
+
+    // Absolute or tilde path → use directly.
+    if flow_arg.starts_with('/') || flow_arg.starts_with('~') {
+        return expand_tilde(flow_arg);
+    }
+
+    // Explicit relative path → resolve from CWD.
+    if flow_arg.starts_with("./") || flow_arg.starts_with("../") {
+        return env::current_dir().expect("current_dir").join(flow_arg);
+    }
+
+    // Bare name → use workflow's default_flow_dir.
+    let Some(ref default_dir) = workflow.default_flow_dir else {
+        eprint_error(format_args!(
+            "flow argument {flow_arg:?} looks like a name, not a path.\n\n  \
+             To use a name the workflow must set `default_flow_dir` in its \
+             WORKFLOW.toml.\n  Otherwise, provide a path: \
+             ./{flow_arg}  or  /absolute/path/{flow_arg}"
+        ));
+        process::exit(1);
+    };
+
+    let base = expand_tilde(default_dir);
+    let base = if base.is_relative() { project_root.join(base) } else { base };
+
+    base.join(flow_arg)
 }
 
 // ---------------------------------------------------------------------------

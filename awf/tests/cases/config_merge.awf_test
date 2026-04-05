@@ -1,0 +1,73 @@
+# Test: config merging (user + project)
+# - flow_search_dirs are concatenated from both configs
+# - commands: project overrides user for same key; unique keys from both are available
+
+$ export HOME=$USER_DIR
+
+# --- User config: defines flow_search_dirs and commands ---
+
+$ write_file user-home/.config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+|
+| [commands]
+| shared-cmd = "false"
+| user-only-cmd = "true"
+
+# --- Project config: adds a second flow_search_dir and overrides shared-cmd ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$PROJECT_DIR/flows2"]
+|
+| [commands]
+| shared-cmd = "true"
+| project-only-cmd = "true"
+
+# --- Workflow that exercises all three commands ---
+
+$ write_file .agents/workflows/merge-test/WORKFLOW.toml
+| name = "merge-test"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "check-shared", type = "command", command = "shared-cmd" },
+|     { name = "check-user-only", type = "command", command = "user-only-cmd" },
+|     { name = "check-project-only", type = "command", command = "project-only-cmd" },
+| ]
+
+# --- Create flows in both search dirs ---
+
+$ awf flow new $FLOWS_DIR/flow-in-user-dir --workflow merge-test
+$ assert_stdout
+| flow-in-user-dir
+
+$ awf flow new $PROJECT_DIR/flows2/flow-in-project-dir --workflow merge-test
+$ assert_stdout
+| flow-in-project-dir
+
+# --- List should find both (concatenated flow_search_dirs) ---
+
+$ awf flow list
+$ assert_stdout
+| flow-in-user-dir
+$ assert_stdout
+| flow-in-project-dir
+
+# --- shared-cmd: project's "true" overrides user's "false" → PASS ---
+
+$ awf flow run check-shared --flow $FLOWS_DIR/flow-in-user-dir
+$ assert_stdout
+| PASS
+
+# --- user-only-cmd: from user config → PASS ---
+
+$ awf flow run check-user-only --flow $FLOWS_DIR/flow-in-user-dir
+$ assert_stdout
+| PASS
+
+# --- project-only-cmd: from project config → PASS ---
+
+$ awf flow run check-project-only --flow $FLOWS_DIR/flow-in-user-dir
+$ assert_stdout
+| PASS

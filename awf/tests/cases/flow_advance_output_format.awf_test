@@ -18,19 +18,19 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 
 # Create a separate flow for each format (advance mutates state)
 
-$ awf flow new --flow $FLOWS_DIR/fmt-adv-h --workflow minimal
+$ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
 $ assert_stdout
 | fmt-adv-h
 
-$ awf flow new --flow $FLOWS_DIR/fmt-adv-j --workflow minimal
+$ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
 $ assert_stdout
 | fmt-adv-j
 
-$ awf flow new --flow $FLOWS_DIR/fmt-adv-t --workflow minimal
+$ awf flow new $FLOWS_DIR/fmt-adv-t --workflow minimal
 $ assert_stdout
 | fmt-adv-t
 
-$ awf flow new --flow $FLOWS_DIR/fmt-adv-x --workflow minimal
+$ awf flow new $FLOWS_DIR/fmt-adv-x --workflow minimal
 $ assert_stdout
 | fmt-adv-x
 

@@ -16,7 +16,7 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | ]
 
 # Step 1: Create flow
-$ awf flow new --flow $FLOWS_DIR/run-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/run-flow --workflow run-test
 $ assert_stdout
 | run-flow
 

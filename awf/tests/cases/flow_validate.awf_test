@@ -77,7 +77,7 @@ $ write_file .agents/workflows/produces-only/WORKFLOW.toml
 # Test 1: validate passes when no stages completed
 # -------------------------------------------------------
 
-$ awf flow new --flow $FLOWS_DIR/validate-empty --workflow feature
+$ awf flow new $FLOWS_DIR/validate-empty --workflow feature
 $ assert_stdout
 | validate-empty
 
@@ -89,7 +89,7 @@ $ assert_stdout
 # Test 2: validate passes when completed stage artifacts present
 # -------------------------------------------------------
 
-$ awf flow new --flow $FLOWS_DIR/validate-ok --workflow feature
+$ awf flow new $FLOWS_DIR/validate-ok --workflow feature
 $ assert_stdout
 | validate-ok
 
@@ -112,7 +112,7 @@ $ assert_stdout
 # Test 3: validate fails for missing artifact
 # -------------------------------------------------------
 
-$ awf flow new --flow $FLOWS_DIR/validate-missing --workflow produces-only
+$ awf flow new $FLOWS_DIR/validate-missing --workflow produces-only
 $ assert_stdout
 | validate-missing
 
@@ -130,7 +130,7 @@ $ assert_stderr
 # Test 4: validate fails for redundant artifact
 # -------------------------------------------------------
 
-$ awf flow new --flow $FLOWS_DIR/validate-redundant --workflow feature
+$ awf flow new $FLOWS_DIR/validate-redundant --workflow feature
 $ assert_stdout
 | validate-redundant
 

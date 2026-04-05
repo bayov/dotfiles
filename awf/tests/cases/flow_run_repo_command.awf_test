@@ -20,7 +20,7 @@ $ write_file .agents/workflows/repo-cmd-test/WORKFLOW.toml
 
 # --- Test steps ---
 
-$ awf flow new --flow $FLOWS_DIR/repo-flow --workflow repo-cmd-test
+$ awf flow new $FLOWS_DIR/repo-flow --workflow repo-cmd-test
 $ assert_stdout
 | repo-flow
 

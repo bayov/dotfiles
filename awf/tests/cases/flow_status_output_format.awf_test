@@ -55,7 +55,7 @@ $ write_file .agents/workflows/feature/review.md
 | # Review
 | Perform code review.
 
-$ awf flow new --flow $FLOWS_DIR/fmt-status --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-status --workflow feature
 $ assert_stdout
 | fmt-status
 

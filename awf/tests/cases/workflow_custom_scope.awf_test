@@ -1,0 +1,34 @@
+# Test custom workflow scopes defined in config
+
+$ export HOME=$USER_DIR
+
+# Write a workflow in a custom scope directory
+$ write_file user-home/custom-workflows/custom-wf/WORKFLOW.toml
+| name = "custom-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# Write project config that defines the custom scope
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+|
+| [scopes.custom]
+| workflow_dir = "$USER_DIR/custom-workflows"
+
+# List workflows — should include the custom scope workflow
+$ awf workflow list
+$ assert_stdout contains
+| custom-wf
+
+# Validate the custom-scope workflow
+$ awf workflow validate custom-wf
+$ assert_stdout contains
+| OK
+
+# Create a flow using the custom-scope workflow
+$ awf flow new $FLOWS_DIR/from-custom --workflow custom-wf
+$ assert_stdout contains
+| from-custom

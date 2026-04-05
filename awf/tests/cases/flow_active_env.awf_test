@@ -1,0 +1,44 @@
+# Test: AWF_ACTIVE_FLOW env var as default flow path
+# When set, --flow flag is not required. When unset, commands fail without --flow.
+
+$ export HOME=$USER_DIR
+
+$ write_file user-home/.config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/test-wf/WORKFLOW.toml
+| name = "test-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# --- Create flow with explicit --flow ---
+
+$ awf flow new $FLOWS_DIR/env-flow --workflow test-wf
+$ assert_stdout
+| env-flow
+
+# --- Set AWF_ACTIVE_FLOW ---
+
+$ export AWF_ACTIVE_FLOW=$FLOWS_DIR/env-flow
+
+# --- Commands work without --flow flag ---
+
+$ awf flow status
+$ assert_stdout
+| work
+
+$ awf flow history
+$ assert_stdout
+| entered
+
+# --- Unset and verify commands fail without --flow ---
+
+$ unset AWF_ACTIVE_FLOW
+
+$ awf flow status
+$ assert_exit_code 1
+$ assert_stderr
+| flow

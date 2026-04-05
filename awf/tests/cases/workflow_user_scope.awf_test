@@ -1,0 +1,44 @@
+# Test that workflows in the user scope (~/.agents/workflows/) are discovered
+
+$ export HOME=$USER_DIR
+
+# Write project config
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# Write a workflow in the USER scope
+$ write_file user-home/.agents/workflows/user-wf/WORKFLOW.toml
+| name = "user-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# Write a workflow in the PROJECT scope
+$ write_file .agents/workflows/project-wf/WORKFLOW.toml
+| name = "project-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# List workflows — should show both scopes
+$ awf workflow list
+$ assert_stdout contains
+| user-wf
+
+$ awf workflow list
+$ assert_stdout contains
+| project-wf
+
+# Validate the user-scope workflow
+$ awf workflow validate user-wf
+$ assert_stdout contains
+| OK
+
+# Create a flow using the user-scope workflow
+$ awf flow new $FLOWS_DIR/from-user-wf --workflow user-wf
+$ assert_stdout contains
+| from-user-wf

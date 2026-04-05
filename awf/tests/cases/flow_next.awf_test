@@ -73,7 +73,7 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 # Test 1: flow_next_failing_step_hints_run
 # =============================================================================
 
-$ awf flow new --flow $FLOWS_DIR/next-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/next-flow --workflow run-test
 $ assert_stdout
 | next-flow
 
@@ -89,7 +89,7 @@ $ assert_stdout
 # Test 2: flow_next_incomplete_agent_step_hints_done
 # =============================================================================
 
-$ awf flow new --flow $FLOWS_DIR/next-agent --workflow feature
+$ awf flow new $FLOWS_DIR/next-agent --workflow feature
 $ assert_stdout
 | next-agent
 
@@ -101,7 +101,7 @@ $ assert_stdout
 # Test 3: flow_next_missing_artifact_mentions_artifact_name
 # =============================================================================
 
-$ awf flow new --flow $FLOWS_DIR/next-artifact --workflow feature
+$ awf flow new $FLOWS_DIR/next-artifact --workflow feature
 $ assert_stdout
 | next-artifact
 
@@ -117,7 +117,7 @@ $ assert_stdout
 # Test 4: flow_next_can_advance_mentions_advance_command
 # =============================================================================
 
-$ awf flow new --flow $FLOWS_DIR/next-advance --workflow feature
+$ awf flow new $FLOWS_DIR/next-advance --workflow feature
 $ assert_stdout
 | next-advance
 

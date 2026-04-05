@@ -1,0 +1,27 @@
+# Test: user-level config resolution
+# awf finds ~/.config/awf.toml when no project config exists.
+
+$ export HOME=$USER_DIR
+
+$ write_file user-home/.config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/test-wf/WORKFLOW.toml
+| name = "test-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# --- Create flow using user config's flow_search_dirs ---
+
+$ awf flow new $FLOWS_DIR/user-cfg-flow --workflow test-wf
+$ assert_stdout
+| user-cfg-flow
+
+# --- List should also find it via user config ---
+
+$ awf flow list
+$ assert_stdout
+| user-cfg-flow

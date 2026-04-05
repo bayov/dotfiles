@@ -1,5 +1,13 @@
 [ignore]
-exts = [".lock", ".lnk", ".ahk", ".kdl", ".Dockerfile", ".gitconfig"]
+exts = [
+    ".lock",
+    ".lnk",
+    ".ahk",
+    ".kdl",
+    ".Dockerfile",
+    ".gitconfig",
+    ".awf_test",
+]
 globs = [
     "**/.gitignore",
     "**/.python-version",

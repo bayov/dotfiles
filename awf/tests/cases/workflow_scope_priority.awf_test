@@ -1,0 +1,65 @@
+# Test that scope-qualified workflow names resolve to the correct scope
+# when the same workflow name exists in both project and user scopes.
+
+$ export HOME=$USER_DIR
+
+# Write project config
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# Write "shared-wf" in PROJECT scope (test-cmd = "true" → should PASS)
+$ write_file .agents/workflows/shared-wf/WORKFLOW.toml
+| name = "shared-wf"
+| version = 1
+|
+| [commands]
+| test-cmd = "true"
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "run-it", type = "command", command = "test-cmd" },
+| ]
+
+# Write "shared-wf" in USER scope (test-cmd = "false" → should FAIL)
+$ write_file user-home/.agents/workflows/shared-wf/WORKFLOW.toml
+| name = "shared-wf"
+| version = 1
+|
+| [commands]
+| test-cmd = "false"
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "run-it", type = "command", command = "test-cmd" },
+| ]
+
+# Validate both scope-qualified names
+$ awf workflow validate project:shared-wf
+$ assert_stdout contains
+| OK
+
+$ awf workflow validate user:shared-wf
+$ assert_stdout contains
+| OK
+
+# Create a flow from the project-scope version
+$ awf flow new $FLOWS_DIR/from-project --workflow project:shared-wf
+$ assert_stdout contains
+| from-project
+
+# Create a flow from the user-scope version
+$ awf flow new $FLOWS_DIR/from-user --workflow user:shared-wf
+$ assert_stdout contains
+| from-user
+
+# Run step from project scope flow (test-cmd = "true") — should PASS
+$ awf flow run run-it --flow $FLOWS_DIR/from-project
+$ assert_stdout contains
+| PASS
+
+# Run step from user scope flow (test-cmd = "false") — should FAIL
+$ awf flow run run-it --flow $FLOWS_DIR/from-user
+$ assert_stdout contains
+| FAIL

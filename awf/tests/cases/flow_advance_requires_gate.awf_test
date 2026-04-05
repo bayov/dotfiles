@@ -21,7 +21,7 @@ $ write_file .agents/workflows/requires-gate/WORKFLOW.toml
 | steps = []
 
 # --- Create a new flow ---
-$ awf flow new --flow $FLOWS_DIR/gate-flow --workflow requires-gate
+$ awf flow new $FLOWS_DIR/gate-flow --workflow requires-gate
 $ assert_stdout
 | gate-flow
 

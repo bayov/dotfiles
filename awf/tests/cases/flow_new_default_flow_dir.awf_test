@@ -1,0 +1,68 @@
+# Test: flow new with default_flow_dir and bare name
+# Tests the three forms of the flow argument to `awf flow new`:
+#   1. Bare name → uses workflow's default_flow_dir
+#   2. Absolute path → used as-is
+#   3. Relative path (./…) → resolved from CWD
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# --- Workflow with default_flow_dir ---
+
+$ write_file .agents/workflows/with-default/WORKFLOW.toml
+| name = "with-default"
+| version = 1
+| default_flow_dir = "$FLOWS_DIR"
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# --- Workflow without default_flow_dir ---
+
+$ write_file .agents/workflows/no-default/WORKFLOW.toml
+| name = "no-default"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# -------------------------------------------------------
+# Test 1: bare name with default_flow_dir → creates at <default_flow_dir>/<name>
+# -------------------------------------------------------
+
+$ awf flow new my-flow --workflow with-default
+$ assert_stdout
+| my-flow
+
+$ assert_exists flows/my-flow/flow_state.toml
+
+# -------------------------------------------------------
+# Test 2: bare name WITHOUT default_flow_dir → error
+# -------------------------------------------------------
+
+$ awf flow new orphan-flow --workflow no-default
+$ assert_exit_code 1
+$ assert_stderr
+| default_flow_dir
+
+# -------------------------------------------------------
+# Test 3: absolute path → used as-is (ignores default_flow_dir)
+# -------------------------------------------------------
+
+$ awf flow new $FLOWS_DIR/abs-flow --workflow no-default
+$ assert_stdout
+| abs-flow
+
+$ assert_exists flows/abs-flow/flow_state.toml
+
+# -------------------------------------------------------
+# Test 4: relative path (./…) → resolved from CWD
+# -------------------------------------------------------
+
+$ awf flow new ./flows/rel-flow --workflow no-default
+$ assert_stdout
+| rel-flow
+
+$ assert_exists flows/rel-flow/flow_state.toml

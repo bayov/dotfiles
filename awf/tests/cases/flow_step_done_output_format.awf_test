@@ -55,19 +55,19 @@ $ write_file .agents/workflows/feature/review.md
 | # Review
 | Perform code review.
 
-$ awf flow new --flow $FLOWS_DIR/fmt-done-h --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-done-h --workflow feature
 $ assert_stdout
 | fmt-done-h
 
-$ awf flow new --flow $FLOWS_DIR/fmt-done-j --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-done-j --workflow feature
 $ assert_stdout
 | fmt-done-j
 
-$ awf flow new --flow $FLOWS_DIR/fmt-done-t --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-done-t --workflow feature
 $ assert_stdout
 | fmt-done-t
 
-$ awf flow new --flow $FLOWS_DIR/fmt-done-x --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-done-x --workflow feature
 $ assert_stdout
 | fmt-done-x
 

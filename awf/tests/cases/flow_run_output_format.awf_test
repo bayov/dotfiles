@@ -15,19 +15,19 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | ]
 
 # Create flows for each format test
-$ awf flow new --flow $FLOWS_DIR/fmt-run-h --workflow run-test
+$ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
 $ assert_stdout
 | fmt-run-h
 
-$ awf flow new --flow $FLOWS_DIR/fmt-run-j --workflow run-test
+$ awf flow new $FLOWS_DIR/fmt-run-j --workflow run-test
 $ assert_stdout
 | fmt-run-j
 
-$ awf flow new --flow $FLOWS_DIR/fmt-run-t --workflow run-test
+$ awf flow new $FLOWS_DIR/fmt-run-t --workflow run-test
 $ assert_stdout
 | fmt-run-t
 
-$ awf flow new --flow $FLOWS_DIR/fmt-run-x --workflow run-test
+$ awf flow new $FLOWS_DIR/fmt-run-x --workflow run-test
 $ assert_stdout
 | fmt-run-x
 

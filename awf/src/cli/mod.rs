@@ -86,10 +86,14 @@ pub enum WorkflowCommands {
 pub enum FlowCommands {
     /// Create a new flow instance
     New {
-        /// Path to the flow directory (tilde-expanded; falls back to
-        /// `AWF_ACTIVE_FLOW`)
-        #[arg(long)]
-        flow: Option<String>,
+        /// Flow name or path.
+        ///
+        /// - Bare name (e.g. `my-flow`): uses the workflow's
+        ///   `default_flow_dir` to build the path.
+        /// - Absolute path (`/…`): used as-is.
+        /// - Relative path (`./…`): resolved from the current directory.
+        /// - Tilde path (`~/…`): expanded via `$HOME`.
+        flow: String,
         #[arg(long)]
         workflow: String,
     },
@@ -194,8 +198,8 @@ fn dispatch_flow(
     fmt: OutputFormat,
 ) -> color_eyre::Result<()> {
     match command {
-        FlowCommands::New { flow: flow_flag, workflow } => {
-            flow::new(flow_flag.as_deref(), &workflow, &fmt)
+        FlowCommands::New { flow, workflow } => {
+            flow::new(&flow, &workflow, &fmt)
         }
         FlowCommands::List { all } => flow::list(all, &fmt),
         FlowCommands::Status { flow: flow_flag } => {

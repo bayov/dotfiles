@@ -1,0 +1,28 @@
+# Test: XDG_CONFIG_HOME overrides user config location
+# Config is read from $XDG_CONFIG_HOME/awf.toml instead of ~/.config/awf.toml.
+
+$ export HOME=$USER_DIR
+$ export XDG_CONFIG_HOME=$USER_DIR/custom-xdg
+
+$ write_file user-home/custom-xdg/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/xdg-wf/WORKFLOW.toml
+| name = "xdg-wf"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# --- Create flow using XDG config's flow_search_dirs ---
+
+$ awf flow new $FLOWS_DIR/xdg-flow --workflow xdg-wf
+$ assert_stdout
+| xdg-flow
+
+# --- List should find it ---
+
+$ awf flow list
+$ assert_stdout
+| xdg-flow

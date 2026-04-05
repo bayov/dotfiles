@@ -60,12 +60,12 @@ $ write_file .agents/workflows/feature/review.md
 # --- Test steps ---
 
 # Create the flow
-$ awf flow new --flow $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
 $ assert_stdout
 | add-oauth
 
 # Try to create a duplicate - should fail
-$ awf flow new --flow $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
 $ assert_exit_code 1
 $ assert_stderr
 | already exists
@@ -76,7 +76,7 @@ $ assert_stdout
 | add-oauth
 
 # Try again after archive - should still fail
-$ awf flow new --flow $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
 $ assert_exit_code 1
 $ assert_stderr
 | already exists

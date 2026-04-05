@@ -60,7 +60,7 @@ $ write_file .agents/workflows/feature/review.md
 
 # --- Create flow ---
 
-$ awf flow new --flow $FLOWS_DIR/fmt-history --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-history --workflow feature
 $ assert_stdout
 | fmt-history
 
