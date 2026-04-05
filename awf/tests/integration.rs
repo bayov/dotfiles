@@ -1149,24 +1149,21 @@ fn workflow_new_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("path").is_some(),
-                "expected 'path' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("name").is_some(),
-                "expected 'name' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("Created"),
-                "human output should contain 'Created': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("path").is_some(),
+            "expected 'path' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("name").is_some(),
+            "expected 'name' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("Created"),
+            "human output should contain 'Created': {s}"
+        );
     }
 }
 
@@ -1191,21 +1188,18 @@ fn workflow_validate_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("name").is_some(),
-                "expected 'name' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("status").is_some(),
-                "expected 'status' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(s.contains("OK"), "human output should contain 'OK': {s}");
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("name").is_some(),
+            "expected 'name' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("status").is_some(),
+            "expected 'status' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(s.contains("OK"), "human output should contain 'OK': {s}");
     }
 }
 
@@ -1230,20 +1224,17 @@ fn workflow_list_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("workflows").is_some(),
-                "expected 'workflows' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("feature"),
-                "human output should contain 'feature': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("workflows").is_some(),
+            "expected 'workflows' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("feature"),
+            "human output should contain 'feature': {s}"
+        );
     }
 }
 
@@ -1278,28 +1269,25 @@ fn flow_new_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("path").is_some(),
-                "expected 'path' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("workflow").is_some(),
-                "expected 'workflow' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("stage").is_some(),
-                "expected 'stage' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("Created flow"),
-                "human output should contain 'Created flow': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("path").is_some(),
+            "expected 'path' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("workflow").is_some(),
+            "expected 'workflow' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("stage").is_some(),
+            "expected 'stage' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("Created flow"),
+            "human output should contain 'Created flow': {s}"
+        );
     }
 }
 
@@ -1325,20 +1313,17 @@ fn flow_list_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("flows").is_some(),
-                "expected 'flows' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("fmt-list"),
-                "human output should contain 'fmt-list': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("flows").is_some(),
+            "expected 'flows' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("fmt-list"),
+            "human output should contain 'fmt-list': {s}"
+        );
     }
 }
 
@@ -1373,28 +1358,25 @@ fn flow_status_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("flow").is_some(),
-                "expected 'flow' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("stage").is_some(),
-                "expected 'stage' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("steps").is_some(),
-                "expected 'steps' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("Stage:"),
-                "human output should contain 'Stage:': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("flow").is_some(),
+            "expected 'flow' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("stage").is_some(),
+            "expected 'stage' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("steps").is_some(),
+            "expected 'steps' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("Stage:"),
+            "human output should contain 'Stage:': {s}"
+        );
     }
 }
 
@@ -1429,21 +1411,18 @@ fn flow_next_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("action").is_some(),
-                "expected 'action' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("message").is_some(),
-                "expected 'message' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(!s.is_empty(), "human output should not be empty: {s}");
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("action").is_some(),
+            "expected 'action' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("message").is_some(),
+            "expected 'message' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(!s.is_empty(), "human output should not be empty: {s}");
     }
 }
 
@@ -1479,28 +1458,22 @@ fn flow_run_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("step").is_some(),
-                "expected 'step' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("status").is_some(),
-                "expected 'status' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("duration_ms").is_some(),
-                "expected 'duration_ms' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("PASS"),
-                "human output should contain 'PASS': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("step").is_some(),
+            "expected 'step' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("status").is_some(),
+            "expected 'status' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("duration_ms").is_some(),
+            "expected 'duration_ms' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(s.contains("PASS"), "human output should contain 'PASS': {s}");
     }
 }
 
@@ -1537,20 +1510,17 @@ fn flow_step_done_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("step").is_some(),
-                "expected 'step' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("marked complete"),
-                "human output should contain 'marked complete': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("step").is_some(),
+            "expected 'step' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("marked complete"),
+            "human output should contain 'marked complete': {s}"
+        );
     }
 }
 
@@ -1585,20 +1555,17 @@ fn flow_validate_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("valid").is_some(),
-                "expected 'valid' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("valid"),
-                "human output should contain 'valid': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("valid").is_some(),
+            "expected 'valid' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("valid"),
+            "human output should contain 'valid': {s}"
+        );
     }
 }
 
@@ -1633,24 +1600,21 @@ fn flow_advance_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("stage").is_some(),
-                "expected 'stage' field in {fmt} output: {val}"
-            );
-            assert!(
-                val.get("is_final").is_some(),
-                "expected 'is_final' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("Entered stage:"),
-                "human output should contain 'Entered stage:': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("stage").is_some(),
+            "expected 'stage' field in {fmt} output: {val}"
+        );
+        assert!(
+            val.get("is_final").is_some(),
+            "expected 'is_final' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("Entered stage:"),
+            "human output should contain 'Entered stage:': {s}"
+        );
     }
 }
 
@@ -1685,20 +1649,17 @@ fn flow_history_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("entries").is_some(),
-                "expected 'entries' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("entered"),
-                "human output should contain 'entered': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("entries").is_some(),
+            "expected 'entries' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("entered"),
+            "human output should contain 'entered': {s}"
+        );
     }
 }
 
@@ -1733,19 +1694,16 @@ fn flow_archive_output_format(#[case] fmt: &str) {
         .stdout
         .clone();
 
-    match parse_machine_output(&out, fmt) {
-        Some(val) => {
-            assert!(
-                val.get("path").is_some(),
-                "expected 'path' field in {fmt} output: {val}"
-            );
-        }
-        None => {
-            let s = std::str::from_utf8(&out).unwrap();
-            assert!(
-                s.contains("Archived flow:"),
-                "human output should contain 'Archived flow:': {s}"
-            );
-        }
+    if let Some(val) = parse_machine_output(&out, fmt) {
+        assert!(
+            val.get("path").is_some(),
+            "expected 'path' field in {fmt} output: {val}"
+        );
+    } else {
+        let s = std::str::from_utf8(&out).unwrap();
+        assert!(
+            s.contains("Archived flow:"),
+            "human output should contain 'Archived flow:': {s}"
+        );
     }
 }
