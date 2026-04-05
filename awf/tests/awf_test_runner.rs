@@ -871,11 +871,11 @@ fn main() {
         cases_dir.display()
     );
 
-    let mut test_files: Vec<PathBuf> = std::fs::read_dir(&cases_dir)
-        .unwrap()
+    let mut test_files: Vec<PathBuf> = walkdir::WalkDir::new(&cases_dir)
+        .into_iter()
         .filter_map(|entry| {
             let entry = entry.ok()?;
-            let path = entry.path();
+            let path = entry.into_path();
             if path.extension().and_then(|e| e.to_str()) == Some("awf_test") {
                 Some(path)
             } else {
@@ -895,11 +895,13 @@ fn main() {
     let trials: Vec<libtest_mimic::Trial> = test_files
         .into_iter()
         .map(|path| {
-            let name = path
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned();
+            let relative = path.strip_prefix(&cases_dir).unwrap_or(&path);
+            let name = relative
+                .with_extension("")
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("/");
             libtest_mimic::Trial::test(name, move || {
                 let case = parse_file(&path);
                 run_test_case(&case);
