@@ -168,8 +168,6 @@ pub enum ArtifactCommands {
 // ---------------------------------------------------------------------------
 
 /// Dispatches a parsed [`Cli`] to the appropriate handler.
-///
-/// All handler bodies are currently stubs returning `Ok(())`.
 pub fn dispatch(cli: Cli) -> color_eyre::Result<()> {
     match cli.command {
         Commands::Workflow { command } => {
