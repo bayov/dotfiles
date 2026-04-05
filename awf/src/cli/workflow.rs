@@ -151,22 +151,21 @@ pub fn validate(
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
 
-    let names: Vec<String> = match name {
-        Some(n) => vec![n.to_string()],
-        None => {
-            let listings = fs::list_workflows(&entries)?;
-            if listings.is_empty() {
-                anstream::eprintln!(
-                    "No workflows found. Create one with: awf workflow new \
-                     <name>"
-                );
-                return Ok(());
-            }
-            listings
-                .into_iter()
-                .map(|l| format!("{}:{}", l.scope, l.name))
-                .collect()
+    let names: Vec<String> = if let Some(n) = name {
+        vec![n.to_string()]
+    } else {
+        let listings = fs::list_workflows(&entries)?;
+        if listings.is_empty() {
+            anstream::eprintln!(
+                "No workflows found. Create one with: awf workflow new \
+                 <name>"
+            );
+            return Ok(());
         }
+        listings
+            .into_iter()
+            .map(|l| format!("{}:{}", l.scope, l.name))
+            .collect()
     };
 
     let mut any_failed = false;
