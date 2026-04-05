@@ -65,7 +65,7 @@ $ write_file .agents/workflows/feature/review.md
 # ---------------------------------------------------------------------------
 
 $ awf workflow validate feature
-$ assert_stdout
+$ assert_stdout contains
 | OK
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ $ write_file .agents/workflows/bad/WORKFLOW.toml
 
 $ awf workflow validate bad
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | undefined-key
 
 # ---------------------------------------------------------------------------
@@ -103,5 +103,5 @@ $ write_file .agents/workflows/noprompt/WORKFLOW.toml
 
 $ awf workflow validate noprompt
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | missing-prompt.md

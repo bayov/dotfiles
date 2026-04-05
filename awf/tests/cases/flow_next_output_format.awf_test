@@ -56,12 +56,12 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 $ awf flow new $FLOWS_DIR/fmt-next --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-next
 
 # Human
 $ awf flow next --flow $FLOWS_DIR/fmt-next --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | Mark complete with
 
 # JSON

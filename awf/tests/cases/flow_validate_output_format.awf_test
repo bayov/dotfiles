@@ -56,12 +56,12 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 $ awf flow new $FLOWS_DIR/fmt-validate --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-validate
 
 # Human
 $ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | valid
 
 # JSON

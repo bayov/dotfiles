@@ -24,7 +24,7 @@ $ write_file .agents/workflows/beta/WORKFLOW.toml
 
 # List should show both workflows
 $ awf workflow list
-$ assert_stdout
+$ assert_stdout contains
 | alpha
-$ assert_stdout
+$ assert_stdout contains
 | beta

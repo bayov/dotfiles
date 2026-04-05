@@ -17,12 +17,12 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Step 1: Create flow
 $ awf flow new $FLOWS_DIR/retry-flow --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | retry-flow
 
 # Step 2: Run fail-step (fails)
 $ awf flow run fail-step --flow $FLOWS_DIR/retry-flow
-$ assert_stdout
+$ assert_stdout contains
 | FAIL
 
 # Step 3: Rewrite WORKFLOW.toml so fail-step now passes
@@ -39,10 +39,10 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Step 4: Run fail-step again (should now pass)
 $ awf flow run fail-step --flow $FLOWS_DIR/retry-flow
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # Step 5: Check status reflects pass
 $ awf flow status --flow $FLOWS_DIR/retry-flow
-$ assert_stdout
+$ assert_stdout contains
 | pass

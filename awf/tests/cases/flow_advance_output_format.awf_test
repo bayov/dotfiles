@@ -19,25 +19,25 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 # Create a separate flow for each format (advance mutates state)
 
 $ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
-$ assert_stdout
+$ assert_stdout contains
 | fmt-adv-h
 
 $ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
-$ assert_stdout
+$ assert_stdout contains
 | fmt-adv-j
 
 $ awf flow new $FLOWS_DIR/fmt-adv-t --workflow minimal
-$ assert_stdout
+$ assert_stdout contains
 | fmt-adv-t
 
 $ awf flow new $FLOWS_DIR/fmt-adv-x --workflow minimal
-$ assert_stdout
+$ assert_stdout contains
 | fmt-adv-x
 
 # --- Human ---
 
 $ awf flow advance --flow $FLOWS_DIR/fmt-adv-h --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | Entered stage:
 
 # --- JSON ---

@@ -33,7 +33,7 @@ $ write_file .agents/workflows/no-default/WORKFLOW.toml
 # -------------------------------------------------------
 
 $ awf flow new my-flow --workflow with-default
-$ assert_stdout
+$ assert_stdout contains
 | my-flow
 
 $ assert_exists flows/my-flow/flow_state.toml
@@ -44,7 +44,7 @@ $ assert_exists flows/my-flow/flow_state.toml
 
 $ awf flow new orphan-flow --workflow no-default
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | default_flow_dir
 
 # -------------------------------------------------------
@@ -52,7 +52,7 @@ $ assert_stderr
 # -------------------------------------------------------
 
 $ awf flow new $FLOWS_DIR/abs-flow --workflow no-default
-$ assert_stdout
+$ assert_stdout contains
 | abs-flow
 
 $ assert_exists flows/abs-flow/flow_state.toml
@@ -62,7 +62,7 @@ $ assert_exists flows/abs-flow/flow_state.toml
 # -------------------------------------------------------
 
 $ awf flow new ./flows/rel-flow --workflow no-default
-$ assert_stdout
+$ assert_stdout contains
 | rel-flow
 
 $ assert_exists flows/rel-flow/flow_state.toml

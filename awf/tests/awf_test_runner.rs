@@ -209,20 +209,24 @@ fn parse_directive(rest: &str, line_number: usize, path: &Path) -> Directive {
             panic!("{}:{}: bad exit code: {e}", path.display(), line_number)
         });
         Directive::AssertExitCode { code }
-    } else if rest == "assert_stdout" || rest.starts_with("assert_stdout ") {
-        let mode = parse_assert_mode(
-            rest.strip_prefix("assert_stdout").unwrap().trim(),
-            line_number,
-            path,
-        );
+    } else if let Some(arg) = rest.strip_prefix("assert_stdout ") {
+        let mode = parse_assert_mode(arg.trim(), line_number, path);
         Directive::AssertStdout { mode, content: None }
-    } else if rest == "assert_stderr" || rest.starts_with("assert_stderr ") {
-        let mode = parse_assert_mode(
-            rest.strip_prefix("assert_stderr").unwrap().trim(),
-            line_number,
-            path,
-        );
+    } else if rest == "assert_stdout" {
+        panic!(
+            "{}:{}: assert_stdout requires an explicit mode (contains, not_contains, regex, json, toml, xml, equals, empty)",
+            path.display(),
+            line_number
+        )
+    } else if let Some(arg) = rest.strip_prefix("assert_stderr ") {
+        let mode = parse_assert_mode(arg.trim(), line_number, path);
         Directive::AssertStderr { mode, content: None }
+    } else if rest == "assert_stderr" {
+        panic!(
+            "{}:{}: assert_stderr requires an explicit mode (contains, not_contains, regex, json, toml, xml, equals, empty)",
+            path.display(),
+            line_number
+        )
     } else {
         panic!(
             "{}:{}: unknown directive: {:?}",
@@ -253,9 +257,6 @@ fn parse_assert_mode(
     line_number: usize,
     file: &Path,
 ) -> AssertMode {
-    if mode_str.is_empty() {
-        return AssertMode::Contains;
-    }
     match mode_str {
         "contains" => AssertMode::Contains,
         "not_contains" => AssertMode::NotContains,

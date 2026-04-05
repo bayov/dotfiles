@@ -21,9 +21,9 @@ $ write_file .agents/workflows/repo-cmd-test/WORKFLOW.toml
 # --- Test steps ---
 
 $ awf flow new $FLOWS_DIR/repo-flow --workflow repo-cmd-test
-$ assert_stdout
+$ assert_stdout contains
 | repo-flow
 
 $ awf flow run true-step --flow $FLOWS_DIR/repo-flow
-$ assert_stdout
+$ assert_stdout contains
 | PASS

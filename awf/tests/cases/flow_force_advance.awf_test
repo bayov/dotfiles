@@ -20,20 +20,20 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 # --- Test ---
 
 $ awf flow new $FLOWS_DIR/force-flow --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | force-flow
 
 # Without --force: fails because steps are incomplete
 $ awf flow advance --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | not complete
 
 # With --force: step gate bypassed.
 # run-test has only one stage, so this errors with "last stage".
 $ awf flow advance --force --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | last stage
 $ assert_stderr not_contains
 | pass-step
@@ -42,5 +42,5 @@ $ assert_stderr not_contains
 
 # History should show the "work" stage
 $ awf flow history --flow $FLOWS_DIR/force-flow
-$ assert_stdout
+$ assert_stdout contains
 | work

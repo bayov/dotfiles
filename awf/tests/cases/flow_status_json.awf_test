@@ -58,15 +58,15 @@ $ write_file .agents/workflows/feature/review.md
 
 # --- Create a new flow ---
 $ awf flow new $FLOWS_DIR/add-oauth --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
 
 # --- Mark write-design step as done ---
 $ awf flow step done write-design --flow $FLOWS_DIR/add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | write-design
 
 # --- Get JSON status and verify structure ---
 $ awf flow status --flow $FLOWS_DIR/add-oauth --output-format json
-$ assert_stdout
+$ assert_stdout json
 | {"flow": "<any_string>", "stage": "<any_string>", "steps": "<any_array>"}

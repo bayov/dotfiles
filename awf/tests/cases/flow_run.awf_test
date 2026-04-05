@@ -17,15 +17,15 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Step 1: Create flow
 $ awf flow new $FLOWS_DIR/run-flow --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | run-flow
 
 # Step 2: Run pass-step (should pass)
 $ awf flow run pass-step --flow $FLOWS_DIR/run-flow
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # Step 3: Run fail-step (reports FAIL in stdout, but exits 0)
 $ awf flow run fail-step --flow $FLOWS_DIR/run-flow
-$ assert_stdout
+$ assert_stdout contains
 | FAIL

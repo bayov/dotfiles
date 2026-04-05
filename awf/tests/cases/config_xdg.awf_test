@@ -18,11 +18,11 @@ $ write_file .agents/workflows/xdg-wf/WORKFLOW.toml
 # --- Create flow using XDG config's flow_search_dirs ---
 
 $ awf flow new $FLOWS_DIR/xdg-flow --workflow xdg-wf
-$ assert_stdout
+$ assert_stdout contains
 | xdg-flow
 
 # --- List should find it ---
 
 $ awf flow list
-$ assert_stdout
+$ assert_stdout contains
 | xdg-flow

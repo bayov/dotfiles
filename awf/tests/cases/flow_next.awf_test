@@ -74,15 +74,15 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/next-flow --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | next-flow
 
 $ awf flow run fail-step --flow $FLOWS_DIR/next-flow
-$ assert_stdout
+$ assert_stdout contains
 | FAIL
 
 $ awf flow next --flow $FLOWS_DIR/next-flow
-$ assert_stdout
+$ assert_stdout contains
 | awf flow run
 
 # =============================================================================
@@ -90,11 +90,11 @@ $ assert_stdout
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/next-agent --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | next-agent
 
 $ awf flow next --flow $FLOWS_DIR/next-agent
-$ assert_stdout
+$ assert_stdout contains
 | Mark complete with
 
 # =============================================================================
@@ -102,15 +102,15 @@ $ assert_stdout
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/next-artifact --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | next-artifact
 
 $ awf flow step done write-design --flow $FLOWS_DIR/next-artifact
-$ assert_stdout
+$ assert_stdout contains
 | write-design
 
 $ awf flow next --flow $FLOWS_DIR/next-artifact
-$ assert_stdout
+$ assert_stdout contains
 | design.md
 
 # =============================================================================
@@ -118,16 +118,16 @@ $ assert_stdout
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/next-advance --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | next-advance
 
 $ write_file flows/next-advance/artifacts/design.md
 | # My design
 
 $ awf flow step done write-design --flow $FLOWS_DIR/next-advance
-$ assert_stdout
+$ assert_stdout contains
 | write-design
 
 $ awf flow next --flow $FLOWS_DIR/next-advance
-$ assert_stdout
+$ assert_stdout contains
 | awf flow advance

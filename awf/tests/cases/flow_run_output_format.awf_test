@@ -16,24 +16,24 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Create flows for each format test
 $ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | fmt-run-h
 
 $ awf flow new $FLOWS_DIR/fmt-run-j --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | fmt-run-j
 
 $ awf flow new $FLOWS_DIR/fmt-run-t --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | fmt-run-t
 
 $ awf flow new $FLOWS_DIR/fmt-run-x --workflow run-test
-$ assert_stdout
+$ assert_stdout contains
 | fmt-run-x
 
 # Human
 $ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-h --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # JSON

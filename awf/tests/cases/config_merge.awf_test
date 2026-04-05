@@ -39,35 +39,35 @@ $ write_file .agents/workflows/merge-test/WORKFLOW.toml
 # --- Create flows in both search dirs ---
 
 $ awf flow new $FLOWS_DIR/flow-in-user-dir --workflow merge-test
-$ assert_stdout
+$ assert_stdout contains
 | flow-in-user-dir
 
 $ awf flow new $PROJECT_DIR/flows2/flow-in-project-dir --workflow merge-test
-$ assert_stdout
+$ assert_stdout contains
 | flow-in-project-dir
 
 # --- List should find both (concatenated flow_search_dirs) ---
 
 $ awf flow list
-$ assert_stdout
+$ assert_stdout contains
 | flow-in-user-dir
-$ assert_stdout
+$ assert_stdout contains
 | flow-in-project-dir
 
 # --- shared-cmd: project's "true" overrides user's "false" → PASS ---
 
 $ awf flow run check-shared --flow $FLOWS_DIR/flow-in-user-dir
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # --- user-only-cmd: from user config → PASS ---
 
 $ awf flow run check-user-only --flow $FLOWS_DIR/flow-in-user-dir
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # --- project-only-cmd: from project config → PASS ---
 
 $ awf flow run check-project-only --flow $FLOWS_DIR/flow-in-user-dir
-$ assert_stdout
+$ assert_stdout contains
 | PASS

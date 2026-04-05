@@ -17,11 +17,11 @@ $ write_file .agents/workflows/test-wf/WORKFLOW.toml
 # --- Create flow using user config's flow_search_dirs ---
 
 $ awf flow new $FLOWS_DIR/user-cfg-flow --workflow test-wf
-$ assert_stdout
+$ assert_stdout contains
 | user-cfg-flow
 
 # --- List should also find it via user config ---
 
 $ awf flow list
-$ assert_stdout
+$ assert_stdout contains
 | user-cfg-flow

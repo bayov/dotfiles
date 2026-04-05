@@ -58,7 +58,7 @@ $ write_file .agents/workflows/feature/review.md
 
 # Step 1: Create flow
 $ awf flow new $FLOWS_DIR/add-oauth --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
 
 # Step 2: Write artifact
@@ -67,10 +67,10 @@ $ write_file flows/add-oauth/artifacts/design.md
 
 # Step 3: Mark step done
 $ awf flow step done write-design --flow $FLOWS_DIR/add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | write-design
 
 # Step 4: Advance
 $ awf flow advance --flow $FLOWS_DIR/add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | implement

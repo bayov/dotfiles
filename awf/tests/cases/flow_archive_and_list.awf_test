@@ -61,22 +61,22 @@ $ write_file .agents/workflows/feature/review.md
 # --- Test ---
 
 $ awf flow new $FLOWS_DIR/add-oauth --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
 
 # Flow appears in normal list
 $ awf flow list
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
 
 # Archive the flow
 $ awf flow archive --flow $FLOWS_DIR/add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
 
 # Status still works after archiving (path-based load)
 $ awf flow status --flow $FLOWS_DIR/add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | design
 
 # Plain list does NOT show archived flow
@@ -86,7 +86,7 @@ $ assert_stdout not_contains
 
 # list --all shows archived flow
 $ awf flow list --all
-$ assert_stdout
+$ assert_stdout contains
 | add-oauth
-$ assert_stdout
+$ assert_stdout contains
 | yes

@@ -17,7 +17,7 @@ $ write_file .agents/workflows/test-wf/WORKFLOW.toml
 # --- Create flow with explicit --flow ---
 
 $ awf flow new $FLOWS_DIR/env-flow --workflow test-wf
-$ assert_stdout
+$ assert_stdout contains
 | env-flow
 
 # --- Set AWF_ACTIVE_FLOW ---
@@ -27,11 +27,11 @@ $ export AWF_ACTIVE_FLOW=$FLOWS_DIR/env-flow
 # --- Commands work without --flow flag ---
 
 $ awf flow status
-$ assert_stdout
+$ assert_stdout contains
 | work
 
 $ awf flow history
-$ assert_stdout
+$ assert_stdout contains
 | entered
 
 # --- Unset and verify commands fail without --flow ---
@@ -40,5 +40,5 @@ $ unset AWF_ACTIVE_FLOW
 
 $ awf flow status
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | flow

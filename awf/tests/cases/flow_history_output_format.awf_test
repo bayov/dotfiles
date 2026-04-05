@@ -61,13 +61,13 @@ $ write_file .agents/workflows/feature/review.md
 # --- Create flow ---
 
 $ awf flow new $FLOWS_DIR/fmt-history --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-history
 
 # --- Human ---
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | entered
 
 # --- JSON ---

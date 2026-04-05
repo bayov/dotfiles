@@ -61,25 +61,25 @@ $ write_file .agents/workflows/feature/review.md
 # --- Create separate flows for each format ---
 
 $ awf flow new $FLOWS_DIR/fmt-arc-h --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-arc-h
 
 $ awf flow new $FLOWS_DIR/fmt-arc-j --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-arc-j
 
 $ awf flow new $FLOWS_DIR/fmt-arc-t --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-arc-t
 
 $ awf flow new $FLOWS_DIR/fmt-arc-x --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-arc-x
 
 # --- Human ---
 
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-h --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | Archived flow:
 
 # --- JSON ---

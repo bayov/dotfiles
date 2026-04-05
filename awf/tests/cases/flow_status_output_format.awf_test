@@ -56,12 +56,12 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 $ awf flow new $FLOWS_DIR/fmt-status --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | fmt-status
 
 # Human
 $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
-$ assert_stdout
+$ assert_stdout contains
 | Stage:
 
 # JSON

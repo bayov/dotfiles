@@ -5,7 +5,7 @@
 
 # Create a new workflow
 $ awf workflow new my-wf
-$ assert_stdout
+$ assert_stdout contains
 | .agents/workflows/my-wf/WORKFLOW.toml
 
 # The file should exist on disk
@@ -14,5 +14,5 @@ $ assert_exists .agents/workflows/my-wf/WORKFLOW.toml
 # Creating the same workflow again should fail
 $ awf workflow new my-wf
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | already exists

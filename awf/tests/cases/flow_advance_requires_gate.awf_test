@@ -22,16 +22,16 @@ $ write_file .agents/workflows/requires-gate/WORKFLOW.toml
 
 # --- Create a new flow ---
 $ awf flow new $FLOWS_DIR/gate-flow --workflow requires-gate
-$ assert_stdout
+$ assert_stdout contains
 | gate-flow
 
 # --- Run the step ---
 $ awf flow run do-thing --flow $FLOWS_DIR/gate-flow
-$ assert_stdout
+$ assert_stdout contains
 | PASS
 
 # --- Advance should fail: special.md is missing ---
 $ awf flow advance --flow $FLOWS_DIR/gate-flow
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | special.md

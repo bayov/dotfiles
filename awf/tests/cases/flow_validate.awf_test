@@ -78,11 +78,11 @@ $ write_file .agents/workflows/produces-only/WORKFLOW.toml
 # -------------------------------------------------------
 
 $ awf flow new $FLOWS_DIR/validate-empty --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | validate-empty
 
 $ awf flow validate --flow $FLOWS_DIR/validate-empty
-$ assert_stdout
+$ assert_stdout contains
 | valid
 
 # -------------------------------------------------------
@@ -90,22 +90,22 @@ $ assert_stdout
 # -------------------------------------------------------
 
 $ awf flow new $FLOWS_DIR/validate-ok --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | validate-ok
 
 $ write_file flows/validate-ok/artifacts/design.md
 | # Design
 
 $ awf flow step done write-design --flow $FLOWS_DIR/validate-ok
-$ assert_stdout
+$ assert_stdout contains
 | write-design
 
 $ awf flow advance --flow $FLOWS_DIR/validate-ok
-$ assert_stdout
+$ assert_stdout contains
 | implement
 
 $ awf flow validate --flow $FLOWS_DIR/validate-ok
-$ assert_stdout
+$ assert_stdout contains
 | valid
 
 # -------------------------------------------------------
@@ -113,17 +113,17 @@ $ assert_stdout
 # -------------------------------------------------------
 
 $ awf flow new $FLOWS_DIR/validate-missing --workflow produces-only
-$ assert_stdout
+$ assert_stdout contains
 | validate-missing
 
 # Force-advance past draft without writing draft.md
 $ awf flow advance --force --flow $FLOWS_DIR/validate-missing
-$ assert_stdout
+$ assert_stdout contains
 | done
 
 $ awf flow validate --flow $FLOWS_DIR/validate-missing
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | missing artifact: draft.md
 
 # -------------------------------------------------------
@@ -131,7 +131,7 @@ $ assert_stderr
 # -------------------------------------------------------
 
 $ awf flow new $FLOWS_DIR/validate-redundant --workflow feature
-$ assert_stdout
+$ assert_stdout contains
 | validate-redundant
 
 $ write_file flows/validate-redundant/artifacts/stray.txt
@@ -139,5 +139,5 @@ $ write_file flows/validate-redundant/artifacts/stray.txt
 
 $ awf flow validate --flow $FLOWS_DIR/validate-redundant
 $ assert_exit_code 1
-$ assert_stderr
+$ assert_stderr contains
 | redundant artifact: stray.txt
