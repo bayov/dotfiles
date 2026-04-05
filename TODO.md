@@ -8,7 +8,6 @@ Awf
 ---
 
 - Do tests use fake ram filesystem to simulate dir/file creation, etc?
-- --output-format should print newline at the end
 - workflow default directory should be .agents/workflows/
 - instead of workflows/foo.toml and workflows/foo/agent_instructions.md, have
   workflows/foo/WORKFLOW.toml.

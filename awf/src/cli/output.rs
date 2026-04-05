@@ -84,10 +84,19 @@ pub fn eprint_warning(msg: impl fmt::Display) {
 pub fn render<T: Serialize + Display>(val: &T, fmt: &OutputFormat) -> String {
     match fmt {
         OutputFormat::Human => format!("{val}"),
-        OutputFormat::Json => serde_json::to_string_pretty(val)
-            .expect("JSON serialisation failed"),
+        OutputFormat::Json => {
+            let mut s = serde_json::to_string_pretty(val)
+                .expect("JSON serialisation failed");
+            s.push('\n');
+            s
+        }
         OutputFormat::Toml => {
-            toml::to_string(val).expect("TOML serialisation failed")
+            let mut s =
+                toml::to_string(val).expect("TOML serialisation failed");
+            if !s.ends_with('\n') {
+                s.push('\n');
+            }
+            s
         }
         OutputFormat::Xml => {
             // Minimal XML: embed the JSON payload inside a <data> element.
@@ -95,7 +104,7 @@ pub fn render<T: Serialize + Display>(val: &T, fmt: &OutputFormat) -> String {
             // iteration.
             let json = serde_json::to_string_pretty(val)
                 .expect("JSON serialisation failed for XML");
-            format!("<data>\n{json}\n</data>")
+            format!("<data>\n{json}\n</data>\n")
         }
     }
 }

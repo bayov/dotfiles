@@ -46,8 +46,8 @@ fn json_format_is_pretty_printed() {
         serde_json::from_str(&output).expect("output should be valid JSON");
     assert_eq!(parsed["name"], "widgets");
     assert_eq!(parsed["count"], 42);
-    // Pretty-printed JSON contains newlines
-    assert!(output.contains('\n'));
+    // Pretty-printed JSON ends with a newline
+    assert!(output.ends_with('\n'));
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn xml_format_wraps_content_in_data_element() {
 
     // Then: output is wrapped in <data>…</data> and contains the JSON payload
     assert!(output.starts_with("<data>"), "output: {output}");
-    assert!(output.ends_with("</data>"), "output: {output}");
+    assert!(output.ends_with("</data>\n"), "output: {output}");
     assert!(output.contains("widgets"), "output: {output}");
     assert!(output.contains("42"), "output: {output}");
 }
