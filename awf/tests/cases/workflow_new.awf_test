@@ -1,0 +1,18 @@
+# Test: awf workflow new
+# Creates a new workflow, verifies it exists, and checks duplicate error.
+
+# Setup: bare project with .agents directory (already created by runner)
+
+# Create a new workflow
+$ awf workflow new my-wf
+$ assert_stdout
+| .agents/workflows/my-wf/WORKFLOW.toml
+
+# The file should exist on disk
+$ assert_exists .agents/workflows/my-wf/WORKFLOW.toml
+
+# Creating the same workflow again should fail
+$ awf workflow new my-wf
+$ assert_exit_code 1
+$ assert_stderr
+| already exists

@@ -1,0 +1,30 @@
+# Test: awf workflow list
+# Creates workflows and lists them.
+
+# Setup: write config so awf can find flows
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# Create two workflow definitions
+$ write_file .agents/workflows/alpha/WORKFLOW.toml
+| name = "alpha"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+$ write_file .agents/workflows/beta/WORKFLOW.toml
+| name = "beta"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = []
+
+# List should show both workflows
+$ awf workflow list
+$ assert_stdout
+| alpha
+$ assert_stdout
+| beta
