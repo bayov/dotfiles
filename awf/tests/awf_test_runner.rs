@@ -470,6 +470,7 @@ fn run_test_case(case: &TestCase) {
                 let output = Command::cargo_bin("awf")
                     .expect("awf binary not found")
                     .current_dir(tmp.path())
+                    .env("NO_COLOR", "1")
                     .envs(env.iter().cloned())
                     .args(&expanded_args)
                     .output()
@@ -588,8 +589,10 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stdout is empty
                     assert!(
                         stdout.trim().is_empty(),
-                        "{} expected empty stdout but got content{}",
+                        "{} expected empty stdout but got content\n  {}: {:?}{}",
                         "implicit assert".red().bold(),
+                        "actual".dimmed(),
+                        stdout.trim(),
                         context()
                     );
                 } else {
@@ -605,8 +608,10 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stderr is empty
                     assert!(
                         stderr.trim().is_empty(),
-                        "{} expected empty stderr but got content{}",
+                        "{} expected empty stderr but got content\n  {}: {:?}{}",
                         "implicit assert".red().bold(),
+                        "actual".dimmed(),
+                        stderr.trim(),
                         context()
                     );
                 } else {
@@ -644,11 +649,13 @@ fn check_output_assertion(
             } else {
                 assert!(
                     actual.contains(expected),
-                    "{} {} does not contain expected text\n  {}: {:?}{}",
+                    "{} {} does not contain expected text\n  {}: {:?}\n  {}: {:?}{}",
                     "assert_stdout contains".red().bold(),
                     stream,
                     "expected".dimmed(),
                     expected,
+                    "actual".dimmed(),
+                    actual.trim(),
                     context()
                 );
             }
@@ -656,11 +663,13 @@ fn check_output_assertion(
         AssertMode::NotContains => {
             assert!(
                 !actual.contains(expected),
-                "{} {} contains text that should be absent\n  {}: {:?}{}",
+                "{} {} contains text that should be absent\n  {}: {:?}\n  {}: {:?}{}",
                 "assert_stdout not_contains".red().bold(),
                 stream,
                 "unwanted".dimmed(),
                 expected,
+                "actual".dimmed(),
+                actual.trim(),
                 context()
             );
         }
@@ -670,11 +679,13 @@ fn check_output_assertion(
             });
             assert!(
                 re.is_match(actual),
-                "{} {} does not match regex\n  {}: {:?}{}",
+                "{} {} does not match regex\n  {}: {:?}\n  {}: {:?}{}",
                 "assert_stdout regex".red().bold(),
                 stream,
                 "pattern".dimmed(),
                 expected,
+                "actual".dimmed(),
+                actual.trim(),
                 context()
             );
         }
@@ -766,8 +777,10 @@ fn check_output_assertion(
         AssertMode::Empty => {
             assert!(
                 actual.trim().is_empty(),
-                "{} expected empty {stream} but got content{}",
+                "{} expected empty {stream} but got content\n  {}: {:?}{}",
                 "assert empty".red().bold(),
+                "actual".dimmed(),
+                actual.trim(),
                 context()
             );
         }
