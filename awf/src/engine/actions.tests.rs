@@ -118,6 +118,7 @@ fn feature_workflow() -> Workflow {
                 ],
             },
         ],
+        default_flow_dir: None,
     }
 }
 

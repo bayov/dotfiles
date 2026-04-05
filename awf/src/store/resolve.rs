@@ -1,46 +1,44 @@
-//! Resolving the `.awf/` workspace root from an arbitrary starting path.
+//! Resolving the project root and active flow path.
 
 use std::path::Path;
 use std::path::PathBuf;
 
-use serde::Deserialize;
 use tracing::instrument;
 
+use crate::config::Config;
 use crate::result::Error;
 use crate::result::Result;
 
-/// Walks up the directory tree from `start` to find the nearest `.awf/` root.
+// ---------------------------------------------------------------------------
+// Project root
+// ---------------------------------------------------------------------------
+
+/// Walks up the directory tree from `start` to find the nearest directory
+/// that contains a `.agents/` subdirectory.
 ///
-/// Beginning at `start`, each directory is checked for the presence of a
-/// `.awf/` subdirectory. If found, the **parent** directory (the one that
-/// contains `.awf/`, not `.awf/` itself) is returned. If `start` is not a
-/// directory, the walk begins at its parent.
-///
-/// The walk proceeds upward one level at a time (via [`Path::parent`]) until
-/// either:
-/// - A `.awf/` subdirectory is found (success), or
-/// - The filesystem root is reached with no `.awf/` found (failure).
+/// Beginning at `start`, each directory is checked for a `.agents/`
+/// subdirectory. If found, the **parent** directory (i.e. the one that
+/// contains `.agents/`, not `.agents/` itself) is returned. If `start` is
+/// not a directory, the walk begins at its parent.
 ///
 /// # Errors
 ///
-/// Returns [`Error::AwfRootNotFound`] when no `.awf/` directory exists in
-/// `start` or any of its ancestors.
+/// Returns [`Error::ProjectRootNotFound`] when no `.agents/` directory
+/// exists in `start` or any of its ancestors.
 #[instrument]
-pub fn find_awf_root(start: &Path) -> Result<PathBuf> {
+pub fn find_project_root(start: &Path) -> Result<PathBuf> {
     let mut current = start;
 
     loop {
-        // Check whether this directory contains a `.awf/` subdirectory.
-        let candidate = current.join(".awf");
+        let candidate = current.join(".agents");
         if candidate.is_dir() {
             return Ok(current.to_path_buf());
         }
 
-        // Move up one level; if there is no parent we have hit the root.
         match current.parent() {
             Some(parent) => current = parent,
             None => {
-                return Err(Error::AwfRootNotFound {
+                return Err(Error::ProjectRootNotFound {
                     start: start.to_path_buf(),
                 });
             }
@@ -48,21 +46,51 @@ pub fn find_awf_root(start: &Path) -> Result<PathBuf> {
     }
 }
 
-/// Partial deserialisation target for `.awf/config.toml`.
+// ---------------------------------------------------------------------------
+// Flow path resolution
+// ---------------------------------------------------------------------------
+
+/// Resolves the active flow directory from the given sources, in priority
+/// order.
 ///
-/// Only the fields relevant to state-dir resolution are captured; all other
-/// keys are ignored by `serde`.
-#[derive(Deserialize)]
-struct AwfConfig {
-    state_dir: Option<String>,
+/// The resolution order is:
+///
+/// 1. **`flag` argument** — if `Some(raw)` is passed, it is tilde-expanded and
+///    returned immediately (e.g. the value of the `--flow` CLI flag).
+/// 2. **`config.active_flow`** — if the config specifies a flow path, it is
+///    returned (already tilde-expanded during config loading).
+/// 3. **Error** — if neither source provides a value,
+///    [`Error::FlowPathRequired`] is returned.
+///
+/// # Errors
+///
+/// Returns [`Error::FlowPathRequired`] when no flow path can be determined.
+#[instrument]
+pub fn resolve_flow_path(
+    flag: Option<&str>,
+    config: &Config,
+) -> Result<PathBuf> {
+    if let Some(raw) = flag {
+        return Ok(expand_tilde(raw));
+    }
+
+    if let Some(ref path) = config.active_flow {
+        return Ok(path.clone());
+    }
+
+    Err(Error::FlowPathRequired)
 }
+
+// ---------------------------------------------------------------------------
+// Tilde expansion
+// ---------------------------------------------------------------------------
 
 /// Replaces a leading `~` with the value of the `HOME` environment variable.
 ///
-/// If the path does not begin with `~`, it is returned unchanged. If `HOME` is
-/// not set the tilde is left in place so that callers receive the raw value
-/// rather than a silent failure.
-fn expand_tilde(path: &str) -> PathBuf {
+/// If the path does not begin with `~`, it is returned unchanged. If `HOME`
+/// is not set the tilde is left in place so that callers receive the raw
+/// value rather than a silent failure.
+pub fn expand_tilde(path: &str) -> PathBuf {
     if let Some(rest) = path.strip_prefix("~/") {
         if let Ok(home) = std::env::var("HOME") {
             return PathBuf::from(home).join(rest);
@@ -74,81 +102,6 @@ fn expand_tilde(path: &str) -> PathBuf {
     }
 
     PathBuf::from(path)
-}
-
-/// Resolves the state directory for the given `awf_root`.
-///
-/// The resolution order is:
-///
-/// 1. **`AWF_STATE_DIR` environment variable** — if set, its value is
-///    `~`-expanded and returned immediately.
-/// 2. **`.awf/config.toml` `state_dir` field** — if the file
-///    `<awf_root>/.awf/config.toml` exists and contains a `state_dir` key, the
-///    value is `~`-expanded and returned.
-/// 3. **Project-local default** — `<awf_root>/.awf` is returned when neither of
-///    the above sources provides a value.
-///
-/// # Errors
-///
-/// Returns [`Error::Io`] if the config file exists but cannot be read.
-/// Returns [`Error::ConfigParseFailed`] if the config file cannot be parsed as
-/// TOML.
-#[instrument]
-pub fn resolve_state_dir(awf_root: &Path) -> Result<PathBuf> {
-    // Priority 1: explicit override via environment variable.
-    if let Ok(raw) = std::env::var("AWF_STATE_DIR") {
-        return Ok(expand_tilde(&raw));
-    }
-
-    // Priority 2: optional `state_dir` field inside `.awf/config.toml`.
-    let config_path = awf_root.join(".awf").join("config.toml");
-    if config_path.is_file() {
-        let contents = std::fs::read_to_string(&config_path)?;
-        let config: AwfConfig =
-            toml::from_str(&contents).map_err(|source| {
-                Error::ConfigParseFailed { path: config_path, source }
-            })?;
-
-        if let Some(raw) = config.state_dir {
-            return Ok(expand_tilde(&raw));
-        }
-    }
-
-    // Priority 3: fall back to the project-local `.awf/` directory.
-    Ok(awf_root.join(".awf"))
-}
-
-/// Resolves the active flow ID from the given sources, in priority order.
-///
-/// The resolution order is:
-///
-/// 1. **`flag` argument** — if `Some(id)` is passed, that value is returned
-///    immediately (e.g. the value of the `--flow` CLI flag).
-/// 2. **`AWF_ACTIVE_FLOW` environment variable** — if set and non-empty, its
-///    value is returned.
-/// 3. **Error** — if neither source provides a value, [`Error::FlowIdRequired`]
-///    is returned.
-///
-/// # Errors
-///
-/// Returns [`Error::FlowIdRequired`] when no flow ID can be determined from
-/// the flag or the environment.
-#[instrument]
-pub fn resolve_flow_id(flag: Option<&str>) -> Result<String> {
-    // Priority 1: explicit flag value (e.g. --flow <id>).
-    if let Some(id) = flag {
-        return Ok(id.to_string());
-    }
-
-    // Priority 2: active flow set in the environment.
-    if let Ok(id) = std::env::var("AWF_ACTIVE_FLOW")
-        && !id.is_empty()
-    {
-        return Ok(id);
-    }
-
-    // Priority 3: no source provided a flow ID.
-    Err(Error::FlowIdRequired)
 }
 
 #[cfg(test)]

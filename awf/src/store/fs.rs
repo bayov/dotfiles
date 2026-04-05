@@ -1,203 +1,302 @@
-//! Filesystem I/O for workflow definitions stored under `.awf/workflows/`.
+//! Filesystem I/O for workflow definitions and flow state.
+//!
+//! ## Workflow layout
+//!
+//! Workflows live under a scope-specific directory. Each workflow is a
+//! **subdirectory** named after the workflow, containing a `WORKFLOW.toml`
+//! definition and any prompt files:
+//!
+//! ```text
+//! <entry.dir>/
+//!   <workflow-name>/
+//!     WORKFLOW.toml
+//!     design.md
+//!     ...
+//! ```
+//!
+//! ## Flow layout
+//!
+//! A flow is a **directory** chosen by the user. Its state lives at
+//! `<flow_dir>/flow_state.toml`; artifacts live under `<flow_dir>/artifacts/`.
+//!
+//! ```text
+//! <flow_dir>/
+//!   flow_state.toml
+//!   artifacts/
+//!     design.md
+//! ```
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use tracing::instrument;
 
+use crate::config::WorkflowSearchEntry;
 use crate::model::flow::FlowState;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::result::Result;
 
-/// A lightweight summary of a flow, used for listing flows without loading
-/// their full state.
-///
-/// Returned by [`list_flows`] for each flow found in the state directory.
-pub struct FlowSummary {
-    /// The unique identifier of the flow (e.g. `"add-oauth"`).
-    pub id: String,
+// ---------------------------------------------------------------------------
+// Workflow types
+// ---------------------------------------------------------------------------
 
-    /// The name of the workflow this flow is an instance of (e.g.
-    /// `"feature"`).
+/// A lightweight listing entry for a discovered workflow.
+pub struct WorkflowListing {
+    /// The workflow's short name (directory name under the scope directory).
+    pub name: String,
+
+    /// The scope this workflow belongs to (e.g. `"project"`, `"user"`).
+    pub scope: String,
+}
+
+// ---------------------------------------------------------------------------
+// Flow summary type
+// ---------------------------------------------------------------------------
+
+/// A lightweight summary of a flow, used for listing.
+pub struct FlowSummary {
+    /// The full path to the flow directory.
+    pub path: PathBuf,
+
+    /// The name of the workflow this flow is an instance of.
     pub workflow: String,
 
-    /// The name of the stage the flow is currently executing (e.g.
-    /// `"design"`).
+    /// The name of the stage the flow is currently executing.
     pub current_stage: String,
 
     /// Whether the flow has been archived.
     pub archived: bool,
 }
 
-/// Lists all workflow names defined in the `.awf/workflows/` directory.
+// ---------------------------------------------------------------------------
+// Workflow functions (search-entry based)
+// ---------------------------------------------------------------------------
+
+/// Lists all workflows found across the given search entries.
 ///
-/// Scans `<awf_root>/workflows/` for files with a `.toml` extension and
-/// returns their stems (filenames without the `.toml` suffix), sorted
-/// alphabetically.
-///
-/// If the `workflows/` directory does not exist, an empty list is returned
-/// rather than an error — this is the expected state for a freshly
-/// initialised `.awf/` root that has no workflows yet.
+/// Scans each `entry.dir` for subdirectories that contain a `WORKFLOW.toml`
+/// file. Results are sorted by scope then name.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::Io`] if reading the directory fails for any reason other
-///   than the directory not existing (e.g. permission denied).
-#[instrument(fields(awf_root = ?awf_root))]
-pub fn list_workflows(awf_root: &Path) -> Result<Vec<String>> {
-    let workflows_dir = awf_root.join("workflows");
+/// Returns [`Error::Io`] if reading a directory fails for reasons other than
+/// the directory not existing (e.g. permission denied).
+pub fn list_workflows(
+    entries: &[WorkflowSearchEntry],
+) -> Result<Vec<WorkflowListing>> {
+    let mut listings = Vec::new();
 
-    // If the workflows directory doesn't exist yet, treat it as empty rather
-    // than propagating a NotFound error — a fresh .awf root has no workflows.
-    let read_dir = match std::fs::read_dir(&workflows_dir) {
-        Ok(rd) => rd,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(vec![]);
-        }
-        Err(e) => return Err(Error::Io(e)),
-    };
+    for entry in entries {
+        let read_dir = match std::fs::read_dir(&entry.dir) {
+            Ok(rd) => rd,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(Error::Io(e)),
+        };
 
-    let mut names = Vec::new();
-    for entry in read_dir {
-        let entry = entry.map_err(Error::Io)?;
-        let path = entry.path();
-
-        // Only collect files whose extension is exactly "toml".
-        if path.extension().and_then(|e| e.to_str()) != Some("toml") {
-            continue;
-        }
-
-        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            names.push(stem.to_string());
+        for de in read_dir {
+            let de = de.map_err(Error::Io)?;
+            if !de.file_type().map_err(Error::Io)?.is_dir() {
+                continue;
+            }
+            if de.path().join("WORKFLOW.toml").exists()
+                && let Some(name) = de.file_name().to_str()
+            {
+                listings.push(WorkflowListing {
+                    name: name.to_string(),
+                    scope: entry.scope.clone(),
+                });
+            }
         }
     }
 
-    names.sort();
-    Ok(names)
+    listings.sort_by(|a, b| a.scope.cmp(&b.scope).then(a.name.cmp(&b.name)));
+    Ok(listings)
 }
 
-/// Loads a workflow definition from the `.awf/workflows/` directory.
+/// Loads a workflow by name reference from the given search entries.
 ///
-/// The file is expected at `<awf_root>/workflows/<name>.toml`. After reading,
-/// the raw TOML is deserialized into a [`Workflow`].
+/// `name_ref` is either a bare name (`"feature"`) or a scope-qualified name
+/// (`"project:feature"`). A bare name is an error if the same name appears
+/// in multiple scopes; use the `"scope:name"` form to disambiguate.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::WorkflowNotFound`] when no file exists at the expected
-///   path.
-/// - Returns [`Error::WorkflowParseFailed`] when the file exists but cannot be
-///   parsed as a valid [`Workflow`].
-/// - Returns [`Error::Io`] for any other I/O failure (e.g. permission denied).
-#[instrument(fields(name = name))]
-pub fn load_workflow(awf_root: &Path, name: &str) -> Result<Workflow> {
-    let path = awf_root.join("workflows").join(format!("{name}.toml"));
+/// - [`Error::WorkflowNotFound`] — no matching workflow found.
+/// - [`Error::AmbiguousWorkflow`] — bare name found in multiple scopes.
+/// - [`Error::WorkflowParseFailed`] — `WORKFLOW.toml` cannot be parsed.
+/// - [`Error::Io`] — unexpected I/O failure.
+pub fn load_workflow(
+    entries: &[WorkflowSearchEntry],
+    name_ref: &str,
+) -> Result<Workflow> {
+    let (scope_filter, bare_name) = parse_name_ref(name_ref);
 
-    // Distinguish "file not found" from other I/O errors so callers receive a
-    // descriptive WorkflowNotFound rather than a raw Io error.
-    let contents = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Err(Error::WorkflowNotFound { name: name.to_string() });
+    let mut found: Vec<PathBuf> = Vec::new();
+    let mut found_scopes: Vec<&str> = Vec::new();
+
+    for entry in entries {
+        if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
+            continue;
         }
-        Err(e) => return Err(Error::Io(e)),
-    };
+        let wf_path = entry.dir.join(bare_name).join("WORKFLOW.toml");
+        if wf_path.exists() {
+            found.push(wf_path);
+            found_scopes.push(&entry.scope);
+        }
+    }
 
-    toml::from_str(&contents).map_err(|source| Error::WorkflowParseFailed {
-        name: name.to_string(),
-        source,
-    })
+    match found.len() {
+        0 => Err(Error::WorkflowNotFound { name: name_ref.to_string() }),
+        1 => {
+            let contents =
+                std::fs::read_to_string(&found[0]).map_err(Error::Io)?;
+            toml::from_str(&contents).map_err(|source| {
+                Error::WorkflowParseFailed {
+                    name: name_ref.to_string(),
+                    source,
+                }
+            })
+        }
+        _ => {
+            let scopes = found_scopes.join(", ");
+            Err(Error::AmbiguousWorkflow {
+                name: bare_name.to_string(),
+                scopes,
+            })
+        }
+    }
 }
 
-/// Creates a new workflow template file in the `.awf/workflows/` directory.
+/// Loads a prompt file from a workflow's directory.
 ///
-/// Writes a stub TOML file at `<awf_root>/workflows/<name>.toml` with
-/// commented-out placeholder sections so the user has a ready-to-edit
-/// starting point. The `workflows/` directory is created automatically if
-/// it does not yet exist.
+/// Searches the entries for the workflow identified by `workflow_name_ref`
+/// (same format as [`load_workflow`]), then reads
+/// `<entry.dir>/<workflow_name>/<filename>`.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::InvalidId`] if `name` contains characters outside the
-///   allowed set (`[a-zA-Z0-9_/\-]+`).
-/// - Returns [`Error::WorkflowAlreadyExists`] if a file for `name` already
-///   exists in the `workflows/` directory.
-/// - Returns [`Error::Io`] for any other I/O failure (e.g. permission denied).
+/// - [`Error::Io`] — file not found or unreadable.
+pub fn load_prompt_file(
+    entries: &[WorkflowSearchEntry],
+    workflow_name_ref: &str,
+    filename: &str,
+) -> Result<String> {
+    let (scope_filter, bare_name) = parse_name_ref(workflow_name_ref);
+
+    for entry in entries {
+        if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
+            continue;
+        }
+        let path = entry.dir.join(bare_name).join(filename);
+        if path.exists() {
+            return std::fs::read_to_string(&path).map_err(Error::Io);
+        }
+    }
+
+    Err(Error::Io(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        format!(
+            "prompt file {filename:?} not found for workflow \
+             {workflow_name_ref:?}"
+        ),
+    )))
+}
+
+/// Creates a workflow template directory under `<agents_root>/workflows/`.
+///
+/// Creates `<agents_root>/workflows/<name>/WORKFLOW.toml` with stub content.
+/// The `workflows/<name>/` directory is created automatically if absent.
+///
+/// # Errors
+///
+/// - [`Error::InvalidId`] — `name` contains characters outside the allowed set.
+/// - [`Error::WorkflowAlreadyExists`] — `WORKFLOW.toml` already exists.
+/// - [`Error::Io`] — unexpected I/O failure.
 #[instrument(fields(name = name))]
-pub fn create_workflow_template(awf_root: &Path, name: &str) -> Result<()> {
+pub fn create_workflow_template(agents_root: &Path, name: &str) -> Result<()> {
     use crate::model::id::validate_id;
 
-    // Reject names that violate the identifier rules before touching the
-    // filesystem.
     validate_id(name)?;
 
-    let workflows_dir = awf_root.join("workflows");
-    let path = workflows_dir.join(format!("{name}.toml"));
+    let workflow_dir = agents_root.join("workflows").join(name);
+    let wf_toml_path = workflow_dir.join("WORKFLOW.toml");
 
-    // Guard against silently overwriting an existing workflow definition.
-    if path.exists() {
+    if wf_toml_path.exists() {
         return Err(Error::WorkflowAlreadyExists { name: name.to_string() });
     }
 
-    // Create the workflows directory only if it is missing; ignore the error
-    // if it already exists (that is the common case).
-    std::fs::create_dir_all(&workflows_dir).map_err(Error::Io)?;
+    std::fs::create_dir_all(&workflow_dir).map_err(Error::Io)?;
 
     let contents = build_workflow_template(name);
-    std::fs::write(&path, contents).map_err(Error::Io)?;
+    std::fs::write(&wf_toml_path, contents).map_err(Error::Io)?;
 
     Ok(())
 }
 
-/// Creates a new flow in the active flows directory.
+/// Returns the workflow directory path for a given name reference and entries.
 ///
-/// Validates the `flow_id`, checks that no flow with the same ID already
-/// exists in either the active or archived directory, creates the flow
-/// directory tree (including an `artifacts/` subdirectory), and writes an
-/// initial `state.toml`.
+/// Used by `validate` to locate prompt files. Returns `None` if the workflow
+/// is not found in any entry.
+pub fn find_workflow_dir(
+    entries: &[WorkflowSearchEntry],
+    name_ref: &str,
+) -> Option<PathBuf> {
+    let (scope_filter, bare_name) = parse_name_ref(name_ref);
+
+    for entry in entries {
+        if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
+            continue;
+        }
+        let dir = entry.dir.join(bare_name);
+        if dir.join("WORKFLOW.toml").exists() {
+            return Some(dir);
+        }
+    }
+
+    None
+}
+
+// ---------------------------------------------------------------------------
+// Flow functions (path-based)
+// ---------------------------------------------------------------------------
+
+/// Creates a new flow at `flow_dir`.
+///
+/// Creates the directory tree (`<flow_dir>/artifacts/`), validates the
+/// `flow_dir` does not already have a `flow_state.toml`, and writes the initial
+/// state.
+///
+/// The flow `id` is set to the last component of `flow_dir`.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::InvalidId`] if `flow_id` contains characters outside the
-///   allowed set (`[a-zA-Z0-9_/\-]+`).
-/// - Returns [`Error::FlowAlreadyExists`] if a directory for `flow_id` already
-///   exists under `<state_dir>/flows/active/` or `<state_dir>/flows/archived/`.
-/// - Returns [`Error::TomlSer`] if the initial state cannot be serialised.
-/// - Returns [`Error::Io`] for any other I/O failure (directory creation or
-///   file write).
-#[instrument(fields(flow_id = flow_id, workflow = workflow))]
+/// - [`Error::FlowAlreadyExists`] — `flow_state.toml` already exists at
+///   `flow_dir`.
+/// - [`Error::TomlSer`] — initial state cannot be serialised.
+/// - [`Error::Io`] — unexpected I/O failure.
+#[instrument(fields(flow_dir = ?flow_dir, workflow = workflow))]
 pub fn create_flow(
-    state_dir: &Path,
-    flow_id: &str,
+    flow_dir: &Path,
     workflow: &str,
     first_stage: &str,
 ) -> Result<()> {
     use chrono::Utc;
 
-    use crate::model::id::validate_id;
-
-    // Reject IDs that violate the identifier rules before touching the
-    // filesystem.
-    validate_id(flow_id)?;
-
-    // Guard against creating a flow that already exists in either directory.
-    let active_dir = state_dir.join("flows/active").join(flow_id);
-    if active_dir.exists() {
-        return Err(Error::FlowAlreadyExists { id: flow_id.to_string() });
+    if flow_dir.join("flow_state.toml").exists() {
+        return Err(Error::FlowAlreadyExists { path: flow_dir.to_path_buf() });
     }
 
-    let archived_dir = state_dir.join("flows/archived").join(flow_id);
-    if archived_dir.exists() {
-        return Err(Error::FlowAlreadyExists { id: flow_id.to_string() });
-    }
+    std::fs::create_dir_all(flow_dir.join("artifacts")).map_err(Error::Io)?;
 
-    // Create the flow directory and an empty artifacts/ subdirectory.
-    std::fs::create_dir_all(active_dir.join("artifacts")).map_err(Error::Io)?;
+    let id = flow_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
 
-    // Build the initial state. Both timestamps are sampled once so that
-    // created_at == updated_at on a freshly created flow.
     let now = Utc::now();
     let state = FlowState {
-        id: flow_id.to_string(),
+        id,
         workflow: workflow.to_string(),
         workflow_version: 1,
         current_stage: first_stage.to_string(),
@@ -209,328 +308,195 @@ pub fn create_flow(
         step_log: vec![],
     };
 
-    save_flow(state_dir, &state)?;
-
-    Ok(())
+    save_flow(flow_dir, &state)
 }
 
-/// Saves a flow state to the active flows directory atomically.
-///
-/// The state is serialized to TOML and written to a temporary file
-/// (`state.toml.tmp`) in the same directory as the target, then renamed to
-/// `state.toml`. The write-then-rename pattern ensures that any reader of
-/// `state.toml` always sees a complete, consistent snapshot — a crash or
-/// power loss mid-write leaves the previous `state.toml` intact.
-///
-/// The target path is `<state_dir>/flows/active/<state.id>/state.toml`. The
-/// directory is created automatically if it does not yet exist.
+/// Loads the flow state from `<flow_dir>/flow_state.toml`.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::TomlSer`] if the state cannot be serialized to TOML.
-/// - Returns [`Error::Io`] for any I/O failure (directory creation, write, or
-///   rename).
-#[instrument(fields(flow_id = %state.id))]
-pub fn save_flow(state_dir: &Path, state: &FlowState) -> Result<()> {
-    let flow_dir = state_dir.join("flows/active").join(&state.id);
-    let target_path = flow_dir.join("state.toml");
-    let tmp_path = flow_dir.join("state.toml.tmp");
+/// - [`Error::FlowNotFound`] — `flow_state.toml` does not exist.
+/// - [`Error::FlowParseFailed`] — `flow_state.toml` cannot be parsed.
+/// - [`Error::Io`] — unexpected I/O failure.
+#[instrument(fields(flow_dir = ?flow_dir))]
+pub fn load_flow(flow_dir: &Path) -> Result<FlowState> {
+    let path = flow_dir.join("flow_state.toml");
 
-    // Create the directory tree if it does not already exist.
-    std::fs::create_dir_all(&flow_dir).map_err(Error::Io)?;
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(Error::FlowNotFound { path: flow_dir.to_path_buf() });
+        }
+        Err(e) => return Err(Error::Io(e)),
+    };
 
-    // Serialize the state to a TOML string before touching the filesystem so
-    // that a serialization failure never leaves a partial file on disk.
+    toml::from_str(&contents).map_err(|source| Error::FlowParseFailed {
+        path: flow_dir.to_path_buf(),
+        source,
+    })
+}
+
+/// Saves a flow state to `<flow_dir>/flow_state.toml` atomically.
+///
+/// Writes to a temp file then renames to ensure readers always see a
+/// complete, consistent snapshot.
+///
+/// # Errors
+///
+/// - [`Error::TomlSer`] — state cannot be serialised.
+/// - [`Error::Io`] — unexpected I/O failure.
+#[instrument(fields(flow_dir = ?flow_dir))]
+pub fn save_flow(flow_dir: &Path, state: &FlowState) -> Result<()> {
+    let target_path = flow_dir.join("flow_state.toml");
+    let tmp_path = flow_dir.join("flow_state.toml.tmp");
+
+    std::fs::create_dir_all(flow_dir).map_err(Error::Io)?;
+
     let contents = toml::to_string(state)?;
 
-    // Write to the temp file, then atomically rename to the final path so
-    // readers always see a complete snapshot.
     std::fs::write(&tmp_path, contents).map_err(Error::Io)?;
     std::fs::rename(&tmp_path, &target_path).map_err(Error::Io)?;
 
     Ok(())
 }
 
-/// Loads a flow state from the active flows directory.
+/// Marks a flow as archived by setting `archived = true` in its
+/// `flow_state.toml`.
 ///
-/// The file is expected at
-/// `<state_dir>/flows/active/<flow_id>/state.toml`. After reading, the raw
-/// TOML is deserialized into a [`FlowState`].
-///
-/// # Errors
-///
-/// - Returns [`Error::FlowNotFound`] when no file exists at the expected path.
-/// - Returns [`Error::FlowParseFailed`] when the file exists but cannot be
-///   parsed as a valid [`FlowState`].
-/// - Returns [`Error::Io`] for any other I/O failure (e.g. permission denied).
-#[instrument(fields(flow_id = flow_id))]
-pub fn load_flow(state_dir: &Path, flow_id: &str) -> Result<FlowState> {
-    let path = state_dir.join("flows/active").join(flow_id).join("state.toml");
-
-    // Distinguish "file not found" from other I/O errors so callers receive a
-    // descriptive FlowNotFound rather than a raw Io error.
-    let contents = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Err(Error::FlowNotFound { id: flow_id.to_string() });
-        }
-        Err(e) => return Err(Error::Io(e)),
-    };
-
-    toml::from_str(&contents).map_err(|source| Error::FlowParseFailed {
-        id: flow_id.to_string(),
-        source,
-    })
-}
-
-/// Lists all flows in the state directory, optionally including archived flows.
-///
-/// Scans `<state_dir>/flows/active/` for subdirectories; for each, loads the
-/// flow state and produces a [`FlowSummary`]. If `include_archived` is `true`,
-/// also scans `<state_dir>/flows/archived/` and includes those flows with
-/// `archived: true`.
-///
-/// If either the `active/` or `archived/` directory does not exist, it is
-/// treated as empty rather than returning an error — this is expected for a
-/// freshly initialised state directory. Results are returned sorted
-/// alphabetically by flow id.
+/// Unlike the previous model, the flow directory is **not moved** — archiving
+/// is purely a flag in the state file.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::Io`] if reading a directory fails for any reason other
-///   than the directory not existing (e.g. permission denied).
-/// - Returns [`Error::FlowParseFailed`] if a flow's `state.toml` cannot be
-///   parsed.
-/// - Returns [`Error::FlowNotFound`] if a flow's `state.toml` is missing after
-///   the directory entry was found.
-#[instrument(fields(
-    state_dir = ?state_dir,
-    include_archived = include_archived,
-))]
-pub fn list_flows(
-    state_dir: &Path,
-    include_archived: bool,
-) -> Result<Vec<FlowSummary>> {
-    let mut summaries = Vec::new();
+/// - [`Error::FlowNotFound`] — no `flow_state.toml` at `flow_dir`.
+/// - [`Error::TomlSer`] — updated state cannot be serialised.
+/// - [`Error::Io`] — unexpected I/O failure.
+#[instrument(fields(flow_dir = ?flow_dir))]
+pub fn archive_flow(flow_dir: &Path) -> Result<()> {
+    use chrono::Utc;
 
-    // Collect summaries from a single flows subdirectory (active or archived).
-    // Returns Ok(()) and skips the directory entirely if it does not exist.
-    let mut collect_from_dir = |dir: &Path, archived: bool| -> Result<()> {
-        let read_dir = match std::fs::read_dir(dir) {
-            Ok(rd) => rd,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(());
-            }
-            Err(e) => return Err(Error::Io(e)),
-        };
-
-        for entry in read_dir {
-            let entry = entry.map_err(Error::Io)?;
-
-            // Only process directory entries; skip any stray files.
-            if !entry.file_type().map_err(Error::Io)?.is_dir() {
-                continue;
-            }
-
-            let flow_id = entry.file_name().into_string().unwrap_or_default();
-
-            // Load state.toml directly from the entry path so we work with
-            // both active and archived directories.
-            let state_path = entry.path().join("state.toml");
-            let contents = match std::fs::read_to_string(&state_path) {
-                Ok(s) => s,
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                    return Err(Error::FlowNotFound { id: flow_id });
-                }
-                Err(e) => return Err(Error::Io(e)),
-            };
-
-            let state: FlowState =
-                toml::from_str(&contents).map_err(|source| {
-                    Error::FlowParseFailed { id: flow_id.clone(), source }
-                })?;
-
-            summaries.push(FlowSummary {
-                id: state.id,
-                workflow: state.workflow,
-                current_stage: state.current_stage,
-                archived,
-            });
-        }
-
-        Ok(())
-    };
-
-    collect_from_dir(&state_dir.join("flows/active"), false)?;
-
-    if include_archived {
-        collect_from_dir(&state_dir.join("flows/archived"), true)?;
+    if !flow_dir.join("flow_state.toml").exists() {
+        return Err(Error::FlowNotFound { path: flow_dir.to_path_buf() });
     }
 
-    summaries.sort_by(|a, b| a.id.cmp(&b.id));
+    let mut state = load_flow(flow_dir)?;
+    state.archived = true;
+    state.updated_at = Utc::now();
+    save_flow(flow_dir, &state)
+}
 
+/// Recursively scans each directory in `search_dirs` for `flow_state.toml`
+/// files.
+///
+/// Each directory containing a `flow_state.toml` is treated as a flow
+/// directory. Subdirectories within a flow directory are not recursed into.
+///
+/// Results are sorted by path.
+///
+/// # Errors
+///
+/// Returns [`Error::Io`] if directory iteration fails.
+pub fn scan_flows(search_dirs: &[PathBuf]) -> Result<Vec<FlowSummary>> {
+    let mut summaries = Vec::new();
+    for dir in search_dirs {
+        scan_dir_for_flows(dir, &mut summaries)?;
+    }
+    summaries.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(summaries)
 }
 
-/// Copies a file into the `artifacts/` directory for an active flow.
-///
-/// The artifact is written to
-/// `<state_dir>/flows/active/<flow_id>/artifacts/<name>`.
-///
-/// The `artifacts/` directory is created automatically if it does not yet
-/// exist, so callers do not need to ensure it is present before calling this
-/// function.
-///
-/// # Name convention
-///
-/// `name` must be a plain filename — it must not contain path separators (e.g.
-/// `/` or `\`). Passing a path component such as `"subdir/file.md"` is not
-/// supported and will result in the file being placed in an unexpected location
-/// or an I/O error if the intermediate directory does not exist.
+// ---------------------------------------------------------------------------
+// Artifact functions
+// ---------------------------------------------------------------------------
+
+/// Copies a file into `<flow_dir>/artifacts/<name>`.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::Io`] if the source file cannot be read, the artifact
-///   directory cannot be created, or the copy fails.
-#[instrument(fields(flow_id = flow_id, name = name, src = ?src))]
-pub fn put_artifact(
-    state_dir: &Path,
-    flow_id: &str,
-    name: &str,
-    src: &Path,
-) -> Result<()> {
-    let artifact_dir =
-        state_dir.join("flows/active").join(flow_id).join("artifacts");
-
-    // Create the artifacts directory if it does not already exist.
+/// - [`Error::Io`] — source file unreadable, artifact dir creation failed, or
+///   copy failed.
+#[instrument(fields(flow_dir = ?flow_dir, name = name, src = ?src))]
+pub fn put_artifact(flow_dir: &Path, name: &str, src: &Path) -> Result<()> {
+    let artifact_dir = flow_dir.join("artifacts");
     std::fs::create_dir_all(&artifact_dir).map_err(Error::Io)?;
-
     let target = artifact_dir.join(name);
     std::fs::copy(src, &target).map_err(Error::Io)?;
-
     Ok(())
 }
 
-/// Returns `true` if the named artifact exists for the given active flow.
-///
-/// Checks whether `<state_dir>/flows/active/<flow_id>/artifacts/<name>` is
-/// present on the filesystem. This function is infallible: any I/O error (e.g.
-/// the flow directory does not exist) is treated as the artifact being absent.
+/// Returns `true` if `<flow_dir>/artifacts/<name>` exists.
 #[allow(dead_code)]
-pub fn artifact_exists(state_dir: &Path, flow_id: &str, name: &str) -> bool {
-    state_dir
-        .join("flows/active")
-        .join(flow_id)
-        .join("artifacts")
-        .join(name)
-        .exists()
+pub fn artifact_exists(flow_dir: &Path, name: &str) -> bool {
+    flow_dir.join("artifacts").join(name).exists()
 }
 
-/// Reads the contents of a named artifact for an active flow as a UTF-8 string.
-///
-/// The file is expected at
-/// `<state_dir>/flows/active/<flow_id>/artifacts/<name>`.
+/// Reads the contents of `<flow_dir>/artifacts/<name>` as a UTF-8 string.
 ///
 /// # Errors
 ///
-/// - Returns [`Error::Io`] if the file does not exist, cannot be read, or
-///   contains bytes that are not valid UTF-8.
+/// - [`Error::Io`] — file absent or unreadable.
 #[allow(dead_code)]
-#[instrument(fields(flow_id = flow_id, name = name))]
-pub fn read_artifact(
-    state_dir: &Path,
-    flow_id: &str,
-    name: &str,
-) -> Result<String> {
-    let path = state_dir
-        .join("flows/active")
-        .join(flow_id)
-        .join("artifacts")
-        .join(name);
-
+#[instrument(fields(flow_dir = ?flow_dir, name = name))]
+pub fn read_artifact(flow_dir: &Path, name: &str) -> Result<String> {
+    let path = flow_dir.join("artifacts").join(name);
     std::fs::read_to_string(&path).map_err(Error::Io)
 }
 
-/// Moves an active flow into the archived flows directory and marks it as
-/// archived.
-///
-/// Performs the following steps atomically from the perspective of the
-/// directory tree:
-///
-/// 1. Loads the current flow state from `flows/active/<flow_id>/state.toml`
-///    (returning [`Error::FlowNotFound`] if it is absent).
-/// 2. Creates `flows/archived/` if it does not yet exist.
-/// 3. Renames `flows/active/<flow_id>` → `flows/archived/<flow_id>`.
-/// 4. Sets `archived = true` and `updated_at = Utc::now()` on the state, then
-///    writes the updated state to `flows/archived/<flow_id>/state.toml`.
-///
-/// After this call succeeds, [`load_flow`] for the same `flow_id` will return
-/// [`Error::FlowNotFound`] because it only looks in the active directory.
-///
-/// # Errors
-///
-/// - Returns [`Error::FlowNotFound`] if no active flow with `flow_id` exists.
-/// - Returns [`Error::TomlSer`] if the updated state cannot be serialised.
-/// - Returns [`Error::Io`] for any other I/O failure (rename, directory
-///   creation, or file write).
-#[instrument(fields(flow_id = flow_id))]
-pub fn archive_flow(state_dir: &Path, flow_id: &str) -> Result<()> {
-    use chrono::Utc;
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
 
-    let active_dir = state_dir.join("flows/active").join(flow_id);
-
-    // Fail fast with a descriptive error if the active flow does not exist.
-    if !active_dir.exists() {
-        return Err(Error::FlowNotFound { id: flow_id.to_string() });
+/// Recursively scans `dir` for `flow_state.toml` files.
+///
+/// When a `flow_state.toml` is found in a directory, that directory is treated
+/// as a flow directory and is **not** recursed into further.
+fn scan_dir_for_flows(
+    dir: &Path,
+    summaries: &mut Vec<FlowSummary>,
+) -> Result<()> {
+    // If this directory is itself a flow directory, record it and stop.
+    let state_path = dir.join("flow_state.toml");
+    if state_path.is_file() {
+        if let Ok(contents) = std::fs::read_to_string(&state_path)
+            && let Ok(state) = toml::from_str::<FlowState>(&contents)
+        {
+            summaries.push(FlowSummary {
+                path: dir.to_path_buf(),
+                workflow: state.workflow,
+                current_stage: state.current_stage,
+                archived: state.archived,
+            });
+        }
+        // Do not recurse into a flow directory.
+        return Ok(());
     }
 
-    // Load the current state before moving the directory so any parse failure
-    // is reported before the rename takes place.
-    let mut state = load_flow(state_dir, flow_id)?;
+    // Recurse into subdirectories.
+    let read_dir = match std::fs::read_dir(dir) {
+        Ok(rd) => rd,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(Error::Io(e)),
+    };
 
-    // Ensure the archived parent directory exists.
-    let archived_parent = state_dir.join("flows/archived");
-    std::fs::create_dir_all(&archived_parent).map_err(Error::Io)?;
-
-    let archived_dir = archived_parent.join(flow_id);
-
-    // Rename the flow directory from active → archived.
-    std::fs::rename(&active_dir, &archived_dir).map_err(Error::Io)?;
-
-    // Update the state to reflect the archive and write it to the new location
-    // directly — save_flow always writes to flows/active/, which no longer
-    // exists after the rename.
-    state.archived = true;
-    state.updated_at = Utc::now();
-
-    let contents = toml::to_string(&state)?;
-    let state_path = archived_dir.join("state.toml");
-    std::fs::write(&state_path, contents).map_err(Error::Io)?;
+    for entry in read_dir {
+        let entry = entry.map_err(Error::Io)?;
+        if entry.file_type().map_err(Error::Io)?.is_dir() {
+            scan_dir_for_flows(&entry.path(), summaries)?;
+        }
+    }
 
     Ok(())
 }
 
-/// Reads a prompt file from a workflow's directory inside `.awf/`.
+/// Parses a workflow name reference into an optional scope filter and a bare
+/// name.
 ///
-/// The file is expected at
-/// `<awf_root>/workflows/<workflow_name>/<filename>`.
-///
-/// `awf_root` is the `.awf/` directory itself (the same convention used by
-/// [`load_workflow`] and [`list_workflows`]).
-///
-/// # Errors
-///
-/// - Returns [`Error::Io`] if the file does not exist, cannot be read, or
-///   contains invalid UTF-8.
-#[instrument(fields(workflow_name = workflow_name, filename = filename))]
-pub fn load_prompt_file(
-    awf_root: &Path,
-    workflow_name: &str,
-    filename: &str,
-) -> Result<String> {
-    let path = awf_root.join("workflows").join(workflow_name).join(filename);
-
-    std::fs::read_to_string(&path).map_err(Error::Io)
+/// `"project:feature"` → `(Some("project"), "feature")`
+/// `"feature"`         → `(None, "feature")`
+pub fn parse_name_ref(name_ref: &str) -> (Option<&str>, &str) {
+    name_ref.find(':').map_or((None, name_ref), |pos| {
+        (Some(&name_ref[..pos]), &name_ref[pos + 1..])
+    })
 }
 
 /// Renders the stub TOML template for a new workflow named `name`.

@@ -15,16 +15,20 @@ pub enum Error {
     #[error("invalid id {id:?}: {reason}")]
     InvalidId { id: String, reason: String },
 
-    /// No `.awf/` directory was found by walking up the directory tree.
-    #[error("no .awf/ root found starting from {start:?}")]
-    AwfRootNotFound { start: std::path::PathBuf },
+    /// No `.agents/` directory was found by walking up the directory tree.
+    #[error("no .agents/ directory found starting from {start:?}")]
+    ProjectRootNotFound { start: std::path::PathBuf },
 
-    /// A flow ID could not be determined (no `--flow` flag and no
+    /// A flow path could not be determined (no `--flow` flag and no
     /// `AWF_ACTIVE_FLOW` environment variable).
-    #[error("a flow ID is required: pass --flow <id> or set AWF_ACTIVE_FLOW")]
-    FlowIdRequired,
+    #[error("no flow specified: pass --flow <path> or set AWF_ACTIVE_FLOW")]
+    FlowPathRequired,
 
-    /// A workflow file was not found.
+    /// A workflow was referenced in multiple scopes without disambiguation.
+    #[error("ambiguous workflow {name:?}: found in multiple scopes ({scopes})")]
+    AmbiguousWorkflow { name: String, scopes: String },
+
+    /// A workflow was not found in any search entry.
     #[error("workflow {name:?} not found")]
     WorkflowNotFound { name: String },
 
@@ -40,21 +44,21 @@ pub enum Error {
     #[error("workflow {name:?} already exists")]
     WorkflowAlreadyExists { name: String },
 
-    /// A flow state file was not found.
-    #[error("flow {id:?} not found")]
-    FlowNotFound { id: String },
+    /// A flow state file was not found at the given directory.
+    #[error("flow not found at {path:?}")]
+    FlowNotFound { path: std::path::PathBuf },
 
     /// A flow state file could not be parsed.
-    #[error("failed to parse flow state for {id:?}: {source}")]
+    #[error("failed to parse flow state at {path:?}: {source}")]
     FlowParseFailed {
-        id: String,
+        path: std::path::PathBuf,
         #[source]
         source: toml::de::Error,
     },
 
-    /// Attempted to create a flow that already exists (active).
-    #[error("flow {id:?} already exists (active)")]
-    FlowAlreadyExists { id: String },
+    /// Attempted to create a flow that already exists.
+    #[error("flow already exists at {path:?}")]
+    FlowAlreadyExists { path: std::path::PathBuf },
 
     /// The workflow has only one stage and `advance_stage` was called while
     /// already on the last stage.
@@ -74,7 +78,7 @@ pub enum Error {
     #[error("TOML serialisation error: {0}")]
     TomlSer(#[from] toml::ser::Error),
 
-    /// The `.awf/config.toml` file could not be parsed.
+    /// A config file could not be parsed.
     #[error("failed to parse config at {path:?}: {source}")]
     ConfigParseFailed {
         path: std::path::PathBuf,

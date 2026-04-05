@@ -7,9 +7,12 @@ TODO
 Awf
 ---
 
+- Flow artifacts should be stored under {flow_path}/artifacts/ directory and
+  should be modified directly by the agent. `awf flow validate` ensures all
+  artifacts that are supposed to exist, do exist (based on stages ran so far),
+  and that redundant artifacts don't exist.
 - Better control for how to define output directory for a flow (state and
   artifacts).
-- awf should be configurable using a file (.config/awf.toml) and env vars.
 - --output-format should work for all commands.
 - awf should support changing --output-format as config & env var.
 - --output-format should print newline at the end
@@ -24,6 +27,7 @@ Awf
   `awf artifact put` moves them into the flow directory.
 - `awf flow next` -> `awf flow next-step`
 - `awf flow advance` -> `awf flow next-stage`
+- Support out-of-workflow skills (e.g. in `.agents/skills`)
 
 Infeasible
 ----------

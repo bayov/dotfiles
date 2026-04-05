@@ -78,7 +78,10 @@ pub enum WorkflowCommands {
 pub enum FlowCommands {
     /// Create a new flow instance
     New {
-        name: String,
+        /// Path to the flow directory (tilde-expanded; falls back to
+        /// `AWF_ACTIVE_FLOW`)
+        #[arg(long)]
+        flow: Option<String>,
         #[arg(long)]
         workflow: String,
     },
@@ -197,7 +200,9 @@ fn dispatch_flow(
     fmt: OutputFormat,
 ) -> color_eyre::Result<()> {
     match command {
-        FlowCommands::New { name, workflow } => flow::new(&name, &workflow),
+        FlowCommands::New { flow: flow_flag, workflow } => {
+            flow::new(flow_flag.as_deref(), &workflow)
+        }
         FlowCommands::List { all } => flow::list(all),
         FlowCommands::Status { flow: flow_flag } => {
             flow::status(flow_flag.as_deref(), &fmt)

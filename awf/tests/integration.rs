@@ -1,27 +1,28 @@
 //! Integration tests for the `awf` CLI.
 //!
-//! Each test invokes the real `awf` binary via [`assert_cmd`] with a temporary
-//! directory that contains a `.awf/` tree. [`setup_feature_workflow`] is the
-//! shared fixture that populates that tree with the `feature` workflow and its
-//! prompt files.
+//! Tests invoke the real `awf` binary with a temporary directory that has
+//! a `.agents/workflows/` tree and flows stored under `<tmp>/flows/`.
 //!
-//! # Layout assumed by the tests
+//! # Project layout
 //!
 //! ```text
 //! <tmp>/
-//! └── .awf/
-//!     └── workflows/
-//!         ├── feature.toml
-//!         └── feature/
-//!             ├── design.md
-//!             ├── implement.md
-//!             └── review.md
+//! ├── .agents/
+//! │   └── workflows/
+//! │       └── feature/
+//! │           ├── WORKFLOW.toml
+//! │           ├── design.md
+//! │           ├── implement.md
+//! │           └── review.md
+//! ├── .config/
+//! │   └── awf.toml          ← flow_search_dirs = ["<tmp>/flows"]
+//! └── flows/                ← flow directories live here
 //! ```
 //!
-//! Every `Command` call sets `.current_dir(&tmp)` so that `find_awf_root` can
-//! locate the `.awf/` directory by walking up from the process CWD.
+//! `find_project_root` walks up from the CWD (`tmp`) looking for `.agents/`.
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use assert_cmd::Command;
 use assert_fs::TempDir;
@@ -31,7 +32,7 @@ use predicates::prelude::*;
 // Fixture helpers
 // ---------------------------------------------------------------------------
 
-/// Feature-workflow TOML content used across all tests that need a workflow.
+/// Feature-workflow TOML used across most tests.
 const FEATURE_TOML: &str = r#"
 name = "feature"
 version = 1
@@ -73,53 +74,42 @@ name = "done"
 description = "Complete."
 "#;
 
-/// Creates the `feature` workflow fixture inside `<tmp>/.awf/`.
-///
-/// Writes:
-/// - `.awf/workflows/feature.toml` — the workflow definition
-/// - `.awf/workflows/feature/design.md` — prompt file
-/// - `.awf/workflows/feature/implement.md` — prompt file
-/// - `.awf/workflows/feature/review.md` — prompt file
+/// Creates the `feature` workflow fixture inside `<tmp>/.agents/`.
 fn setup_feature_workflow(tmp: &TempDir) {
-    let awf_dir = tmp.path().join(".awf");
-    let workflows_dir = awf_dir.join("workflows");
-    let prompts_dir = workflows_dir.join("feature");
+    let workflow_dir = tmp.path().join(".agents/workflows/feature");
+    std::fs::create_dir_all(&workflow_dir)
+        .expect("create .agents/workflows/feature/");
 
-    std::fs::create_dir_all(&prompts_dir)
-        .expect("create .awf/workflows/feature/");
-
-    std::fs::write(workflows_dir.join("feature.toml"), FEATURE_TOML.trim())
-        .expect("write feature.toml");
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), FEATURE_TOML.trim())
+        .expect("write WORKFLOW.toml");
 
     std::fs::write(
-        prompts_dir.join("design.md"),
+        workflow_dir.join("design.md"),
         "# Design\nWrite a design document.\n",
     )
     .expect("write design.md");
 
     std::fs::write(
-        prompts_dir.join("implement.md"),
+        workflow_dir.join("implement.md"),
         "# Implement\nWrite the implementation.\n",
     )
     .expect("write implement.md");
 
     std::fs::write(
-        prompts_dir.join("review.md"),
+        workflow_dir.join("review.md"),
         "# Review\nPerform code review.\n",
     )
     .expect("write review.md");
+
+    // Write project config so `awf flow list` can find flows.
+    setup_flow_config(tmp);
 }
 
-/// Creates a minimal workflow that uses inline `run` steps so tests can
-/// control pass/fail without relying on real project tools.
-///
-/// The `pass-step` uses `run = "true"` (always succeeds) and `fail-step` uses
-/// `run = "false"` (always fails).  Both live in the single `work` stage.
+/// Creates a minimal workflow that uses inline `run` steps.
 fn setup_run_workflow(tmp: &TempDir) {
-    let awf_dir = tmp.path().join(".awf");
-    let workflows_dir = awf_dir.join("workflows");
-
-    std::fs::create_dir_all(&workflows_dir).expect("create .awf/workflows/");
+    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
+    std::fs::create_dir_all(&workflow_dir)
+        .expect("create run-test workflow dir");
 
     let toml = r#"
 name = "run-test"
@@ -133,58 +123,50 @@ steps = [
 ]
 "#;
 
-    std::fs::write(workflows_dir.join("run-test.toml"), toml.trim())
-        .expect("write run-test.toml");
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), toml.trim())
+        .expect("write run-test WORKFLOW.toml");
+
+    setup_flow_config(tmp);
+}
+
+/// Writes `.config/awf.toml` pointing `flow_search_dirs` at `<tmp>/flows/`.
+fn setup_flow_config(tmp: &TempDir) {
+    let config_dir = tmp.path().join(".config");
+    std::fs::create_dir_all(&config_dir).expect("create .config/");
+    let flows_dir = tmp.path().join("flows");
+    std::fs::create_dir_all(&flows_dir).expect("create flows/");
+    std::fs::write(
+        config_dir.join("awf.toml"),
+        format!("flow_search_dirs = [{:?}]\n", flows_dir.to_string_lossy()),
+    )
+    .expect("write .config/awf.toml");
+}
+
+/// Returns the path for a named flow under `<tmp>/flows/`.
+fn flow_path(tmp: &TempDir, name: &str) -> PathBuf {
+    tmp.path().join("flows").join(name)
 }
 
 /// Returns a [`Command`] builder for the `awf` binary rooted at `tmp`.
-///
-/// Sets the working directory to `tmp` so `find_awf_root` can locate `.awf/`.
 fn awf(tmp: &Path) -> Command {
     let mut cmd = Command::cargo_bin("awf").expect("awf binary");
     cmd.current_dir(tmp);
     cmd
 }
 
-// ---------------------------------------------------------------------------
-// Flow state files land at `.awf/flows/…`, not `.awf/.awf/flows/…`
-// ---------------------------------------------------------------------------
-
-/// Regression test for the double-`.awf` path bug.
-///
-/// Before the fix, `resolve_state_dir` was called with the `.awf/` directory
-/// itself instead of its parent, so it appended another `.awf` segment and
-/// every flow write went to `.awf/.awf/flows/…`.
-#[test]
-fn t15_flow_state_stored_at_awf_flows_not_double_awf() {
-    // Given: the feature workflow fixture
-    let tmp = TempDir::new().unwrap();
-    setup_feature_workflow(&tmp);
-
-    // When: create a new flow
+/// Helper: create a flow at `<tmp>/flows/<name>` via the CLI.
+fn create_flow(tmp: &TempDir, name: &str, workflow: &str) {
     awf(tmp.path())
-        .args(["flow", "new", "path-check", "--workflow", "feature"])
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            flow_path(tmp, name).to_str().unwrap(),
+            "--workflow",
+            workflow,
+        ])
         .assert()
         .success();
-
-    let awf_dir = tmp.path().join(".awf");
-
-    // Then: the state file exists at `.awf/flows/active/path-check/`
-    let correct_path = awf_dir.join("flows").join("active").join("path-check");
-    assert!(
-        correct_path.exists(),
-        "flow state should be at .awf/flows/active/path-check/, but that \
-         path does not exist.\n  expected: {correct_path:?}",
-    );
-
-    // And: the double-nested path must NOT exist
-    let wrong_path =
-        awf_dir.join(".awf").join("flows").join("active").join("path-check");
-    assert!(
-        !wrong_path.exists(),
-        "flow state must NOT be at .awf/.awf/flows/active/path-check/ \
-         (double-awf bug); found: {wrong_path:?}",
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -193,22 +175,23 @@ fn t15_flow_state_stored_at_awf_flows_not_double_awf() {
 
 #[test]
 fn t2_workflow_new_creates_file() {
-    // Given: a temp dir with a bare `.awf/workflows/` directory
+    // Given: a temp dir with a bare `.agents/workflows/` directory
     let tmp = TempDir::new().unwrap();
-    let awf_dir = tmp.path().join(".awf");
-    std::fs::create_dir_all(awf_dir.join("workflows")).unwrap();
+    std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
 
     // When: we run `awf workflow new my-wf`
     awf(tmp.path())
         .args(["workflow", "new", "my-wf"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Created .awf/workflows/my-wf.toml"));
+        .stdout(predicate::str::contains(
+            ".agents/workflows/my-wf/WORKFLOW.toml",
+        ));
 
-    // Then: the file exists on disk
+    // Then: the WORKFLOW.toml exists on disk
     assert!(
-        awf_dir.join("workflows").join("my-wf.toml").exists(),
-        "my-wf.toml should have been created"
+        tmp.path().join(".agents/workflows/my-wf/WORKFLOW.toml").exists(),
+        "WORKFLOW.toml should have been created"
     );
 }
 
@@ -216,13 +199,12 @@ fn t2_workflow_new_creates_file() {
 fn t2_workflow_new_duplicate_errors() {
     // Given: a temp dir with an already-created workflow
     let tmp = TempDir::new().unwrap();
-    let awf_dir = tmp.path().join(".awf");
-    std::fs::create_dir_all(awf_dir.join("workflows")).unwrap();
+    std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
 
     awf(tmp.path()).args(["workflow", "new", "dup"]).assert().success();
 
-    // When: we try to create the same workflow a second time
-    // Then: the command exits non-zero with a "already exists" message
+    // When: try to create the same workflow a second time
+    // Then: exits non-zero with "already exists"
     awf(tmp.path())
         .args(["workflow", "new", "dup"])
         .assert()
@@ -236,11 +218,9 @@ fn t2_workflow_new_duplicate_errors() {
 
 #[test]
 fn t3_validate_passes_on_valid_workflow() {
-    // Given: the feature workflow fixture
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    // When/Then: validate reports OK
     awf(tmp.path())
         .args(["workflow", "validate", "feature"])
         .assert()
@@ -250,10 +230,9 @@ fn t3_validate_passes_on_valid_workflow() {
 
 #[test]
 fn t3_validate_reports_missing_command_key() {
-    // Given: a workflow whose step references an undefined command key
     let tmp = TempDir::new().unwrap();
-    let awf_dir = tmp.path().join(".awf");
-    std::fs::create_dir_all(awf_dir.join("workflows")).unwrap();
+    let workflow_dir = tmp.path().join(".agents/workflows/bad");
+    std::fs::create_dir_all(&workflow_dir).unwrap();
 
     let bad_toml = r#"
 name = "bad"
@@ -266,10 +245,9 @@ steps = [
 ]
 "#;
 
-    std::fs::write(awf_dir.join("workflows").join("bad.toml"), bad_toml.trim())
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), bad_toml.trim())
         .unwrap();
 
-    // When/Then: validate exits non-zero and mentions the missing key
     awf(tmp.path())
         .args(["workflow", "validate", "bad"])
         .assert()
@@ -279,10 +257,9 @@ steps = [
 
 #[test]
 fn t3_validate_reports_missing_prompt_file() {
-    // Given: a workflow whose agent step references a non-existent prompt file
     let tmp = TempDir::new().unwrap();
-    let awf_dir = tmp.path().join(".awf");
-    std::fs::create_dir_all(awf_dir.join("workflows")).unwrap();
+    let workflow_dir = tmp.path().join(".agents/workflows/noprompt");
+    std::fs::create_dir_all(&workflow_dir).unwrap();
 
     let bad_toml = r#"
 name = "noprompt"
@@ -295,13 +272,9 @@ steps = [
 ]
 "#;
 
-    std::fs::write(
-        awf_dir.join("workflows").join("noprompt.toml"),
-        bad_toml.trim(),
-    )
-    .unwrap();
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), bad_toml.trim())
+        .unwrap();
 
-    // When/Then: validate exits non-zero and mentions the missing file
     awf(tmp.path())
         .args(["workflow", "validate", "noprompt"])
         .assert()
@@ -315,20 +288,26 @@ steps = [
 
 #[test]
 fn t4_flow_new_and_status() {
-    // Given: the feature workflow fixture
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    // When: we create a new flow named "add-oauth"
+    let fp = flow_path(&tmp, "add-oauth");
+
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("add-oauth"));
 
-    // Then: status shows the first stage and the pending step
     awf(tmp.path())
-        .args(["flow", "status", "--flow", "add-oauth"])
+        .args(["flow", "status", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("design"))
@@ -342,20 +321,15 @@ fn t4_flow_new_and_status() {
 
 #[test]
 fn t5_happy_path_design_stage() {
-    // Given: the feature workflow with a fresh "add-oauth" flow
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "add-oauth");
+    create_flow(&tmp, "add-oauth", "feature");
 
-    // Write a local design.md so `artifact put` has a real source file.
     let design_file = tmp.path().join("design.md");
     std::fs::write(&design_file, "# My design\n").unwrap();
 
-    // When: put the design artifact
     awf(tmp.path())
         .args([
             "flow",
@@ -364,23 +338,27 @@ fn t5_happy_path_design_stage() {
             "design.md",
             design_file.to_str().unwrap(),
             "--flow",
-            "add-oauth",
+            fp.to_str().unwrap(),
         ])
         .assert()
         .success()
         .stdout(predicate::str::contains("design.md"));
 
-    // When: mark the agent step done
     awf(tmp.path())
-        .args(["flow", "step", "done", "write-design", "--flow", "add-oauth"])
+        .args([
+            "flow",
+            "step",
+            "done",
+            "write-design",
+            "--flow",
+            fp.to_str().unwrap(),
+        ])
         .assert()
         .success()
         .stdout(predicate::str::contains("write-design"));
 
-    // When: advance to the next stage
-    // Then: we enter "implement"
     awf(tmp.path())
-        .args(["flow", "advance", "--flow", "add-oauth"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("implement"));
@@ -392,19 +370,14 @@ fn t5_happy_path_design_stage() {
 
 #[test]
 fn t6_flow_run_pass() {
-    // Given: the run-test workflow with a fresh flow
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "run-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "run-flow");
+    create_flow(&tmp, "run-flow", "run-test");
 
-    // When: we run the always-passing step
-    // Then: the output says PASS
     awf(tmp.path())
-        .args(["flow", "run", "pass-step", "--flow", "run-flow"])
+        .args(["flow", "run", "pass-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
@@ -412,44 +385,33 @@ fn t6_flow_run_pass() {
 
 #[test]
 fn t6_flow_run_fail() {
-    // Given: the run-test workflow with a fresh flow
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "run-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "run-flow");
+    create_flow(&tmp, "run-flow", "run-test");
 
-    // When: we run the always-failing step
-    // Then: the output says FAIL (the command itself exits 0 because awf
-    // records the failure but doesn't propagate a non-zero exit for `run`)
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "run-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .stdout(predicate::str::contains("FAIL"));
 }
 
 #[test]
 fn t6_flow_run_fail_then_rerun_reflects_pass() {
-    // Given: run the failing step first
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "retry-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "retry-flow");
+    create_flow(&tmp, "retry-flow", "run-test");
 
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "retry-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .stdout(predicate::str::contains("FAIL"));
 
-    // Patch the workflow so fail-step now uses `run = "true"`.
-    // Instead of mutating the file, we create a separate flow on a workflow
-    // whose fail-step has been replaced with a passing inline command.
-    let awf_dir = tmp.path().join(".awf");
+    // Patch workflow so fail-step now passes.
+    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
     let patched_toml = r#"
 name = "run-test"
 version = 1
@@ -461,22 +423,17 @@ steps = [
     { name = "fail-step", type = "command", run = "true" },
 ]
 "#;
-    std::fs::write(
-        awf_dir.join("workflows").join("run-test.toml"),
-        patched_toml.trim(),
-    )
-    .unwrap();
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), patched_toml.trim())
+        .unwrap();
 
-    // When: re-run the (now-passing) step
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "retry-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
 
-    // Then: status shows the step as "pass"
     awf(tmp.path())
-        .args(["flow", "status", "--flow", "retry-flow"])
+        .args(["flow", "status", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("pass"));
@@ -488,38 +445,32 @@ steps = [
 
 #[test]
 fn t7_advance_blocked_by_failed_step() {
-    // Given: a flow where a step has failed
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "blocker-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "blocker-flow");
+    create_flow(&tmp, "blocker-flow", "run-test");
 
-    // Run pass-step first so it is recorded as passed.
     awf(tmp.path())
-        .args(["flow", "run", "pass-step", "--flow", "blocker-flow"])
+        .args(["flow", "run", "pass-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
 
-    // Run the failing step so it is recorded as failed.
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "blocker-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .stdout(predicate::str::contains("FAIL"));
 
-    // When: we try to advance
-    // Then: advance exits non-zero and mentions the failed step
+    // Advance should fail because fail-step failed.
     awf(tmp.path())
-        .args(["flow", "advance", "--flow", "blocker-flow"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .failure()
         .stderr(predicate::str::contains("fail-step"));
 
-    // Patch the workflow so fail-step passes, then re-run it.
-    let awf_dir = tmp.path().join(".awf");
+    // Fix the workflow.
+    let workflow_dir = tmp.path().join(".agents/workflows/run-test");
     let fixed_toml = r#"
 name = "run-test"
 version = 1
@@ -531,30 +482,20 @@ steps = [
     { name = "fail-step", type = "command", run = "true" },
 ]
 "#;
-    std::fs::write(
-        awf_dir.join("workflows").join("run-test.toml"),
-        fixed_toml.trim(),
-    )
-    .unwrap();
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), fixed_toml.trim())
+        .unwrap();
 
-    // Re-run fail-step; it now uses `run = "true"` so it passes.
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "blocker-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
 
-    // When: advance now that both steps have passed
-    // The run-test workflow only has one stage ("work") so there is nothing
-    // to advance to — the test verifies the blocker was resolved (the earlier
-    // call was the one that should fail; now it either succeeds or gives a
-    // "last stage" error rather than a "step failed" error).
     let output = awf(tmp.path())
-        .args(["flow", "advance", "--flow", "blocker-flow"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .output()
         .unwrap();
 
-    // The advance is no longer blocked by a failed step.
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         !stderr.contains("fail-step") || stderr.contains("last stage"),
@@ -563,36 +504,38 @@ steps = [
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow advance` blocked when `produces` artifact missing; unblocked after
-// `artifact put`
+// `awf flow advance` blocked by missing artifact
 // ---------------------------------------------------------------------------
 
 #[test]
 fn t8_advance_blocked_by_missing_artifact_then_unblocked() {
-    // Given: the feature workflow with a fresh "add-oauth" flow at design stage
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
+    let fp = flow_path(&tmp, "add-oauth");
+    create_flow(&tmp, "add-oauth", "feature");
+
+    // Mark step done but skip putting the artifact.
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "step",
+            "done",
+            "write-design",
+            "--flow",
+            fp.to_str().unwrap(),
+        ])
         .assert()
         .success();
 
-    // Mark the agent step done — but intentionally skip putting the artifact.
+    // Advance should fail with missing artifact.
     awf(tmp.path())
-        .args(["flow", "step", "done", "write-design", "--flow", "add-oauth"])
-        .assert()
-        .success();
-
-    // When: try to advance without putting design.md
-    // Then: advance fails and mentions the missing artifact
-    awf(tmp.path())
-        .args(["flow", "advance", "--flow", "add-oauth"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .failure()
         .stderr(predicate::str::contains("design.md"));
 
-    // When: put the design artifact
+    // Put the artifact then advance.
     let design_file = tmp.path().join("design.md");
     std::fs::write(&design_file, "# My design\n").unwrap();
 
@@ -604,26 +547,22 @@ fn t8_advance_blocked_by_missing_artifact_then_unblocked() {
             "design.md",
             design_file.to_str().unwrap(),
             "--flow",
-            "add-oauth",
+            fp.to_str().unwrap(),
         ])
         .assert()
         .success();
 
-    // Then: advance now succeeds and enters "implement"
     awf(tmp.path())
-        .args(["flow", "advance", "--flow", "add-oauth"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("implement"));
 }
 
 // ---------------------------------------------------------------------------
-// `requires` gate: entering a stage blocked when its `requires` artifact is
-// absent
+// `requires` gate
 // ---------------------------------------------------------------------------
 
-/// A workflow whose second stage requires an artifact the first stage does not
-/// produce, so the `requires` gate on entry is always hit.
 const REQUIRES_GATE_TOML: &str = r#"
 name = "requires-gate"
 version = 1
@@ -641,86 +580,70 @@ steps = []
 "#;
 
 fn setup_requires_gate_workflow(tmp: &TempDir) {
-    let workflows_dir = tmp.path().join(".awf").join("workflows");
-    std::fs::create_dir_all(&workflows_dir).expect("create .awf/workflows/");
+    let workflow_dir = tmp.path().join(".agents/workflows/requires-gate");
+    std::fs::create_dir_all(&workflow_dir).expect("create requires-gate dir");
     std::fs::write(
-        workflows_dir.join("requires-gate.toml"),
+        workflow_dir.join("WORKFLOW.toml"),
         REQUIRES_GATE_TOML.trim(),
     )
-    .expect("write requires-gate.toml");
+    .expect("write requires-gate WORKFLOW.toml");
+    setup_flow_config(tmp);
 }
 
 #[test]
 fn t9_advance_blocked_by_missing_requires_artifact() {
-    // Given: the requires-gate workflow with a fresh flow whose "start" stage
-    // has no `produces` but "finish" declares `requires = ["special.md"]`
     let tmp = TempDir::new().unwrap();
     setup_requires_gate_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "gate-flow", "--workflow", "requires-gate"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "gate-flow");
+    create_flow(&tmp, "gate-flow", "requires-gate");
 
-    // Complete the only step in "start" so the exit gate is clear.
     awf(tmp.path())
-        .args(["flow", "run", "do-thing", "--flow", "gate-flow"])
+        .args(["flow", "run", "do-thing", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"));
 
-    // When: try to advance into "finish" without providing special.md
-    // Then: advance fails and mentions the missing required artifact
     awf(tmp.path())
-        .args(["flow", "advance", "--flow", "gate-flow"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .failure()
         .stderr(predicate::str::contains("special.md"));
 }
 
 // ---------------------------------------------------------------------------
-// `--force` bypasses the step-completion gate; history records the transition
+// `--force` bypasses step-completion gate
 // ---------------------------------------------------------------------------
 
 #[test]
 fn t10_force_advance_bypasses_incomplete_steps() {
-    // Given: a fresh flow with no steps completed
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "force-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "force-flow");
+    create_flow(&tmp, "force-flow", "run-test");
 
-    // When: advance without --force → fails because steps are incomplete
+    // Without --force: fails because steps are incomplete.
     awf(tmp.path())
-        .args(["flow", "advance", "--flow", "force-flow"])
+        .args(["flow", "advance", "--flow", fp.to_str().unwrap()])
         .assert()
         .failure();
 
-    // When: advance with --force → succeeds even though steps are incomplete
-    // The run-test workflow only has one stage, so advance will hit "last
-    // stage" once force bypasses the step gate. Accept either an "Entered" or
-    // "last stage" message — what matters is the step-gate is no longer the
-    // blocker.
+    // With --force: step gate bypassed.
     let output = awf(tmp.path())
-        .args(["flow", "advance", "--force", "--flow", "force-flow"])
+        .args(["flow", "advance", "--force", "--flow", fp.to_str().unwrap()])
         .output()
         .unwrap();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // The command must not be blocked by an incomplete step.
     assert!(
         !stderr.contains("pass-step") && !stderr.contains("fail-step"),
         "force advance should not be blocked by incomplete steps; \
          stderr: {stderr}"
     );
 
-    // Either we entered a stage or we are already on the last stage — both are
-    // valid outcomes given the single-stage run-test workflow.
     let mentions_stage_or_last =
         stdout.contains("Entered") || stderr.contains("last stage");
     assert!(
@@ -729,78 +652,90 @@ fn t10_force_advance_bypasses_incomplete_steps() {
          stdout: {stdout}; stderr: {stderr}"
     );
 
-    // Then: history shows the current (or entered) stage transition
     awf(tmp.path())
-        .args(["flow", "history", "--flow", "force-flow"])
+        .args(["flow", "history", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
-        // history must mention at least the starting stage name
         .stdout(predicate::str::contains("work"));
 }
 
 // ---------------------------------------------------------------------------
-// Duplicate flow name blocked (active and archived)
+// Duplicate flow path blocked
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t11_duplicate_flow_name_blocked() {
-    // Given: the feature workflow
+fn t11_duplicate_flow_path_blocked() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    // When: create "add-oauth" for the first time → succeeds
+    let fp = flow_path(&tmp, "add-oauth");
+
+    // First creation succeeds.
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+        ])
         .assert()
         .success();
 
-    // When: create "add-oauth" a second time while it is still active
-    // Then: blocked with an "already exists" message
+    // Second creation at the same path fails.
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+        ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("already exists"));
 
-    // When: archive the flow
+    // Archive then try again — still blocked (flow_state.toml exists).
     awf(tmp.path())
-        .args(["flow", "archive", "--flow", "add-oauth"])
+        .args(["flow", "archive", "--flow", fp.to_str().unwrap()])
         .assert()
         .success();
 
-    // When: try to create "add-oauth" again after it has been archived
-    // Then: still blocked (archived flows occupy the name)
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+        ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("already exists"));
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow next` output is deterministic at each named state
+// `awf flow next` output
 // ---------------------------------------------------------------------------
 
 #[test]
 fn t12_flow_next_failing_step_hints_run() {
-    // Given: a run-test flow where fail-step has been run and failed
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "next-flow", "--workflow", "run-test"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "next-flow");
+    create_flow(&tmp, "next-flow", "run-test");
 
     awf(tmp.path())
-        .args(["flow", "run", "fail-step", "--flow", "next-flow"])
+        .args(["flow", "run", "fail-step", "--flow", fp.to_str().unwrap()])
         .assert()
         .stdout(predicate::str::contains("FAIL"));
 
-    // When: ask what to do next
-    // Then: output mentions `awf flow run <step>`
     awf(tmp.path())
-        .args(["flow", "next", "--flow", "next-flow"])
+        .args(["flow", "next", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("awf flow run"));
@@ -808,19 +743,14 @@ fn t12_flow_next_failing_step_hints_run() {
 
 #[test]
 fn t12_flow_next_incomplete_agent_step_hints_done() {
-    // Given: a feature flow at design stage (agent step not yet completed)
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "next-agent", "--workflow", "feature"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "next-agent");
+    create_flow(&tmp, "next-agent", "feature");
 
-    // When: ask what to do next for the pending agent step
-    // Then: output mentions how to mark it complete
     awf(tmp.path())
-        .args(["flow", "next", "--flow", "next-agent"])
+        .args(["flow", "next", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("Mark complete with"));
@@ -828,14 +758,11 @@ fn t12_flow_next_incomplete_agent_step_hints_done() {
 
 #[test]
 fn t12_flow_next_missing_artifact_mentions_artifact_name() {
-    // Given: a feature flow where the agent step is done but artifact missing
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "next-artifact", "--workflow", "feature"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "next-artifact");
+    create_flow(&tmp, "next-artifact", "feature");
 
     awf(tmp.path())
         .args([
@@ -844,15 +771,13 @@ fn t12_flow_next_missing_artifact_mentions_artifact_name() {
             "done",
             "write-design",
             "--flow",
-            "next-artifact",
+            fp.to_str().unwrap(),
         ])
         .assert()
         .success();
 
-    // When: ask what to do next
-    // Then: output mentions the missing artifact name
     awf(tmp.path())
-        .args(["flow", "next", "--flow", "next-artifact"])
+        .args(["flow", "next", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("design.md"));
@@ -860,14 +785,11 @@ fn t12_flow_next_missing_artifact_mentions_artifact_name() {
 
 #[test]
 fn t12_flow_next_can_advance_mentions_advance_command() {
-    // Given: a feature flow fully ready to advance (step done + artifact put)
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "next-advance", "--workflow", "feature"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "next-advance");
+    create_flow(&tmp, "next-advance", "feature");
 
     let design_file = tmp.path().join("design.md");
     std::fs::write(&design_file, "# My design\n").unwrap();
@@ -880,7 +802,7 @@ fn t12_flow_next_can_advance_mentions_advance_command() {
             "design.md",
             design_file.to_str().unwrap(),
             "--flow",
-            "next-advance",
+            fp.to_str().unwrap(),
         ])
         .assert()
         .success();
@@ -892,47 +814,48 @@ fn t12_flow_next_can_advance_mentions_advance_command() {
             "done",
             "write-design",
             "--flow",
-            "next-advance",
+            fp.to_str().unwrap(),
         ])
         .assert()
         .success();
 
-    // When: ask what to do next
-    // Then: output mentions `awf flow advance`
     awf(tmp.path())
-        .args(["flow", "next", "--flow", "next-advance"])
+        .args(["flow", "next", "--flow", fp.to_str().unwrap()])
         .assert()
         .success()
         .stdout(predicate::str::contains("awf flow advance"));
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow status --output-format json` produces valid JSON
+// `awf flow status --output-format json`
 // ---------------------------------------------------------------------------
 
 #[test]
 fn t13_flow_status_json_output_is_valid() {
-    // Given: a feature flow with one completed step
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
+    let fp = flow_path(&tmp, "add-oauth");
+    create_flow(&tmp, "add-oauth", "feature");
+
     awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
+        .args([
+            "flow",
+            "step",
+            "done",
+            "write-design",
+            "--flow",
+            fp.to_str().unwrap(),
+        ])
         .assert()
         .success();
 
-    awf(tmp.path())
-        .args(["flow", "step", "done", "write-design", "--flow", "add-oauth"])
-        .assert()
-        .success();
-
-    // When: request status in JSON format
     let output = awf(tmp.path())
         .args([
             "flow",
             "status",
             "--flow",
-            "add-oauth",
+            fp.to_str().unwrap(),
             "--output-format",
             "json",
         ])
@@ -943,63 +866,55 @@ fn t13_flow_status_json_output_is_valid() {
         .clone();
 
     let json_str = String::from_utf8(output).expect("valid utf-8");
-
-    // Then: the output parses as valid JSON
     let value: serde_json::Value = serde_json::from_str(&json_str)
         .expect("valid JSON from status --output-format json");
 
-    // And: it contains the expected keys
     assert!(
         value.get("flow").is_some(),
-        "JSON should contain 'flow' key; got: {json_str}"
+        "JSON should contain 'flow'; got: {json_str}"
     );
     assert!(
         value.get("stage").is_some(),
-        "JSON should contain 'stage' key; got: {json_str}"
+        "JSON should contain 'stage'; got: {json_str}"
     );
     assert!(
         value.get("steps").is_some(),
-        "JSON should contain 'steps' key; got: {json_str}"
+        "JSON should contain 'steps'; got: {json_str}"
     );
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow archive` moves dirs; subsequent `status` errors; `list --all`
-// shows archived entry
+// `awf flow archive` — marks archived; `list` hides it; `list --all` shows it
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t14_archive_moves_flow_and_list_all_shows_it() {
-    // Given: a feature flow in the active state
+fn t14_archive_and_list() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
-    awf(tmp.path())
-        .args(["flow", "new", "add-oauth", "--workflow", "feature"])
-        .assert()
-        .success();
+    let fp = flow_path(&tmp, "add-oauth");
+    create_flow(&tmp, "add-oauth", "feature");
 
-    // Confirm the flow appears in the normal list before archiving.
+    // Flow appears in normal list.
     awf(tmp.path())
         .args(["flow", "list"])
         .assert()
         .success()
         .stdout(predicate::str::contains("add-oauth"));
 
-    // When: archive the flow
+    // Archive the flow.
     awf(tmp.path())
-        .args(["flow", "archive", "--flow", "add-oauth"])
+        .args(["flow", "archive", "--flow", fp.to_str().unwrap()])
         .assert()
         .success();
 
-    // Then: `awf flow status` for the archived flow exits non-zero (not found
-    // in active)
+    // After archiving, `status` still succeeds (path-based load).
     awf(tmp.path())
-        .args(["flow", "status", "--flow", "add-oauth"])
+        .args(["flow", "status", "--flow", fp.to_str().unwrap()])
         .assert()
-        .failure();
+        .success();
 
-    // Then: plain `awf flow list` does NOT show "add-oauth"
+    // Plain `list` does NOT show "add-oauth".
     let list_out = awf(tmp.path())
         .args(["flow", "list"])
         .assert()
@@ -1013,11 +928,39 @@ fn t14_archive_moves_flow_and_list_all_shows_it() {
         "plain list should not show archived flow; got: {list_str}"
     );
 
-    // Then: `awf flow list --all` DOES show "add-oauth" as archived
+    // `list --all` DOES show "add-oauth" as archived.
     awf(tmp.path())
         .args(["flow", "list", "--all"])
         .assert()
         .success()
         .stdout(predicate::str::contains("add-oauth"))
-        .stdout(predicate::str::contains("yes")); // archived column
+        .stdout(predicate::str::contains("yes"));
+}
+
+// ---------------------------------------------------------------------------
+// Flow state stored at <flow_dir>/flow_state.toml
+// ---------------------------------------------------------------------------
+
+#[test]
+fn t15_flow_state_stored_in_flow_dir() {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "path-check");
+
+    awf(tmp.path())
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+        ])
+        .assert()
+        .success();
+
+    // State file is at <flow_dir>/flow_state.toml
+    let state_path = fp.join("flow_state.toml");
+    assert!(state_path.exists(), "flow state should be at {state_path:?}");
 }

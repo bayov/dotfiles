@@ -267,6 +267,7 @@ fn serialize_then_deserialize_is_identity() {
                 },
             ],
         }],
+        default_flow_dir: None,
     };
 
     // When: we serialize to TOML and deserialize back
@@ -305,6 +306,7 @@ fn command_step_with_both_command_and_run_fails_validation() {
                 },
             }],
         }],
+        default_flow_dir: None,
     };
 
     // When: we validate the workflow
@@ -336,6 +338,7 @@ fn command_step_with_neither_command_nor_run_fails_validation() {
                 kind: StepKind::Command { command: None, run: None },
             }],
         }],
+        default_flow_dir: None,
     };
 
     // When / Then
@@ -367,6 +370,7 @@ fn agent_step_with_both_prompt_and_instructions_fails_validation() {
                 },
             }],
         }],
+        default_flow_dir: None,
     };
 
     // When / Then
@@ -395,6 +399,7 @@ fn agent_step_with_neither_prompt_nor_instructions_fails_validation() {
                 kind: StepKind::Agent { prompt: None, instructions: None },
             }],
         }],
+        default_flow_dir: None,
     };
 
     // When / Then
@@ -446,6 +451,7 @@ fn duplicate_stage_names_fail_validation() {
                 }],
             },
         ],
+        default_flow_dir: None,
     };
 
     // When / Then
@@ -486,6 +492,7 @@ fn duplicate_step_names_within_stage_fail_validation() {
                 },
             ],
         }],
+        default_flow_dir: None,
     };
 
     // When / Then

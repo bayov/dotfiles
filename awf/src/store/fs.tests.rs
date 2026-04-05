@@ -6,7 +6,7 @@ use super::archive_flow;
 use super::artifact_exists;
 use super::create_flow;
 use super::create_workflow_template;
-use super::list_flows;
+use super::find_workflow_dir;
 use super::list_workflows;
 use super::load_flow;
 use super::load_prompt_file;
@@ -14,21 +14,23 @@ use super::load_workflow;
 use super::put_artifact;
 use super::read_artifact;
 use super::save_flow;
+use super::scan_flows;
+use crate::config::WorkflowSearchEntry;
 use crate::model::flow::FlowState;
 use crate::result::Error;
 
-const ADD_OAUTH_STATE_TOML: &str = r#"
-id = "add-oauth"
-workflow = "feature"
-workflow_version = 1
-current_stage = "design"
-stage_entered_at = "2026-04-04T10:00:00Z"
-created_at = "2026-04-04T10:00:00Z"
-updated_at = "2026-04-04T10:00:00Z"
-archived = false
-"#;
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const FEATURE_TOML: &str = r#"
+fn make_entry(
+    dir: impl Into<std::path::PathBuf>,
+    scope: &str,
+) -> WorkflowSearchEntry {
+    WorkflowSearchEntry { dir: dir.into(), scope: scope.to_string() }
+}
+
+const FEATURE_WORKFLOW_TOML: &str = r#"
 name = "feature"
 version = 1
 description = "Ship a new feature."
@@ -52,200 +54,333 @@ steps = [
 ]
 "#;
 
+// ---------------------------------------------------------------------------
+// list_workflows
+// ---------------------------------------------------------------------------
+
 #[test]
-fn list_workflows_returns_empty_for_empty_dir() {
-    // Given: A temp `.awf/` directory with an empty `workflows/` subdirectory
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows").create_dir_all().unwrap();
+fn list_workflows_returns_empty_when_entries_have_no_workflows() {
+    // Given: an empty agents/workflows dir
+    let root = TempDir::new().unwrap();
+    root.child("workflows").create_dir_all().unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We list all workflows
-    let result = list_workflows(awf_root.path());
+    // When: we list workflows
+    let result = list_workflows(&entries).unwrap();
 
-    // Then: An empty list is returned
-    assert_eq!(result.unwrap(), Vec::<String>::new());
+    // Then: empty list
+    assert!(result.is_empty());
 }
 
 #[test]
-fn list_workflows_returns_sorted_stems() {
-    // Given: A temp `.awf/` directory with three workflow files
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows").create_dir_all().unwrap();
-    awf_root.child("workflows/feature.toml").write_str("").unwrap();
-    awf_root.child("workflows/hotfix.toml").write_str("").unwrap();
-    awf_root.child("workflows/deploy.toml").write_str("").unwrap();
+fn list_workflows_finds_dirs_with_workflow_toml() {
+    // Given: two workflow subdirs with WORKFLOW.toml
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature/WORKFLOW.toml").write_str("").unwrap();
+    root.child("workflows/hotfix/WORKFLOW.toml").write_str("").unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We list all workflows
-    let result = list_workflows(awf_root.path());
+    // When: we list workflows
+    let mut result = list_workflows(&entries).unwrap();
+    result.sort_by(|a, b| a.name.cmp(&b.name));
 
-    // Then: The names are returned sorted alphabetically, without the .toml
-    // suffix
-    assert_eq!(result.unwrap(), vec!["deploy", "feature", "hotfix"]);
+    // Then: both names are returned with the correct scope
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].name, "feature");
+    assert_eq!(result[0].scope, "project");
+    assert_eq!(result[1].name, "hotfix");
 }
 
 #[test]
 fn list_workflows_returns_empty_when_dir_missing() {
-    // Given: A temp `.awf/` directory with no `workflows/` subdirectory
-    let awf_root = TempDir::new().unwrap();
+    // Given: an entry whose directory doesn't exist
+    let entries = [make_entry("/nonexistent/workflows", "project")];
 
-    // When: We list all workflows
-    let result = list_workflows(awf_root.path());
+    // When / Then: empty list, no error
+    let result = list_workflows(&entries).unwrap();
+    assert!(result.is_empty());
+}
 
-    // Then: An empty list is returned rather than an error
-    assert_eq!(result.unwrap(), Vec::<String>::new());
+// ---------------------------------------------------------------------------
+// load_workflow
+// ---------------------------------------------------------------------------
+
+#[test]
+fn load_workflow_loads_valid_workflow() {
+    // Given: a feature workflow dir with WORKFLOW.toml
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature/WORKFLOW.toml")
+        .write_str(FEATURE_WORKFLOW_TOML)
+        .unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
+
+    // When: we load "feature"
+    let wf = load_workflow(&entries, "feature").unwrap();
+
+    // Then: parsed correctly
+    assert_eq!(wf.name, "feature");
+    assert_eq!(wf.stages.len(), 2);
 }
 
 #[test]
-fn loads_valid_workflow_from_fixture() {
-    // Given: A temp `.awf/` directory with a valid `feature.toml` workflow file
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows").create_dir_all().unwrap();
-    awf_root.child("workflows/feature.toml").write_str(FEATURE_TOML).unwrap();
+fn load_workflow_resolves_scope_qualified_name() {
+    // Given: a workflow in the "project" scope
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature/WORKFLOW.toml")
+        .write_str(FEATURE_WORKFLOW_TOML)
+        .unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We load the "feature" workflow
-    let result = load_workflow(awf_root.path(), "feature");
+    // When: we load "project:feature"
+    let wf = load_workflow(&entries, "project:feature").unwrap();
 
-    // Then: The workflow is parsed correctly with the expected name and stages
-    let workflow = result.unwrap();
-    assert_eq!(workflow.name, "feature");
-    assert_eq!(workflow.stages.len(), 2);
-    assert_eq!(workflow.stages[0].name, "design");
-    assert_eq!(workflow.stages[1].name, "implement");
+    // Then: found
+    assert_eq!(wf.name, "feature");
 }
 
 #[test]
-fn returns_workflow_not_found_for_missing_file() {
-    // Given: A temp `.awf/` directory with no workflow files
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows").create_dir_all().unwrap();
+fn load_workflow_returns_not_found_for_missing() {
+    // Given: an empty workflows dir
+    let root = TempDir::new().unwrap();
+    root.child("workflows").create_dir_all().unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We attempt to load a workflow that does not exist
-    let result = load_workflow(awf_root.path(), "nonexistent");
+    // When: we load a nonexistent workflow
+    let result = load_workflow(&entries, "nonexistent");
 
-    // Then: WorkflowNotFound is returned with the correct name
+    // Then: WorkflowNotFound
     assert!(
         matches!(result, Err(Error::WorkflowNotFound { ref name }) if name == "nonexistent"),
-        "expected WorkflowNotFound {{ name: \"nonexistent\" }}, got {result:?}",
+        "expected WorkflowNotFound, got {result:?}",
     );
 }
 
 #[test]
-fn returns_workflow_parse_failed_for_invalid_toml() {
-    // Given: A temp `.awf/` directory with a malformed `broken.toml` file
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows").create_dir_all().unwrap();
-    awf_root
-        .child("workflows/broken.toml")
+fn load_workflow_returns_ambiguous_when_bare_name_in_multiple_scopes() {
+    // Given: "feature" exists in both project and user scopes
+    let project = TempDir::new().unwrap();
+    project.child("feature/WORKFLOW.toml").write_str("").unwrap();
+    let user = TempDir::new().unwrap();
+    user.child("feature/WORKFLOW.toml").write_str("").unwrap();
+
+    let entries = [
+        make_entry(project.path(), "project"),
+        make_entry(user.path(), "user"),
+    ];
+
+    // When: we load bare "feature"
+    let result = load_workflow(&entries, "feature");
+
+    // Then: AmbiguousWorkflow
+    assert!(
+        matches!(result, Err(Error::AmbiguousWorkflow { ref name, .. }) if name == "feature"),
+        "expected AmbiguousWorkflow, got {result:?}",
+    );
+}
+
+#[test]
+fn load_workflow_returns_parse_failed_for_invalid_toml() {
+    // Given: a workflow with malformed TOML
+    let root = TempDir::new().unwrap();
+    root.child("workflows/broken/WORKFLOW.toml")
         .write_str("this is not valid toml ][[[")
         .unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We attempt to load the malformed workflow
-    let result = load_workflow(awf_root.path(), "broken");
+    // When: we try to load it
+    let result = load_workflow(&entries, "broken");
 
-    // Then: WorkflowParseFailed is returned with the correct name
+    // Then: WorkflowParseFailed
     assert!(
         matches!(result, Err(Error::WorkflowParseFailed { ref name, .. }) if name == "broken"),
-        "expected WorkflowParseFailed {{ name: \"broken\", .. }}, got {result:?}",
+        "expected WorkflowParseFailed, got {result:?}",
     );
 }
 
+// ---------------------------------------------------------------------------
+// create_workflow_template
+// ---------------------------------------------------------------------------
+
 #[test]
-fn create_workflow_template_writes_file_with_correct_name() {
-    // Given: A temp `.awf/` directory with no workflows yet
-    let awf_root = TempDir::new().unwrap();
+fn create_workflow_template_writes_workflow_toml() {
+    // Given: an empty agents root
+    let agents_root = TempDir::new().unwrap();
 
-    // When: We create a workflow template named "my-workflow"
-    let result = create_workflow_template(awf_root.path(), "my-workflow");
+    // When: we create a workflow template
+    create_workflow_template(agents_root.path(), "my-workflow").unwrap();
 
-    // Then: The call succeeds and the file exists containing the workflow name
-    result.unwrap();
-    let toml_path = awf_root.path().join("workflows/my-workflow.toml");
-    assert!(
-        toml_path.exists(),
-        "expected workflow file to exist at {toml_path:?}"
-    );
-    let contents = std::fs::read_to_string(&toml_path).unwrap();
+    // Then: WORKFLOW.toml exists with the workflow name
+    let path = agents_root.path().join("workflows/my-workflow/WORKFLOW.toml");
+    assert!(path.exists(), "expected {path:?} to exist");
+    let contents = std::fs::read_to_string(&path).unwrap();
     assert!(
         contents.contains(r#"name = "my-workflow""#),
-        "expected file to contain workflow name, got:\n{contents}",
+        "expected name in template, got:\n{contents}",
     );
 }
 
 #[test]
 fn create_workflow_template_returns_already_exists_on_duplicate() {
-    // Given: A temp `.awf/` directory where "my-workflow" has already been
-    // created
-    let awf_root = TempDir::new().unwrap();
-    create_workflow_template(awf_root.path(), "my-workflow").unwrap();
+    // Given: already created
+    let agents_root = TempDir::new().unwrap();
+    create_workflow_template(agents_root.path(), "my-workflow").unwrap();
 
-    // When: We attempt to create the same workflow a second time
-    let result = create_workflow_template(awf_root.path(), "my-workflow");
+    // When: try again
+    let result = create_workflow_template(agents_root.path(), "my-workflow");
 
-    // Then: WorkflowAlreadyExists is returned with the correct name
+    // Then: WorkflowAlreadyExists
     assert!(
         matches!(result, Err(Error::WorkflowAlreadyExists { ref name }) if name == "my-workflow"),
-        "expected WorkflowAlreadyExists {{ name: \"my-workflow\" }}, got {result:?}",
+        "expected WorkflowAlreadyExists, got {result:?}",
     );
 }
 
 #[test]
 fn create_workflow_template_returns_invalid_id_for_name_with_space() {
-    // Given: A temp `.awf/` directory
-    let awf_root = TempDir::new().unwrap();
+    // Given: an agents root
+    let agents_root = TempDir::new().unwrap();
 
-    // When: We attempt to create a workflow whose name contains a space
-    let result = create_workflow_template(awf_root.path(), "has space");
+    // When: invalid name
+    let result = create_workflow_template(agents_root.path(), "has space");
 
-    // Then: InvalidId is returned and no file is written
+    // Then: InvalidId, no file written
     assert!(
         matches!(result, Err(Error::InvalidId { ref id, .. }) if id == "has space"),
-        "expected InvalidId {{ id: \"has space\", .. }}, got {result:?}",
+        "expected InvalidId, got {result:?}",
     );
-    let bad_path = awf_root.path().join("workflows/has space.toml");
     assert!(
-        !bad_path.exists(),
-        "expected no file to be created for invalid name"
+        !agents_root.path().join("workflows/has space/WORKFLOW.toml").exists()
     );
 }
 
+// ---------------------------------------------------------------------------
+// load_prompt_file
+// ---------------------------------------------------------------------------
+
 #[test]
-fn loads_valid_flow_state_from_fixture() {
-    // Given: A temp state directory with a valid `state.toml` for the
-    // "add-oauth" flow
-    let state_dir = TempDir::new().unwrap();
-    state_dir
-        .child("flows/active/add-oauth/state.toml")
-        .write_str(ADD_OAUTH_STATE_TOML)
+fn load_prompt_file_returns_content() {
+    // Given: a workflow dir with a prompt file
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature/design.md")
+        .write_str("# Design Prompt\nDo the thing.")
         .unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
 
-    // When: We load the "add-oauth" flow state
-    let result = load_flow(state_dir.path(), "add-oauth");
+    // When: load the prompt file
+    let contents = load_prompt_file(&entries, "feature", "design.md").unwrap();
 
-    // Then: The flow state is parsed correctly with the expected fields
-    let flow = result.unwrap();
-    assert_eq!(flow.id, "add-oauth");
+    // Then: full contents returned
+    assert_eq!(contents, "# Design Prompt\nDo the thing.");
+}
+
+#[test]
+fn load_prompt_file_returns_io_error_for_missing_file() {
+    // Given: workflow dir exists but no prompt file
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature").create_dir_all().unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
+
+    // When: load nonexistent file
+    let result = load_prompt_file(&entries, "feature", "missing.md");
+
+    // Then: Io error
+    assert!(
+        matches!(result, Err(Error::Io(_))),
+        "expected Err(Error::Io(_)), got {result:?}",
+    );
+}
+
+// ---------------------------------------------------------------------------
+// find_workflow_dir
+// ---------------------------------------------------------------------------
+
+#[test]
+fn find_workflow_dir_returns_correct_path() {
+    // Given: a workflow dir with WORKFLOW.toml
+    let root = TempDir::new().unwrap();
+    root.child("workflows/feature/WORKFLOW.toml").write_str("").unwrap();
+    let entries = [make_entry(root.child("workflows").path(), "project")];
+
+    // When: find the workflow dir
+    let dir = find_workflow_dir(&entries, "feature");
+
+    // Then: correct path
+    assert_eq!(dir.unwrap(), root.path().join("workflows/feature"));
+}
+
+// ---------------------------------------------------------------------------
+// create_flow / load_flow / save_flow
+// ---------------------------------------------------------------------------
+
+#[test]
+fn create_flow_creates_and_loads_initial_state() {
+    // Given: a fresh temp directory as the flow dir
+    let flow_dir = TempDir::new().unwrap();
+
+    // When: we create a flow
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+
+    // Then: load succeeds with expected fields
+    let flow = load_flow(flow_dir.path()).unwrap();
     assert_eq!(flow.workflow, "feature");
     assert_eq!(flow.current_stage, "design");
+    assert!(!flow.archived);
 }
 
 #[test]
-fn returns_flow_not_found_for_missing_flow() {
-    // Given: A temp state directory with no flows
-    let state_dir = TempDir::new().unwrap();
+fn create_flow_returns_already_exists_if_state_toml_present() {
+    // Given: flow already created
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
 
-    // When: We attempt to load a flow that does not exist
-    let result = load_flow(state_dir.path(), "nonexistent");
+    // When: try again
+    let result = create_flow(flow_dir.path(), "feature", "design");
 
-    // Then: FlowNotFound is returned with the correct id
+    // Then: FlowAlreadyExists
     assert!(
-        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "nonexistent"),
-        "expected FlowNotFound {{ id: \"nonexistent\" }}, got {result:?}",
+        matches!(result, Err(Error::FlowAlreadyExists { .. })),
+        "expected FlowAlreadyExists, got {result:?}",
+    );
+}
+
+#[test]
+fn load_flow_returns_not_found_for_missing_state_toml() {
+    // Given: a directory with no flow_state.toml
+    let flow_dir = TempDir::new().unwrap();
+
+    // When: load
+    let result = load_flow(flow_dir.path());
+
+    // Then: FlowNotFound
+    assert!(
+        matches!(result, Err(Error::FlowNotFound { .. })),
+        "expected FlowNotFound, got {result:?}",
+    );
+}
+
+#[test]
+fn load_flow_returns_parse_failed_for_invalid_toml() {
+    // Given: a malformed flow_state.toml
+    let flow_dir = TempDir::new().unwrap();
+    flow_dir
+        .child("flow_state.toml")
+        .write_str("this is not valid toml ][[[")
+        .unwrap();
+
+    // When: load
+    let result = load_flow(flow_dir.path());
+
+    // Then: FlowParseFailed
+    assert!(
+        matches!(result, Err(Error::FlowParseFailed { .. })),
+        "expected FlowParseFailed, got {result:?}",
     );
 }
 
 #[test]
 fn save_flow_round_trips_through_load_flow() {
-    // Given: A temp state directory and a minimal FlowState in memory
-    let state_dir = TempDir::new().unwrap();
+    // Given: a temp dir and a FlowState in memory
+    let flow_dir = TempDir::new().unwrap();
     let original = FlowState {
         id: "test-flow".to_string(),
         workflow: "feature".to_string(),
@@ -265,245 +400,12 @@ fn save_flow_round_trips_through_load_flow() {
         step_log: vec![],
     };
 
-    // When: We save the flow state and then load it back
-    save_flow(state_dir.path(), &original).unwrap();
-    let loaded = load_flow(state_dir.path(), "test-flow").unwrap();
+    // When: save then load
+    save_flow(flow_dir.path(), &original).unwrap();
+    let loaded = load_flow(flow_dir.path()).unwrap();
 
-    // Then: The loaded state is identical to the original
+    // Then: identical
     assert_eq!(loaded, original);
-}
-
-#[test]
-fn returns_flow_parse_failed_for_invalid_toml() {
-    // Given: A temp state directory with a malformed `state.toml` for the
-    // "broken-flow" flow
-    let state_dir = TempDir::new().unwrap();
-    state_dir
-        .child("flows/active/broken-flow/state.toml")
-        .write_str("this is not valid toml ][[[")
-        .unwrap();
-
-    // When: We attempt to load the malformed flow state
-    let result = load_flow(state_dir.path(), "broken-flow");
-
-    // Then: FlowParseFailed is returned with the correct id
-    assert!(
-        matches!(result, Err(Error::FlowParseFailed { ref id, .. }) if id == "broken-flow"),
-        "expected FlowParseFailed {{ id: \"broken-flow\", .. }}, got {result:?}",
-    );
-}
-
-#[test]
-fn create_flow_creates_and_loads_initial_state() {
-    // Given: A fresh temp state directory
-    let state_dir = TempDir::new().unwrap();
-
-    // When: We create the "add-oauth" flow under the "feature" workflow
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    // Then: The flow can be loaded back with the expected id, workflow, and
-    // current stage
-    let flow = load_flow(state_dir.path(), "add-oauth").unwrap();
-    assert_eq!(flow.id, "add-oauth");
-    assert_eq!(flow.workflow, "feature");
-    assert_eq!(flow.current_stage, "design");
-}
-
-#[test]
-fn create_flow_returns_already_exists_on_duplicate_active() {
-    // Given: A temp state directory where "add-oauth" has already been created
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    // When: We attempt to create the same flow a second time
-    let result =
-        create_flow(state_dir.path(), "add-oauth", "feature", "design");
-
-    // Then: FlowAlreadyExists is returned with the correct id
-    assert!(
-        matches!(result, Err(Error::FlowAlreadyExists { ref id }) if id == "add-oauth"),
-        "expected FlowAlreadyExists {{ id: \"add-oauth\" }}, got {result:?}",
-    );
-}
-
-#[test]
-fn create_flow_returns_already_exists_when_archived_dir_exists() {
-    // Given: A temp state directory where an archived directory for "add-oauth"
-    // already exists
-    let state_dir = TempDir::new().unwrap();
-    state_dir.child("flows/archived/add-oauth").create_dir_all().unwrap();
-
-    // When: We attempt to create the "add-oauth" flow
-    let result =
-        create_flow(state_dir.path(), "add-oauth", "feature", "design");
-
-    // Then: FlowAlreadyExists is returned with the correct id
-    assert!(
-        matches!(result, Err(Error::FlowAlreadyExists { ref id }) if id == "add-oauth"),
-        "expected FlowAlreadyExists {{ id: \"add-oauth\" }}, got {result:?}",
-    );
-}
-
-#[test]
-fn list_flows_returns_active_flows_sorted_by_id() {
-    // Given: A temp state directory with two active flows
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "fix-bug", "hotfix", "patch").unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    // When: We list flows with include_archived = false
-    let summaries = list_flows(state_dir.path(), false).unwrap();
-
-    // Then: Both active flows are returned, sorted alphabetically by id
-    assert_eq!(summaries.len(), 2);
-    assert_eq!(summaries[0].id, "add-oauth");
-    assert_eq!(summaries[0].workflow, "feature");
-    assert_eq!(summaries[0].current_stage, "design");
-    assert!(!summaries[0].archived);
-    assert_eq!(summaries[1].id, "fix-bug");
-    assert_eq!(summaries[1].workflow, "hotfix");
-    assert_eq!(summaries[1].current_stage, "patch");
-    assert!(!summaries[1].archived);
-}
-
-#[test]
-fn list_flows_includes_archived_when_requested() {
-    // Given: A temp state directory with one active flow and one archived flow
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-    create_flow(state_dir.path(), "fix-bug", "hotfix", "patch").unwrap();
-
-    // Move "fix-bug" to the archived directory to simulate archiving
-    let active_dir = state_dir.path().join("flows/active/fix-bug");
-    let archived_parent = state_dir.path().join("flows/archived");
-    std::fs::create_dir_all(&archived_parent).unwrap();
-    std::fs::rename(&active_dir, archived_parent.join("fix-bug")).unwrap();
-
-    // When: We list flows with include_archived = true
-    let all_summaries = list_flows(state_dir.path(), true).unwrap();
-
-    // Then: Both flows are returned, sorted by id; archived flow is flagged
-    assert_eq!(all_summaries.len(), 2);
-    assert_eq!(all_summaries[0].id, "add-oauth");
-    assert!(!all_summaries[0].archived);
-    assert_eq!(all_summaries[1].id, "fix-bug");
-    assert!(all_summaries[1].archived);
-
-    // When: We list flows with include_archived = false
-    let active_only = list_flows(state_dir.path(), false).unwrap();
-
-    // Then: Only the active flow is returned
-    assert_eq!(active_only.len(), 1);
-    assert_eq!(active_only[0].id, "add-oauth");
-}
-
-// ---------------------------------------------------------------------------
-// put_artifact
-// ---------------------------------------------------------------------------
-
-#[test]
-fn put_artifact_copies_file_into_artifact_dir() {
-    // Given: An active "add-oauth" flow and a source file to store
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("# Design\nHello.").unwrap();
-    let src_path = src.path().join("design.md");
-
-    // When: We store the source file as the "design.md" artifact
-    put_artifact(state_dir.path(), "add-oauth", "design.md", &src_path)
-        .unwrap();
-
-    // Then: The file exists at the expected location with the original content
-    let artifact_path =
-        state_dir.path().join("flows/active/add-oauth/artifacts/design.md");
-    assert!(
-        artifact_path.exists(),
-        "artifact file should exist at {artifact_path:?}"
-    );
-    let contents = std::fs::read_to_string(&artifact_path).unwrap();
-    assert_eq!(contents, "# Design\nHello.");
-}
-
-// ---------------------------------------------------------------------------
-// artifact_exists
-// ---------------------------------------------------------------------------
-
-#[test]
-fn artifact_exists_returns_true_when_artifact_is_present() {
-    // Given: An active "add-oauth" flow with a stored "design.md" artifact
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("content").unwrap();
-    put_artifact(
-        state_dir.path(),
-        "add-oauth",
-        "design.md",
-        &src.path().join("design.md"),
-    )
-    .unwrap();
-
-    // When / Then: artifact_exists returns true for the stored artifact
-    assert!(artifact_exists(state_dir.path(), "add-oauth", "design.md"));
-}
-
-#[test]
-fn artifact_exists_returns_false_when_artifact_is_absent() {
-    // Given: An active "add-oauth" flow with no artifacts
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    // When / Then: artifact_exists returns false for a name that was never
-    // stored
-    assert!(!artifact_exists(state_dir.path(), "add-oauth", "missing.md"));
-}
-
-// ---------------------------------------------------------------------------
-// read_artifact
-// ---------------------------------------------------------------------------
-
-#[test]
-fn read_artifact_returns_content_of_stored_artifact() {
-    // Given: An active "add-oauth" flow with a "design.md" artifact containing
-    // known text
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    let src = TempDir::new().unwrap();
-    src.child("design.md").write_str("# My Design\nDetails here.").unwrap();
-    put_artifact(
-        state_dir.path(),
-        "add-oauth",
-        "design.md",
-        &src.path().join("design.md"),
-    )
-    .unwrap();
-
-    // When: We read the artifact back
-    let contents =
-        read_artifact(state_dir.path(), "add-oauth", "design.md").unwrap();
-
-    // Then: The returned string matches the original file content
-    assert_eq!(contents, "# My Design\nDetails here.");
-}
-
-#[test]
-fn read_artifact_returns_io_error_for_missing_artifact() {
-    // Given: An active "add-oauth" flow with no artifacts
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-
-    // When: We attempt to read an artifact that was never stored
-    let result = read_artifact(state_dir.path(), "add-oauth", "missing.md");
-
-    // Then: An Io error is returned (file not found)
-    assert!(
-        matches!(result, Err(Error::Io(_))),
-        "expected Err(Error::Io(_)), got {result:?}",
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -511,98 +413,159 @@ fn read_artifact_returns_io_error_for_missing_artifact() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn archive_flow_moves_flow_to_archived_dir_and_sets_archived_flag() {
-    // Given: An active "add-oauth" flow
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
+fn archive_flow_sets_archived_flag_in_state_toml() {
+    // Given: an active flow
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
 
-    // When: We archive the flow
-    archive_flow(state_dir.path(), "add-oauth").unwrap();
+    // When: archive
+    archive_flow(flow_dir.path()).unwrap();
 
-    // Then: The active directory no longer exists
-    let active_dir = state_dir.path().join("flows/active/add-oauth");
-    assert!(
-        !active_dir.exists(),
-        "active directory should be gone after archiving"
-    );
-
-    // Then: The archived state.toml exists and has archived = true
-    let archived_state_path =
-        state_dir.path().join("flows/archived/add-oauth/state.toml");
-    assert!(
-        archived_state_path.exists(),
-        "archived state.toml should exist at {archived_state_path:?}"
-    );
-    let contents = std::fs::read_to_string(&archived_state_path).unwrap();
-    assert!(
-        contents.contains("archived = true"),
-        "archived state.toml should contain `archived = true`, got:\n{contents}",
-    );
+    // Then: flow_state.toml has archived = true and directory still exists
+    let state = load_flow(flow_dir.path()).unwrap();
+    assert!(state.archived);
+    assert!(flow_dir.path().exists());
 }
 
 #[test]
-fn archive_flow_makes_load_flow_return_not_found() {
-    // Given: An active "add-oauth" flow that we then archive
-    let state_dir = TempDir::new().unwrap();
-    create_flow(state_dir.path(), "add-oauth", "feature", "design").unwrap();
-    archive_flow(state_dir.path(), "add-oauth").unwrap();
+fn archive_flow_returns_not_found_for_nonexistent_flow() {
+    // Given: directory with no flow_state.toml
+    let flow_dir = TempDir::new().unwrap();
 
-    // When: We try to load the flow via the normal active-only path
-    let result = load_flow(state_dir.path(), "add-oauth");
-
-    // Then: FlowNotFound is returned because load_flow only checks active/
+    // When / Then: FlowNotFound
+    let result = archive_flow(flow_dir.path());
     assert!(
-        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "add-oauth"),
-        "expected FlowNotFound {{ id: \"add-oauth\" }}, got {result:?}",
-    );
-}
-
-#[test]
-fn archive_flow_returns_flow_not_found_for_nonexistent_flow() {
-    // Given: A state directory with no flows
-    let state_dir = TempDir::new().unwrap();
-
-    // When: We attempt to archive a flow that does not exist
-    let result = archive_flow(state_dir.path(), "ghost-flow");
-
-    // Then: FlowNotFound is returned with the correct id
-    assert!(
-        matches!(result, Err(Error::FlowNotFound { ref id }) if id == "ghost-flow"),
-        "expected FlowNotFound {{ id: \"ghost-flow\" }}, got {result:?}",
+        matches!(result, Err(Error::FlowNotFound { .. })),
+        "expected FlowNotFound, got {result:?}",
     );
 }
 
 // ---------------------------------------------------------------------------
-// load_prompt_file
+// scan_flows
 // ---------------------------------------------------------------------------
 
 #[test]
-fn load_prompt_file_returns_content_of_workflow_prompt() {
-    // Given: An awf root directory with a "feature/design.md" prompt file
-    let awf_root = TempDir::new().unwrap();
-    awf_root
-        .child("workflows/feature/design.md")
-        .write_str("# Design Prompt\nDo the thing.")
+fn scan_flows_finds_state_toml_in_subdirs() {
+    // Given: two flow dirs inside a search root
+    let search_root = TempDir::new().unwrap();
+    let flow_a = search_root.child("2026-04-05/alpha");
+    let flow_b = search_root.child("2026-04-05/beta");
+    create_flow(flow_a.path(), "feature", "design").unwrap();
+    create_flow(flow_b.path(), "hotfix", "patch").unwrap();
+
+    // When: scan
+    let summaries = scan_flows(&[search_root.path().to_path_buf()]).unwrap();
+
+    // Then: both flows found
+    assert_eq!(summaries.len(), 2);
+    let paths: Vec<String> =
+        summaries.iter().map(|s| s.path.display().to_string()).collect();
+    assert!(
+        paths.iter().any(|p| p.ends_with("alpha")),
+        "alpha not found in {paths:?}"
+    );
+    assert!(
+        paths.iter().any(|p| p.ends_with("beta")),
+        "beta not found in {paths:?}"
+    );
+}
+
+#[test]
+fn scan_flows_excludes_archived_flows_indirectly() {
+    // Given: one active and one archived flow
+    let search_root = TempDir::new().unwrap();
+    let flow_active = search_root.child("active-flow");
+    let flow_archived = search_root.child("archived-flow");
+    create_flow(flow_active.path(), "feature", "design").unwrap();
+    create_flow(flow_archived.path(), "feature", "design").unwrap();
+    archive_flow(flow_archived.path()).unwrap();
+
+    // When: scan (returns all flows)
+    let all = scan_flows(&[search_root.path().to_path_buf()]).unwrap();
+
+    // Then: both appear; the archived one has archived=true
+    assert_eq!(all.len(), 2);
+    let archived_entry =
+        all.iter().find(|s| s.path.ends_with("archived-flow")).unwrap();
+    assert!(archived_entry.archived);
+    let active_entry =
+        all.iter().find(|s| s.path.ends_with("active-flow")).unwrap();
+    assert!(!active_entry.archived);
+}
+
+#[test]
+fn scan_flows_returns_empty_for_nonexistent_dir() {
+    // Given: nonexistent search dir
+    let result =
+        scan_flows(&[std::path::PathBuf::from("/nonexistent/dir")]).unwrap();
+    assert!(result.is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// put_artifact / artifact_exists / read_artifact
+// ---------------------------------------------------------------------------
+
+#[test]
+fn put_artifact_copies_file_into_artifact_dir() {
+    // Given: an active flow and a source file
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("# Design\nHello.").unwrap();
+
+    // When: put artifact
+    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
         .unwrap();
 
-    // When: We load the prompt file
-    let contents =
-        load_prompt_file(awf_root.path(), "feature", "design.md").unwrap();
-
-    // Then: The full file content is returned
-    assert_eq!(contents, "# Design Prompt\nDo the thing.");
+    // Then: file exists with correct content
+    let artifact_path = flow_dir.path().join("artifacts/design.md");
+    assert!(artifact_path.exists());
+    assert_eq!(
+        std::fs::read_to_string(&artifact_path).unwrap(),
+        "# Design\nHello."
+    );
 }
 
 #[test]
-fn load_prompt_file_returns_io_error_for_missing_file() {
-    // Given: An awf root directory with no prompt files under "feature"
-    let awf_root = TempDir::new().unwrap();
-    awf_root.child("workflows/feature").create_dir_all().unwrap();
+fn artifact_exists_returns_true_when_present() {
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("content").unwrap();
+    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
+        .unwrap();
 
-    // When: We attempt to load a prompt file that does not exist
-    let result = load_prompt_file(awf_root.path(), "feature", "missing.md");
+    assert!(artifact_exists(flow_dir.path(), "design.md"));
+}
 
-    // Then: An Io error is returned (file not found)
+#[test]
+fn artifact_exists_returns_false_when_absent() {
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+
+    assert!(!artifact_exists(flow_dir.path(), "missing.md"));
+}
+
+#[test]
+fn read_artifact_returns_content() {
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+    let src = TempDir::new().unwrap();
+    src.child("design.md").write_str("# My Design\nDetails here.").unwrap();
+    put_artifact(flow_dir.path(), "design.md", &src.path().join("design.md"))
+        .unwrap();
+
+    let contents = read_artifact(flow_dir.path(), "design.md").unwrap();
+    assert_eq!(contents, "# My Design\nDetails here.");
+}
+
+#[test]
+fn read_artifact_returns_io_error_for_missing() {
+    let flow_dir = TempDir::new().unwrap();
+    create_flow(flow_dir.path(), "feature", "design").unwrap();
+
+    let result = read_artifact(flow_dir.path(), "missing.md");
     assert!(
         matches!(result, Err(Error::Io(_))),
         "expected Err(Error::Io(_)), got {result:?}",

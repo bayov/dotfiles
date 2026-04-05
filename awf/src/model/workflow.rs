@@ -46,6 +46,13 @@ pub struct Workflow {
     /// Ordered list of stages that make up the workflow.
     #[serde(default)]
     pub stages: Vec<Stage>,
+
+    /// Suggested path prefix for new flows created from this workflow.
+    ///
+    /// When set, tooling may use this as the default parent directory when
+    /// constructing a flow path. Users are free to override it via `--flow`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_flow_dir: Option<String>,
 }
 
 /// A single stage within a [`Workflow`].
