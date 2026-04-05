@@ -75,15 +75,3 @@ $ assert_stdout contains
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
 $ assert_stdout json
 | {"entries": "<any_array>"}
-
-# --- TOML ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format toml
-$ assert_stdout toml
-| {"entries": "<any_array>"}
-
-# --- XML ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format xml
-$ assert_stdout xml
-| {"entries": "<any_array>"}

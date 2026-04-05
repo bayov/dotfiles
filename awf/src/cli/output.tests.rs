@@ -49,31 +49,3 @@ fn json_format_is_pretty_printed() {
     // Pretty-printed JSON ends with a newline
     assert!(output.ends_with('\n'));
 }
-
-#[test]
-fn toml_format_contains_key_value_pairs() {
-    // Given: a sample report
-    let report = sample();
-
-    // When: rendered as TOML
-    let output = render(&report, &OutputFormat::Toml);
-
-    // Then: the output is valid TOML with the expected entries
-    assert!(output.contains("name = \"widgets\""), "output: {output}");
-    assert!(output.contains("count = 42"), "output: {output}");
-}
-
-#[test]
-fn xml_format_wraps_content_in_data_element() {
-    // Given: a sample report
-    let report = sample();
-
-    // When: rendered as XML
-    let output = render(&report, &OutputFormat::Xml);
-
-    // Then: output is wrapped in <data>…</data> and contains the JSON payload
-    assert!(output.starts_with("<data>"), "output: {output}");
-    assert!(output.ends_with("</data>\n"), "output: {output}");
-    assert!(output.contains("widgets"), "output: {output}");
-    assert!(output.contains("42"), "output: {output}");
-}

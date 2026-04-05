@@ -68,13 +68,3 @@ $ assert_stdout contains
 $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format json
 $ assert_stdout json
 | {"flow": "<any_string>", "stage": "<any_string>", "steps": "<any_array>"}
-
-# TOML
-$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format toml
-$ assert_stdout toml
-| {"flow": "<any_string>", "stage": "<any_string>", "steps": "<any_array>"}
-
-# XML
-$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format xml
-$ assert_stdout xml
-| {"flow": "<any_string>", "stage": "<any_string>", "steps": "<any_array>"}

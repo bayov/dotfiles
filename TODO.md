@@ -7,15 +7,12 @@ TODO
 Awf
 ---
 
-- Remove xml and toml `--output-format`s. Only `human` and `json` must remain.
-- Implement `dynamic_task_lists_plan.md`
-- Agent should have .awf-staging/ folder to write artifacts to before
-  `awf artifact put` moves them into the flow directory.
 - `awf flow next` -> `awf flow next-step`
 - `awf flow advance` -> `awf flow next-stage`
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Add README.md's
+- Implement `dynamic_task_lists_plan.md`
 
 Infeasible
 ----------

@@ -64,13 +64,3 @@ $ assert_stdout contains
 $ awf workflow validate feature --output-format json
 $ assert_stdout json
 | {"name": "<any_string>", "status": "<any_string>"}
-
-# TOML
-$ awf workflow validate feature --output-format toml
-$ assert_stdout toml
-| {"name": "<any_string>", "status": "<any_string>"}
-
-# XML
-$ awf workflow validate feature --output-format xml
-$ assert_stdout xml
-| {"name": "<any_string>", "status": "<any_string>"}

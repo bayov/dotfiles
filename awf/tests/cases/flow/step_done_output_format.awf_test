@@ -80,13 +80,3 @@ $ assert_stdout contains
 $ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-j --output-format json
 $ assert_stdout json
 | {"step": "<any_string>"}
-
-# TOML
-$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-t --output-format toml
-$ assert_stdout toml
-| {"step": "<any_string>"}
-
-# XML
-$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-x --output-format xml
-$ assert_stdout xml
-| {"step": "<any_string>"}

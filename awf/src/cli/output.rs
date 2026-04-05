@@ -33,10 +33,6 @@ pub enum OutputFormat {
     Human,
     /// Pretty-printed JSON via `serde_json`.
     Json,
-    /// TOML via the `toml` crate.
-    Toml,
-    /// Minimal XML: the JSON representation wrapped in a `<data>` element.
-    Xml,
 }
 
 // ---------------------------------------------------------------------------
@@ -71,10 +67,6 @@ pub fn eprint_warning(msg: impl fmt::Display) {
 ///
 /// - **Human** — delegates to `val`'s [`Display`] implementation.
 /// - **Json** — pretty-printed JSON produced by `serde_json`.
-/// - **Toml** — TOML produced by the `toml` crate.
-/// - **Xml** — minimal XML: the JSON representation of the value is wrapped in
-///   a `<data>` element.  This is an intentionally lightweight v1 approach; a
-///   proper XML serialiser can be introduced later.
 ///
 /// # Panics
 ///
@@ -89,22 +81,6 @@ pub fn render<T: Serialize + Display>(val: &T, fmt: &OutputFormat) -> String {
                 .expect("JSON serialisation failed");
             s.push('\n');
             s
-        }
-        OutputFormat::Toml => {
-            let mut s =
-                toml::to_string(val).expect("TOML serialisation failed");
-            if !s.ends_with('\n') {
-                s.push('\n');
-            }
-            s
-        }
-        OutputFormat::Xml => {
-            // Minimal XML: embed the JSON payload inside a <data> element.
-            // A dedicated XML serialiser can replace this in a future
-            // iteration.
-            let json = serde_json::to_string_pretty(val)
-                .expect("JSON serialisation failed for XML");
-            format!("<data>\n{json}\n</data>\n")
         }
     }
 }

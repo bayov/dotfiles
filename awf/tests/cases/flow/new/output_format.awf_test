@@ -64,13 +64,3 @@ $ assert_stdout contains
 $ awf flow new $FLOWS_DIR/fmt-new-j --workflow feature --output-format json
 $ assert_stdout json
 | {"path": "<any_string>", "workflow": "<any_string>", "stage": "<any_string>"}
-
-# TOML
-$ awf flow new $FLOWS_DIR/fmt-new-t --workflow feature --output-format toml
-$ assert_stdout toml
-| {"path": "<any_string>", "workflow": "<any_string>", "stage": "<any_string>"}
-
-# XML
-$ awf flow new $FLOWS_DIR/fmt-new-x --workflow feature --output-format xml
-$ assert_stdout xml
-| {"path": "<any_string>", "workflow": "<any_string>", "stage": "<any_string>"}

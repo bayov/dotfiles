@@ -68,13 +68,3 @@ $ assert_stdout contains
 $ awf flow next --flow $FLOWS_DIR/fmt-next --output-format json
 $ assert_stdout json
 | {"action": "<any_string>", "message": "<any_string>"}
-
-# TOML
-$ awf flow next --flow $FLOWS_DIR/fmt-next --output-format toml
-$ assert_stdout toml
-| {"action": "<any_string>", "message": "<any_string>"}
-
-# XML
-$ awf flow next --flow $FLOWS_DIR/fmt-next --output-format xml
-$ assert_stdout xml
-| {"action": "<any_string>", "message": "<any_string>"}

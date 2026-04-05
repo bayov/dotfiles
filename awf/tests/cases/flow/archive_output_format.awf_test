@@ -87,15 +87,3 @@ $ assert_stdout contains
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-j --output-format json
 $ assert_stdout json
 | {"path": "<any_string>"}
-
-# --- TOML ---
-
-$ awf flow archive --flow $FLOWS_DIR/fmt-arc-t --output-format toml
-$ assert_stdout toml
-| {"path": "<any_string>"}
-
-# --- XML ---
-
-$ awf flow archive --flow $FLOWS_DIR/fmt-arc-x --output-format xml
-$ assert_stdout xml
-| {"path": "<any_string>"}

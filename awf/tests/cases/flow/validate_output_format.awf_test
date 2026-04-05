@@ -68,13 +68,3 @@ $ assert_stdout contains
 $ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format json
 $ assert_stdout json
 | {"valid": true}
-
-# TOML
-$ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format toml
-$ assert_stdout toml
-| {"valid": true}
-
-# XML
-$ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format xml
-$ assert_stdout xml
-| {"valid": true}

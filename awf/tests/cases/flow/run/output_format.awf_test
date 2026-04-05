@@ -40,13 +40,3 @@ $ assert_stdout contains
 $ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-j --output-format json
 $ assert_stdout json
 | {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}
-
-# TOML
-$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-t --output-format toml
-$ assert_stdout toml
-| {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}
-
-# XML
-$ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-x --output-format xml
-$ assert_stdout xml
-| {"step": "<any_string>", "status": "<any_string>", "duration_ms": "<any_number>"}

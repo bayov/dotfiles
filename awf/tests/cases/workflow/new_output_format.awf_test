@@ -64,13 +64,3 @@ $ assert_stdout contains
 $ awf workflow new fmt-wf-j --output-format json
 $ assert_stdout json
 | {"path": "<any_string>", "name": "<any_string>"}
-
-# TOML
-$ awf workflow new fmt-wf-t --output-format toml
-$ assert_stdout toml
-| {"path": "<any_string>", "name": "<any_string>"}
-
-# XML
-$ awf workflow new fmt-wf-x --output-format xml
-$ assert_stdout xml
-| {"path": "<any_string>", "name": "<any_string>"}

@@ -1,4 +1,4 @@
-# Test: awf workflow list --output-format (human, json, toml, xml)
+# Test: awf workflow list --output-format (human, json)
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -65,12 +65,3 @@ $ awf workflow list --output-format json
 $ assert_stdout json
 | {"workflows": "<any_array>"}
 
-# TOML
-$ awf workflow list --output-format toml
-$ assert_stdout toml
-| {"workflows": "<any_array>"}
-
-# XML
-$ awf workflow list --output-format xml
-$ assert_stdout xml
-| {"workflows": "<any_array>"}

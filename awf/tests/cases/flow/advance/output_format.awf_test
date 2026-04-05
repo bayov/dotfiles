@@ -45,15 +45,3 @@ $ assert_stdout contains
 $ awf flow advance --flow $FLOWS_DIR/fmt-adv-j --output-format json
 $ assert_stdout json
 | {"stage": "<any_string>", "is_final": true}
-
-# --- TOML ---
-
-$ awf flow advance --flow $FLOWS_DIR/fmt-adv-t --output-format toml
-$ assert_stdout toml
-| {"stage": "<any_string>", "is_final": true}
-
-# --- XML ---
-
-$ awf flow advance --flow $FLOWS_DIR/fmt-adv-x --output-format xml
-$ assert_stdout xml
-| {"stage": "<any_string>", "is_final": true}

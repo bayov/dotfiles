@@ -1,4 +1,4 @@
-# Test: awf flow list --output-format (human, json, toml, xml)
+# Test: awf flow list --output-format (human, json)
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -70,12 +70,3 @@ $ awf flow list --output-format json
 $ assert_stdout json
 | {"flows": "<any_array>"}
 
-# TOML
-$ awf flow list --output-format toml
-$ assert_stdout toml
-| {"flows": "<any_array>"}
-
-# XML
-$ awf flow list --output-format xml
-$ assert_stdout xml
-| {"flows": "<any_array>"}
