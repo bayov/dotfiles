@@ -17,6 +17,7 @@ Awf
 - `awf flow advance` -> `awf flow next-stage`
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
+- Add README.md's
 
 Infeasible
 ----------
