@@ -7,7 +7,6 @@ TODO
 Awf
 ---
 
-- Do tests use fake ram filesystem to simulate dir/file creation, etc?
 - Implement `dynamic_task_lists_plan.md`
 - Agent should have .awf-staging/ folder to write artifacts to before
   `awf artifact put` moves them into the flow directory.
