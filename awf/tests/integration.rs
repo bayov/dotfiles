@@ -147,6 +147,47 @@ fn awf(tmp: &Path) -> Command {
 }
 
 // ---------------------------------------------------------------------------
+// T15 — Flow state files land at `.awf/flows/…`, not `.awf/.awf/flows/…`
+// ---------------------------------------------------------------------------
+
+/// Regression test for the double-`.awf` path bug.
+///
+/// Before the fix, `resolve_state_dir` was called with the `.awf/` directory
+/// itself instead of its parent, so it appended another `.awf` segment and
+/// every flow write went to `.awf/.awf/flows/…`.
+#[test]
+fn t15_flow_state_stored_at_awf_flows_not_double_awf() {
+    // Given: the feature workflow fixture
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    // When: create a new flow
+    awf(tmp.path())
+        .args(["flow", "new", "path-check", "--workflow", "feature"])
+        .assert()
+        .success();
+
+    let awf_dir = tmp.path().join(".awf");
+
+    // Then: the state file exists at `.awf/flows/active/path-check/`
+    let correct_path = awf_dir.join("flows").join("active").join("path-check");
+    assert!(
+        correct_path.exists(),
+        "flow state should be at .awf/flows/active/path-check/, but that \
+         path does not exist.\n  expected: {correct_path:?}",
+    );
+
+    // And: the double-nested path must NOT exist
+    let wrong_path =
+        awf_dir.join(".awf").join("flows").join("active").join("path-check");
+    assert!(
+        !wrong_path.exists(),
+        "flow state must NOT be at .awf/.awf/flows/active/path-check/ \
+         (double-awf bug); found: {wrong_path:?}",
+    );
+}
+
+// ---------------------------------------------------------------------------
 // T2 — `awf workflow new`
 // ---------------------------------------------------------------------------
 

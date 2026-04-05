@@ -58,7 +58,8 @@ use crate::store::resolve::resolve_state_dir;
 /// Returns an error for unexpected I/O failures, if no `.awf/` root can be
 /// found, or if the named workflow does not exist or cannot be parsed.
 pub fn new(name: &str, workflow: &str) -> color_eyre::Result<()> {
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
 
     // Load the workflow to obtain the name of its first stage.
     let wf = fs::load_workflow(&awf_root, workflow)?;
@@ -76,7 +77,7 @@ pub fn new(name: &str, workflow: &str) -> color_eyre::Result<()> {
         |s| s.name.as_str(),
     );
 
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let state_dir = resolve_state_dir(&project_root)?;
 
     match fs::create_flow(&state_dir, name, workflow, first_stage) {
         Ok(()) => {
@@ -113,8 +114,8 @@ pub fn new(name: &str, workflow: &str) -> color_eyre::Result<()> {
 /// Returns an error for unexpected I/O failures or if no `.awf/` root can be
 /// found.
 pub fn list(include_archived: bool) -> color_eyre::Result<()> {
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flows = fs::list_flows(&state_dir, include_archived)?;
 
@@ -261,8 +262,9 @@ pub fn status(
         Err(e) => return Err(e.into()),
     };
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
     let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
@@ -351,8 +353,9 @@ pub fn status(
 pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
     let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
@@ -435,8 +438,9 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 pub fn run(step_name: &str, flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
     let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
@@ -534,8 +538,9 @@ pub fn step_done(
 ) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
     let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
@@ -590,8 +595,8 @@ pub fn artifact_put(
 ) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let state_dir = resolve_state_dir(&project_root)?;
 
     fs::put_artifact(&state_dir, &flow_id, name, file)?;
 
@@ -630,8 +635,9 @@ pub fn artifact_put(
 pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let awf_root = project_root.join(".awf");
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
     let workflow = fs::load_workflow(&awf_root, &flow.workflow)?;
@@ -773,8 +779,8 @@ pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
 pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let state_dir = resolve_state_dir(&project_root)?;
 
     let flow = fs::load_flow(&state_dir, &flow_id)?;
 
@@ -840,8 +846,8 @@ pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 pub fn archive(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let flow_id = resolve_or_exit(flow_flag)?;
 
-    let awf_root = find_awf_root(&env::current_dir()?)?.join(".awf");
-    let state_dir = resolve_state_dir(&awf_root)?;
+    let project_root = find_awf_root(&env::current_dir()?)?;
+    let state_dir = resolve_state_dir(&project_root)?;
 
     match fs::archive_flow(&state_dir, &flow_id) {
         Ok(()) => {

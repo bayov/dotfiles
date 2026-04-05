@@ -8,8 +8,7 @@ Awf
 ---
 
 - Better control for how to define output directory for a flow (state and
-  artifacts). Currently there is a big? where its stored in
-  `.awf/.awf/flows/...`
+  artifacts).
 - awf should be configurable using a file (.config/awf.toml) and env vars.
 - --output-format should work for all commands.
 - awf should support changing --output-format as config & env var.
