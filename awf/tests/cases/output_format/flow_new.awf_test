@@ -1,0 +1,39 @@
+# Test: awf flow new — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+# --- Human ---
+
+$ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
+$ assert_stdout equals
+| Created flow <_> (workflow: feature, stage: design)
+
+# --- JSON ---
+
+$ awf flow new $FLOWS_DIR/fmt-new-j --workflow feature --output-format json
+$ assert_stdout json
+| {
+|   "path": "<any_string>",
+|   "workflow": "feature",
+|   "stage": "design"
+| }

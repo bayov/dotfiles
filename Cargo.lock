@@ -140,7 +140,6 @@ dependencies = [
  "libtest-mimic",
  "owo-colors",
  "predicates",
- "regex",
  "rstest",
  "serde",
  "serde_json",

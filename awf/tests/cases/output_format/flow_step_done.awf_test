@@ -1,0 +1,47 @@
+# Test: awf flow step done — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+# Separate flows (step done mutates state)
+
+$ awf flow new $FLOWS_DIR/fmt-done-h --workflow feature
+$ assert_stdout contains
+| fmt-done-h
+
+$ awf flow new $FLOWS_DIR/fmt-done-j --workflow feature
+$ assert_stdout contains
+| fmt-done-j
+
+# --- Human ---
+
+$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-h --output-format human
+$ assert_stdout equals
+| ✓ Step write-design marked complete.
+
+# --- JSON ---
+
+$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-j --output-format json
+$ assert_stdout json
+| {
+|   "step": "write-design"
+| }

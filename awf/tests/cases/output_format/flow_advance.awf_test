@@ -1,7 +1,5 @@
-# Test: awf flow advance --output-format with all 4 formats
-# Uses the minimal workflow (two stages, no steps) so advance works without completing anything.
-
-# --- Setup ---
+# Test: awf flow advance — human and json output
+# Uses a minimal workflow (two stages, no steps) so advance works immediately.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -16,7 +14,7 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 | [[stages]]
 | name = "done"
 
-# Create a separate flow for each format (advance mutates state)
+# Separate flows (advance mutates state)
 
 $ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
 $ assert_stdout contains
@@ -26,22 +24,18 @@ $ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
 $ assert_stdout contains
 | fmt-adv-j
 
-$ awf flow new $FLOWS_DIR/fmt-adv-t --workflow minimal
-$ assert_stdout contains
-| fmt-adv-t
-
-$ awf flow new $FLOWS_DIR/fmt-adv-x --workflow minimal
-$ assert_stdout contains
-| fmt-adv-x
-
 # --- Human ---
 
 $ awf flow advance --flow $FLOWS_DIR/fmt-adv-h --output-format human
-$ assert_stdout contains
-| Entered stage:
+$ assert_stdout equals
+| ▶ Entered stage: done
+|   This is the final stage.
 
 # --- JSON ---
 
 $ awf flow advance --flow $FLOWS_DIR/fmt-adv-j --output-format json
 $ assert_stdout json
-| {"stage": "<any_string>", "is_final": true}
+| {
+|   "stage": "done",
+|   "is_final": true
+| }

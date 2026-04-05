@@ -1,0 +1,44 @@
+# Test: awf workflow list — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+# --- Human ---
+
+$ awf workflow list --output-format human
+$ assert_stdout equals
+| WORKFLOW
+| ───────────────
+| project:feature
+
+# --- JSON ---
+
+$ awf workflow list --output-format json
+$ assert_stdout json
+| {
+|   "workflows": [
+|     {
+|       "scope": "project",
+|       "name": "feature"
+|     }
+|   ]
+| }

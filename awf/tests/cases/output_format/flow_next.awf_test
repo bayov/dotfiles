@@ -1,0 +1,45 @@
+# Test: awf flow next — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+$ awf flow new $FLOWS_DIR/fmt-next --workflow feature
+$ assert_stdout contains
+| fmt-next
+
+# --- Human ---
+
+$ awf flow next --flow $FLOWS_DIR/fmt-next --output-format human
+$ assert_stdout equals
+| # Design
+| → Mark complete with: awf flow step done write-design
+
+# --- JSON ---
+
+$ awf flow next --flow $FLOWS_DIR/fmt-next --output-format json
+$ assert_stdout json
+| {
+|   "action": "complete_agent_step",
+|   "step": "write-design",
+|   "prompt": "<any_string>",
+|   "message": "Mark complete with: awf flow step done write-design"
+| }

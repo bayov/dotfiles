@@ -1,0 +1,51 @@
+# Test: awf flow status — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+$ awf flow new $FLOWS_DIR/fmt-status --workflow feature
+$ assert_stdout contains
+| fmt-status
+
+# --- Human ---
+
+$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
+$ assert_stdout equals
+| Flow:  fmt-status
+| Stage:  design
+| Steps:
+|   write-design  [· pending]
+
+# --- JSON ---
+
+$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format json
+$ assert_stdout json
+| {
+|   "flow": "fmt-status",
+|   "stage": "design",
+|   "steps": [
+|     {
+|       "name": "write-design",
+|       "status": "pending"
+|     }
+|   ]
+| }

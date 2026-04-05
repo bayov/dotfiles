@@ -24,15 +24,17 @@ enum AssertMode {
     Contains,
     /// Negated string contains.
     NotContains,
-    /// Regex match against full output.
-    Regex,
     /// Force JSON partial match (panics on parse failure instead of fallback).
     Json,
     /// Parse stdout as TOML → JSON, then JSON partial match.
     Toml,
     /// Strip `<data>…</data>` XML envelope, parse inner JSON, partial match.
     Xml,
-    /// Exact string equality (trimmed).
+    /// String equality (trimmed), with `<_>` wildcard support.
+    ///
+    /// The placeholder `<_>` matches any non-empty run of characters within a
+    /// single line.  Literal segments between placeholders are matched in
+    /// order.  Lines without `<_>` must match exactly.
     Equals,
     /// Assert output is empty (no content lines needed).
     Empty,
@@ -214,7 +216,7 @@ fn parse_directive(rest: &str, line_number: usize, path: &Path) -> Directive {
         Directive::AssertStdout { mode, content: None }
     } else if rest == "assert_stdout" {
         panic!(
-            "{}:{}: assert_stdout requires an explicit mode (contains, not_contains, regex, json, toml, xml, equals, empty)",
+            "{}:{}: assert_stdout requires an explicit mode (contains, not_contains, json, toml, xml, equals, empty)",
             path.display(),
             line_number
         )
@@ -223,7 +225,7 @@ fn parse_directive(rest: &str, line_number: usize, path: &Path) -> Directive {
         Directive::AssertStderr { mode, content: None }
     } else if rest == "assert_stderr" {
         panic!(
-            "{}:{}: assert_stderr requires an explicit mode (contains, not_contains, regex, json, toml, xml, equals, empty)",
+            "{}:{}: assert_stderr requires an explicit mode (contains, not_contains, json, toml, xml, equals, empty)",
             path.display(),
             line_number
         )
@@ -260,14 +262,13 @@ fn parse_assert_mode(
     match mode_str {
         "contains" => AssertMode::Contains,
         "not_contains" => AssertMode::NotContains,
-        "regex" => AssertMode::Regex,
         "json" => AssertMode::Json,
         "toml" => AssertMode::Toml,
         "xml" => AssertMode::Xml,
         "equals" => AssertMode::Equals,
         "empty" => AssertMode::Empty,
         other => panic!(
-            "{}:{}: unknown assert mode: {:?} (expected contains, not_contains, regex, json, toml, xml, equals, empty)",
+            "{}:{}: unknown assert mode: {:?} (expected contains, not_contains, json, toml, xml, equals, empty)",
             file.display(),
             line_number,
             other
@@ -674,22 +675,6 @@ fn check_output_assertion(
                 context()
             );
         }
-        AssertMode::Regex => {
-            let re = regex::Regex::new(expected).unwrap_or_else(|e| {
-                panic!("invalid regex {expected:?}: {e}{}", context());
-            });
-            assert!(
-                re.is_match(actual),
-                "{} {} does not match regex\n  {}: {:?}\n  {}: {:?}{}",
-                "assert_stdout regex".red().bold(),
-                stream,
-                "pattern".dimmed(),
-                expected,
-                "actual".dimmed(),
-                actual.trim(),
-                context()
-            );
-        }
         AssertMode::Json => {
             let expected_json: serde_json::Value =
                 serde_json::from_str(expected).unwrap_or_else(|e| {
@@ -767,12 +752,11 @@ fn check_output_assertion(
             assert_json_contains(&actual_json, &expected_json, context);
         }
         AssertMode::Equals => {
-            assert_eq!(
+            assert_equals_with_placeholders(
                 actual.trim(),
                 expected.trim(),
-                "{} {stream} does not equal expected text{}",
-                "assert equals".red().bold(),
-                context()
+                stream,
+                context,
             );
         }
         AssertMode::Empty => {
@@ -785,6 +769,146 @@ fn check_output_assertion(
                 context()
             );
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Equals with `<_>` placeholders
+// ---------------------------------------------------------------------------
+
+/// Compares `actual` against `expected` line-by-line.
+///
+/// Lines in `expected` that contain no `<_>` placeholder must match the
+/// corresponding `actual` line exactly.  When `<_>` appears, the line is
+/// split into literal segments around each placeholder and matched
+/// left-to-right: each literal segment must appear in order, and each `<_>`
+/// must consume at least one character.
+fn assert_equals_with_placeholders(
+    actual: &str,
+    expected: &str,
+    stream: &str,
+    context: &dyn Fn() -> String,
+) {
+    let actual_lines: Vec<&str> = actual.lines().collect();
+    let expected_lines: Vec<&str> = expected.lines().collect();
+
+    if !expected.contains("<_>") {
+        // Fast path: no placeholders, plain equality.
+        assert_eq!(
+            actual,
+            expected,
+            "{} {stream} does not equal expected text{}",
+            "assert equals".red().bold(),
+            context()
+        );
+        return;
+    }
+
+    assert_eq!(
+        actual_lines.len(),
+        expected_lines.len(),
+        "{} {stream} line count mismatch (expected {}, got {})\n  \
+         {}: {:?}\n  {}: {:?}{}",
+        "assert equals".red().bold(),
+        expected_lines.len(),
+        actual_lines.len(),
+        "expected".dimmed(),
+        expected,
+        "actual".dimmed(),
+        actual,
+        context()
+    );
+
+    for (i, (actual_line, expected_line)) in
+        actual_lines.iter().zip(expected_lines.iter()).enumerate()
+    {
+        if !expected_line.contains("<_>") {
+            assert_eq!(
+                actual_line,
+                expected_line,
+                "{} {stream} line {} differs\n  {}: {:?}\n  {}: {:?}{}",
+                "assert equals".red().bold(),
+                i + 1,
+                "expected".dimmed(),
+                expected_line,
+                "actual".dimmed(),
+                actual_line,
+                context()
+            );
+            continue;
+        }
+        assert!(
+            line_matches_pattern(actual_line, expected_line),
+            "{} {stream} line {} does not match pattern\n  {}: {:?}\n  {}: {:?}{}",
+            "assert equals".red().bold(),
+            i + 1,
+            "pattern".dimmed(),
+            expected_line,
+            "actual".dimmed(),
+            actual_line,
+            context()
+        );
+    }
+}
+
+/// Returns `true` if `actual` matches `pattern` where `<_>` segments each
+/// consume one or more characters and literal segments match exactly.
+fn line_matches_pattern(actual: &str, pattern: &str) -> bool {
+    let segments: Vec<&str> = pattern.split("<_>").collect();
+    let placeholder_count = segments.len() - 1;
+
+    // No placeholders — exact match (shouldn't reach here, but be safe).
+    if placeholder_count == 0 {
+        return actual == pattern;
+    }
+
+    let mut pos = 0usize;
+
+    for (i, segment) in segments.iter().enumerate() {
+        if segment.is_empty() {
+            // Leading, trailing, or consecutive `<_>` — the placeholder still
+            // needs to consume ≥1 char, so just ensure we haven't exhausted
+            // the string between required literal anchors.
+            if i > 0 && i < segments.len() - 1 {
+                // Consecutive `<_><_>`: each must consume ≥1 char.
+                // We'll enforce this by requiring at least one char gap per
+                // remaining placeholder when we reach the next literal.
+            }
+            continue;
+        }
+
+        if i == 0 {
+            // First segment: must be a prefix.
+            if !actual[pos..].starts_with(segment) {
+                return false;
+            }
+            pos += segment.len();
+        } else {
+            // Non-first segment: find it after pos, ensuring ≥1 char gap for
+            // the preceding `<_>`.
+            let search_start = pos + 1; // at least 1 char for <_>
+            if search_start > actual.len() {
+                return false;
+            }
+            match actual[search_start..].find(segment) {
+                Some(offset) => pos = search_start + offset + segment.len(),
+                None => return false,
+            }
+        }
+    }
+
+    // If the pattern ends with a literal (last segment non-empty), `pos`
+    // should be at the end.  If it ends with `<_>`, there must be ≥1 char
+    // remaining.
+    let last_segment = segments.last().unwrap();
+    if last_segment.is_empty() {
+        // Pattern ends with `<_>` — need ≥1 char remaining.
+        pos < actual.len()
+    } else {
+        // Pattern ends with a literal — must have consumed everything.
+        // But we found the segment by searching forward, so check the actual
+        // end.
+        actual.ends_with(last_segment) && pos == actual.len()
     }
 }
 

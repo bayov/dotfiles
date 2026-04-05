@@ -1,0 +1,51 @@
+# Test: awf flow list — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Ship a feature."
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a design doc."
+| steps = [
+|     { name = "write-design", type = "agent", prompt = "design.md" },
+| ]
+|
+| [[stages]]
+| name = "done"
+| description = "Complete."
+
+$ write_file .agents/workflows/feature/design.md
+| # Design
+
+$ awf flow new $FLOWS_DIR/fmt-list --workflow feature
+$ assert_stdout contains
+| fmt-list
+
+# --- Human ---
+
+# Table header + separator + one row. Widths depend on the path so use <_>.
+$ awf flow list --output-format human
+$ assert_stdout equals
+| PATH<_>WORKFLOW  STAGE<_>
+| <_>
+| <_>fmt-list<_>feature<_>design
+
+# --- JSON ---
+
+$ awf flow list --output-format json
+$ assert_stdout json
+| {
+|   "flows": [
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": false
+|     }
+|   ]
+| }

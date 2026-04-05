@@ -1,0 +1,20 @@
+# Test: awf workflow new — human and json output
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+# --- Human ---
+
+$ awf workflow new my-wf --output-format human
+$ assert_stdout equals
+| Created .agents/workflows/my-wf/WORKFLOW.toml
+| Edit it to define your stages, then run `awf workflow validate my-wf`.
+
+# --- JSON ---
+
+$ awf workflow new my-wf-j --output-format json
+$ assert_stdout json
+| {
+|   "path": ".agents/workflows/my-wf-j/WORKFLOW.toml",
+|   "name": "my-wf-j"
+| }
