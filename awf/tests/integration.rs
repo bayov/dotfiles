@@ -174,7 +174,7 @@ fn create_flow(tmp: &TempDir, name: &str, workflow: &str) {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t2_workflow_new_creates_file() {
+fn workflow_new_creates_file() {
     // Given: a temp dir with a bare `.agents/workflows/` directory
     let tmp = TempDir::new().unwrap();
     std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
@@ -196,7 +196,7 @@ fn t2_workflow_new_creates_file() {
 }
 
 #[test]
-fn t2_workflow_new_duplicate_errors() {
+fn workflow_new_duplicate_errors() {
     // Given: a temp dir with an already-created workflow
     let tmp = TempDir::new().unwrap();
     std::fs::create_dir_all(tmp.path().join(".agents/workflows")).unwrap();
@@ -217,7 +217,7 @@ fn t2_workflow_new_duplicate_errors() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t3_validate_passes_on_valid_workflow() {
+fn workflow_validate_passes_on_valid_workflow() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -229,7 +229,7 @@ fn t3_validate_passes_on_valid_workflow() {
 }
 
 #[test]
-fn t3_validate_reports_missing_command_key() {
+fn workflow_validate_reports_missing_command_key() {
     let tmp = TempDir::new().unwrap();
     let workflow_dir = tmp.path().join(".agents/workflows/bad");
     std::fs::create_dir_all(&workflow_dir).unwrap();
@@ -256,7 +256,7 @@ steps = [
 }
 
 #[test]
-fn t3_validate_reports_missing_prompt_file() {
+fn workflow_validate_reports_missing_prompt_file() {
     let tmp = TempDir::new().unwrap();
     let workflow_dir = tmp.path().join(".agents/workflows/noprompt");
     std::fs::create_dir_all(&workflow_dir).unwrap();
@@ -287,7 +287,7 @@ steps = [
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t4_flow_new_and_status() {
+fn flow_new_and_status() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -320,7 +320,7 @@ fn t4_flow_new_and_status() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t5_happy_path_design_stage() {
+fn flow_happy_path_design_stage() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -356,7 +356,7 @@ fn t5_happy_path_design_stage() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t6_flow_run_pass() {
+fn flow_run_pass() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -371,7 +371,7 @@ fn t6_flow_run_pass() {
 }
 
 #[test]
-fn t6_flow_run_fail() {
+fn flow_run_fail() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -385,7 +385,7 @@ fn t6_flow_run_fail() {
 }
 
 #[test]
-fn t6_flow_run_fail_then_rerun_reflects_pass() {
+fn flow_run_fail_then_rerun_reflects_pass() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -431,7 +431,7 @@ steps = [
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t7_advance_blocked_by_failed_step() {
+fn advance_blocked_by_failed_step() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -495,7 +495,7 @@ steps = [
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t8_advance_blocked_by_missing_artifact_then_unblocked() {
+fn advance_blocked_by_missing_artifact_then_unblocked() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -566,7 +566,7 @@ fn setup_requires_gate_workflow(tmp: &TempDir) {
 }
 
 #[test]
-fn t9_advance_blocked_by_missing_requires_artifact() {
+fn advance_blocked_by_missing_requires_artifact() {
     let tmp = TempDir::new().unwrap();
     setup_requires_gate_workflow(&tmp);
 
@@ -591,7 +591,7 @@ fn t9_advance_blocked_by_missing_requires_artifact() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t10_force_advance_bypasses_incomplete_steps() {
+fn force_advance_bypasses_incomplete_steps() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -639,7 +639,7 @@ fn t10_force_advance_bypasses_incomplete_steps() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t11_duplicate_flow_path_blocked() {
+fn duplicate_flow_path_blocked() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -697,7 +697,7 @@ fn t11_duplicate_flow_path_blocked() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t12_flow_next_failing_step_hints_run() {
+fn flow_next_failing_step_hints_run() {
     let tmp = TempDir::new().unwrap();
     setup_run_workflow(&tmp);
 
@@ -717,7 +717,7 @@ fn t12_flow_next_failing_step_hints_run() {
 }
 
 #[test]
-fn t12_flow_next_incomplete_agent_step_hints_done() {
+fn flow_next_incomplete_agent_step_hints_done() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -732,7 +732,7 @@ fn t12_flow_next_incomplete_agent_step_hints_done() {
 }
 
 #[test]
-fn t12_flow_next_missing_artifact_mentions_artifact_name() {
+fn flow_next_missing_artifact_mentions_artifact_name() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -759,7 +759,7 @@ fn t12_flow_next_missing_artifact_mentions_artifact_name() {
 }
 
 #[test]
-fn t12_flow_next_can_advance_mentions_advance_command() {
+fn flow_next_can_advance_mentions_advance_command() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -794,7 +794,7 @@ fn t12_flow_next_can_advance_mentions_advance_command() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t13_flow_status_json_output_is_valid() {
+fn flow_status_json_output_is_valid() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -851,7 +851,7 @@ fn t13_flow_status_json_output_is_valid() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t14_archive_and_list() {
+fn archive_and_list() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
@@ -905,7 +905,7 @@ fn t14_archive_and_list() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t16_flow_validate_passes_when_no_stages_completed() {
+fn flow_validate_passes_when_no_stages_completed() {
     // Given: a fresh flow in the design stage with no artifacts on disk
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
@@ -923,7 +923,7 @@ fn t16_flow_validate_passes_when_no_stages_completed() {
 }
 
 #[test]
-fn t16_flow_validate_passes_when_completed_stage_artifacts_present() {
+fn flow_validate_passes_when_completed_stage_artifacts_present() {
     // Given: design stage completed and design.md present in artifacts/
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
@@ -962,7 +962,7 @@ fn t16_flow_validate_passes_when_completed_stage_artifacts_present() {
 }
 
 #[test]
-fn t16_flow_validate_fails_for_missing_artifact() {
+fn flow_validate_fails_for_missing_artifact() {
     // Given: a workflow where stage 2 does not `requires` the stage-1 artifact
     // so --force can advance without the artifact being present.
     let tmp = TempDir::new().unwrap();
@@ -1006,7 +1006,7 @@ steps = []
 }
 
 #[test]
-fn t16_flow_validate_fails_for_redundant_artifact() {
+fn flow_validate_fails_for_redundant_artifact() {
     // Given: flow is in design stage; an undeclared file is written to
     // artifacts/
     let tmp = TempDir::new().unwrap();
@@ -1033,7 +1033,7 @@ fn t16_flow_validate_fails_for_redundant_artifact() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn t15_flow_state_stored_in_flow_dir() {
+fn flow_state_stored_in_flow_dir() {
     let tmp = TempDir::new().unwrap();
     setup_feature_workflow(&tmp);
 
