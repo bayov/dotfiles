@@ -37,6 +37,13 @@ pub struct Config {
 
     /// Named scope configurations (custom scopes, or overrides for `user`).
     pub scopes: HashMap<String, ScopeConfig>,
+
+    /// Repo-wide named shell commands available to all workflows.
+    ///
+    /// Defined under `[commands]` in `.config/awf.toml`. Workflow-level
+    /// `[commands]` tables take precedence when the same alias is defined in
+    /// both places.
+    pub commands: HashMap<String, String>,
 }
 
 /// A single entry in the ordered list of directories to search for workflows.
@@ -75,6 +82,8 @@ struct RawConfig {
     pub flow_search_dirs: Vec<String>,
     #[serde(default)]
     pub scopes: HashMap<String, ScopeConfig>,
+    #[serde(default)]
+    pub commands: HashMap<String, String>,
 }
 
 /// Reads and deserialises a config file, returning the default if absent.
@@ -127,7 +136,13 @@ pub fn load(project_root: &Path) -> Result<Config> {
         scopes.insert(k, v);
     }
 
-    Ok(Config { active_flow, flow_search_dirs, scopes })
+    // commands: user as base, project entries override same-named aliases
+    let mut commands = user_raw.commands;
+    for (k, v) in project_raw.commands {
+        commands.insert(k, v);
+    }
+
+    Ok(Config { active_flow, flow_search_dirs, scopes, commands })
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 //! Handlers for `awf flow` subcommands.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env;
 use std::fmt;
@@ -743,8 +744,8 @@ pub fn run(
         process::exit(1);
     }
 
-    let shell_cmd =
-        resolve_shell_command(step, &workflow).unwrap_or_else(|| {
+    let shell_cmd = resolve_shell_command(step, &workflow, &config.commands)
+        .unwrap_or_else(|| {
             eprint_error(format_args!(
                 "step {step_name:?} has no resolvable shell command"
             ));
@@ -752,7 +753,7 @@ pub fn run(
         });
 
     let started_at = Utc::now();
-    let result = run_command(shell_cmd)?;
+    let result = run_command(&shell_cmd)?;
 
     let stage = flow.current_stage.clone();
     let flow = if result.exit_code == 0 {
@@ -780,7 +781,7 @@ pub fn run(
     let status = if result.exit_code == 0 { "pass" } else { "fail" };
     let output = FlowRunOutput {
         step: step_name.to_string(),
-        command: shell_cmd.to_string(),
+        command: shell_cmd,
         status: status.to_string(),
         duration_ms: result.duration_ms,
     };
@@ -1210,16 +1211,24 @@ fn find_step_in_current_stage<'a>(
 }
 
 /// Resolves the shell command string for a command step.
-fn resolve_shell_command<'a>(
-    step: &'a Step,
-    workflow: &'a Workflow,
-) -> Option<&'a str> {
+///
+/// For `command` alias steps, looks up the alias in `workflow.commands` first,
+/// then falls back to `repo_commands` (from `.config/awf.toml`). This allows
+/// common commands like `test` and `format` to be defined once at the repo
+/// level rather than repeated in every workflow.
+fn resolve_shell_command(
+    step: &Step,
+    workflow: &Workflow,
+    repo_commands: &HashMap<String, String>,
+) -> Option<String> {
     match &step.kind {
-        StepKind::Command { command: Some(alias), run: None } => {
-            workflow.commands.get(alias.as_str()).map(String::as_str)
-        }
+        StepKind::Command { command: Some(alias), run: None } => workflow
+            .commands
+            .get(alias.as_str())
+            .or_else(|| repo_commands.get(alias.as_str()))
+            .map(String::clone),
         StepKind::Command { run: Some(inline), command: None } => {
-            Some(inline.as_str())
+            Some(inline.clone())
         }
         _ => None,
     }

@@ -132,15 +132,29 @@ steps = [
 
 /// Writes `.config/awf.toml` pointing `flow_search_dirs` at `<tmp>/flows/`.
 fn setup_flow_config(tmp: &TempDir) {
+    setup_flow_config_with_commands(tmp, &[]);
+}
+
+/// Writes `.config/awf.toml` with `flow_search_dirs` and optional repo-wide
+/// `[commands]` entries (each element is a `"key = \"shell\""` string).
+fn setup_flow_config_with_commands(tmp: &TempDir, commands: &[(&str, &str)]) {
     let config_dir = tmp.path().join(".config");
     std::fs::create_dir_all(&config_dir).expect("create .config/");
     let flows_dir = tmp.path().join("flows");
     std::fs::create_dir_all(&flows_dir).expect("create flows/");
-    std::fs::write(
-        config_dir.join("awf.toml"),
-        format!("flow_search_dirs = [{:?}]\n", flows_dir.to_string_lossy()),
-    )
-    .expect("write .config/awf.toml");
+
+    let mut contents =
+        format!("flow_search_dirs = [{:?}]\n", flows_dir.to_string_lossy());
+
+    if !commands.is_empty() {
+        contents.push_str("\n[commands]\n");
+        for (key, shell) in commands {
+            contents.push_str(&format!("{key} = {shell:?}\n"));
+        }
+    }
+
+    std::fs::write(config_dir.join("awf.toml"), contents)
+        .expect("write .config/awf.toml");
 }
 
 /// Returns the path for a named flow under `<tmp>/flows/`.
@@ -1706,4 +1720,92 @@ fn flow_archive_output_format(#[case] fmt: &str) {
             "human output should contain 'Archived flow:': {s}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Repo-wide commands in `.config/awf.toml`
+// ---------------------------------------------------------------------------
+
+/// Creates a workflow with no `[commands]` table — relies entirely on the
+/// repo-level command defined in `.config/awf.toml`.
+fn setup_repo_command_workflow(tmp: &TempDir) {
+    let workflow_dir = tmp.path().join(".agents/workflows/repo-cmd-test");
+    std::fs::create_dir_all(&workflow_dir)
+        .expect("create repo-cmd-test workflow dir");
+
+    // Workflow has no [commands] section; `true-step` references a `repo-true`
+    // alias that must come from the repo config.
+    let toml = r#"
+name = "repo-cmd-test"
+version = 1
+
+[[stages]]
+name = "work"
+steps = [
+    { name = "true-step", type = "command", command = "repo-true" },
+]
+"#;
+
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), toml.trim())
+        .expect("write repo-cmd-test WORKFLOW.toml");
+
+    setup_flow_config_with_commands(tmp, &[("repo-true", "true")]);
+}
+
+#[test]
+fn flow_run_resolves_command_from_repo_config() {
+    // Given: a workflow with no [commands] and a repo-level command "repo-true"
+    let tmp = TempDir::new().unwrap();
+    setup_repo_command_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "repo-flow");
+    create_flow(&tmp, "repo-flow", "repo-cmd-test");
+
+    // When: we run the step that uses the repo-level command alias
+    // Then: it resolves and succeeds
+    awf(tmp.path())
+        .args(["flow", "run", "true-step", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("PASS"));
+}
+
+#[test]
+fn workflow_command_takes_priority_over_repo_command() {
+    // Given: a workflow that defines "shared" as "true", and the repo config
+    // also defines "shared" as "false" — the workflow definition must win.
+    let tmp = TempDir::new().unwrap();
+
+    let workflow_dir = tmp.path().join(".agents/workflows/priority-test");
+    std::fs::create_dir_all(&workflow_dir).expect("create priority-test dir");
+
+    let toml = r#"
+name = "priority-test"
+version = 1
+
+[commands]
+shared = "true"
+
+[[stages]]
+name = "work"
+steps = [
+    { name = "check", type = "command", command = "shared" },
+]
+"#;
+    std::fs::write(workflow_dir.join("WORKFLOW.toml"), toml.trim())
+        .expect("write WORKFLOW.toml");
+
+    // Repo config defines the same alias with "false" (would fail if used).
+    setup_flow_config_with_commands(&tmp, &[("shared", "false")]);
+
+    let fp = flow_path(&tmp, "priority-flow");
+    create_flow(&tmp, "priority-flow", "priority-test");
+
+    // When: we run the step
+    // Then: the workflow-level "true" wins and the step passes
+    awf(tmp.path())
+        .args(["flow", "run", "check", "--flow", fp.to_str().unwrap()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("PASS"));
 }
