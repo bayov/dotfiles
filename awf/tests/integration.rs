@@ -27,6 +27,7 @@ use std::path::PathBuf;
 use assert_cmd::Command;
 use assert_fs::TempDir;
 use predicates::prelude::*;
+use rstest::rstest;
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -1054,4 +1055,697 @@ fn flow_state_stored_in_flow_dir() {
     // State file is at <flow_dir>/flow_state.toml
     let state_path = fp.join("flow_state.toml");
     assert!(state_path.exists(), "flow state should be at {state_path:?}");
+}
+
+// ---------------------------------------------------------------------------
+// Minimal workflow fixture (no steps, no artifacts) used for advance tests.
+// ---------------------------------------------------------------------------
+
+fn setup_minimal_workflow(tmp: &TempDir) {
+    let workflow_dir = tmp.path().join(".agents/workflows/minimal");
+    std::fs::create_dir_all(&workflow_dir)
+        .expect("create .agents/workflows/minimal/");
+    std::fs::write(
+        workflow_dir.join("WORKFLOW.toml"),
+        "name = \"minimal\"\nversion = 1\n\n\
+         [[stages]]\nname = \"work\"\n\n\
+         [[stages]]\nname = \"done\"\n",
+    )
+    .expect("write minimal WORKFLOW.toml");
+    setup_flow_config(tmp);
+}
+
+// ---------------------------------------------------------------------------
+// Helper: parse machine-readable output into a `serde_json::Value`.
+//
+// Returns `None` for the `"human"` format so callers can apply string
+// assertions instead.  For all machine formats the returned value is a
+// `serde_json::Value`, making assertions format-agnostic.
+// ---------------------------------------------------------------------------
+
+fn parse_machine_output(output: &[u8], fmt: &str) -> Option<serde_json::Value> {
+    let s = std::str::from_utf8(output).expect("valid utf-8");
+    match fmt {
+        "json" => {
+            let val: serde_json::Value = serde_json::from_str(s)
+                .unwrap_or_else(|e| {
+                    panic!("invalid JSON ({fmt}): {e}\n---\n{s}\n---")
+                });
+            Some(val)
+        }
+        "toml" => {
+            let val: toml::Value = s.parse().unwrap_or_else(|e| {
+                panic!("invalid TOML ({fmt}): {e}\n---\n{s}\n---")
+            });
+            Some(
+                serde_json::to_value(&val)
+                    .expect("TOML value to serde_json::Value"),
+            )
+        }
+        "xml" => {
+            assert!(
+                s.starts_with("<data>\n"),
+                "XML output must start with '<data>\\n': {s}"
+            );
+            assert!(
+                s.trim_end().ends_with("</data>"),
+                "XML output must end with '</data>': {s}"
+            );
+            let inner = s
+                .trim_start_matches("<data>\n")
+                .trim_end_matches('\n')
+                .trim_end_matches("</data>");
+            let val: serde_json::Value = serde_json::from_str(inner)
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "invalid JSON inside XML envelope: {e}\n---\n{inner}\n---"
+                    )
+                });
+            Some(val)
+        }
+        "human" => None,
+        other => panic!("unknown format: {other}"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf workflow new --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn workflow_new_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp); // sets up .agents/ and config
+
+    let out = awf(tmp.path())
+        .args(["workflow", "new", "fmt-wf", "--output-format", fmt])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("path").is_some(),
+                "expected 'path' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("name").is_some(),
+                "expected 'name' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("Created"),
+                "human output should contain 'Created': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf workflow validate --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn workflow_validate_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let out = awf(tmp.path())
+        .args(["workflow", "validate", "feature", "--output-format", fmt])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("name").is_some(),
+                "expected 'name' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("status").is_some(),
+                "expected 'status' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(s.contains("OK"), "human output should contain 'OK': {s}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf workflow list --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn workflow_list_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let out = awf(tmp.path())
+        .args(["workflow", "list", "--output-format", fmt])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("workflows").is_some(),
+                "expected 'workflows' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("feature"),
+                "human output should contain 'feature': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow new --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_new_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-new");
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "new",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--workflow",
+            "feature",
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("path").is_some(),
+                "expected 'path' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("workflow").is_some(),
+                "expected 'workflow' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("stage").is_some(),
+                "expected 'stage' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("Created flow"),
+                "human output should contain 'Created flow': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow list --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_list_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+    create_flow(&tmp, "fmt-list", "feature");
+
+    let out = awf(tmp.path())
+        .args(["flow", "list", "--output-format", fmt])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("flows").is_some(),
+                "expected 'flows' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("fmt-list"),
+                "human output should contain 'fmt-list': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow status --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_status_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-status");
+    create_flow(&tmp, "fmt-status", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "status",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("flow").is_some(),
+                "expected 'flow' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("stage").is_some(),
+                "expected 'stage' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("steps").is_some(),
+                "expected 'steps' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("Stage:"),
+                "human output should contain 'Stage:': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow next --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_next_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-next");
+    create_flow(&tmp, "fmt-next", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "next",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("action").is_some(),
+                "expected 'action' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("message").is_some(),
+                "expected 'message' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(!s.is_empty(), "human output should not be empty: {s}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow run --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_run_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_run_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-run");
+    create_flow(&tmp, "fmt-run", "run-test");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "run",
+            "pass-step",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("step").is_some(),
+                "expected 'step' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("status").is_some(),
+                "expected 'status' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("duration_ms").is_some(),
+                "expected 'duration_ms' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("PASS"),
+                "human output should contain 'PASS': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow step done --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_step_done_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-done");
+    create_flow(&tmp, "fmt-done", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "step",
+            "done",
+            "write-design",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("step").is_some(),
+                "expected 'step' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("marked complete"),
+                "human output should contain 'marked complete': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow validate --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_validate_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-validate");
+    create_flow(&tmp, "fmt-validate", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "validate",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("valid").is_some(),
+                "expected 'valid' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("valid"),
+                "human output should contain 'valid': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow advance --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_advance_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_minimal_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-advance");
+    create_flow(&tmp, "fmt-advance", "minimal");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "advance",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("stage").is_some(),
+                "expected 'stage' field in {fmt} output: {val}"
+            );
+            assert!(
+                val.get("is_final").is_some(),
+                "expected 'is_final' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("Entered stage:"),
+                "human output should contain 'Entered stage:': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow history --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_history_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-history");
+    create_flow(&tmp, "fmt-history", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "history",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("entries").is_some(),
+                "expected 'entries' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("entered"),
+                "human output should contain 'entered': {s}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow archive --output-format <fmt>`
+// ---------------------------------------------------------------------------
+
+#[rstest]
+#[case::human("human")]
+#[case::json("json")]
+#[case::toml("toml")]
+#[case::xml("xml")]
+fn flow_archive_output_format(#[case] fmt: &str) {
+    let tmp = TempDir::new().unwrap();
+    setup_feature_workflow(&tmp);
+
+    let fp = flow_path(&tmp, "fmt-archive");
+    create_flow(&tmp, "fmt-archive", "feature");
+
+    let out = awf(tmp.path())
+        .args([
+            "flow",
+            "archive",
+            "--flow",
+            fp.to_str().unwrap(),
+            "--output-format",
+            fmt,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    match parse_machine_output(&out, fmt) {
+        Some(val) => {
+            assert!(
+                val.get("path").is_some(),
+                "expected 'path' field in {fmt} output: {val}"
+            );
+        }
+        None => {
+            let s = std::str::from_utf8(&out).unwrap();
+            assert!(
+                s.contains("Archived flow:"),
+                "human output should contain 'Archived flow:': {s}"
+            );
+        }
+    }
 }

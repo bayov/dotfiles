@@ -7,10 +7,6 @@ TODO
 Awf
 ---
 
-- Better control for how to define output directory for a flow (state and
-  artifacts).
-- --output-format should work for all commands.
-- awf should support changing --output-format as config & env var.
 - --output-format should print newline at the end
 - workflow default directory should be .agents/workflows/
 - instead of workflows/foo.toml and workflows/foo/agent_instructions.md, have

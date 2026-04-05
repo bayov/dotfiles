@@ -11,6 +11,7 @@ use chrono::Utc;
 use serde::Serialize;
 
 use crate::cli::output::OutputFormat;
+use crate::cli::output::render;
 use crate::engine::actions::AdvanceBlocker;
 use crate::engine::actions::NextAction;
 use crate::engine::actions::can_advance;
@@ -32,151 +33,132 @@ use crate::store::resolve::find_project_root;
 use crate::store::resolve::resolve_flow_path;
 
 // ---------------------------------------------------------------------------
-// `awf flow new [--flow <path>] --workflow <name>`
+// Output types — `awf flow new`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow new [--flow <path>] --workflow <workflow>`.
-///
-/// Resolves the flow path, loads the workflow to find its first stage, and
-/// creates a new flow at the path.
-///
-/// # Errors
-///
-/// Returns an error for unexpected I/O failures or if the workflow cannot be
-/// loaded.
-pub fn new(flow_flag: Option<&str>, workflow: &str) -> color_eyre::Result<()> {
-    let project_root = find_project_root(&env::current_dir()?)?;
-    let config = crate::config::load(&project_root)?;
-    let flow_dir = resolve_or_exit(flow_flag, &config)?;
-    let entries =
-        crate::config::effective_workflow_entries(&project_root, &config);
+/// Output payload for `awf flow new`.
+#[derive(Debug, Serialize)]
+pub struct FlowNewOutput {
+    pub path: String,
+    pub workflow: String,
+    pub stage: String,
+}
 
-    let wf = fs::load_workflow(&entries, workflow)?;
-
-    let first_stage = wf.stages.first().map_or_else(
-        || {
-            eprintln!(
-                "error: workflow {workflow:?} has no stages; \
-                 cannot create a flow"
-            );
-            process::exit(1);
-        },
-        |s| s.name.as_str(),
-    );
-
-    match fs::create_flow(&flow_dir, workflow, first_stage) {
-        Ok(()) => {
-            println!(
-                "Created flow {} (workflow: {workflow}, stage: {first_stage})",
-                flow_dir.display()
-            );
-            Ok(())
-        }
-        Err(Error::FlowAlreadyExists { .. }) => {
-            eprintln!("error: flow already exists at {}", flow_dir.display());
-            process::exit(1);
-        }
-        Err(e) => Err(e.into()),
+impl fmt::Display for FlowNewOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "Created flow {} (workflow: {}, stage: {})",
+            self.path, self.workflow, self.stage
+        )
     }
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow list [--all]`
+// Output types — `awf flow list`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow list [--all]`.
-///
-/// Scans `config.flow_search_dirs` for flows. Without `--all`, archived flows
-/// are excluded.
-///
-/// # Errors
-///
-/// Returns an error for unexpected I/O failures or if no project root can be
-/// found.
-pub fn list(include_archived: bool) -> color_eyre::Result<()> {
-    let project_root = find_project_root(&env::current_dir()?)?;
-    let config = crate::config::load(&project_root)?;
+/// A single flow entry in the list output.
+#[derive(Debug, Serialize)]
+pub struct FlowListEntry {
+    pub path: String,
+    pub workflow: String,
+    pub stage: String,
+    pub archived: bool,
+}
 
-    let all_flows = fs::scan_flows(&config.flow_search_dirs)?;
-    let flows: Vec<_> = if include_archived {
-        all_flows
-    } else {
-        all_flows.into_iter().filter(|f| !f.archived).collect()
-    };
+/// Output payload for `awf flow list`.
+#[derive(Debug, Serialize)]
+pub struct FlowListOutput {
+    pub flows: Vec<FlowListEntry>,
+    /// Controls the empty-list hint and whether the ARCHIVED column is shown.
+    /// Skipped from serialisation — this is a query parameter, not output
+    /// data.
+    #[serde(skip)]
+    pub include_archived: bool,
+}
 
-    if flows.is_empty() {
-        if include_archived {
-            println!("No flows found.");
+impl fmt::Display for FlowListOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.flows.is_empty() {
+            if self.include_archived {
+                return writeln!(f, "No flows found.");
+            }
+            return writeln!(
+                f,
+                "No flows found. Create one with: awf flow new \
+                 --flow <path> --workflow <workflow>"
+            );
+        }
+
+        let path_width = self
+            .flows
+            .iter()
+            .map(|e| e.path.len())
+            .max()
+            .unwrap_or(0)
+            .max("PATH".len());
+        let wf_width = self
+            .flows
+            .iter()
+            .map(|e| e.workflow.len())
+            .max()
+            .unwrap_or(0)
+            .max("WORKFLOW".len());
+        let stage_width = self
+            .flows
+            .iter()
+            .map(|e| e.stage.len())
+            .max()
+            .unwrap_or(0)
+            .max("STAGE".len());
+
+        if self.include_archived {
+            writeln!(
+                f,
+                "{:<path_width$}  {:<wf_width$}  {:<stage_width$}  ARCHIVED",
+                "PATH", "WORKFLOW", "STAGE"
+            )?;
+            writeln!(
+                f,
+                "{:-<path_width$}  {:-<wf_width$}  {:-<stage_width$}  --------",
+                "", "", ""
+            )?;
+            for entry in &self.flows {
+                let archived_label = if entry.archived { "yes" } else { "no" };
+                writeln!(
+                    f,
+                    "{:<path_width$}  {:<wf_width$}  {:<stage_width$}  \
+                     {archived_label}",
+                    entry.path, entry.workflow, entry.stage
+                )?;
+            }
         } else {
-            println!(
-                "No flows found. Create one with: awf flow new --flow <path> \
-                 --workflow <workflow>"
-            );
-        }
-        return Ok(());
-    }
-
-    let path_width = flows
-        .iter()
-        .map(|f| f.path.display().to_string().len())
-        .max()
-        .unwrap_or(0)
-        .max("PATH".len());
-
-    let wf_width = flows
-        .iter()
-        .map(|f| f.workflow.len())
-        .max()
-        .unwrap_or(0)
-        .max("WORKFLOW".len());
-
-    let stage_width = flows
-        .iter()
-        .map(|f| f.current_stage.len())
-        .max()
-        .unwrap_or(0)
-        .max("STAGE".len());
-
-    if include_archived {
-        println!(
-            "{:<path_width$}  {:<wf_width$}  {:<stage_width$}  ARCHIVED",
-            "PATH", "WORKFLOW", "STAGE"
-        );
-        println!(
-            "{:-<path_width$}  {:-<wf_width$}  {:-<stage_width$}  --------",
-            "", "", ""
-        );
-        for f in &flows {
-            let archived_label = if f.archived { "yes" } else { "no" };
-            let path_str = f.path.display().to_string();
-            println!(
-                "{:<path_width$}  {:<wf_width$}  {:<stage_width$}  {archived_label}",
-                path_str, f.workflow, f.current_stage
-            );
-        }
-    } else {
-        println!(
-            "{:<path_width$}  {:<wf_width$}  {:<stage_width$}",
-            "PATH", "WORKFLOW", "STAGE"
-        );
-        println!(
-            "{:-<path_width$}  {:-<wf_width$}  {:-<stage_width$}",
-            "", "", ""
-        );
-        for f in &flows {
-            let path_str = f.path.display().to_string();
-            println!(
+            writeln!(
+                f,
                 "{:<path_width$}  {:<wf_width$}  {:<stage_width$}",
-                path_str, f.workflow, f.current_stage
-            );
+                "PATH", "WORKFLOW", "STAGE"
+            )?;
+            writeln!(
+                f,
+                "{:-<path_width$}  {:-<wf_width$}  {:-<stage_width$}",
+                "", "", ""
+            )?;
+            for entry in &self.flows {
+                writeln!(
+                    f,
+                    "{:<path_width$}  {:<wf_width$}  {:<stage_width$}",
+                    entry.path, entry.workflow, entry.stage
+                )?;
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow status [--flow <path>]`
+// Output types — `awf flow status`
 // ---------------------------------------------------------------------------
 
 /// A single step's status as computed for the `status` command output.
@@ -205,6 +187,292 @@ impl fmt::Display for FlowStatusOutput {
         Ok(())
     }
 }
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow next`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow next`.
+#[derive(Debug, Serialize)]
+pub struct FlowNextOutput {
+    /// Discriminator: `"run_step"`, `"complete_agent_step"`,
+    /// `"produce_artifact"`, `"can_advance"`, or `"done"`.
+    pub action: String,
+    /// The step name (for `run_step` and `complete_agent_step`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step: Option<String>,
+    /// The artifact name (for `produce_artifact`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifact: Option<String>,
+    /// The name of the next stage (for `can_advance`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_stage: Option<String>,
+    /// The raw prompt file contents (for `complete_agent_step`, when
+    /// available).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Human-readable instruction.
+    pub message: String,
+}
+
+impl fmt::Display for FlowNextOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref prompt) = self.prompt {
+            // Replicate `println!("{prompt}")`: write contents then a newline.
+            writeln!(f, "{prompt}")?;
+        }
+        writeln!(f, "{}", self.message)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow run`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow run`.
+#[derive(Debug, Serialize)]
+pub struct FlowRunOutput {
+    pub step: String,
+    pub command: String,
+    /// `"pass"` or `"fail"`.
+    pub status: String,
+    pub duration_ms: u64,
+}
+
+impl fmt::Display for FlowRunOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status_upper = self.status.to_uppercase();
+        writeln!(
+            f,
+            "{status_upper}  {}  ({}ms)",
+            self.command, self.duration_ms
+        )?;
+        if self.status == "fail" {
+            writeln!(f, "Fix the error, then run: awf flow run {}", self.step)?;
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow step done`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow step done`.
+#[derive(Debug, Serialize)]
+pub struct FlowStepDoneOutput {
+    pub step: String,
+}
+
+impl fmt::Display for FlowStepDoneOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Step {} marked complete.", self.step)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow validate`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow validate` (success path).
+#[derive(Debug, Serialize)]
+pub struct FlowValidateOutput {
+    pub valid: bool,
+}
+
+impl fmt::Display for FlowValidateOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Flow artifacts valid.")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow advance`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow advance`.
+#[derive(Debug, Serialize)]
+pub struct FlowAdvanceOutput {
+    pub stage: String,
+    pub is_final: bool,
+}
+
+impl fmt::Display for FlowAdvanceOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Entered stage: {}", self.stage)?;
+        if self.is_final {
+            writeln!(f, "This is the final stage.")?;
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow history`
+// ---------------------------------------------------------------------------
+
+/// A single completed step record within a stage history entry.
+#[derive(Debug, Serialize)]
+pub struct FlowStepRecord {
+    pub step: String,
+    pub status: String,
+    pub step_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timing: Option<String>,
+}
+
+/// A stage record within the history output.
+#[derive(Debug, Serialize)]
+pub struct FlowStageRecord {
+    pub stage: String,
+    pub entered_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exited_at: Option<String>,
+    pub steps: Vec<FlowStepRecord>,
+}
+
+/// Output payload for `awf flow history`.
+#[derive(Debug, Serialize)]
+pub struct FlowHistoryOutput {
+    pub entries: Vec<FlowStageRecord>,
+}
+
+impl fmt::Display for FlowHistoryOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for entry in &self.entries {
+            writeln!(f, "[{}] entered {}", entry.stage, entry.entered_at)?;
+            for step in &entry.steps {
+                if let Some(ref timing) = step.timing {
+                    writeln!(f, "  {}  {}  {timing}", step.step, step.status)?;
+                } else {
+                    writeln!(f, "  {}  {}", step.step, step.status)?;
+                }
+            }
+            if let Some(ref exited_at) = entry.exited_at {
+                writeln!(f, "[{}] exited  {}", entry.stage, exited_at)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output types — `awf flow archive`
+// ---------------------------------------------------------------------------
+
+/// Output payload for `awf flow archive`.
+#[derive(Debug, Serialize)]
+pub struct FlowArchiveOutput {
+    pub path: String,
+}
+
+impl fmt::Display for FlowArchiveOutput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Archived flow: {}", self.path)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow new [--flow <path>] --workflow <name>`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow new [--flow <path>] --workflow <workflow>`.
+///
+/// Resolves the flow path, loads the workflow to find its first stage, and
+/// creates a new flow at the path.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures or if the workflow cannot be
+/// loaded.
+pub fn new(
+    flow_flag: Option<&str>,
+    workflow: &str,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
+    let project_root = find_project_root(&env::current_dir()?)?;
+    let config = crate::config::load(&project_root)?;
+    let flow_dir = resolve_or_exit(flow_flag, &config)?;
+    let entries =
+        crate::config::effective_workflow_entries(&project_root, &config);
+
+    let wf = fs::load_workflow(&entries, workflow)?;
+
+    let first_stage = wf.stages.first().map_or_else(
+        || {
+            eprintln!(
+                "error: workflow {workflow:?} has no stages; \
+                 cannot create a flow"
+            );
+            process::exit(1);
+        },
+        |s| s.name.as_str(),
+    );
+
+    match fs::create_flow(&flow_dir, workflow, first_stage) {
+        Ok(()) => {
+            let output = FlowNewOutput {
+                path: flow_dir.display().to_string(),
+                workflow: workflow.to_string(),
+                stage: first_stage.to_string(),
+            };
+            print!("{}", render(&output, fmt));
+            Ok(())
+        }
+        Err(Error::FlowAlreadyExists { .. }) => {
+            eprintln!("error: flow already exists at {}", flow_dir.display());
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow list [--all]`
+// ---------------------------------------------------------------------------
+
+/// Handles `awf flow list [--all]`.
+///
+/// Scans `config.flow_search_dirs` for flows. Without `--all`, archived flows
+/// are excluded.
+///
+/// # Errors
+///
+/// Returns an error for unexpected I/O failures or if no project root can be
+/// found.
+pub fn list(
+    include_archived: bool,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
+    let project_root = find_project_root(&env::current_dir()?)?;
+    let config = crate::config::load(&project_root)?;
+
+    let all_flows = fs::scan_flows(&config.flow_search_dirs)?;
+    let flows: Vec<_> = if include_archived {
+        all_flows
+    } else {
+        all_flows.into_iter().filter(|f| !f.archived).collect()
+    };
+
+    let output = FlowListOutput {
+        flows: flows
+            .into_iter()
+            .map(|f| FlowListEntry {
+                path: f.path.display().to_string(),
+                workflow: f.workflow,
+                stage: f.current_stage,
+                archived: f.archived,
+            })
+            .collect(),
+        include_archived,
+    };
+    print!("{}", render(&output, fmt));
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// `awf flow status [--flow <path>]`
+// ---------------------------------------------------------------------------
 
 /// Handles `awf flow status [--flow <path>]`.
 ///
@@ -266,7 +534,7 @@ pub fn status(
         steps,
     };
 
-    print!("{}", crate::cli::output::render(&output, fmt));
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -279,7 +547,10 @@ pub fn status(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+pub fn next(
+    flow_flag: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -290,34 +561,63 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let workflow = fs::load_workflow(&entries, &flow.workflow)?;
     let artifacts = collect_artifacts(&flow_dir);
 
-    match next_action(&workflow, &flow, &artifacts) {
-        NextAction::RunStep(step) => {
-            println!(
-                "[command] {} — next step to run: awf flow run {}",
+    let output = match next_action(&workflow, &flow, &artifacts) {
+        NextAction::RunStep(step) => FlowNextOutput {
+            action: "run_step".to_string(),
+            step: Some(step.name.clone()),
+            artifact: None,
+            next_stage: None,
+            prompt: None,
+            message: format!(
+                "[command] {} \u{2014} next step to run: awf flow run {}",
                 step.name, step.name
-            );
-        }
+            ),
+        },
         NextAction::CompleteAgentStep(step) => {
-            if let StepKind::Agent { prompt: Some(ref filename), .. } =
-                step.kind
-            {
-                match fs::load_prompt_file(&entries, &flow.workflow, filename) {
-                    Ok(contents) => println!("{contents}"),
-                    Err(e) => {
-                        eprintln!(
-                            "warning: could not load prompt file {filename:?}: {e}"
-                        );
+            let prompt =
+                if let StepKind::Agent { prompt: Some(ref filename), .. } =
+                    step.kind
+                {
+                    match fs::load_prompt_file(
+                        &entries,
+                        &flow.workflow,
+                        filename,
+                    ) {
+                        Ok(contents) => Some(contents),
+                        Err(e) => {
+                            eprintln!(
+                                "warning: could not load prompt file \
+                                 {filename:?}: {e}"
+                            );
+                            None
+                        }
                     }
-                }
+                } else {
+                    None
+                };
+            FlowNextOutput {
+                action: "complete_agent_step".to_string(),
+                step: Some(step.name.clone()),
+                artifact: None,
+                next_stage: None,
+                prompt,
+                message: format!(
+                    "Mark complete with: awf flow step done {}",
+                    step.name
+                ),
             }
-            println!("Mark complete with: awf flow step done {}", step.name);
         }
-        NextAction::ProduceArtifact(name) => {
-            println!("All steps complete. Produce artifact: {name}");
-            println!(
-                "Write it to the artifacts/ directory inside the flow path."
-            );
-        }
+        NextAction::ProduceArtifact(name) => FlowNextOutput {
+            action: "produce_artifact".to_string(),
+            step: None,
+            artifact: Some(name.clone()),
+            next_stage: None,
+            prompt: None,
+            message: format!(
+                "All steps complete. Produce artifact: {name}\n\
+                 Write it to the artifacts/ directory inside the flow path."
+            ),
+        },
         NextAction::CanAdvance => {
             let next_stage_name = workflow
                 .stages
@@ -325,16 +625,29 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
                 .position(|s| s.name == flow.current_stage)
                 .and_then(|idx| workflow.stages.get(idx + 1))
                 .map_or_else(|| "next".to_string(), |s| s.name.clone());
-            println!(
-                "All steps complete. Run `awf flow advance` to move to \
-                 {next_stage_name}."
-            );
+            FlowNextOutput {
+                action: "can_advance".to_string(),
+                step: None,
+                artifact: None,
+                next_stage: Some(next_stage_name.clone()),
+                prompt: None,
+                message: format!(
+                    "All steps complete. Run `awf flow advance` to move to \
+                     {next_stage_name}."
+                ),
+            }
         }
-        NextAction::Done => {
-            println!("All stages complete. The workflow is done.");
-        }
-    }
+        NextAction::Done => FlowNextOutput {
+            action: "done".to_string(),
+            step: None,
+            artifact: None,
+            next_stage: None,
+            prompt: None,
+            message: "All stages complete. The workflow is done.".to_string(),
+        },
+    };
 
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -347,7 +660,11 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn run(step_name: &str, flow_flag: Option<&str>) -> color_eyre::Result<()> {
+pub fn run(
+    step_name: &str,
+    flow_flag: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -408,13 +725,14 @@ pub fn run(step_name: &str, flow_flag: Option<&str>) -> color_eyre::Result<()> {
 
     fs::save_flow(&flow_dir, &flow)?;
 
-    if result.exit_code == 0 {
-        println!("PASS  {}  ({}ms)", shell_cmd, result.duration_ms);
-    } else {
-        println!("FAIL  {}  ({}ms)", shell_cmd, result.duration_ms);
-        println!("Fix the error, then run: awf flow run {step_name}");
-    }
-
+    let status = if result.exit_code == 0 { "pass" } else { "fail" };
+    let output = FlowRunOutput {
+        step: step_name.to_string(),
+        command: shell_cmd.to_string(),
+        status: status.to_string(),
+        duration_ms: result.duration_ms,
+    };
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -430,6 +748,7 @@ pub fn run(step_name: &str, flow_flag: Option<&str>) -> color_eyre::Result<()> {
 pub fn step_done(
     step_name: &str,
     flow_flag: Option<&str>,
+    fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
@@ -462,8 +781,8 @@ pub fn step_done(
 
     fs::save_flow(&flow_dir, &flow)?;
 
-    println!("Step {step_name} marked complete.");
-
+    let output = FlowStepDoneOutput { step: step_name.to_string() };
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -481,7 +800,10 @@ pub fn step_done(
 /// # Errors
 ///
 /// Returns an error if validation fails or for unexpected I/O failures.
-pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+pub fn validate(
+    flow_flag: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -526,7 +848,8 @@ pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         .collect();
 
     if missing.is_empty() && redundant.is_empty() {
-        println!("Flow artifacts valid.");
+        let output = FlowValidateOutput { valid: true };
+        print!("{}", render(&output, fmt));
         return Ok(());
     }
 
@@ -549,7 +872,11 @@ pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
+pub fn advance(
+    flow_flag: Option<&str>,
+    force: bool,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -642,13 +969,9 @@ pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
     let new_stage = updated_flow.current_stage.clone();
     fs::save_flow(&flow_dir, &updated_flow)?;
 
-    println!("Entered stage: {new_stage}");
-
-    let is_last = workflow.stages.last().is_some_and(|s| s.name == new_stage);
-    if is_last {
-        println!("This is the final stage.");
-    }
-
+    let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
+    let output = FlowAdvanceOutput { stage: new_stage, is_final };
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -661,41 +984,49 @@ pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+pub fn history(
+    flow_flag: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
 
     let flow = load_flow_or_exit(&flow_dir)?;
 
-    for entry in &flow.stage_history {
-        println!(
-            "[{}] entered {}",
-            entry.stage,
-            entry.entered_at.format("%Y-%m-%dT%H:%M:%SZ")
-        );
-        print_step_log_for_stage(&flow, &entry.stage);
-        if let Some(exited_at) = entry.exited_at {
-            println!(
-                "[{}] exited  {}",
-                entry.stage,
-                exited_at.format("%Y-%m-%dT%H:%M:%SZ")
-            );
-        }
-    }
+    let mut entries: Vec<FlowStageRecord> = flow
+        .stage_history
+        .iter()
+        .map(|entry| FlowStageRecord {
+            stage: entry.stage.clone(),
+            entered_at: entry
+                .entered_at
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+            exited_at: entry
+                .exited_at
+                .map(|t| t.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+            steps: build_step_records(&flow, &entry.stage),
+        })
+        .collect();
 
     let current_already_shown =
         flow.stage_history.iter().any(|e| e.stage == flow.current_stage);
 
     if !current_already_shown {
-        println!(
-            "[{}] entered {}",
-            flow.current_stage,
-            flow.stage_entered_at.format("%Y-%m-%dT%H:%M:%SZ")
-        );
-        print_step_log_for_stage(&flow, &flow.current_stage);
+        entries.push(FlowStageRecord {
+            stage: flow.current_stage.clone(),
+            entered_at: flow
+                .stage_entered_at
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string(),
+            exited_at: None,
+            steps: build_step_records(&flow, &flow.current_stage),
+        });
     }
 
+    let output = FlowHistoryOutput { entries };
+    print!("{}", render(&output, fmt));
     Ok(())
 }
 
@@ -708,14 +1039,19 @@ pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn archive(flow_flag: Option<&str>) -> color_eyre::Result<()> {
+pub fn archive(
+    flow_flag: Option<&str>,
+    fmt: &OutputFormat,
+) -> color_eyre::Result<()> {
     let project_root = find_project_root(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
 
     match fs::archive_flow(&flow_dir) {
         Ok(()) => {
-            println!("Archived flow: {}", flow_dir.display());
+            let output =
+                FlowArchiveOutput { path: flow_dir.display().to_string() };
+            print!("{}", render(&output, fmt));
             Ok(())
         }
         Err(Error::FlowNotFound { .. }) => {
@@ -730,33 +1066,39 @@ pub fn archive(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 // Private helpers
 // ---------------------------------------------------------------------------
 
-/// Prints all step log entries for `stage_name` from the flow's step log.
-fn print_step_log_for_stage(flow: &FlowState, stage_name: &str) {
-    for entry in flow.step_log.iter().filter(|e| e.stage == stage_name) {
-        let status_str = match entry.status {
-            StepStatus::Pass => "pass",
-            StepStatus::Fail => "fail",
-        };
-        let timing = if entry.step_type == "command" {
-            entry.duration_ms.map_or_else(
-                || {
-                    entry.started_at.map_or_else(String::new, |ts| {
-                        ts.format("%Y-%m-%dT%H:%M:%SZ").to_string()
-                    })
-                },
-                |ms| format!("{ms}ms"),
-            )
-        } else {
-            entry.completed_at.map_or_else(String::new, |ts| {
-                ts.format("%Y-%m-%dT%H:%M:%SZ").to_string()
-            })
-        };
-        if timing.is_empty() {
-            println!("  {}  {status_str}", entry.step);
-        } else {
-            println!("  {}  {status_str}  {timing}", entry.step);
-        }
-    }
+/// Builds `FlowStepRecord` entries for all steps in `stage_name` from the
+/// flow's step log.
+fn build_step_records(
+    flow: &FlowState,
+    stage_name: &str,
+) -> Vec<FlowStepRecord> {
+    flow.step_log
+        .iter()
+        .filter(|e| e.stage == stage_name)
+        .map(|entry| {
+            let status_str = match entry.status {
+                StepStatus::Pass => "pass",
+                StepStatus::Fail => "fail",
+            };
+            let timing = if entry.step_type == "command" {
+                entry.duration_ms.map(|ms| format!("{ms}ms")).or_else(|| {
+                    entry
+                        .started_at
+                        .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                })
+            } else {
+                entry
+                    .completed_at
+                    .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+            };
+            FlowStepRecord {
+                step: entry.step.clone(),
+                status: status_str.to_string(),
+                step_type: entry.step_type.clone(),
+                timing,
+            }
+        })
+        .collect()
 }
 
 /// Resolves the flow path, printing a friendly error and exiting if none is

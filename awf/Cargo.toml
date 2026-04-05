@@ -29,6 +29,7 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt"] }
 assert_cmd = "2.0"
 assert_fs = "1.0"
 predicates = "3.1.4"
+rstest = "0.22"
 # keep-sorted end
 
 [lints.rust]

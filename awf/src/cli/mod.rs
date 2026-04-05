@@ -166,12 +166,12 @@ pub fn dispatch(cli: Cli) -> color_eyre::Result<()> {
 #[allow(clippy::needless_pass_by_value)]
 fn dispatch_workflow(
     command: WorkflowCommands,
-    _fmt: OutputFormat,
+    fmt: OutputFormat,
 ) -> color_eyre::Result<()> {
     match command {
-        WorkflowCommands::New { name } => workflow::new(&name),
-        WorkflowCommands::Validate { name } => workflow::validate(&name),
-        WorkflowCommands::List => workflow::list(),
+        WorkflowCommands::New { name } => workflow::new(&name, &fmt),
+        WorkflowCommands::Validate { name } => workflow::validate(&name, &fmt),
+        WorkflowCommands::List => workflow::list(&fmt),
     }
 }
 
@@ -183,40 +183,43 @@ fn dispatch_flow(
 ) -> color_eyre::Result<()> {
     match command {
         FlowCommands::New { flow: flow_flag, workflow } => {
-            flow::new(flow_flag.as_deref(), &workflow)
+            flow::new(flow_flag.as_deref(), &workflow, &fmt)
         }
-        FlowCommands::List { all } => flow::list(all),
+        FlowCommands::List { all } => flow::list(all, &fmt),
         FlowCommands::Status { flow: flow_flag } => {
             flow::status(flow_flag.as_deref(), &fmt)
         }
         FlowCommands::Next { flow: flow_flag } => {
-            flow::next(flow_flag.as_deref())
+            flow::next(flow_flag.as_deref(), &fmt)
         }
         FlowCommands::Run { step, flow: flow_flag } => {
-            flow::run(&step, flow_flag.as_deref())
+            flow::run(&step, flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::Step { command } => dispatch_step(command),
+        FlowCommands::Step { command } => dispatch_step(command, fmt),
         FlowCommands::Validate { flow: flow_flag } => {
-            flow::validate(flow_flag.as_deref())
+            flow::validate(flow_flag.as_deref(), &fmt)
         }
         FlowCommands::Advance { flow: flow_flag, force } => {
-            flow::advance(flow_flag.as_deref(), force)
+            flow::advance(flow_flag.as_deref(), force, &fmt)
         }
         FlowCommands::History { flow: flow_flag } => {
-            flow::history(flow_flag.as_deref())
+            flow::history(flow_flag.as_deref(), &fmt)
         }
         FlowCommands::Archive { flow: flow_flag } => {
-            flow::archive(flow_flag.as_deref())
+            flow::archive(flow_flag.as_deref(), &fmt)
         }
     }
 }
 
 /// Dispatches `awf flow step` subcommands.
 #[allow(clippy::needless_pass_by_value)]
-fn dispatch_step(command: StepCommands) -> color_eyre::Result<()> {
+fn dispatch_step(
+    command: StepCommands,
+    fmt: OutputFormat,
+) -> color_eyre::Result<()> {
     match command {
         StepCommands::Done { step, flow: flow_flag } => {
-            flow::step_done(&step, flow_flag.as_deref())
+            flow::step_done(&step, flow_flag.as_deref(), &fmt)
         }
     }
 }
