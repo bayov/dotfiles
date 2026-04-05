@@ -12,10 +12,20 @@ pub mod flow;
 pub mod output;
 pub mod workflow;
 
+use std::path::Path;
+use std::path::PathBuf;
+use std::process;
+
 use clap::Parser;
 use clap::Subcommand;
+use owo_colors::OwoColorize as _;
 
 use crate::cli::output::OutputFormat;
+use crate::cli::output::eprint_error;
+use crate::config::WorkflowSearchEntry;
+use crate::model::workflow::Workflow;
+use crate::result::Error;
+use crate::store::fs;
 
 // ---------------------------------------------------------------------------
 // Top-level CLI
@@ -222,4 +232,153 @@ fn dispatch_step(
             flow::step_done(&step, flow_flag.as_deref(), &fmt)
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Shared CLI helpers
+// ---------------------------------------------------------------------------
+
+/// Finds the nearest project root, printing a friendly error and exiting when
+/// no `.agents/` directory is found up the directory tree.
+pub fn find_project_root_or_exit(start: &Path) -> color_eyre::Result<PathBuf> {
+    match crate::store::resolve::find_project_root(start) {
+        Ok(p) => Ok(p),
+        Err(Error::ProjectRootNotFound { .. }) => {
+            eprint_error(
+                "not inside an awf project \
+                 (no .agents/ directory found in this directory or any parent)",
+            );
+            anstream::eprintln!(
+                "  {} Run this command from inside a directory that contains \
+                 a .agents/ folder.",
+                "Hint:".bold()
+            );
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Loads a workflow by name, printing rich diagnostic context and exiting when
+/// not found or ambiguous.
+///
+/// On `WorkflowNotFound` the output includes the configured search
+/// directories, up to 10 available workflows, and a "Did you mean …?" hint
+/// when an existing workflow name is within edit-distance 2 of the query.
+pub fn load_workflow_or_exit(
+    entries: &[WorkflowSearchEntry],
+    name: &str,
+) -> color_eyre::Result<Workflow> {
+    match fs::load_workflow(entries, name) {
+        Ok(wf) => Ok(wf),
+        Err(Error::WorkflowNotFound { name: ref n }) => {
+            eprint_error(format_args!("workflow {n:?} not found"));
+
+            // Search directories.
+            anstream::eprintln!("\n  {}:", "Searched in".bold());
+            for entry in entries {
+                anstream::eprintln!(
+                    "    {}  {}",
+                    format!("[{}]", entry.scope).cyan(),
+                    entry.dir.display(),
+                );
+            }
+
+            // Available workflows.
+            match fs::list_workflows(entries) {
+                Ok(listings) if listings.is_empty() => {
+                    anstream::eprintln!(
+                        "\n  {}",
+                        "No workflows found in any search directory.".dimmed()
+                    );
+                }
+                Ok(listings) => {
+                    const MAX_SHOWN: usize = 10;
+                    anstream::eprintln!(
+                        "\n  {}:",
+                        "Available workflows".bold()
+                    );
+                    for w in listings.iter().take(MAX_SHOWN) {
+                        anstream::eprintln!(
+                            "    {}:{}",
+                            w.scope.dimmed(),
+                            w.name.cyan(),
+                        );
+                    }
+                    if listings.len() > MAX_SHOWN {
+                        anstream::eprintln!(
+                            "    {} and {} more…",
+                            "…".dimmed(),
+                            listings.len() - MAX_SHOWN,
+                        );
+                    }
+
+                    // Fuzzy "Did you mean?" suggestion.
+                    // Strip an optional scope prefix for matching.
+                    let bare = n.split_once(':').map_or(n.as_str(), |(_, b)| b);
+                    if let Some(suggestion) = suggest_workflow(bare, &listings)
+                    {
+                        anstream::eprintln!(
+                            "\n  {} {}?",
+                            "Did you mean".yellow().bold(),
+                            suggestion.yellow().bold(),
+                        );
+                    }
+                }
+                Err(_) => {}
+            }
+
+            process::exit(1);
+        }
+        Err(Error::AmbiguousWorkflow { name: ref n, ref scopes }) => {
+            eprint_error(format_args!(
+                "workflow {n:?} is ambiguous — found in multiple scopes: {scopes}"
+            ));
+            anstream::eprintln!(
+                "  {} Use a scope-qualified name such as {}.",
+                "Hint:".bold(),
+                format!("<scope>:{n}").cyan(),
+            );
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Returns a scope-qualified suggestion (`"scope:name"`) for the closest
+/// workflow to `query`, or `None` if no workflow is within edit-distance 2.
+fn suggest_workflow(
+    query: &str,
+    listings: &[fs::WorkflowListing],
+) -> Option<String> {
+    listings
+        .iter()
+        .map(|w| (w, edit_distance(query, &w.name)))
+        .filter(|(_, d)| *d <= 2 && *d > 0)
+        .min_by_key(|(_, d)| *d)
+        .map(|(w, _)| format!("{}:{}", w.scope, w.name))
+}
+
+/// Levenshtein edit distance between two strings.
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let (m, n) = (a.len(), b.len());
+    let mut dp = vec![vec![0usize; n + 1]; m + 1];
+    for (i, row) in dp.iter_mut().enumerate() {
+        row[0] = i;
+    }
+    for (j, cell) in dp[0].iter_mut().enumerate() {
+        *cell = j;
+    }
+    for i in 1..=m {
+        for j in 1..=n {
+            dp[i][j] = if a[i - 1] == b[j - 1] {
+                dp[i - 1][j - 1]
+            } else {
+                1 + dp[i - 1][j].min(dp[i][j - 1]).min(dp[i - 1][j - 1])
+            };
+        }
+    }
+    dp[m][n]
 }

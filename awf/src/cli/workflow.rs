@@ -4,14 +4,15 @@ use std::env;
 use std::fmt;
 use std::process;
 
+use owo_colors::OwoColorize as _;
 use serde::Serialize;
 
 use crate::cli::output::OutputFormat;
-use crate::cli::output::render;
+use crate::cli::output::eprint_error;
+use crate::cli::output::print_output;
 use crate::model::workflow::StepKind;
 use crate::result::Error;
 use crate::store::fs;
-use crate::store::resolve::find_project_root;
 
 // ---------------------------------------------------------------------------
 // Output types
@@ -26,7 +27,7 @@ pub struct WorkflowNewOutput {
 
 impl fmt::Display for WorkflowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Created {}", self.path)?;
+        writeln!(f, "{} {}", "Created".dimmed(), self.path.bold())?;
         writeln!(
             f,
             "Edit it to define your stages, then run `awf workflow validate {}`.",
@@ -44,7 +45,7 @@ pub struct WorkflowValidateOutput {
 
 impl fmt::Display for WorkflowValidateOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Workflow {}: OK", self.name)
+        writeln!(f, "Workflow {}: {}", self.name, "✓ OK".green().bold())
     }
 }
 
@@ -69,8 +70,15 @@ impl fmt::Display for WorkflowListOutput {
                 "No workflows found. Create one with: awf workflow new <name>"
             );
         }
-        writeln!(f, "WORKFLOW")?;
-        writeln!(f, "--------")?;
+        let width = self
+            .workflows
+            .iter()
+            .map(|w| w.scope.len() + 1 + w.name.len())
+            .max()
+            .unwrap_or(0)
+            .max("WORKFLOW".len());
+        writeln!(f, "{}", "WORKFLOW".bold())?;
+        writeln!(f, "{}", "─".repeat(width))?;
         for w in &self.workflows {
             writeln!(f, "{}:{}", w.scope, w.name)?;
         }
@@ -93,7 +101,7 @@ impl fmt::Display for WorkflowListOutput {
 /// Returns an error for unexpected I/O failures or if no project root can be
 /// found.
 pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
-    let project_root = find_project_root(&env::current_dir()?)?;
+    let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let agents_root = project_root.join(".agents");
 
     match fs::create_workflow_template(&agents_root, name) {
@@ -102,11 +110,11 @@ pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
                 path: format!(".agents/workflows/{name}/WORKFLOW.toml"),
                 name: name.to_string(),
             };
-            print!("{}", render(&output, fmt));
+            print_output(&output, fmt);
             Ok(())
         }
         Err(Error::WorkflowAlreadyExists { name: n }) => {
-            eprintln!("error: workflow {n:?} already exists");
+            eprint_error(format_args!("workflow {n:?} already exists"));
             process::exit(1);
         }
         Err(e) => Err(e.into()),
@@ -130,12 +138,12 @@ pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
 /// Returns an error for unexpected I/O failures or if the workflow cannot be
 /// loaded/parsed.
 pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
-    let project_root = find_project_root(&env::current_dir()?)?;
+    let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
 
-    let workflow = fs::load_workflow(&entries, name)?;
+    let workflow = super::load_workflow_or_exit(&entries, name)?;
 
     let mut errors: Vec<String> = Vec::new();
 
@@ -184,11 +192,11 @@ pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
             name: name.to_string(),
             status: "ok".to_string(),
         };
-        print!("{}", render(&output, fmt));
+        print_output(&output, fmt);
         Ok(())
     } else {
         for error in &errors {
-            eprintln!("  - {error}");
+            anstream::eprintln!("  {} {error}", "·".red());
         }
         process::exit(1);
     }
@@ -207,7 +215,7 @@ pub fn validate(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
 /// Returns an error for unexpected I/O failures or if no project root can be
 /// found.
 pub fn list(fmt: &OutputFormat) -> color_eyre::Result<()> {
-    let project_root = find_project_root(&env::current_dir()?)?;
+    let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
@@ -220,6 +228,6 @@ pub fn list(fmt: &OutputFormat) -> color_eyre::Result<()> {
             .map(|l| WorkflowListEntry { scope: l.scope, name: l.name })
             .collect(),
     };
-    print!("{}", render(&output, fmt));
+    print_output(&output, fmt);
     Ok(())
 }
