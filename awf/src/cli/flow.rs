@@ -40,7 +40,7 @@ use crate::store::resolve::resolve_flow_id;
 use crate::store::resolve::resolve_state_dir;
 
 // ---------------------------------------------------------------------------
-// C6 — `awf flow new <name> --workflow <workflow>`
+// `awf flow new <name> --workflow <workflow>`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow new <name> --workflow <workflow>`.
@@ -96,7 +96,7 @@ pub fn new(name: &str, workflow: &str) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C7 — `awf flow list [--all]`
+// `awf flow list [--all]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow list [--all]`.
@@ -187,7 +187,7 @@ pub fn list(include_archived: bool) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C8 — `awf flow status`
+// `awf flow status`
 // ---------------------------------------------------------------------------
 
 /// A single step's status as computed for the `status` command output.
@@ -325,7 +325,7 @@ pub fn status(
 }
 
 // ---------------------------------------------------------------------------
-// C9 — `awf flow next [--flow <id>]`
+// `awf flow next [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow next [--flow <id>]`.
@@ -415,7 +415,7 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C10 — `awf flow run <step> [--flow <id>]`
+// `awf flow run <step> [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow run <step> [--flow <id>]`.
@@ -513,7 +513,7 @@ pub fn run(step_name: &str, flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C11 — `awf flow step done <step> [--flow <id>]`
+// `awf flow step done <step> [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow step done <step> [--flow <id>]`.
@@ -575,7 +575,7 @@ pub fn step_done(
 }
 
 // ---------------------------------------------------------------------------
-// C12 — `awf flow artifact put <name> <file> [--flow <id>]`
+// `awf flow artifact put <name> <file> [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow artifact put <name> <file> [--flow <id>]`.
@@ -606,7 +606,7 @@ pub fn artifact_put(
 }
 
 // ---------------------------------------------------------------------------
-// C13 — `awf flow advance [--force] [--flow <id>]`
+// `awf flow advance [--force] [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow advance [--force] [--flow <id>]`.
@@ -748,7 +748,7 @@ pub fn advance(flow_flag: Option<&str>, force: bool) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C14 — `awf flow history [--flow <id>]`
+// `awf flow history [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow history [--flow <id>]`.
@@ -824,7 +824,7 @@ pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C15 — `awf flow archive [--flow <id>]`
+// `awf flow archive [--flow <id>]`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf flow archive [--flow <id>]`.

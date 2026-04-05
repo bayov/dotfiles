@@ -1,4 +1,4 @@
-//! Integration tests T1–T7 for the `awf` CLI.
+//! Integration tests for the `awf` CLI.
 //!
 //! Each test invokes the real `awf` binary via [`assert_cmd`] with a temporary
 //! directory that contains a `.awf/` tree. [`setup_feature_workflow`] is the
@@ -28,7 +28,7 @@ use assert_fs::TempDir;
 use predicates::prelude::*;
 
 // ---------------------------------------------------------------------------
-// T1 — Fixture helper
+// Fixture helpers
 // ---------------------------------------------------------------------------
 
 /// Feature-workflow TOML content used across all tests that need a workflow.
@@ -147,7 +147,7 @@ fn awf(tmp: &Path) -> Command {
 }
 
 // ---------------------------------------------------------------------------
-// T15 — Flow state files land at `.awf/flows/…`, not `.awf/.awf/flows/…`
+// Flow state files land at `.awf/flows/…`, not `.awf/.awf/flows/…`
 // ---------------------------------------------------------------------------
 
 /// Regression test for the double-`.awf` path bug.
@@ -188,7 +188,7 @@ fn t15_flow_state_stored_at_awf_flows_not_double_awf() {
 }
 
 // ---------------------------------------------------------------------------
-// T2 — `awf workflow new`
+// `awf workflow new`
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -231,7 +231,7 @@ fn t2_workflow_new_duplicate_errors() {
 }
 
 // ---------------------------------------------------------------------------
-// T3 — `awf workflow validate`
+// `awf workflow validate`
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -310,7 +310,7 @@ steps = [
 }
 
 // ---------------------------------------------------------------------------
-// T4 — `awf flow new` + `awf flow status`
+// `awf flow new` + `awf flow status`
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -337,7 +337,7 @@ fn t4_flow_new_and_status() {
 }
 
 // ---------------------------------------------------------------------------
-// T5 — Happy path through the design stage
+// Happy path through the design stage
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -387,7 +387,7 @@ fn t5_happy_path_design_stage() {
 }
 
 // ---------------------------------------------------------------------------
-// T6 — `awf flow run` PASS and FAIL
+// `awf flow run` PASS and FAIL
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -483,7 +483,7 @@ steps = [
 }
 
 // ---------------------------------------------------------------------------
-// T7 — `awf flow advance` blocked by failed step
+// `awf flow advance` blocked by failed step
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -563,8 +563,8 @@ steps = [
 }
 
 // ---------------------------------------------------------------------------
-// T8 — `awf flow advance` blocked when `produces` artifact missing; unblocked
-//      after `artifact put`
+// `awf flow advance` blocked when `produces` artifact missing; unblocked after
+// `artifact put`
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -618,8 +618,8 @@ fn t8_advance_blocked_by_missing_artifact_then_unblocked() {
 }
 
 // ---------------------------------------------------------------------------
-// T9 — `requires` gate: entering a stage blocked when its `requires` artifact
-//      is absent
+// `requires` gate: entering a stage blocked when its `requires` artifact is
+// absent
 // ---------------------------------------------------------------------------
 
 /// A workflow whose second stage requires an artifact the first stage does not
@@ -679,8 +679,7 @@ fn t9_advance_blocked_by_missing_requires_artifact() {
 }
 
 // ---------------------------------------------------------------------------
-// T10 — `--force` bypasses the step-completion gate; history records the
-//       transition
+// `--force` bypasses the step-completion gate; history records the transition
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -740,7 +739,7 @@ fn t10_force_advance_bypasses_incomplete_steps() {
 }
 
 // ---------------------------------------------------------------------------
-// T11 — Duplicate flow name blocked (active and archived)
+// Duplicate flow name blocked (active and archived)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -779,7 +778,7 @@ fn t11_duplicate_flow_name_blocked() {
 }
 
 // ---------------------------------------------------------------------------
-// T12 — `awf flow next` output is deterministic at each named state
+// `awf flow next` output is deterministic at each named state
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -908,7 +907,7 @@ fn t12_flow_next_can_advance_mentions_advance_command() {
 }
 
 // ---------------------------------------------------------------------------
-// T13 — `awf flow status --output-format json` produces valid JSON
+// `awf flow status --output-format json` produces valid JSON
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -965,8 +964,8 @@ fn t13_flow_status_json_output_is_valid() {
 }
 
 // ---------------------------------------------------------------------------
-// T14 — `awf flow archive` moves dirs; subsequent `status` errors; `list
-//       --all` shows archived entry
+// `awf flow archive` moves dirs; subsequent `status` errors; `list --all`
+// shows archived entry
 // ---------------------------------------------------------------------------
 
 #[test]

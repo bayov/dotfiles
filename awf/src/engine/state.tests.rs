@@ -169,7 +169,7 @@ fn command_step(name: &str) -> Step {
 fn ts(s: &str) -> DateTime<Utc> { s.parse().expect("timestamp should parse") }
 
 // ---------------------------------------------------------------------------
-// E4: can_enter_stage — Ok
+// can_enter_stage — Ok
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -202,7 +202,7 @@ fn can_enter_stage_returns_ok_when_required_artifacts_are_present() {
 }
 
 // ---------------------------------------------------------------------------
-// E4: can_enter_stage — MissingRequires
+// can_enter_stage — MissingRequires
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -223,7 +223,7 @@ fn can_enter_stage_returns_missing_requires_when_artifact_absent() {
 }
 
 // ---------------------------------------------------------------------------
-// E4: can_enter_stage — AlreadyCompleted (non-repeatable)
+// can_enter_stage — AlreadyCompleted (non-repeatable)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -252,7 +252,7 @@ fn can_enter_stage_returns_already_completed_for_non_repeatable_visited_stage()
 }
 
 // ---------------------------------------------------------------------------
-// E4: can_enter_stage — repeatable stage is always Ok if requirements met
+// can_enter_stage — repeatable stage is always Ok if requirements met
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -277,7 +277,7 @@ fn can_enter_stage_returns_ok_for_repeatable_stage_even_if_in_history() {
 }
 
 // ---------------------------------------------------------------------------
-// E5: advance_stage — normal advance
+// advance_stage — normal advance
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -343,7 +343,7 @@ fn advance_stage_updates_updated_at() {
 }
 
 // ---------------------------------------------------------------------------
-// E5: advance_stage — last stage error
+// advance_stage — last stage error
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -364,7 +364,7 @@ fn advance_stage_returns_already_on_last_stage_when_on_last_stage() {
 }
 
 // ---------------------------------------------------------------------------
-// E6: record_step_pass — command step
+// record_step_pass — command step
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -398,7 +398,7 @@ fn record_step_pass_appends_passing_command_entry_to_step_log() {
 }
 
 // ---------------------------------------------------------------------------
-// E6: record_step_fail — command step
+// record_step_fail — command step
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -432,7 +432,7 @@ fn record_step_fail_appends_failing_command_entry_to_step_log() {
 }
 
 // ---------------------------------------------------------------------------
-// E6: record_step_pass — agent step
+// record_step_pass — agent step
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -468,7 +468,7 @@ fn record_step_pass_appends_passing_agent_entry_with_completed_at() {
 }
 
 // ---------------------------------------------------------------------------
-// E6: record_step_fail — agent step
+// record_step_fail — agent step
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -501,7 +501,7 @@ fn record_step_fail_appends_failing_agent_entry_with_completed_at() {
 }
 
 // ---------------------------------------------------------------------------
-// E6: multiple entries accumulate in step_log
+// multiple entries accumulate in step_log
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -553,7 +553,7 @@ fn multiple_record_calls_accumulate_entries_in_step_log() {
 }
 
 // ---------------------------------------------------------------------------
-// E5 + E6 integration: advance preserves accumulated step log
+// advance preserves accumulated step log
 // ---------------------------------------------------------------------------
 
 #[test]

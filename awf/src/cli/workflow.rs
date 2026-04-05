@@ -17,7 +17,7 @@ use crate::store::fs;
 use crate::store::resolve::find_awf_root;
 
 // ---------------------------------------------------------------------------
-// C3 — `awf workflow new <name>`
+// `awf workflow new <name>`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf workflow new <name>`.
@@ -59,7 +59,7 @@ pub fn new(name: &str) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// C4 — `awf workflow validate <name>`
+// `awf workflow validate <name>`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf workflow validate <name>`.
@@ -143,7 +143,7 @@ fn prompt_file_exists(prompts_dir: &Path, filename: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
-// C5 — `awf workflow list`
+// `awf workflow list`
 // ---------------------------------------------------------------------------
 
 /// Handles `awf workflow list`.

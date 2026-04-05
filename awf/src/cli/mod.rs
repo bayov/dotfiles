@@ -4,7 +4,6 @@
 //! [`Commands`] enum that routes to either the `workflow` or `flow` subcommand
 //! group, and all nested subcommand enums.
 //!
-//! Handlers are currently stubbed out and will be implemented in C3–C15.
 //! The global `--output-format` flag (default `human`) is threaded through
 //! every handler so that all output can be rendered in the requested format via
 //! [`output::render`].
@@ -170,8 +169,7 @@ pub enum ArtifactCommands {
 
 /// Dispatches a parsed [`Cli`] to the appropriate handler.
 ///
-/// All handler bodies are currently stubs returning `Ok(())`; they will be
-/// filled in during C3–C15.
+/// All handler bodies are currently stubs returning `Ok(())`.
 pub fn dispatch(cli: Cli) -> color_eyre::Result<()> {
     match cli.command {
         Commands::Workflow { command } => {
