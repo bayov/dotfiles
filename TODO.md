@@ -7,8 +7,6 @@ TODO
 Awf
 ---
 
-- assert_stdout should not default to contains, and instead specify contains
-  explicitly.
 - Remove xml and toml `--output-format`s. Only `human` and `json` must remain.
 - Implement `dynamic_task_lists_plan.md`
 - Agent should have .awf-staging/ folder to write artifacts to before
