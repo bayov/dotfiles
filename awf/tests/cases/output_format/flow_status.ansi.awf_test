@@ -35,7 +35,7 @@ $ assert_stdout equals
 | [1mFlow:[0m  [36mfmt-status[39m
 | [1mStage:[0m  [35mdesign[39m
 | [1mSteps[0m:
-|   [34mwrite-design[39m  [90m[· pending][39m
+|   [35mwrite-design[39m  [90m[· pending][39m
 
 # --- JSON ---
 

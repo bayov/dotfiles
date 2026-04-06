@@ -56,7 +56,7 @@ impl fmt::Display for FlowNewOutput {
             "Created flow".bright_black(),
             self.path.cyan().bold(),
             "workflow".bright_black(),
-            self.workflow,
+            self.workflow.blue(),
             "stage".bright_black(),
             self.stage,
         )
@@ -106,7 +106,7 @@ impl fmt::Display for FlowListOutput {
                 "• {}  ({}: {}, {}: {}",
                 entry.path.cyan(),
                 "workflow".bright_black(),
-                entry.workflow,
+                entry.workflow.blue(),
                 "stage".bright_black(),
                 entry.stage.magenta(),
             )?;
@@ -150,7 +150,7 @@ impl fmt::Display for FlowStatusOutput {
                 "fail" => "[✗ fail]".red().to_string(),
                 _ => "[· pending]".bright_black().to_string(),
             };
-            writeln!(f, "  {}  {badge}", step.name.blue())?;
+            writeln!(f, "  {}  {badge}", step.name.magenta())?;
         }
         Ok(())
     }
@@ -223,7 +223,7 @@ impl fmt::Display for FlowRunOutput {
             writeln!(
                 f,
                 "Fix the error, then run: awf flow run {}",
-                self.step.blue()
+                self.step.magenta()
             )?;
         }
         Ok(())
@@ -246,7 +246,7 @@ impl fmt::Display for FlowStepDoneOutput {
             f,
             "{} Step {} marked complete.",
             "✓".green(),
-            self.step.blue()
+            self.step.magenta()
         )
     }
 }

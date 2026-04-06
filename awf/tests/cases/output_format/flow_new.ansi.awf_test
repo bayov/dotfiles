@@ -28,7 +28,7 @@ $ export CLICOLOR_FORCE=1
 
 $ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
 $ assert_stdout equals
-| [90mCreated flow[39m [1m<...>[0m ([90mworkflow[39m: feature, [90mstage[39m: design)
+| [90mCreated flow[39m [1m<...>[0m ([90mworkflow[39m: [34mfeature[39m, [90mstage[39m: design)
 
 # --- JSON ---
 

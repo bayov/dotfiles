@@ -38,7 +38,7 @@ $ assert_stdout contains
 
 $ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-h --output-format human
 $ assert_stdout equals
-| [32m✓[39m Step [34mwrite-design[39m marked complete.
+| [32m✓[39m Step [35mwrite-design[39m marked complete.
 
 # --- JSON ---
 

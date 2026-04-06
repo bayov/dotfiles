@@ -31,7 +31,7 @@ impl fmt::Display for WorkflowNewOutput {
         writeln!(
             f,
             "Edit it to define your stages, then run `awf workflow validate {}`.",
-            self.name
+            self.name.blue()
         )
     }
 }
@@ -45,7 +45,7 @@ pub struct WorkflowValidateOutput {
 
 impl fmt::Display for WorkflowValidateOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Workflow {}: {}", self.name, "✓ OK".green().bold())
+        writeln!(f, "Workflow {}: {}", self.name.blue(), "✓ OK".green().bold())
     }
 }
 
@@ -80,7 +80,7 @@ impl fmt::Display for WorkflowListOutput {
         writeln!(f, "{}", "WORKFLOW".bold())?;
         writeln!(f, "{}", "─".repeat(width))?;
         for w in &self.workflows {
-            writeln!(f, "{}:{}", w.scope, w.name)?;
+            writeln!(f, "{}:{}", w.scope, w.name.blue())?;
         }
         Ok(())
     }
@@ -199,7 +199,11 @@ fn validate_single(
         print_output(&output, fmt);
         Ok(false)
     } else {
-        anstream::eprintln!("Workflow {}: {}", name, "✗ FAILED".red().bold());
+        anstream::eprintln!(
+            "Workflow {}: {}",
+            name.blue(),
+            "✗ FAILED".red().bold()
+        );
         for error in &errors {
             anstream::eprintln!("  {} {error}", "·".red());
         }

@@ -30,7 +30,7 @@ $ awf workflow list --output-format human
 $ assert_stdout equals
 | [1mWORKFLOW[0m
 | ───────────────
-| project:feature
+| project:[34mfeature[39m
 
 # --- JSON ---
 
