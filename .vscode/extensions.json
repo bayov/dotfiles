@@ -8,7 +8,7 @@
         "ms-python.debugpy",
         // Dependency management
         "fill-labs.dependi",
-        // Viewing ANSI output in awf/tests/output_format/*.awf_test
+        // Viewing ANSI output in awf/tests/*.ansi.awf_test
         "HNRobert.ansi-viewer"
     ]
 }
