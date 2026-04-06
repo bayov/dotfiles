@@ -24,9 +24,11 @@ $ write_file .agents/workflows/feature/design.md
 
 # --- Human ---
 
+$ export CLICOLOR_FORCE=1
+
 $ awf workflow list --output-format human
 $ assert_stdout equals
-| WORKFLOW
+| [1mWORKFLOW[0m
 | ───────────────
 | project:feature
 

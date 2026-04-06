@@ -24,9 +24,11 @@ $ write_file .agents/workflows/feature/design.md
 
 # --- Human ---
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
 $ assert_stdout equals
-| Created flow <...> (workflow: feature, stage: design)
+| [2mCreated flow[0m [1m<...>[0m ([2mworkflow[0m: feature, [2mstage[0m: design)
 
 # --- JSON ---
 

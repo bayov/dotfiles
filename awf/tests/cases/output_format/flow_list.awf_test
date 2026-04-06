@@ -22,6 +22,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-list --workflow feature
 $ assert_stdout contains
 | fmt-list
@@ -31,7 +33,7 @@ $ assert_stdout contains
 # Table header + separator + one row. Widths depend on the path so use <...>.
 $ awf flow list --output-format human
 $ assert_stdout equals
-| PATH<...>WORKFLOW  STAGE<...>
+| [1mPATH[0m<...>[1mWORKFLOW[0m  [1mSTAGE[0m<...>
 | <...>
 | <...>fmt-list<...>feature<...>design
 

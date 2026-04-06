@@ -22,6 +22,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-validate --workflow feature
 $ assert_stdout contains
 | fmt-validate
@@ -30,7 +32,7 @@ $ assert_stdout contains
 
 $ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format human
 $ assert_stdout equals
-| ✓ Flow artifacts valid.
+| [32m✓ Flow artifacts valid.[39m
 
 # --- JSON ---
 

@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 
+use chrono::Local;
 use chrono::Utc;
 use owo_colors::OwoColorize as _;
 use serde::Serialize;
@@ -200,7 +201,7 @@ pub struct FlowStatusOutput {
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}  {}", "Flow:".bold(), self.flow)?;
-        writeln!(f, "{}  {}", "Stage:".bold(), self.stage)?;
+        writeln!(f, "{}  {}", "Stage:".bold(), self.stage.magenta())?;
         writeln!(f, "{}:", "Steps".bold())?;
         for step in &self.steps {
             let badge = match step.status.as_str() {
@@ -208,7 +209,7 @@ impl fmt::Display for FlowStatusOutput {
                 "fail" => "[✗ fail]".red().to_string(),
                 _ => "[· pending]".dimmed().to_string(),
             };
-            writeln!(f, "  {}  {badge}", step.name)?;
+            writeln!(f, "  {}  {badge}", step.name.blue())?;
         }
         Ok(())
     }
@@ -278,7 +279,11 @@ impl fmt::Display for FlowRunOutput {
             self.command, self.duration_ms
         )?;
         if self.status == "fail" {
-            writeln!(f, "Fix the error, then run: awf flow run {}", self.step)?;
+            writeln!(
+                f,
+                "Fix the error, then run: awf flow run {}",
+                self.step.blue()
+            )?;
         }
         Ok(())
     }
@@ -296,7 +301,12 @@ pub struct FlowStepDoneOutput {
 
 impl fmt::Display for FlowStepDoneOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{} Step {} marked complete.", "✓".green(), self.step)
+        writeln!(
+            f,
+            "{} Step {} marked complete.",
+            "✓".green(),
+            self.step.blue()
+        )
     }
 }
 
@@ -329,7 +339,12 @@ pub struct FlowAdvanceOutput {
 
 impl fmt::Display for FlowAdvanceOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{} {}", "▶ Entered stage:".green().bold(), self.stage)?;
+        writeln!(
+            f,
+            "{} {}",
+            "▶ Entered stage:".green().bold(),
+            self.stage.magenta()
+        )?;
         if self.is_final {
             writeln!(f, "{}", "  This is the final stage.".dimmed())?;
         }
@@ -378,35 +393,31 @@ impl fmt::Display for FlowHistoryOutput {
                 f,
                 "{} stage {} started at {}",
                 "•".bold(),
-                entry.stage.bold(),
-                entry.started_at.dimmed(),
+                entry.stage.magenta().bold(),
+                pretty_dt(&entry.started_at).bright_black(),
             )?;
             for step in &entry.steps {
-                let icon;
-                let verb;
-                match step.status.as_str() {
-                    "pass" => {
-                        icon = "✓".green().to_string();
-                        verb = "completed at";
-                    }
-                    "fail" => {
-                        icon = "✗".red().to_string();
-                        verb = "failed at";
-                    }
-                    _ => {
-                        icon = "?".to_string();
-                        verb = "at";
-                    }
-                }
+                let (icon, verb, name_colored) = match step.status.as_str() {
+                    "pass" => (
+                        "✓".green().to_string(),
+                        "completed at",
+                        step.step.green().to_string(),
+                    ),
+                    "fail" => (
+                        "✗".red().to_string(),
+                        "failed at",
+                        step.step.red().to_string(),
+                    ),
+                    _ => ("?".to_string(), "at", step.step.blue().to_string()),
+                };
                 if let Some(ref time) = step.time {
                     writeln!(
                         f,
-                        "    {icon} step {} {verb} {}",
-                        step.step,
-                        time.dimmed(),
+                        "    {icon} step {name_colored} {verb} {}",
+                        pretty_dt(time).bright_black(),
                     )?;
                 } else {
-                    writeln!(f, "    {icon} step {} {verb} ?", step.step)?;
+                    writeln!(f, "    {icon} step {name_colored} {verb} ?")?;
                 }
             }
             if let Some(ref completed_at) = entry.completed_at {
@@ -414,18 +425,19 @@ impl fmt::Display for FlowHistoryOutput {
                     let icon = "⚠".yellow();
                     writeln!(
                         f,
-                        "    {icon} stage force completed at {}",
-                        completed_at.dimmed(),
+                        "    {icon} stage {} at {}",
+                        "force completed".yellow(),
+                        pretty_dt(completed_at).bright_black(),
                     )?;
                     if let Some(ref reason) = entry.force_reason {
-                        writeln!(f, "        {reason}")?;
+                        writeln!(f, "        {}", reason.yellow())?;
                     }
                 } else {
                     let icon = "✓".green();
                     writeln!(
                         f,
                         "    {icon} stage completed at {}",
-                        completed_at.dimmed(),
+                        pretty_dt(completed_at).bright_black(),
                     )?;
                 }
             }
@@ -1236,6 +1248,17 @@ fn build_step_records(
             }
         })
         .collect()
+}
+
+/// Parses an ISO 8601 timestamp and formats it in the local timezone as
+/// `"YYYY-MM-DD HH:MM:SS ±HH:MM"`. Returns the input unchanged if it cannot
+/// be parsed (e.g. `"123ms"` duration strings).
+fn pretty_dt(s: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(s)
+        .map(|dt| {
+            dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S %:z").to_string()
+        })
+        .unwrap_or_else(|_| s.to_owned())
 }
 
 /// Checks that all `produces` artifacts for the current stage exist, exiting

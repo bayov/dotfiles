@@ -468,11 +468,17 @@ fn run_test_case(case: &TestCase) {
                 let expanded_args: Vec<String> =
                     args.iter().map(|a| expand(a)).collect();
 
-                let output = Command::cargo_bin("awf")
-                    .expect("awf binary not found")
-                    .current_dir(tmp.path())
-                    .env("NO_COLOR", "1")
-                    .envs(env.iter().cloned())
+                let force_color =
+                    env.iter().any(|(k, _)| k == "CLICOLOR_FORCE");
+
+                let mut cmd =
+                    Command::cargo_bin("awf").expect("awf binary not found");
+                cmd.current_dir(tmp.path());
+                if !force_color {
+                    cmd.env("NO_COLOR", "1");
+                }
+                cmd.envs(env.iter().cloned());
+                let output = cmd
                     .args(&expanded_args)
                     .output()
                     .unwrap_or_else(|e| {
@@ -598,8 +604,13 @@ fn run_test_case(case: &TestCase) {
                     );
                 } else {
                     for (mode, expected) in expected_stdout {
-                        check_output_assertion(
-                            "stdout", &stdout, *mode, expected, &context,
+                        check_output_assertion_maybe_colored(
+                            "stdout",
+                            &stdout,
+                            *mode,
+                            expected,
+                            force_color,
+                            &context,
                         );
                     }
                 }
@@ -617,8 +628,13 @@ fn run_test_case(case: &TestCase) {
                     );
                 } else {
                     for (mode, expected) in expected_stderr {
-                        check_output_assertion(
-                            "stderr", &stderr, *mode, expected, &context,
+                        check_output_assertion_maybe_colored(
+                            "stderr",
+                            &stderr,
+                            *mode,
+                            expected,
+                            force_color,
+                            &context,
                         );
                     }
                 }
@@ -628,8 +644,71 @@ fn run_test_case(case: &TestCase) {
 }
 
 // ---------------------------------------------------------------------------
+// ANSI helpers
+// ---------------------------------------------------------------------------
+
+fn strip_ansi(s: &str) -> String { anstream::adapter::strip_str(s).to_string() }
+
+// ---------------------------------------------------------------------------
 // Output assertion dispatch
 // ---------------------------------------------------------------------------
+
+/// When `force_color` is true (command was run with `CLICOLOR_FORCE=1`), runs a
+/// two-phase comparison:
+///
+/// - **Phase 1** (content check): strip ANSI from both sides, then assert. This
+///   gives a readable failure message when the text itself is wrong.
+/// - **Phase 2** (style check): compare with ANSI codes intact.  If this fails
+///   but Phase 1 passed, the content is correct but styling changed; the panic
+///   message includes a hint to update the expected output.
+///
+/// When `force_color` is false, delegates directly to
+/// [`check_output_assertion`] (unchanged behaviour).
+fn check_output_assertion_maybe_colored(
+    stream: &str,
+    actual: &str,
+    mode: AssertMode,
+    expected: &str,
+    force_color: bool,
+    context: &dyn Fn() -> String,
+) {
+    if !force_color {
+        check_output_assertion(stream, actual, mode, expected, context);
+        return;
+    }
+
+    // Phase 1: content check (ANSI stripped).
+    let stripped_actual = strip_ansi(actual);
+    let stripped_expected = strip_ansi(expected);
+    check_output_assertion(
+        stream,
+        &stripped_actual,
+        mode,
+        &stripped_expected,
+        context,
+    );
+
+    // Phase 2: style check (full ANSI comparison).
+    // We catch the panic from a failing assertion and re-raise it with a hint.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        check_output_assertion(stream, actual, mode, expected, context);
+    }));
+    if let Err(payload) = result {
+        let original_msg = payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| {
+                payload.downcast_ref::<&str>().map(|s| (*s).to_string())
+            })
+            .unwrap_or_else(|| "(unknown panic payload)".to_string());
+        panic!(
+            "{}\n\n  {} Content is correct but ANSI styling differs — \
+             update the expected output in the test file.",
+            original_msg,
+            "hint:".yellow().bold(),
+        );
+    }
+}
 
 #[allow(clippy::too_many_lines)]
 fn check_output_assertion(

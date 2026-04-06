@@ -1,1 +1,9 @@
-{ "files.associations": { "*.awf_test": "shellscript" } }
+{
+    "files.associations": { "*.awf_test": "shellscript" },
+    "ansiViewer.autoLanguageModeFiles": [
+        "**/*.ans",
+        "**/*.ansi",
+        "**/output_format/*.awf_test"
+    ],
+    "ansiViewer.escapeSequenceDisplay": "hidden"
+}

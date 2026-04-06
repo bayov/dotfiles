@@ -24,6 +24,8 @@ $ write_file .agents/workflows/feature/design.md
 
 # Separate flows (archive mutates state)
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-arc-h --workflow feature
 $ assert_stdout contains
 | fmt-arc-h
@@ -36,7 +38,7 @@ $ assert_stdout contains
 
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-h --output-format human
 $ assert_stdout equals
-| Archived flow: <...>fmt-arc-h
+| [2mArchived flow:[0m [1m<...>fmt-arc-h[0m
 
 # --- JSON ---
 

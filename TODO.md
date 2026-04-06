@@ -7,7 +7,7 @@ TODO
 Awf
 ---
 
-- Output format tests should use ansi colors
+- Rename ANSi tests to .ansi.awf_test
 - Improve human output format.
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Coverage for all output format as tests.

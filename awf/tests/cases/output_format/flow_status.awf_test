@@ -22,6 +22,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-status --workflow feature
 $ assert_stdout contains
 | fmt-status
@@ -30,10 +32,10 @@ $ assert_stdout contains
 
 $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
 $ assert_stdout equals
-| Flow:  fmt-status
-| Stage:  design
-| Steps:
-|   write-design  [· pending]
+| [1mFlow:[0m  fmt-status
+| [1mStage:[0m  [35mdesign[39m
+| [1mSteps[0m:
+|   [34mwrite-design[39m  [2m[· pending][0m
 
 # --- JSON ---
 

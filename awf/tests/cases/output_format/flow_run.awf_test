@@ -15,6 +15,8 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Separate flows for each format (run mutates state)
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
 $ assert_stdout contains
 | fmt-run-h
@@ -27,7 +29,7 @@ $ assert_stdout contains
 
 $ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-h --output-format human
 $ assert_stdout equals
-| PASS  true  (<...>ms)
+| [1m[32mPASS[39m[0m  true  (<...>ms)
 
 # --- JSON ---
 

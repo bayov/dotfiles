@@ -7,6 +7,8 @@
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
         // Dependency management
-        "fill-labs.dependi"
+        "fill-labs.dependi",
+        // Viewing ANSI output in awf/tests/output_format/*.awf_test
+        "HNRobert.ansi-viewer"
     ]
 }

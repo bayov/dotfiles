@@ -16,6 +16,8 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 
 # Separate flows (advance mutates state)
 
+$ export CLICOLOR_FORCE=1
+
 $ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
 $ assert_stdout contains
 | fmt-adv-h
@@ -28,8 +30,8 @@ $ assert_stdout contains
 
 $ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h --output-format human
 $ assert_stdout equals
-| ▶ Entered stage: done
-|   This is the final stage.
+| [1m[32m▶ Entered stage:[39m[0m [35mdone[39m
+| [2m  This is the final stage.[0m
 
 # --- JSON ---
 
