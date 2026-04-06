@@ -56,6 +56,7 @@
     // color theme
     "workbench.colorTheme": "IntelliJ IDEA Islands Dark",
     "workbench.colorCustomizations": {
+        "editor.background": "#191a1c",
         // highlight of word under caret
         "editor.wordHighlightBackground": "#fff1",
         "editor.wordHighlightStrongBackground": "#fff1",

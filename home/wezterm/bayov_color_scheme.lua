@@ -20,7 +20,7 @@ function module.apply_to_config(config)
     --  - ANSI 8-15 are in 'brights'
     color_scheme.brights[1] = "#666666"
 
-    --color_scheme.background = "#1f2023"
+    color_scheme.background = "#1d1f21"
     color_scheme.cursor_bg = "#ced0d6"
     color_scheme.cursor_fg = "black"
     color_scheme.cursor_border = "#ced0d6"
