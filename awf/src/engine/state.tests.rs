@@ -239,6 +239,7 @@ fn can_enter_stage_returns_already_completed_for_non_repeatable_visited_stage()
         started_at: ts("2026-04-04T10:00:00Z"),
         completed_at: Some(ts("2026-04-04T12:00:00Z")),
         force_completed: false,
+        force_reason: None,
     });
 
     let mut artifacts = HashSet::new();
@@ -268,6 +269,7 @@ fn can_enter_stage_returns_ok_for_repeatable_stage_even_if_in_history() {
         started_at: ts("2026-04-04T10:00:00Z"),
         completed_at: Some(ts("2026-04-04T11:00:00Z")),
         force_completed: false,
+        force_reason: None,
     });
 
     let artifacts = HashSet::new(); // review has no requires
@@ -293,7 +295,7 @@ fn advance_stage_moves_flow_from_design_to_implement() {
 
     // When: we advance the stage
     let updated =
-        advance_stage(&workflow, flow, false).expect("advance should succeed");
+        advance_stage(&workflow, flow, None).expect("advance should succeed");
 
     // Then: the current stage is now implement
     assert_eq!(updated.current_stage, "implement");
@@ -317,7 +319,7 @@ fn advance_stage_sets_stage_started_at_for_new_stage() {
     // When: we advance the stage
     let before = Utc::now();
     let updated =
-        advance_stage(&workflow, flow, false).expect("advance should succeed");
+        advance_stage(&workflow, flow, None).expect("advance should succeed");
     let after = Utc::now();
 
     // Then: stage_started_at is set to a time within the current call window
@@ -335,7 +337,7 @@ fn advance_stage_updates_updated_at() {
 
     // When: we advance the stage
     let updated =
-        advance_stage(&workflow, flow, false).expect("advance should succeed");
+        advance_stage(&workflow, flow, None).expect("advance should succeed");
 
     // Then: updated_at is refreshed (same instant as stage_started_at)
     assert_eq!(updated.updated_at, updated.stage_started_at);
@@ -357,7 +359,7 @@ fn advance_stage_returns_already_on_last_stage_when_on_last_stage() {
     let flow = flow_at("review");
 
     // When: we attempt to advance further
-    let result = advance_stage(&workflow, flow, false);
+    let result = advance_stage(&workflow, flow, None);
 
     // Then: AlreadyOnLastStage error is returned
     assert!(
@@ -572,7 +574,7 @@ fn advance_stage_preserves_existing_step_log_entries() {
 
     // When: we advance the stage
     let advanced =
-        advance_stage(&workflow, flow, false).expect("advance should succeed");
+        advance_stage(&workflow, flow, None).expect("advance should succeed");
 
     // Then: the step log entry from the design stage is still present
     assert_eq!(advanced.step_log.len(), 1);

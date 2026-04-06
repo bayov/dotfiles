@@ -42,12 +42,14 @@ fn full_flow_state_round_trip() {
                 started_at: ts("2026-04-04T10:00:00Z"),
                 completed_at: Some(ts("2026-04-04T12:00:00Z")),
                 force_completed: false,
+                force_reason: None,
             },
             StageHistoryEntry {
                 stage: "implement".to_owned(),
                 started_at: ts("2026-04-04T12:00:00Z"),
                 completed_at: None,
                 force_completed: false,
+                force_reason: None,
             },
         ],
         step_log: vec![
@@ -262,6 +264,7 @@ fn stage_history_entry_without_completed_at_omits_field() {
         started_at: ts("2026-04-04T12:00:00Z"),
         completed_at: None,
         force_completed: false,
+        force_reason: None,
     };
 
     // When: we embed it in a flow state and serialize

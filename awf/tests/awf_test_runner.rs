@@ -201,8 +201,7 @@ fn parse_directive(rest: &str, line_number: usize, path: &Path) -> Directive {
     } else if let Some(arg) = rest.strip_prefix("unset ") {
         Directive::Unset { key: arg.trim().to_string() }
     } else if let Some(arg) = rest.strip_prefix("awf ") {
-        let args: Vec<String> =
-            arg.split_whitespace().map(String::from).collect();
+        let args = shlex::split(arg).unwrap_or_default();
         Directive::AwfCommand { args, line_number }
     } else if rest == "awf" {
         Directive::AwfCommand { args: vec![], line_number }

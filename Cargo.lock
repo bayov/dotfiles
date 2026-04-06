@@ -143,6 +143,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
+ "shlex",
  "thiserror",
  "toml",
  "tracing",

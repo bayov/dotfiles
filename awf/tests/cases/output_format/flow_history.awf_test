@@ -66,7 +66,7 @@ $ assert_stdout contains
 $ awf flow run test --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | PASS
-$ awf flow next-stage --force --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --force "force moving to next stage despite lint failure" --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | done
 
@@ -74,15 +74,16 @@ $ assert_stdout contains
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
-| ▶ design started <...>
-|   write-design  ✓ pass  <...>
-| ◀ design completed  <...>
-| ▶ implement started <...>
-|   write-code  ✓ pass  <...>
-|   lint  ✗ fail  <...>
-|   test  ✓ pass  <...>
-| ◀ implement force_completed  <...>
-| ▶ done started <...>
+| • stage design started at <...>
+|     ✓ step write-design completed at <...>
+|     ✓ stage completed at <...>
+| • stage implement started at <...>
+|     ✓ step write-code completed at <...>
+|     ✗ step lint failed at <...>
+|     ✓ step test completed at <...>
+|     ⚠ stage force completed at <...>
+|         force moving to next stage despite lint failure
+| • stage done started at <...>
 
 # --- JSON output ---
 
@@ -108,6 +109,7 @@ $ assert_stdout json
 |       "started_at": "<any_string>",
 |       "completed_at": "<any_string>",
 |       "force_completed": true,
+|       "force_reason": "force moving to next stage despite lint failure",
 |       "steps": [
 |         {
 |           "step": "write-code",

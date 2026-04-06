@@ -142,7 +142,7 @@ pub enum FlowCommands {
         #[arg(long)]
         flow: Option<String>,
         #[arg(long)]
-        force: bool,
+        force: Option<String>,
     },
     /// Show transition and command history
     History {

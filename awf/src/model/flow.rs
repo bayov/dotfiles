@@ -51,6 +51,10 @@ pub struct StageHistoryEntry {
     /// `true` when the stage was force-advanced past gate checks.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub force_completed: bool,
+
+    /// Human-readable reason why the stage was force-advanced.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub force_reason: Option<String>,
 }
 
 /// A single completed step execution recorded in a flow's step log.

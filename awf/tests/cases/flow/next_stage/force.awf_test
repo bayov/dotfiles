@@ -45,7 +45,7 @@ $ assert_stderr contains
 
 # With --force: step gate bypassed.
 # run-test has only one stage, so this errors with "last stage".
-$ awf flow next-stage --force --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage
@@ -55,7 +55,7 @@ $ assert_stderr not_contains
 | fail-step
 
 # =============================================================================
-# Test 2: --force records force_completed in history
+# Test 2: --force records force_completed with reason in history
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/force-history --workflow with-artifact
@@ -65,14 +65,14 @@ $ assert_stdout contains
 # Write artifact and force-advance (step not done but artifact present)
 $ write_file flows/force-history/artifacts/draft.md
 | placeholder
-$ awf flow next-stage --force --flow $FLOWS_DIR/force-history
+$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-history
 $ assert_stdout contains
 | done
 
-# History shows force_completed
+# History shows force completed with reason
 $ awf flow history --flow $FLOWS_DIR/force-history --output-format human
 $ assert_stdout contains
-| force_completed
+| force completed
 
 $ awf flow history --flow $FLOWS_DIR/force-history --output-format json
 $ assert_stdout json
@@ -83,6 +83,7 @@ $ assert_stdout json
 |       "started_at": "<any_string>",
 |       "completed_at": "<any_string>",
 |       "force_completed": true,
+|       "force_reason": "<any_string>",
 |       "steps": []
 |     },
 |     {
@@ -102,7 +103,7 @@ $ assert_stdout contains
 | force-no-artifact
 
 # --force without the required artifact: still blocked
-$ awf flow next-stage --force --flow $FLOWS_DIR/force-no-artifact
+$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-no-artifact
 $ assert_exit_code 1
 $ assert_stderr contains
 | draft.md
