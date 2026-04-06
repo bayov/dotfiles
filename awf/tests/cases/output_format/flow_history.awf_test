@@ -1,6 +1,6 @@
 # Test: awf flow history — human and json output
-# Exercises a multi-stage workflow with agent steps, command steps, and
-# stage transitions to verify both human and JSON history formats.
+# Builds a multi-stage flow with passing agent steps, a failing command step,
+# and a passing command step, then checks the final history in both formats.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -12,6 +12,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 |
 | [commands]
 | test = "true"
+| lint = "false"
 |
 | [[stages]]
 | name = "design"
@@ -27,6 +28,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | requires = ["design.md"]
 | steps = [
 |     { name = "write-code", type = "agent", prompt = "implement.md" },
+|     { name = "lint", type = "command", command = "lint" },
 |     { name = "test", type = "command", command = "test" },
 | ]
 |
@@ -40,115 +42,49 @@ $ write_file .agents/workflows/feature/design.md
 $ write_file .agents/workflows/feature/implement.md
 | # Implement
 
-# =============================================================================
-# Scenario 1: Fresh flow — single stage, no steps completed
-# =============================================================================
+# --- Build up flow state: design → implement → done ---
 
 $ awf flow new $FLOWS_DIR/fmt-history --workflow feature
 $ assert_stdout contains
 | fmt-history
 
-# --- Human: only the entered line, no steps ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
-$ assert_stdout equals
-| ▶ design entered <...>
-
-# --- JSON: one entry, empty steps ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
-$ assert_stdout json
-| {
-|   "entries": [
-|     {
-|       "stage": "design",
-|       "entered_at": "<any_string>",
-|       "steps": []
-|     }
-|   ]
-| }
-
-# =============================================================================
-# Scenario 2: Complete design stage and advance to implement
-# =============================================================================
-
 $ awf flow step done write-design --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-design
-
 $ write_file flows/fmt-history/artifacts/design.md
 | # Design doc
-
 $ awf flow next-stage --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | implement
 
-# --- Human: design exited with its agent step, implement entered ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
-$ assert_stdout equals
-| ▶ design entered <...>
-|   write-design  ✓ pass  <...>
-| ◀ design exited  <...>
-| ▶ implement entered <...>
-
-# --- JSON: two entries, design has exited_at and a step ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
-$ assert_stdout json
-| {
-|   "entries": [
-|     {
-|       "stage": "design",
-|       "entered_at": "<any_string>",
-|       "exited_at": "<any_string>",
-|       "steps": [
-|         {
-|           "step": "write-design",
-|           "status": "pass",
-|           "step_type": "agent",
-|           "timing": "<any_string>"
-|         }
-|       ]
-|     },
-|     {
-|       "stage": "implement",
-|       "entered_at": "<any_string>",
-|       "steps": []
-|     }
-|   ]
-| }
-
-# =============================================================================
-# Scenario 3: Complete implement stage (agent + command steps) and advance
-# =============================================================================
-
 $ awf flow step done write-code --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-code
-
+$ awf flow run lint --flow $FLOWS_DIR/fmt-history
+$ assert_stdout contains
+| FAIL
 $ awf flow run test --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | PASS
-
 $ awf flow next-stage --force --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | done
 
-# --- Human: full three-stage history with mixed step types ---
+# --- Human output ---
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
-| ▶ design entered <...>
+| ▶ design started <...>
 |   write-design  ✓ pass  <...>
-| ◀ design exited  <...>
-| ▶ implement entered <...>
+| ◀ design completed  <...>
+| ▶ implement started <...>
 |   write-code  ✓ pass  <...>
+|   lint  ✗ fail  <...>
 |   test  ✓ pass  <...>
-| ◀ implement exited  <...>
-| ▶ done entered <...>
+| ◀ implement force_completed  <...>
+| ▶ done started <...>
 
-# --- JSON: three entries, implement has both agent and command steps ---
+# --- JSON output ---
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
 $ assert_stdout json
@@ -156,39 +92,46 @@ $ assert_stdout json
 |   "entries": [
 |     {
 |       "stage": "design",
-|       "entered_at": "<any_string>",
-|       "exited_at": "<any_string>",
+|       "started_at": "<any_string>",
+|       "completed_at": "<any_string>",
 |       "steps": [
 |         {
 |           "step": "write-design",
 |           "status": "pass",
 |           "step_type": "agent",
-|           "timing": "<any_string>"
+|           "time": "<any_string>"
 |         }
 |       ]
 |     },
 |     {
 |       "stage": "implement",
-|       "entered_at": "<any_string>",
-|       "exited_at": "<any_string>",
+|       "started_at": "<any_string>",
+|       "completed_at": "<any_string>",
+|       "force_completed": true,
 |       "steps": [
 |         {
 |           "step": "write-code",
 |           "status": "pass",
 |           "step_type": "agent",
-|           "timing": "<any_string>"
+|           "time": "<any_string>"
+|         },
+|         {
+|           "step": "lint",
+|           "status": "fail",
+|           "step_type": "command",
+|           "time": "<any_string>"
 |         },
 |         {
 |           "step": "test",
 |           "status": "pass",
 |           "step_type": "command",
-|           "timing": "<any_string>"
+|           "time": "<any_string>"
 |         }
 |       ]
 |     },
 |     {
 |       "stage": "done",
-|       "entered_at": "<any_string>",
+|       "started_at": "<any_string>",
 |       "steps": []
 |     }
 |   ]

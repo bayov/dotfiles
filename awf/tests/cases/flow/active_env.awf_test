@@ -32,7 +32,7 @@ $ assert_stdout contains
 
 $ awf flow history
 $ assert_stdout contains
-| entered
+| started
 
 # --- Unset and verify commands fail without --flow ---
 

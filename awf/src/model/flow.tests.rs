@@ -26,26 +26,28 @@ fn parse(toml: &str) -> FlowState {
 #[test]
 fn full_flow_state_round_trip() {
     // Given: a FlowState built in memory with both agent and command step log
-    // entries and stage history with and without exited_at
+    // entries and stage history with and without completed_at
     let original = FlowState {
         id: "add-oauth".to_owned(),
         workflow: "feature".to_owned(),
         workflow_version: 1,
         current_stage: "implement".to_owned(),
-        stage_entered_at: ts("2026-04-04T12:00:00Z"),
+        stage_started_at: ts("2026-04-04T12:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T14:32:00Z"),
         archived: false,
         stage_history: vec![
             StageHistoryEntry {
                 stage: "design".to_owned(),
-                entered_at: ts("2026-04-04T10:00:00Z"),
-                exited_at: Some(ts("2026-04-04T12:00:00Z")),
+                started_at: ts("2026-04-04T10:00:00Z"),
+                completed_at: Some(ts("2026-04-04T12:00:00Z")),
+                force_completed: false,
             },
             StageHistoryEntry {
                 stage: "implement".to_owned(),
-                entered_at: ts("2026-04-04T12:00:00Z"),
-                exited_at: None,
+                started_at: ts("2026-04-04T12:00:00Z"),
+                completed_at: None,
+                force_completed: false,
             },
         ],
         step_log: vec![
@@ -107,15 +109,15 @@ fn parse_canonical_toml_format() {
         workflow = "feature"
         workflow_version = 1
         current_stage = "implement"
-        stage_entered_at = "2026-04-04T12:00:00Z"
+        stage_started_at = "2026-04-04T12:00:00Z"
         created_at = "2026-04-04T10:00:00Z"
         updated_at = "2026-04-04T14:32:00Z"
         archived = false
 
         [[stage_history]]
         stage = "design"
-        entered_at = "2026-04-04T10:00:00Z"
-        exited_at = "2026-04-04T12:00:00Z"
+        started_at = "2026-04-04T10:00:00Z"
+        completed_at = "2026-04-04T12:00:00Z"
 
         [[step_log]]
         step = "write-code"
@@ -159,8 +161,8 @@ fn parse_canonical_toml_format() {
     assert_eq!(flow.stage_history.len(), 1);
     let history_entry = &flow.stage_history[0];
     assert_eq!(history_entry.stage, "design");
-    assert_eq!(history_entry.entered_at, ts("2026-04-04T10:00:00Z"));
-    assert_eq!(history_entry.exited_at, Some(ts("2026-04-04T12:00:00Z")));
+    assert_eq!(history_entry.started_at, ts("2026-04-04T10:00:00Z"));
+    assert_eq!(history_entry.completed_at, Some(ts("2026-04-04T12:00:00Z")));
 
     // Then: step log has three entries
     assert_eq!(flow.step_log.len(), 3);
@@ -210,7 +212,7 @@ fn step_status_serializes_as_lowercase() {
         workflow: "w".to_owned(),
         workflow_version: 1,
         current_stage: "s".to_owned(),
-        stage_entered_at: ts("2026-04-04T10:00:00Z"),
+        stage_started_at: ts("2026-04-04T10:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
@@ -249,16 +251,17 @@ fn step_status_serializes_as_lowercase() {
 }
 
 // ---------------------------------------------------------------------------
-// Stage history: active stage has no exited_at
+// Stage history: active stage has no completed_at
 // ---------------------------------------------------------------------------
 
 #[test]
-fn stage_history_entry_without_exited_at_omits_field() {
-    // Given: a stage history entry with no exited_at (stage still active)
+fn stage_history_entry_without_completed_at_omits_field() {
+    // Given: a stage history entry with no completed_at (stage still active)
     let entry = StageHistoryEntry {
         stage: "implement".to_owned(),
-        entered_at: ts("2026-04-04T12:00:00Z"),
-        exited_at: None,
+        started_at: ts("2026-04-04T12:00:00Z"),
+        completed_at: None,
+        force_completed: false,
     };
 
     // When: we embed it in a flow state and serialize
@@ -267,7 +270,7 @@ fn stage_history_entry_without_exited_at_omits_field() {
         workflow: "w".to_owned(),
         workflow_version: 1,
         current_stage: "implement".to_owned(),
-        stage_entered_at: ts("2026-04-04T12:00:00Z"),
+        stage_started_at: ts("2026-04-04T12:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T12:00:00Z"),
         archived: false,
@@ -277,14 +280,14 @@ fn stage_history_entry_without_exited_at_omits_field() {
     let serialized =
         toml::to_string(&flow).expect("serialization should succeed");
 
-    // Then: exited_at is absent from the serialized output
+    // Then: completed_at is absent from the serialized output
     assert!(
-        !serialized.contains("exited_at"),
-        "exited_at should be omitted when None, but found in:\n{serialized}"
+        !serialized.contains("completed_at"),
+        "completed_at should be omitted when None, but found in:\n{serialized}"
     );
 
     // Then: the round-trip preserves the None value
     let roundtripped: FlowState =
         toml::from_str(&serialized).expect("deserialization should succeed");
-    assert_eq!(roundtripped.stage_history[0].exited_at, None);
+    assert_eq!(roundtripped.stage_history[0].completed_at, None);
 }

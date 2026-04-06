@@ -115,9 +115,10 @@ pub fn can_enter_stage(
 /// Advances the flow to the next stage in the workflow.
 ///
 /// Appends a completed [`StageHistoryEntry`] for the stage being left (using
-/// `flow.stage_entered_at` as `entered_at` and `Utc::now()` as `exited_at`),
-/// sets `current_stage` and `stage_entered_at` to the next stage, and updates
-/// `updated_at`.
+/// `flow.stage_started_at` as `started_at` and `Utc::now()` as `completed_at`),
+/// sets `current_stage` and `stage_started_at` to the next stage, and updates
+/// `updated_at`. When `force` is `true` the history entry is marked with
+/// `force_completed = true`.
 ///
 /// # Errors
 ///
@@ -135,6 +136,7 @@ pub fn can_enter_stage(
 pub fn advance_stage(
     workflow: &Workflow,
     mut flow: FlowState,
+    force: bool,
 ) -> Result<FlowState> {
     let current_idx = workflow
         .stages
@@ -158,13 +160,14 @@ pub fn advance_stage(
     // Record the completed stage in history before moving forward.
     flow.stage_history.push(StageHistoryEntry {
         stage: flow.current_stage.clone(),
-        entered_at: flow.stage_entered_at,
-        exited_at: Some(now),
+        started_at: flow.stage_started_at,
+        completed_at: Some(now),
+        force_completed: force,
     });
 
     // Advance to the next stage and refresh timestamps.
     flow.current_stage = next_stage_name;
-    flow.stage_entered_at = now;
+    flow.stage_started_at = now;
     flow.updated_at = now;
 
     Ok(flow)

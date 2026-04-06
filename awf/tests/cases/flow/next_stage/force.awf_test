@@ -1,7 +1,6 @@
-# Test: --force bypasses step-completion gate
-# Converts: force_advance_bypasses_incomplete_steps
+# Test: --force bypasses step-completion gate but not missing artifacts
 
-# --- Setup: run-test workflow ---
+# --- Setup ---
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,7 +16,22 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 |     { name = "fail-step", type = "command", run = "false" },
 | ]
 
-# --- Test ---
+$ write_file .agents/workflows/with-artifact/WORKFLOW.toml
+| name = "with-artifact"
+| version = 1
+|
+| [[stages]]
+| name = "draft"
+| produces = ["draft.md"]
+| steps = [{ name = "write", type = "agent", instructions = "Write it." }]
+|
+| [[stages]]
+| name = "done"
+| steps = []
+
+# =============================================================================
+# Test 1: --force bypasses step gate
+# =============================================================================
 
 $ awf flow new $FLOWS_DIR/force-flow --workflow run-test
 $ assert_stdout contains
@@ -40,7 +54,55 @@ $ assert_stderr not_contains
 $ assert_stderr not_contains
 | fail-step
 
-# History should show the "work" stage
-$ awf flow history --flow $FLOWS_DIR/force-flow
+# =============================================================================
+# Test 2: --force records force_completed in history
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/force-history --workflow with-artifact
 $ assert_stdout contains
-| work
+| force-history
+
+# Write artifact and force-advance (step not done but artifact present)
+$ write_file flows/force-history/artifacts/draft.md
+| placeholder
+$ awf flow next-stage --force --flow $FLOWS_DIR/force-history
+$ assert_stdout contains
+| done
+
+# History shows force_completed
+$ awf flow history --flow $FLOWS_DIR/force-history --output-format human
+$ assert_stdout contains
+| force_completed
+
+$ awf flow history --flow $FLOWS_DIR/force-history --output-format json
+$ assert_stdout json
+| {
+|   "entries": [
+|     {
+|       "stage": "draft",
+|       "started_at": "<any_string>",
+|       "completed_at": "<any_string>",
+|       "force_completed": true,
+|       "steps": []
+|     },
+|     {
+|       "stage": "done",
+|       "started_at": "<any_string>",
+|       "steps": []
+|     }
+|   ]
+| }
+
+# =============================================================================
+# Test 3: --force still rejects missing produces artifacts
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/force-no-artifact --workflow with-artifact
+$ assert_stdout contains
+| force-no-artifact
+
+# --force without the required artifact: still blocked
+$ awf flow next-stage --force --flow $FLOWS_DIR/force-no-artifact
+$ assert_exit_code 1
+$ assert_stderr contains
+| draft.md

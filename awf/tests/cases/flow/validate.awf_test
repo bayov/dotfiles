@@ -116,10 +116,16 @@ $ awf flow new $FLOWS_DIR/validate-missing --workflow produces-only
 $ assert_stdout contains
 | validate-missing
 
-# Force-advance past draft without writing draft.md
-$ awf flow next-stage --force --flow $FLOWS_DIR/validate-missing
+# Write the artifact, advance, then delete to create invalid state
+$ write_file flows/validate-missing/artifacts/draft.md
+| placeholder
+$ awf flow step done write --flow $FLOWS_DIR/validate-missing
+$ assert_stdout contains
+| write
+$ awf flow next-stage --flow $FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | done
+$ delete flows/validate-missing/artifacts/draft.md
 
 $ awf flow validate --flow $FLOWS_DIR/validate-missing
 $ assert_exit_code 1

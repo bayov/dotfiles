@@ -130,7 +130,7 @@ fn flow_at(stage: &str, step_log: Vec<StepLogEntry>) -> FlowState {
         workflow: "feature".to_owned(),
         workflow_version: 1,
         current_stage: stage.to_owned(),
-        stage_entered_at: ts("2026-04-04T10:00:00Z"),
+        stage_started_at: ts("2026-04-04T10:00:00Z"),
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,

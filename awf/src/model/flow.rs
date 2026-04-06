@@ -31,20 +31,26 @@ pub enum StepStatus {
 /// A record of a single stage transition within a flow.
 ///
 /// Appended to [`FlowState::stage_history`] whenever the flow advances from
-/// one stage to the next. The `exited_at` field is `None` while the stage
+/// one stage to the next. The `completed_at` field is `None` while the stage
 /// is still active and is filled in when the flow leaves the stage.
+/// When the stage was force-advanced (skipping gate checks),
+/// `force_completed` is set to `true`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StageHistoryEntry {
     /// The name of the stage (e.g. `"design"`).
     pub stage: String,
 
     /// The UTC instant at which the flow entered this stage.
-    pub entered_at: DateTime<Utc>,
+    pub started_at: DateTime<Utc>,
 
-    /// The UTC instant at which the flow exited this stage, or `None` if the
+    /// The UTC instant at which the flow left this stage, or `None` if the
     /// stage is still active.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub exited_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+
+    /// `true` when the stage was force-advanced past gate checks.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub force_completed: bool,
 }
 
 /// A single completed step execution recorded in a flow's step log.
@@ -127,10 +133,10 @@ pub struct FlowState {
     ///
     /// Recorded when the flow is created (for the initial stage) and updated
     /// each time [`advance_stage`] moves the flow forward. Used to populate
-    /// [`StageHistoryEntry::entered_at`] when the stage is later exited.
+    /// [`StageHistoryEntry::started_at`] when the stage is later completed.
     ///
     /// [`advance_stage`]: crate::engine::state::advance_stage
-    pub stage_entered_at: DateTime<Utc>,
+    pub stage_started_at: DateTime<Utc>,
 
     /// The UTC instant at which this flow was first created.
     pub created_at: DateTime<Utc>,

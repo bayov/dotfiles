@@ -348,16 +348,18 @@ pub struct FlowStepRecord {
     pub status: String,
     pub step_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub timing: Option<String>,
+    pub time: Option<String>,
 }
 
 /// A stage record within the history output.
 #[derive(Debug, Serialize)]
 pub struct FlowStageRecord {
     pub stage: String,
-    pub entered_at: String,
+    pub started_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub exited_at: Option<String>,
+    pub completed_at: Option<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub force_completed: bool,
     pub steps: Vec<FlowStepRecord>,
 }
 
@@ -372,10 +374,10 @@ impl fmt::Display for FlowHistoryOutput {
         for entry in &self.entries {
             writeln!(
                 f,
-                "{} {} entered {}",
+                "{} {} started {}",
                 "▶".cyan().bold(),
                 entry.stage.bold(),
-                entry.entered_at.dimmed(),
+                entry.started_at.dimmed(),
             )?;
             for step in &entry.steps {
                 let status_colored = match step.status.as_str() {
@@ -383,24 +385,29 @@ impl fmt::Display for FlowHistoryOutput {
                     "fail" => "✗ fail".red().to_string(),
                     other => other.to_string(),
                 };
-                if let Some(ref timing) = step.timing {
+                if let Some(ref time) = step.time {
                     writeln!(
                         f,
                         "  {}  {status_colored}  {}",
                         step.step,
-                        timing.dimmed(),
+                        time.dimmed(),
                     )?;
                 } else {
                     writeln!(f, "  {}  {status_colored}", step.step)?;
                 }
             }
-            if let Some(ref exited_at) = entry.exited_at {
+            if let Some(ref completed_at) = entry.completed_at {
+                let label = if entry.force_completed {
+                    "force_completed"
+                } else {
+                    "completed"
+                };
                 writeln!(
                     f,
-                    "{} {} exited  {}",
+                    "{} {} {label}  {}",
                     "◀".cyan(),
                     entry.stage.bold(),
-                    exited_at.dimmed(),
+                    completed_at.dimmed(),
                 )?;
             }
         }
@@ -912,7 +919,7 @@ pub fn validate(
     let completed_stage_names: HashSet<&str> = flow
         .stage_history
         .iter()
-        .filter(|e| e.exited_at.is_some())
+        .filter(|e| e.completed_at.is_some())
         .map(|e| e.stage.as_str())
         .collect();
 
@@ -984,7 +991,10 @@ pub fn advance(
     super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
     let artifacts = collect_artifacts(&flow_dir);
 
-    if !force && let Err(blocker) = can_advance(&workflow, &flow, &artifacts) {
+    // --force bypasses step gates but never artifact gates.
+    if force {
+        check_produces_or_exit(&workflow, &flow, &artifacts);
+    } else if let Err(blocker) = can_advance(&workflow, &flow, &artifacts) {
         match blocker {
             AdvanceBlocker::StepFailed(step) => {
                 eprint_error(format_args!(
@@ -994,13 +1004,15 @@ pub fn advance(
             }
             AdvanceBlocker::StepIncomplete(step) => {
                 eprint_error(format_args!(
-                    "`{step}` is not complete. Complete it before advancing."
+                    "`{step}` is not complete. Complete it before \
+                     advancing."
                 ));
             }
             AdvanceBlocker::MissingArtifact(name) => {
                 eprint_error(format_args!(
                     "Missing artifact `{name}`. Register it with \
-                     `awf flow artifact put {name} <file>` before advancing."
+                     `awf flow artifact put {name} <file>` before \
+                     advancing."
                 ));
             }
         }
@@ -1048,7 +1060,7 @@ pub fn advance(
         }
     }
 
-    let updated_flow = match advance_stage(&workflow, flow) {
+    let updated_flow = match advance_stage(&workflow, flow, force) {
         Ok(f) => f,
         Err(Error::AlreadyOnLastStage) => {
             eprint_error("already on the last stage; nothing to advance to");
@@ -1090,13 +1102,14 @@ pub fn history(
         .iter()
         .map(|entry| FlowStageRecord {
             stage: entry.stage.clone(),
-            entered_at: entry
-                .entered_at
+            started_at: entry
+                .started_at
                 .format("%Y-%m-%dT%H:%M:%SZ")
                 .to_string(),
-            exited_at: entry
-                .exited_at
+            completed_at: entry
+                .completed_at
                 .map(|t| t.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+            force_completed: entry.force_completed,
             steps: build_step_records(&flow, &entry.stage),
         })
         .collect();
@@ -1107,11 +1120,12 @@ pub fn history(
     if !current_already_shown {
         entries.push(FlowStageRecord {
             stage: flow.current_stage.clone(),
-            entered_at: flow
-                .stage_entered_at
+            started_at: flow
+                .stage_started_at
                 .format("%Y-%m-%dT%H:%M:%SZ")
                 .to_string(),
-            exited_at: None,
+            completed_at: None,
+            force_completed: false,
             steps: build_step_records(&flow, &flow.current_stage),
         });
     }
@@ -1174,7 +1188,7 @@ fn build_step_records(
                 StepStatus::Pass => "pass",
                 StepStatus::Fail => "fail",
             };
-            let timing = if entry.step_type == "command" {
+            let time = if entry.step_type == "command" {
                 entry.duration_ms.map(|ms| format!("{ms}ms")).or_else(|| {
                     entry
                         .started_at
@@ -1189,10 +1203,34 @@ fn build_step_records(
                 step: entry.step.clone(),
                 status: status_str.to_string(),
                 step_type: entry.step_type.clone(),
-                timing,
+                time,
             }
         })
         .collect()
+}
+
+/// Checks that all `produces` artifacts for the current stage exist, exiting
+/// with an error if any are missing. Used by `--force` which bypasses step
+/// gates but still requires artifacts.
+fn check_produces_or_exit(
+    workflow: &Workflow,
+    flow: &FlowState,
+    artifacts: &HashSet<String>,
+) {
+    let Some(stage) =
+        workflow.stages.iter().find(|s| s.name == flow.current_stage)
+    else {
+        return;
+    };
+    for artifact in &stage.produces {
+        if !artifacts.contains(artifact) {
+            eprint_error(format_args!(
+                "Missing artifact `{artifact}`. Register it with \
+                 `awf flow artifact put {artifact} <file>` before advancing."
+            ));
+            process::exit(1);
+        }
+    }
 }
 
 /// Resolves the flow path, printing a friendly error and exiting if none is
