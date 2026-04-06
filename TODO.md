@@ -7,6 +7,7 @@ TODO
 Awf
 ---
 
+- Refactor state machine to be a DAG.
 - Improve human output format.
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Coverage for all output format as tests.
