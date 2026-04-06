@@ -37,6 +37,28 @@ function module.apply_to_config(config)
     color_scheme.quick_select_match_fg = { Color = "black" }
     config.color_schemes = { ["Bayov Scheme"] = color_scheme }
     config.color_scheme = "Bayov Scheme"
+
+    -- Faint text same as bright-black (ANSI 8)
+    config.font_rules = {
+        {
+            -- This rule applies to \x1b[2m (faint) text
+            intensity = "Half",
+            italic = false,
+            font = wezterm.font(
+                "JetBrains Mono NL",
+                { foreground = "#666666", weight = "Regular" }
+            ),
+        },
+        {
+            -- This rule applies to \x1b[2;3m (faint+italic) text
+            intensity = "Half",
+            italic = true,
+            font = wezterm.font(
+                "JetBrains Mono NL",
+                { foreground = "#666666", weight = "Regular", italic = true }
+            ),
+        },
+    }
 end
 
 -- Export the module
