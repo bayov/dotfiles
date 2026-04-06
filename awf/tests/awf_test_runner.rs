@@ -511,20 +511,20 @@ fn run_test_case(case: &TestCase) {
                     let _ = writeln!(
                         s,
                         "  {} {}:{}",
-                        "at".dimmed(),
+                        "at".bright_black(),
                         case.path.display(),
                         line_number,
                     );
                     let _ = writeln!(
                         s,
                         "  {} awf {}",
-                        "cmd".dimmed(),
+                        "cmd".bright_black(),
                         expanded_args.join(" "),
                     );
                     let _ = writeln!(
                         s,
                         "  {} {}",
-                        "exit code".dimmed(),
+                        "exit code".bright_black(),
                         if exit == *expected_exit_code {
                             exit.to_string().green().to_string()
                         } else {
@@ -537,11 +537,11 @@ fn run_test_case(case: &TestCase) {
                         let _ = writeln!(
                             s,
                             "  {} {}",
-                            "stdout".dimmed(),
-                            "(empty)".dimmed(),
+                            "stdout".bright_black(),
+                            "(empty)".bright_black(),
                         );
                     } else {
-                        let _ = writeln!(s, "  {}:", "stdout".dimmed());
+                        let _ = writeln!(s, "  {}", "stdout:".bright_black());
                         for line in stdout.trim().lines().take(30) {
                             let _ = writeln!(s, "    {line}");
                         }
@@ -550,7 +550,7 @@ fn run_test_case(case: &TestCase) {
                             let _ = writeln!(
                                 s,
                                 "    {} ({} more lines)",
-                                "...".dimmed(),
+                                "...".bright_black(),
                                 line_count - 30,
                             );
                         }
@@ -559,11 +559,11 @@ fn run_test_case(case: &TestCase) {
                         let _ = writeln!(
                             s,
                             "  {} {}",
-                            "stderr".dimmed(),
-                            "(empty)".dimmed(),
+                            "stderr".bright_black(),
+                            "(empty)".bright_black(),
                         );
                     } else {
-                        let _ = writeln!(s, "  {}:", "stderr".dimmed());
+                        let _ = writeln!(s, "  {}", "stderr:".bright_black());
                         for line in stderr.trim().lines().take(15) {
                             let _ = writeln!(s, "    {line}");
                         }
@@ -572,7 +572,7 @@ fn run_test_case(case: &TestCase) {
                             let _ = writeln!(
                                 s,
                                 "    {} ({} more lines)",
-                                "...".dimmed(),
+                                "...".bright_black(),
                                 line_count - 15,
                             );
                         }
@@ -596,9 +596,9 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stdout is empty
                     assert!(
                         stdout.trim().is_empty(),
-                        "{} expected empty stdout but got content\n  {}: {:?}{}",
+                        "{} expected empty stdout but got content\n  {} {:?}{}",
                         "implicit assert".red().bold(),
-                        "actual".dimmed(),
+                        "actual:".bright_black(),
                         stdout.trim(),
                         context()
                     );
@@ -620,9 +620,9 @@ fn run_test_case(case: &TestCase) {
                     // Implicit: assert stderr is empty
                     assert!(
                         stderr.trim().is_empty(),
-                        "{} expected empty stderr but got content\n  {}: {:?}{}",
+                        "{} expected empty stderr but got content\n  {} {:?}{}",
                         "implicit assert".red().bold(),
-                        "actual".dimmed(),
+                        "actual:".bright_black(),
                         stderr.trim(),
                         context()
                     );
@@ -729,12 +729,12 @@ fn check_output_assertion(
             } else {
                 assert!(
                     actual.contains(expected),
-                    "{} {} does not contain expected text\n  {}: {:?}\n  {}: {:?}{}",
+                    "{} {} does not contain expected text\n  {} {:?}\n  {} {:?}{}",
                     "assert_stdout contains".red().bold(),
                     stream,
-                    "expected".dimmed(),
+                    "expected:".bright_black(),
                     expected,
-                    "actual".dimmed(),
+                    "actual:".bright_black(),
                     actual.trim(),
                     context()
                 );
@@ -743,12 +743,12 @@ fn check_output_assertion(
         AssertMode::NotContains => {
             assert!(
                 !actual.contains(expected),
-                "{} {} contains text that should be absent\n  {}: {:?}\n  {}: {:?}{}",
+                "{} {} contains text that should be absent\n  {} {:?}\n  {} {:?}{}",
                 "assert_stdout not_contains".red().bold(),
                 stream,
-                "unwanted".dimmed(),
+                "unwanted:".bright_black(),
                 expected,
-                "actual".dimmed(),
+                "actual:".bright_black(),
                 actual.trim(),
                 context()
             );
@@ -795,17 +795,17 @@ fn check_output_assertion(
             let trimmed = actual.trim();
             assert!(
                 trimmed.starts_with("<data>\n"),
-                "{} {stream} XML output must start with '<data>\\n'\n  {}: {:?}{}",
+                "{} {stream} XML output must start with '<data>\\n'\n  {} {:?}{}",
                 "assert xml".red().bold(),
-                "got".dimmed(),
+                "got:".bright_black(),
                 &trimmed[..trimmed.len().min(80)],
                 context()
             );
             assert!(
                 trimmed.ends_with("</data>"),
-                "{} {stream} XML output must end with '</data>'\n  {}: {:?}{}",
+                "{} {stream} XML output must end with '</data>'\n  {} {:?}{}",
                 "assert xml".red().bold(),
-                "got".dimmed(),
+                "got:".bright_black(),
                 &trimmed[trimmed.len().saturating_sub(80)..],
                 context()
             );
@@ -840,9 +840,9 @@ fn check_output_assertion(
         AssertMode::Empty => {
             assert!(
                 actual.trim().is_empty(),
-                "{} expected empty {stream} but got content\n  {}: {:?}{}",
+                "{} expected empty {stream} but got content\n  {} {:?}{}",
                 "assert empty".red().bold(),
-                "actual".dimmed(),
+                "actual:".bright_black(),
                 actual.trim(),
                 context()
             );
@@ -886,13 +886,13 @@ fn assert_equals_with_placeholders(
         actual_lines.len(),
         expected_lines.len(),
         "{} {stream} line count mismatch (expected {}, got {})\n  \
-         {}: {:?}\n  {}: {:?}{}",
+         {} {:?}\n  {} {:?}{}",
         "assert equals".red().bold(),
         expected_lines.len(),
         actual_lines.len(),
-        "expected".dimmed(),
+        "expected:".bright_black(),
         expected,
-        "actual".dimmed(),
+        "actual:".bright_black(),
         actual,
         context()
     );
@@ -904,12 +904,12 @@ fn assert_equals_with_placeholders(
             assert_eq!(
                 actual_line,
                 expected_line,
-                "{} {stream} line {} differs\n  {}: {:?}\n  {}: {:?}{}",
+                "{} {stream} line {} differs\n  {} {:?}\n  {} {:?}{}",
                 "assert equals".red().bold(),
                 i + 1,
-                "expected".dimmed(),
+                "expected:".bright_black(),
                 expected_line,
-                "actual".dimmed(),
+                "actual:".bright_black(),
                 actual_line,
                 context()
             );
@@ -917,12 +917,12 @@ fn assert_equals_with_placeholders(
         }
         assert!(
             line_matches_pattern(actual_line, expected_line),
-            "{} {stream} line {} does not match pattern\n  {}: {:?}\n  {}: {:?}{}",
+            "{} {stream} line {} does not match pattern\n  {} {:?}\n  {} {:?}{}",
             "assert equals".red().bold(),
             i + 1,
-            "pattern".dimmed(),
+            "pattern:".bright_black(),
             expected_line,
-            "actual".dimmed(),
+            "actual:".bright_black(),
             actual_line,
             context()
         );

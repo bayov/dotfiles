@@ -100,89 +100,20 @@ impl fmt::Display for FlowListOutput {
             );
         }
 
-        let path_width = self
-            .flows
-            .iter()
-            .map(|e| e.path.len())
-            .max()
-            .unwrap_or(0)
-            .max("PATH".len());
-        let wf_width = self
-            .flows
-            .iter()
-            .map(|e| e.workflow.len())
-            .max()
-            .unwrap_or(0)
-            .max("WORKFLOW".len());
-        let stage_width = self
-            .flows
-            .iter()
-            .map(|e| e.stage.len())
-            .max()
-            .unwrap_or(0)
-            .max("STAGE".len());
-
-        let sep_path = "─".repeat(path_width);
-        let sep_wf = "─".repeat(wf_width);
-        let sep_stage = "─".repeat(stage_width);
-
-        // Pad headers manually — format-string width counts ANSI bytes which
-        // breaks alignment when the header text is shorter than path_width.
-        let hpad_path = " ".repeat(path_width - "PATH".len());
-        let hpad_wf = " ".repeat(wf_width - "WORKFLOW".len());
-        let hpad_stage = " ".repeat(stage_width - "STAGE".len());
-
-        if self.include_archived {
-            writeln!(
+        for entry in &self.flows {
+            write!(
                 f,
-                "{}{}  {}{}  {}{}  {}",
-                "PATH".bold(),
-                hpad_path,
-                "WORKFLOW".bold(),
-                hpad_wf,
-                "STAGE".bold(),
-                hpad_stage,
-                "ARCHIVED".bold(),
+                "• {}  ({}: {}, {}: {}",
+                entry.path.cyan(),
+                "workflow".dimmed(),
+                entry.workflow,
+                "stage".dimmed(),
+                entry.stage.magenta(),
             )?;
-            writeln!(f, "{sep_path}  {sep_wf}  {sep_stage}  ────────")?;
-            for entry in &self.flows {
-                let archived_label = if entry.archived { "yes" } else { "no" };
-                let pad =
-                    " ".repeat(path_width.saturating_sub(entry.path.len()));
-                writeln!(
-                    f,
-                    "{}{}  {:<wf_width$}  {:<stage_width$}  \
-                     {archived_label}",
-                    entry.path.cyan(),
-                    pad,
-                    entry.workflow,
-                    entry.stage
-                )?;
+            if self.include_archived && entry.archived {
+                write!(f, ", {}", "archived".dimmed())?;
             }
-        } else {
-            writeln!(
-                f,
-                "{}{}  {}{}  {}{}",
-                "PATH".bold(),
-                hpad_path,
-                "WORKFLOW".bold(),
-                hpad_wf,
-                "STAGE".bold(),
-                hpad_stage,
-            )?;
-            writeln!(f, "{sep_path}  {sep_wf}  {sep_stage}")?;
-            for entry in &self.flows {
-                let pad =
-                    " ".repeat(path_width.saturating_sub(entry.path.len()));
-                writeln!(
-                    f,
-                    "{}{}  {:<wf_width$}  {:<stage_width$}",
-                    entry.path.cyan(),
-                    pad,
-                    entry.workflow,
-                    entry.stage
-                )?;
-            }
+            writeln!(f, ")")?;
         }
 
         Ok(())

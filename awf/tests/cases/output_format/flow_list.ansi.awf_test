@@ -24,18 +24,56 @@ $ write_file .agents/workflows/feature/design.md
 
 $ export CLICOLOR_FORCE=1
 
-$ awf flow new $FLOWS_DIR/fmt-list --workflow feature
+# Create 5 flows: 2 active, 3 archived
+
+$ awf flow new $FLOWS_DIR/alpha --workflow feature
 $ assert_stdout contains
-| fmt-list
+| alpha
 
-# --- Human ---
+$ awf flow new $FLOWS_DIR/bravo --workflow feature
+$ assert_stdout contains
+| bravo
 
-# Table header + separator + one row. Widths depend on the path so use <...>.
+$ awf flow new $FLOWS_DIR/charlie --workflow feature
+$ assert_stdout contains
+| charlie
+
+$ awf flow new $FLOWS_DIR/delta --workflow feature
+$ assert_stdout contains
+| delta
+
+$ awf flow new $FLOWS_DIR/echo --workflow feature
+$ assert_stdout contains
+| echo
+
+$ awf flow archive --flow $FLOWS_DIR/charlie
+$ assert_stdout contains
+| charlie
+
+$ awf flow archive --flow $FLOWS_DIR/delta
+$ assert_stdout contains
+| delta
+
+$ awf flow archive --flow $FLOWS_DIR/echo
+$ assert_stdout contains
+| echo
+
+# --- Human (active only) ---
+
 $ awf flow list --output-format human
 $ assert_stdout equals
-| [1mPATH[0m<...>[1mWORKFLOW[0m  [1mSTAGE[0m<...>
-| <...>
-| <...>fmt-list<...>feature<...>design
+| • [36m<...>alpha[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
+| • [36m<...>bravo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
+
+# --- Human (all, including archived) ---
+
+$ awf flow list --all --output-format human
+$ assert_stdout equals
+| • [36m<...>alpha[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
+| • [36m<...>bravo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
+| • [36m<...>charlie[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
+| • [36m<...>delta[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
+| • [36m<...>echo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
 
 # --- JSON ---
 
@@ -48,6 +86,49 @@ $ assert_stdout json
 |       "workflow": "feature",
 |       "stage": "design",
 |       "archived": false
+|     },
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": false
+|     }
+|   ]
+| }
+
+$ awf flow list --all --output-format json
+$ assert_stdout json
+| {
+|   "flows": [
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": false
+|     },
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": false
+|     },
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": true
+|     },
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": true
+|     },
+|     {
+|       "path": "<any_string>",
+|       "workflow": "feature",
+|       "stage": "design",
+|       "archived": true
 |     }
 |   ]
 | }

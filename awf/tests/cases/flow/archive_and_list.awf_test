@@ -89,4 +89,4 @@ $ awf flow list --all
 $ assert_stdout contains
 | add-oauth
 $ assert_stdout contains
-| yes
+| archived
