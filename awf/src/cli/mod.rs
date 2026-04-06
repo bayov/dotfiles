@@ -12,6 +12,7 @@ pub mod flow;
 pub mod output;
 pub mod workflow;
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
@@ -23,6 +24,7 @@ use owo_colors::OwoColorize as _;
 use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::config::WorkflowSearchEntry;
+use crate::model::workflow::StepKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::store::fs;
@@ -355,6 +357,85 @@ pub fn load_workflow_or_exit(
             process::exit(1);
         }
         Err(e) => Err(e.into()),
+    }
+}
+
+/// Collects all validation errors for a workflow definition: structural
+/// invariants, command-key references, and prompt-file existence.
+///
+/// `config_commands` contains repo/user-level command aliases that are also
+/// valid targets for a step's `command` key (in addition to
+/// `workflow.commands`).
+pub fn collect_workflow_errors(
+    workflow: &Workflow,
+    entries: &[WorkflowSearchEntry],
+    config_commands: &HashMap<String, String>,
+) -> Vec<String> {
+    let mut errors: Vec<String> = Vec::new();
+
+    // Structural validation.
+    if let Err(e) = workflow.validate() {
+        errors.push(e.to_string());
+    }
+
+    // Every `command` key must exist in workflow.commands or config commands.
+    for stage in &workflow.stages {
+        for step in &stage.steps {
+            if let StepKind::Command { command: Some(key), .. } = &step.kind
+                && !workflow.commands.contains_key(key.as_str())
+                && !config_commands.contains_key(key.as_str())
+            {
+                errors.push(format!(
+                    "step {:?} in stage {:?}: command key {key:?} is not \
+                     defined in [commands]",
+                    step.name, stage.name
+                ));
+            }
+        }
+    }
+
+    // Every `prompt` file must exist on disk.
+    let wf_dir = fs::find_workflow_dir(entries, &workflow.name);
+    if let Some(wf_dir) = wf_dir {
+        for stage in &workflow.stages {
+            for step in &stage.steps {
+                if let StepKind::Agent { prompt: Some(filename), .. } =
+                    &step.kind
+                    && !wf_dir.join(filename).exists()
+                {
+                    errors.push(format!(
+                        "step {:?} in stage {:?}: prompt file {filename:?} \
+                         not found in workflow directory",
+                        step.name, stage.name
+                    ));
+                }
+            }
+        }
+    }
+
+    errors
+}
+
+/// Validates a workflow definition and exits with a diagnostic if any check
+/// fails. Silent on success.
+///
+/// This is the same set of checks as `awf workflow validate` but intended for
+/// use as a pre-flight guard in flow commands.
+pub fn validate_workflow_or_exit(
+    workflow: &Workflow,
+    entries: &[WorkflowSearchEntry],
+    config_commands: &HashMap<String, String>,
+) {
+    let errors = collect_workflow_errors(workflow, entries, config_commands);
+    if !errors.is_empty() {
+        eprint_error(format_args!(
+            "workflow {:?} failed validation",
+            workflow.name
+        ));
+        for error in &errors {
+            anstream::eprintln!("  {} {error}", "·".red());
+        }
+        process::exit(1);
     }
 }
 

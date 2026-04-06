@@ -11,7 +11,6 @@ use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::cli::output::print_output;
 use crate::config::WorkflowSearchEntry;
-use crate::model::workflow::StepKind;
 use crate::result::Error;
 use crate::store::fs;
 
@@ -170,7 +169,7 @@ pub fn validate(
 
     let mut any_failed = false;
     for n in &names {
-        if validate_single(n, &entries, fmt)? {
+        if validate_single(n, &entries, &config.commands, fmt)? {
             any_failed = true;
         }
     }
@@ -185,51 +184,12 @@ pub fn validate(
 fn validate_single(
     name: &str,
     entries: &[WorkflowSearchEntry],
+    config_commands: &std::collections::HashMap<String, String>,
     fmt: &OutputFormat,
 ) -> color_eyre::Result<bool> {
     let workflow = super::load_workflow_or_exit(entries, name)?;
-
-    let mut errors: Vec<String> = Vec::new();
-
-    // Structural validation.
-    if let Err(e) = workflow.validate() {
-        errors.push(e.to_string());
-    }
-
-    // Check 1: every `command` key must exist in workflow.commands.
-    for stage in &workflow.stages {
-        for step in &stage.steps {
-            if let StepKind::Command { command: Some(key), .. } = &step.kind
-                && !workflow.commands.contains_key(key.as_str())
-            {
-                errors.push(format!(
-                    "step {:?} in stage {:?}: command key {key:?} is not \
-                     defined in [commands]",
-                    step.name, stage.name
-                ));
-            }
-        }
-    }
-
-    // Check 2: every `prompt` file must exist on disk.
-    let wf_dir = fs::find_workflow_dir(entries, name);
-
-    if let Some(wf_dir) = wf_dir {
-        for stage in &workflow.stages {
-            for step in &stage.steps {
-                if let StepKind::Agent { prompt: Some(filename), .. } =
-                    &step.kind
-                    && !wf_dir.join(filename).exists()
-                {
-                    errors.push(format!(
-                        "step {:?} in stage {:?}: prompt file {filename:?} \
-                         not found in workflow directory",
-                        step.name, stage.name
-                    ));
-                }
-            }
-        }
-    }
+    let errors =
+        super::collect_workflow_errors(&workflow, entries, config_commands);
 
     if errors.is_empty() {
         let output = WorkflowValidateOutput {

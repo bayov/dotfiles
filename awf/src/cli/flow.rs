@@ -448,6 +448,7 @@ pub fn new(
         crate::config::effective_workflow_entries(&project_root, &config);
 
     let wf = super::load_workflow_or_exit(&entries, workflow)?;
+    super::validate_workflow_or_exit(&wf, &entries, &config.commands);
 
     let flow_dir = resolve_new_flow_dir(flow_arg, &wf, &project_root);
 
@@ -654,6 +655,7 @@ pub fn next(
 
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
+    super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
     let artifacts = collect_artifacts(&flow_dir);
 
     let output = match next_action(&workflow, &flow, &artifacts) {
@@ -979,6 +981,7 @@ pub fn advance(
 
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
+    super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
     let artifacts = collect_artifacts(&flow_dir);
 
     if !force && let Err(blocker) = can_advance(&workflow, &flow, &artifacts) {
