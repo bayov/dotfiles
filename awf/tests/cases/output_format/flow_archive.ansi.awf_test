@@ -45,5 +45,5 @@ $ assert_stdout equals
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-j --output-format json
 $ assert_stdout json
 | {
-|   "path": "<any_string>"
+|   "archived_flow": "<any_string>"
 | }

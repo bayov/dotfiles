@@ -470,12 +470,17 @@ impl fmt::Display for FlowHistoryOutput {
 /// Output payload for `awf flow archive`.
 #[derive(Debug, Serialize)]
 pub struct FlowArchiveOutput {
-    pub path: String,
+    pub archived_flow: String,
 }
 
 impl fmt::Display for FlowArchiveOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{} {}", "Archived flow:".dimmed(), self.path.cyan().bold())
+        writeln!(
+            f,
+            "{} {}",
+            "Archived flow:".dimmed(),
+            self.archived_flow.cyan().bold()
+        )
     }
 }
 
@@ -1212,8 +1217,9 @@ pub fn archive(
 
     match fs::archive_flow(&flow_dir) {
         Ok(()) => {
-            let output =
-                FlowArchiveOutput { path: flow_dir.display().to_string() };
+            let output = FlowArchiveOutput {
+                archived_flow: flow_dir.display().to_string(),
+            };
             print_output(&output, fmt);
             Ok(())
         }
