@@ -32,9 +32,9 @@ enum AssertMode {
     Xml,
     /// String equality (trimmed), with `<...>` wildcard support.
     ///
-    /// The placeholder `<...>` matches any non-empty run of characters within a
-    /// single line.  Literal segments between placeholders are matched in
-    /// order.  Lines without `<...>` must match exactly.
+    /// The placeholder `<...>` matches any run of zero or more characters
+    /// within a single line.  Literal segments between placeholders are
+    /// matched in order.  Lines without `<...>` must match exactly.
     Equals,
     /// Assert output is empty (no content lines needed).
     Empty,
@@ -859,7 +859,7 @@ fn check_output_assertion(
 /// corresponding `actual` line exactly.  When `<...>` appears, the line is
 /// split into literal segments around each placeholder and matched
 /// left-to-right: each literal segment must appear in order, and each `<...>`
-/// must consume at least one character.
+/// may consume zero or more characters.
 fn assert_equals_with_placeholders(
     actual: &str,
     expected: &str,
@@ -929,7 +929,7 @@ fn assert_equals_with_placeholders(
 }
 
 /// Returns `true` if `actual` matches `pattern` where `<...>` segments each
-/// consume one or more characters and literal segments match exactly.
+/// consume zero or more characters and literal segments match exactly.
 fn line_matches_pattern(actual: &str, pattern: &str) -> bool {
     let segments: Vec<&str> = pattern.split("<...>").collect();
     let placeholder_count = segments.len() - 1;
@@ -943,14 +943,8 @@ fn line_matches_pattern(actual: &str, pattern: &str) -> bool {
 
     for (i, segment) in segments.iter().enumerate() {
         if segment.is_empty() {
-            // Leading, trailing, or consecutive `<...>` — the placeholder still
-            // needs to consume ≥1 char, so just ensure we haven't exhausted
-            // the string between required literal anchors.
-            if i > 0 && i < segments.len() - 1 {
-                // Consecutive `<...><...>`: each must consume ≥1 char.
-                // We'll enforce this by requiring at least one char gap per
-                // remaining placeholder when we reach the next literal.
-            }
+            // Leading, trailing, or consecutive `<...>` — each placeholder
+            // may consume zero characters, so nothing to enforce here.
             continue;
         }
 
@@ -961,9 +955,9 @@ fn line_matches_pattern(actual: &str, pattern: &str) -> bool {
             }
             pos += segment.len();
         } else {
-            // Non-first segment: find it after pos, ensuring ≥1 char gap for
-            // the preceding `<...>`.
-            let search_start = pos + 1; // at least 1 char for <...>
+            // Non-first segment: find it at or after pos (the preceding
+            // `<...>` may consume zero characters).
+            let search_start = pos;
             if search_start > actual.len() {
                 return false;
             }
@@ -975,12 +969,12 @@ fn line_matches_pattern(actual: &str, pattern: &str) -> bool {
     }
 
     // If the pattern ends with a literal (last segment non-empty), `pos`
-    // should be at the end.  If it ends with `<...>`, there must be ≥1 char
-    // remaining.
+    // should be at the end.  If it ends with `<...>`, any remaining suffix
+    // is consumed.
     let last_segment = segments.last().unwrap();
     if last_segment.is_empty() {
-        // Pattern ends with `<...>` — need ≥1 char remaining.
-        pos < actual.len()
+        // Pattern ends with `<...>` — pos must be at or before the end.
+        pos <= actual.len()
     } else {
         // Pattern ends with a literal — must have consumed everything.
         // But we found the segment by searching forward, so check the actual
