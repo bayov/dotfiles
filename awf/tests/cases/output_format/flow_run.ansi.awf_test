@@ -15,7 +15,7 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # Separate flows for each format (run mutates state)
 
-$ export CLICOLOR_FORCE=1
+$ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
 $ assert_stdout contains

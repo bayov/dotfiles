@@ -22,7 +22,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-$ export CLICOLOR_FORCE=1
+$ export FORCE_COLOR=1
 
 # Create 5 flows: 2 active, 3 archived
 

@@ -468,8 +468,7 @@ fn run_test_case(case: &TestCase) {
                 let expanded_args: Vec<String> =
                     args.iter().map(|a| expand(a)).collect();
 
-                let force_color =
-                    env.iter().any(|(k, _)| k == "CLICOLOR_FORCE");
+                let force_color = env.iter().any(|(k, _)| k == "FORCE_COLOR");
 
                 let mut cmd =
                     Command::cargo_bin("awf").expect("awf binary not found");
@@ -653,7 +652,7 @@ fn strip_ansi(s: &str) -> String { anstream::adapter::strip_str(s).to_string() }
 // Output assertion dispatch
 // ---------------------------------------------------------------------------
 
-/// When `force_color` is true (command was run with `CLICOLOR_FORCE=1`), runs a
+/// When `force_color` is true (command was run with `FORCE_COLOR=1`), runs a
 /// two-phase comparison:
 ///
 /// - **Phase 1** (content check): strip ANSI from both sides, then assert. This

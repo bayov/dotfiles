@@ -44,7 +44,7 @@ $ write_file .agents/workflows/feature/implement.md
 
 # --- Build up flow state: design → implement → done ---
 
-$ export CLICOLOR_FORCE=1
+$ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-history --workflow feature
 $ assert_stdout contains

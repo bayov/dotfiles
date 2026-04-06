@@ -16,7 +16,7 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 
 # Separate flows (advance mutates state)
 
-$ export CLICOLOR_FORCE=1
+$ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
 $ assert_stdout contains
