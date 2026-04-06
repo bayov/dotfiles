@@ -524,7 +524,7 @@ fn run_test_case(case: &TestCase) {
                     let _ = writeln!(
                         s,
                         "  {} {}",
-                        "exit".dimmed(),
+                        "exit code".dimmed(),
                         if exit == *expected_exit_code {
                             exit.to_string().green().to_string()
                         } else {
@@ -543,7 +543,7 @@ fn run_test_case(case: &TestCase) {
                     } else {
                         let _ = writeln!(s, "  {}:", "stdout".dimmed());
                         for line in stdout.trim().lines().take(30) {
-                            let _ = writeln!(s, "    {}", line.yellow());
+                            let _ = writeln!(s, "    {line}");
                         }
                         let line_count = stdout.trim().lines().count();
                         if line_count > 30 {
@@ -565,7 +565,7 @@ fn run_test_case(case: &TestCase) {
                     } else {
                         let _ = writeln!(s, "  {}:", "stderr".dimmed());
                         for line in stderr.trim().lines().take(15) {
-                            let _ = writeln!(s, "    {}", line.red());
+                            let _ = writeln!(s, "    {line}");
                         }
                         let line_count = stderr.trim().lines().count();
                         if line_count > 15 {
@@ -702,7 +702,7 @@ fn check_output_assertion_maybe_colored(
             })
             .unwrap_or_else(|| "(unknown panic payload)".to_string());
         panic!(
-            "{}\n\n  {} Content is correct but ANSI styling differs — \
+            "{}\n  {} Content is correct but ANSI styling differs — \
              update the expected output in the test file.",
             original_msg,
             "hint:".yellow().bold(),
