@@ -53,11 +53,11 @@ impl fmt::Display for FlowNewOutput {
         writeln!(
             f,
             "{} {} ({}: {}, {}: {})",
-            "Created flow".dimmed(),
+            "Created flow".bright_black(),
             self.path.cyan().bold(),
-            "workflow".dimmed(),
+            "workflow".bright_black(),
             self.workflow,
-            "stage".dimmed(),
+            "stage".bright_black(),
             self.stage,
         )
     }
@@ -105,13 +105,13 @@ impl fmt::Display for FlowListOutput {
                 f,
                 "• {}  ({}: {}, {}: {}",
                 entry.path.cyan(),
-                "workflow".dimmed(),
+                "workflow".bright_black(),
                 entry.workflow,
-                "stage".dimmed(),
+                "stage".bright_black(),
                 entry.stage.magenta(),
             )?;
             if self.include_archived && entry.archived {
-                write!(f, ", {}", "archived".dimmed())?;
+                write!(f, ", {}", "archived".bright_black())?;
             }
             writeln!(f, ")")?;
         }
@@ -148,7 +148,7 @@ impl fmt::Display for FlowStatusOutput {
             let badge = match step.status.as_str() {
                 "pass" => "[✓ pass]".green().to_string(),
                 "fail" => "[✗ fail]".red().to_string(),
-                _ => "[· pending]".dimmed().to_string(),
+                _ => "[· pending]".bright_black().to_string(),
             };
             writeln!(f, "  {}  {badge}", step.name.blue())?;
         }
@@ -287,7 +287,7 @@ impl fmt::Display for FlowAdvanceOutput {
             self.stage.magenta()
         )?;
         if self.is_final {
-            writeln!(f, "{}", "  This is the final stage.".dimmed())?;
+            writeln!(f, "{}", "  This is the final stage.".bright_black())?;
         }
         Ok(())
     }
@@ -409,7 +409,7 @@ impl fmt::Display for FlowArchiveOutput {
         writeln!(
             f,
             "{} {}",
-            "Archived flow:".dimmed(),
+            "Archived flow:".bright_black(),
             self.archived_flow.cyan().bold()
         )
     }

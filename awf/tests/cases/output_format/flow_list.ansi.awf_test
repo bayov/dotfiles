@@ -62,18 +62,18 @@ $ assert_stdout contains
 
 $ awf flow list --output-format human
 $ assert_stdout equals
-| • [36m<...>alpha[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
-| • [36m<...>bravo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
+| • [36m<...>alpha[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m)
+| • [36m<...>bravo[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m)
 
 # --- Human (all, including archived) ---
 
 $ awf flow list --all --output-format human
 $ assert_stdout equals
-| • [36m<...>alpha[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
-| • [36m<...>bravo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m)
-| • [36m<...>charlie[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
-| • [36m<...>delta[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
-| • [36m<...>echo[39m  ([2mworkflow[0m: feature, [2mstage[0m: [35mdesign[39m, [2marchived[0m)
+| • [36m<...>alpha[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m)
+| • [36m<...>bravo[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m)
+| • [36m<...>charlie[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m, [90marchived[39m)
+| • [36m<...>delta[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m, [90marchived[39m)
+| • [36m<...>echo[39m  ([90mworkflow[39m: feature, [90mstage[39m: [35mdesign[39m, [90marchived[39m)
 
 # --- JSON ---
 

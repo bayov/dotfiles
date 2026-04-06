@@ -31,7 +31,7 @@ $ assert_stdout contains
 $ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h --output-format human
 $ assert_stdout equals
 | [1m[32m▶ Entered stage:[39m[0m [35mdone[39m
-| [2m  This is the final stage.[0m
+| [90m  This is the final stage.[39m
 
 # --- JSON ---
 

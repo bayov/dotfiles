@@ -304,7 +304,8 @@ pub fn load_workflow_or_exit(
                 Ok(listings) if listings.is_empty() => {
                     anstream::eprintln!(
                         "\n  {}",
-                        "No workflows found in any search directory.".dimmed()
+                        "No workflows found in any search directory."
+                            .bright_black()
                     );
                 }
                 Ok(listings) => {
@@ -316,14 +317,14 @@ pub fn load_workflow_or_exit(
                     for w in listings.iter().take(MAX_SHOWN) {
                         anstream::eprintln!(
                             "    {}:{}",
-                            w.scope.dimmed(),
+                            w.scope.bright_black(),
                             w.name.cyan(),
                         );
                     }
                     if listings.len() > MAX_SHOWN {
                         anstream::eprintln!(
                             "    {} and {} more…",
-                            "…".dimmed(),
+                            "…".bright_black(),
                             listings.len() - MAX_SHOWN,
                         );
                     }
