@@ -38,14 +38,15 @@ function module.apply_to_config(config)
     config.color_schemes = { ["Bayov Scheme"] = color_scheme }
     config.color_scheme = "Bayov Scheme"
 
-    -- Faint text same as bright-black (ANSI 8)
+    local font_family = "JetBrains Mono NL"
     config.font_rules = {
+        -- Faint text color same as bright-black (ANSI 8)
         {
             -- This rule applies to \x1b[2m (faint) text
             intensity = "Half",
             italic = false,
             font = wezterm.font(
-                "JetBrains Mono NL",
+                font_family,
                 { foreground = "#666666", weight = "Regular" }
             ),
         },
@@ -54,8 +55,22 @@ function module.apply_to_config(config)
             intensity = "Half",
             italic = true,
             font = wezterm.font(
-                "JetBrains Mono NL",
+                font_family,
                 { foreground = "#666666", weight = "Regular", italic = true }
+            ),
+        },
+        -- Bold actually bold
+        {
+            intensity = "Bold",
+            font = wezterm.font(font_family, { weight = "ExtraBold" }),
+        },
+        {
+            -- Bold and italic not working for me for some reason... Fix later.
+            intensity = "Bold",
+            italic = true,
+            font = wezterm.font(
+                font_family,
+                { weight = "ExtraBold", italic = true }
             ),
         },
     }
