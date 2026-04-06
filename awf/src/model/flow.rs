@@ -63,7 +63,8 @@ pub struct StageHistoryEntry {
 /// to a given step type are stored as `None` and omitted during serialization.
 ///
 /// **Command-specific fields** (present when `step_type` is `"command"`):
-/// `exit_code`, `started_at`, `duration_ms`.
+/// `exit_code`, `started_at`, `duration_ms`. `completed_at` is also set for
+/// command steps, computed as `started_at + duration_ms`.
 ///
 /// **Agent-specific fields** (present when `step_type` is `"agent"`):
 /// `completed_at`.

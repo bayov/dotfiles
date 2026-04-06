@@ -363,7 +363,9 @@ pub struct FlowStepRecord {
     pub status: String,
     pub step_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub time: Option<String>,
+    pub completed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
 }
 
 /// A stage record within the history output.
@@ -410,14 +412,20 @@ impl fmt::Display for FlowHistoryOutput {
                     ),
                     _ => ("?".to_string(), "at", step.step.blue().to_string()),
                 };
-                if let Some(ref time) = step.time {
-                    writeln!(
+                match (&step.completed_at, step.duration_ms) {
+                    (Some(ts), Some(ms)) => writeln!(
                         f,
                         "    {icon} step {name_colored} {verb} {}",
-                        pretty_dt(time).bright_black(),
-                    )?;
-                } else {
-                    writeln!(f, "    {icon} step {name_colored} {verb} ?")?;
+                        format!("{} ({} ms)", pretty_dt(ts), ms).bright_black(),
+                    )?,
+                    (Some(ts), None) => writeln!(
+                        f,
+                        "    {icon} step {name_colored} {verb} {}",
+                        pretty_dt(ts).bright_black(),
+                    )?,
+                    _ => {
+                        writeln!(f, "    {icon} step {name_colored} {verb} ?")?;
+                    }
                 }
             }
             if let Some(ref completed_at) = entry.completed_at {
@@ -1229,22 +1237,20 @@ fn build_step_records(
                 StepStatus::Pass => "pass",
                 StepStatus::Fail => "fail",
             };
-            let time = if entry.step_type == "command" {
-                entry.duration_ms.map(|ms| format!("{ms}ms")).or_else(|| {
-                    entry
-                        .started_at
-                        .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-                })
+            let completed_at = entry
+                .completed_at
+                .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string());
+            let duration_ms = if entry.step_type == "command" {
+                entry.duration_ms
             } else {
-                entry
-                    .completed_at
-                    .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                None
             };
             FlowStepRecord {
                 step: entry.step.clone(),
                 status: status_str.to_string(),
                 step_type: entry.step_type.clone(),
-                time,
+                completed_at,
+                duration_ms,
             }
         })
         .collect()
@@ -1254,11 +1260,12 @@ fn build_step_records(
 /// `"YYYY-MM-DD HH:MM:SS ±HH:MM"`. Returns the input unchanged if it cannot
 /// be parsed (e.g. `"123ms"` duration strings).
 fn pretty_dt(s: &str) -> String {
-    chrono::DateTime::parse_from_rfc3339(s)
-        .map(|dt| {
+    chrono::DateTime::parse_from_rfc3339(s).map_or_else(
+        |_| s.to_owned(),
+        |dt| {
             dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S %:z").to_string()
-        })
-        .unwrap_or_else(|_| s.to_owned())
+        },
+    )
 }
 
 /// Checks that all `produces` artifacts for the current stage exist, exiting

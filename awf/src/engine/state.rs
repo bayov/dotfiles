@@ -275,9 +275,11 @@ fn build_log_entry(
             step_type: "command".to_owned(),
             status,
             exit_code,
+            completed_at: started_at.zip(duration_ms).map(|(s, d)| {
+                s + chrono::Duration::milliseconds(d.cast_signed())
+            }),
             started_at,
             duration_ms,
-            completed_at: None,
         },
     }
 }

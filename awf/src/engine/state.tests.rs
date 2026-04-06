@@ -399,7 +399,11 @@ fn record_step_pass_appends_passing_command_entry_to_step_log() {
     assert_eq!(entry.exit_code, Some(0));
     assert_eq!(entry.started_at, Some(ts("2026-04-04T14:00:00Z")));
     assert_eq!(entry.duration_ms, Some(450));
-    assert!(entry.completed_at.is_none());
+    assert_eq!(
+        entry.completed_at,
+        Some(ts("2026-04-04T14:00:00.450Z")),
+        "completed_at should be started_at + duration_ms"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -433,7 +437,11 @@ fn record_step_fail_appends_failing_command_entry_to_step_log() {
     assert_eq!(entry.exit_code, Some(1));
     assert_eq!(entry.started_at, Some(ts("2026-04-04T14:05:00Z")));
     assert_eq!(entry.duration_ms, Some(800));
-    assert!(entry.completed_at.is_none());
+    assert_eq!(
+        entry.completed_at,
+        Some(ts("2026-04-04T14:05:00.800Z")),
+        "completed_at should be started_at + duration_ms"
+    );
 }
 
 // ---------------------------------------------------------------------------

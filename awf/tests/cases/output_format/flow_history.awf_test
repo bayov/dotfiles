@@ -102,7 +102,7 @@ $ assert_stdout json
 |           "step": "write-design",
 |           "status": "pass",
 |           "step_type": "agent",
-|           "time": "<any_string>"
+|           "completed_at": "<any_string>"
 |         }
 |       ]
 |     },
@@ -117,19 +117,21 @@ $ assert_stdout json
 |           "step": "write-code",
 |           "status": "pass",
 |           "step_type": "agent",
-|           "time": "<any_string>"
+|           "completed_at": "<any_string>"
 |         },
 |         {
 |           "step": "lint",
 |           "status": "fail",
 |           "step_type": "command",
-|           "time": "<any_string>"
+|           "completed_at": "<any_string>",
+|           "duration_ms": "<any_number>"
 |         },
 |         {
 |           "step": "test",
 |           "status": "pass",
 |           "step_type": "command",
-|           "time": "<any_string>"
+|           "completed_at": "<any_string>",
+|           "duration_ms": "<any_number>"
 |         }
 |       ]
 |     },
