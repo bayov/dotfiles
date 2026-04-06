@@ -91,7 +91,32 @@
         "jjDecoration.modifiedResourceForeground": "#6aa2d7",
         // inlay hints
         "editorInlayHint.foreground": "#96969666",
-        "editorInlayHint.background": "#0000"
+        "editorInlayHint.background": "#0000",
+        // terminal — Base: Tomorrow (dark) (terminal.sexy)
+        "terminal.background": "#1d1f21",
+        "terminal.foreground": "#c5c8c6",
+        // terminal — ANSI 0–7
+        "terminal.ansiBlack": "#1d1f21",
+        "terminal.ansiRed": "#cc6666",
+        "terminal.ansiGreen": "#b5bd68",
+        "terminal.ansiYellow": "#f0c674",
+        "terminal.ansiBlue": "#81a2be",
+        "terminal.ansiMagenta": "#b294bb",
+        "terminal.ansiCyan": "#8abeb7",
+        "terminal.ansiWhite": "#c5c8c6",
+        // terminal — ANSI 8–15 (brights)
+        "terminal.ansiBrightBlack": "#666666",
+        "terminal.ansiBrightRed": "#cc6666",
+        "terminal.ansiBrightGreen": "#b5bd68",
+        "terminal.ansiBrightYellow": "#f0c674",
+        "terminal.ansiBrightBlue": "#81a2be",
+        "terminal.ansiBrightMagenta": "#b294bb",
+        "terminal.ansiBrightCyan": "#8abeb7",
+        "terminal.ansiBrightWhite": "#ffffff",
+        // terminal — cursor & selection
+        "terminalCursor.background": "#000000",
+        "terminalCursor.foreground": "#ced0d6",
+        "terminal.selectionBackground": "#214283"
     },
     // syntax highlighting
     "editor.semanticTokenColorCustomizations": {
