@@ -394,7 +394,7 @@ impl fmt::Display for FlowHistoryOutput {
             writeln!(
                 f,
                 "• stage {} started at {}",
-                entry.stage.magenta().bold(),
+                entry.stage.magenta(),
                 pretty_dt(&entry.started_at).bright_black(),
             )?;
             for step in &entry.steps {
@@ -414,16 +414,16 @@ impl fmt::Display for FlowHistoryOutput {
                 match (&step.completed_at, step.duration_ms) {
                     (Some(ts), Some(ms)) => writeln!(
                         f,
-                        "    {icon} step {name_colored} {verb} {}",
+                        "    {icon} {name_colored} step {verb} {}",
                         format!("{} ({} ms)", pretty_dt(ts), ms).bright_black(),
                     )?,
                     (Some(ts), None) => writeln!(
                         f,
-                        "    {icon} step {name_colored} {verb} {}",
+                        "    {icon} {name_colored} step {verb} {}",
                         pretty_dt(ts).bright_black(),
                     )?,
                     _ => {
-                        writeln!(f, "    {icon} step {name_colored} {verb} ?")?;
+                        writeln!(f, "    {icon} {name_colored} step {verb} ?")?;
                     }
                 }
             }

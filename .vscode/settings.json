@@ -5,5 +5,5 @@
         "**/*.ansi",
         "**/output_format/*.awf_test"
     ],
-    "ansiViewer.escapeSequenceDisplay": "hidden"
+    "ansiViewer.escapeSequenceDisplay": "dimmed"
 }
