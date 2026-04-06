@@ -26,7 +26,7 @@ $ write_file .agents/workflows/feature/design.md
 
 $ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
 $ assert_stdout equals
-| Created flow <_> (workflow: feature, stage: design)
+| Created flow <...> (workflow: feature, stage: design)
 
 # --- JSON ---
 

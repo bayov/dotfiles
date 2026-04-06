@@ -30,7 +30,7 @@ $ assert_stdout contains
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
-| ▶ design entered <_>
+| ▶ design entered <...>
 
 # --- JSON ---
 

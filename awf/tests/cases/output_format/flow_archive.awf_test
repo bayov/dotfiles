@@ -36,7 +36,7 @@ $ assert_stdout contains
 
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-h --output-format human
 $ assert_stdout equals
-| Archived flow: <_>fmt-arc-h
+| Archived flow: <...>fmt-arc-h
 
 # --- JSON ---
 

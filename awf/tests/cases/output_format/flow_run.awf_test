@@ -27,7 +27,7 @@ $ assert_stdout contains
 
 $ awf flow run pass-step --flow $FLOWS_DIR/fmt-run-h --output-format human
 $ assert_stdout equals
-| PASS  true  (<_>ms)
+| PASS  true  (<...>ms)
 
 # --- JSON ---
 

@@ -28,12 +28,12 @@ $ assert_stdout contains
 
 # --- Human ---
 
-# Table header + separator + one row. Widths depend on the path so use <_>.
+# Table header + separator + one row. Widths depend on the path so use <...>.
 $ awf flow list --output-format human
 $ assert_stdout equals
-| PATH<_>WORKFLOW  STAGE<_>
-| <_>
-| <_>fmt-list<_>feature<_>design
+| PATH<...>WORKFLOW  STAGE<...>
+| <...>
+| <...>fmt-list<...>feature<...>design
 
 # --- JSON ---
 
