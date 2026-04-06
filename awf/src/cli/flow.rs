@@ -54,7 +54,7 @@ impl fmt::Display for FlowNewOutput {
             f,
             "{} {} ({}: {}, {}: {})",
             "Created flow".dimmed(),
-            self.path.bold(),
+            self.path.cyan().bold(),
             "workflow".dimmed(),
             self.workflow,
             "stage".dimmed(),
@@ -147,11 +147,16 @@ impl fmt::Display for FlowListOutput {
             writeln!(f, "{sep_path}  {sep_wf}  {sep_stage}  ────────")?;
             for entry in &self.flows {
                 let archived_label = if entry.archived { "yes" } else { "no" };
+                let pad =
+                    " ".repeat(path_width.saturating_sub(entry.path.len()));
                 writeln!(
                     f,
-                    "{:<path_width$}  {:<wf_width$}  {:<stage_width$}  \
+                    "{}{}  {:<wf_width$}  {:<stage_width$}  \
                      {archived_label}",
-                    entry.path, entry.workflow, entry.stage
+                    entry.path.cyan(),
+                    pad,
+                    entry.workflow,
+                    entry.stage
                 )?;
             }
         } else {
@@ -167,10 +172,15 @@ impl fmt::Display for FlowListOutput {
             )?;
             writeln!(f, "{sep_path}  {sep_wf}  {sep_stage}")?;
             for entry in &self.flows {
+                let pad =
+                    " ".repeat(path_width.saturating_sub(entry.path.len()));
                 writeln!(
                     f,
-                    "{:<path_width$}  {:<wf_width$}  {:<stage_width$}",
-                    entry.path, entry.workflow, entry.stage
+                    "{}{}  {:<wf_width$}  {:<stage_width$}",
+                    entry.path.cyan(),
+                    pad,
+                    entry.workflow,
+                    entry.stage
                 )?;
             }
         }
@@ -200,7 +210,7 @@ pub struct FlowStatusOutput {
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}  {}", "Flow:".bold(), self.flow)?;
+        writeln!(f, "{}  {}", "Flow:".bold(), self.flow.cyan())?;
         writeln!(f, "{}  {}", "Stage:".bold(), self.stage.magenta())?;
         writeln!(f, "{}:", "Steps".bold())?;
         for step in &self.steps {
@@ -465,7 +475,7 @@ pub struct FlowArchiveOutput {
 
 impl fmt::Display for FlowArchiveOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{} {}", "Archived flow:".dimmed(), self.path.bold())
+        writeln!(f, "{} {}", "Archived flow:".dimmed(), self.path.cyan().bold())
     }
 }
 
