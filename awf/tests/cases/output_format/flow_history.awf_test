@@ -76,16 +76,16 @@ $ assert_stdout contains
  
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
-| [1m•[0m stage [1m[35mdesign[39m[0m started at [90m<...>[39m
+| • stage [1m[35mdesign[39m[0m started at [90m<...>[39m
 |     [32m✓[39m step [32mwrite-design[39m completed at [90m<...>[39m
 |     [32m✓[39m stage completed at [90m<...>[39m
-| [1m•[0m stage [1m[35mimplement[39m[0m started at [90m<...>[39m
+| • stage [1m[35mimplement[39m[0m started at [90m<...>[39m
 |     [32m✓[39m step [32mwrite-code[39m completed at [90m<...>[39m
 |     [31m✗[39m step [31mlint[39m failed at [90m<...>[39m
 |     [32m✓[39m step [32mtest[39m completed at [90m<...>[39m
 |     [33m⚠[39m stage [33mforce completed[39m at [90m<...>[39m
 |         [33mforce moving to next stage despite lint failure[39m
-| [1m•[0m stage [1m[35mdone[39m[0m started at [90m<...>[39m
+| • stage [1m[35mdone[39m[0m started at [90m<...>[39m
 
 # --- JSON output ---
 

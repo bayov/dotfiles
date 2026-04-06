@@ -393,8 +393,7 @@ impl fmt::Display for FlowHistoryOutput {
         for entry in &self.entries {
             writeln!(
                 f,
-                "{} stage {} started at {}",
-                "•".bold(),
+                "• stage {} started at {}",
                 entry.stage.magenta().bold(),
                 pretty_dt(&entry.started_at).bright_black(),
             )?;
