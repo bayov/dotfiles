@@ -52,10 +52,10 @@ impl fmt::Display for FlowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "Created flow {} (workflow: {}, stage: {})",
+            "Created flow: {} (workflow: {}, stage: {})",
             self.path.cyan(),
             self.workflow.blue(),
-            self.stage,
+            self.stage.magenta(),
         )
     }
 }

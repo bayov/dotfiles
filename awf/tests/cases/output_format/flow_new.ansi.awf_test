@@ -28,7 +28,7 @@ $ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
 $ assert_stdout equals
-| Created flow [36m<...>/fmt-new-h[39m (workflow: [34mfeature[39m, stage: design)
+| Created flow: [36m<...>/fmt-new-h[39m (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 
 # --- JSON ---
 
