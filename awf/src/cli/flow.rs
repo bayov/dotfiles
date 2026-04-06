@@ -52,12 +52,9 @@ impl fmt::Display for FlowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "{} {} ({}: {}, {}: {})",
-            "Created flow".bright_black(),
+            "Created flow {} (workflow: {}, stage: {})",
             self.path.cyan().bold(),
-            "workflow".bright_black(),
             self.workflow.blue(),
-            "stage".bright_black(),
             self.stage,
         )
     }
@@ -103,11 +100,9 @@ impl fmt::Display for FlowListOutput {
         for entry in &self.flows {
             write!(
                 f,
-                "• {}  ({}: {}, {}: {}",
+                "• {}  (workflow: {}, stage: {}",
                 entry.path.cyan(),
-                "workflow".bright_black(),
                 entry.workflow.blue(),
-                "stage".bright_black(),
                 entry.stage.magenta(),
             )?;
             if self.include_archived && entry.archived {
@@ -406,12 +401,7 @@ pub struct FlowArchiveOutput {
 
 impl fmt::Display for FlowArchiveOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "{} {}",
-            "Archived flow:".bright_black(),
-            self.archived_flow.cyan().bold()
-        )
+        writeln!(f, "Archived flow: {}", self.archived_flow.cyan().bold())
     }
 }
 

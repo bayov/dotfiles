@@ -9,7 +9,7 @@ $ export CLICOLOR_FORCE=1
 
 $ awf workflow new my-wf --output-format human
 $ assert_stdout equals
-| [90mCreated[39m [1m.agents/workflows/my-wf/WORKFLOW.toml[0m
+| Created [1m.agents/workflows/my-wf/WORKFLOW.toml[0m
 | Edit it to define your stages, then run `awf workflow validate [34mmy-wf[39m`.
 
 # --- JSON ---

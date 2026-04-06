@@ -27,7 +27,7 @@ pub struct WorkflowNewOutput {
 
 impl fmt::Display for WorkflowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{} {}", "Created".bright_black(), self.path.bold())?;
+        writeln!(f, "Created {}", self.path.bold())?;
         writeln!(
             f,
             "Edit it to define your stages, then run `awf workflow validate {}`.",
