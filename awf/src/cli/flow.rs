@@ -53,7 +53,7 @@ impl fmt::Display for FlowNewOutput {
         writeln!(
             f,
             "Created flow {} (workflow: {}, stage: {})",
-            self.path.cyan().bold(),
+            self.path.cyan(),
             self.workflow.blue(),
             self.stage,
         )
@@ -136,9 +136,9 @@ pub struct FlowStatusOutput {
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}  {}", "Flow:".bold(), self.flow.cyan())?;
-        writeln!(f, "{}  {}", "Stage:".bold(), self.stage.magenta())?;
-        writeln!(f, "{}:", "Steps".bold())?;
+        writeln!(f, "Flow:  {}", self.flow.cyan())?;
+        writeln!(f, "Stage:  {}", self.stage.magenta())?;
+        writeln!(f, "Steps:")?;
         for step in &self.steps {
             let badge = match step.status.as_str() {
                 "pass" => "[✓ pass]".green().to_string(),
@@ -205,9 +205,9 @@ pub struct FlowRunOutput {
 impl fmt::Display for FlowRunOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let status_badge = if self.status == "pass" {
-            "PASS".green().bold().to_string()
+            "PASS".green().to_string()
         } else {
-            "FAIL".red().bold().to_string()
+            "FAIL".red().to_string()
         };
         writeln!(
             f,
@@ -275,12 +275,7 @@ pub struct FlowAdvanceOutput {
 
 impl fmt::Display for FlowAdvanceOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "{} {}",
-            "▶ Entered stage:".green().bold(),
-            self.stage.magenta()
-        )?;
+        writeln!(f, "{} {}", "▶ Entered stage:".green(), self.stage.magenta())?;
         if self.is_final {
             writeln!(f, "{}", "  This is the final stage.".bright_black())?;
         }
@@ -401,7 +396,7 @@ pub struct FlowArchiveOutput {
 
 impl fmt::Display for FlowArchiveOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Archived flow: {}", self.archived_flow.cyan().bold())
+        writeln!(f, "Archived flow: {}", self.archived_flow.cyan())
     }
 }
 

@@ -748,7 +748,7 @@ fn check_output_assertion(
                 stream,
                 "unwanted:".bright_black(),
                 expected,
-                "actual:".bright_black(),
+                "  actual:".bright_black(),
                 actual.trim(),
                 context()
             );
@@ -892,7 +892,7 @@ fn assert_equals_with_placeholders(
         actual_lines.len(),
         "expected:".bright_black(),
         expected,
-        "actual:".bright_black(),
+        "  actual:".bright_black(),
         actual,
         context()
     );
@@ -909,7 +909,7 @@ fn assert_equals_with_placeholders(
                 i + 1,
                 "expected:".bright_black(),
                 expected_line,
-                "actual:".bright_black(),
+                "  actual:".bright_black(),
                 actual_line,
                 context()
             );
@@ -922,7 +922,7 @@ fn assert_equals_with_placeholders(
             i + 1,
             "pattern:".bright_black(),
             expected_line,
-            "actual:".bright_black(),
+            " actual:".bright_black(),
             actual_line,
             context()
         );

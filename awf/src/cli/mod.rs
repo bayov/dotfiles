@@ -266,7 +266,7 @@ pub fn find_project_root_or_exit(start: &Path) -> color_eyre::Result<PathBuf> {
             anstream::eprintln!(
                 "  {} Run this command from inside a directory that contains \
                  a .agents/ folder.",
-                "Hint:".bold()
+                "Hint:"
             );
             process::exit(1);
         }
@@ -290,7 +290,7 @@ pub fn load_workflow_or_exit(
             eprint_error(format_args!("workflow {n:?} not found"));
 
             // Search directories.
-            anstream::eprintln!("\n  {}:", "Searched in".bold());
+            anstream::eprintln!("\n  Searched in:");
             for entry in entries {
                 anstream::eprintln!(
                     "    {}  {}",
@@ -310,10 +310,7 @@ pub fn load_workflow_or_exit(
                 }
                 Ok(listings) => {
                     const MAX_SHOWN: usize = 10;
-                    anstream::eprintln!(
-                        "\n  {}:",
-                        "Available workflows".bold()
-                    );
+                    anstream::eprintln!("\n  {}:", "Available workflows");
                     for w in listings.iter().take(MAX_SHOWN) {
                         anstream::eprintln!(
                             "    {}:{}",
@@ -336,8 +333,8 @@ pub fn load_workflow_or_exit(
                     {
                         anstream::eprintln!(
                             "\n  {} {}?",
-                            "Did you mean".yellow().bold(),
-                            suggestion.yellow().bold(),
+                            "Did you mean".yellow(),
+                            suggestion.yellow(),
                         );
                     }
                 }
@@ -352,7 +349,7 @@ pub fn load_workflow_or_exit(
             ));
             anstream::eprintln!(
                 "  {} Use a scope-qualified name such as {}.",
-                "Hint:".bold(),
+                "Hint:",
                 format!("<scope>:{n}").cyan(),
             );
             process::exit(1);

@@ -48,14 +48,14 @@ pub fn print_output<T: Serialize + Display>(val: &T, fmt: &OutputFormat) {
     anstream::print!("{}", render(val, fmt));
 }
 
-/// Prints `"error: {msg}"` to stderr with a bold-red `"error:"` prefix.
+/// Prints `"error: {msg}"` to stderr with a red `"error:"` prefix.
 pub fn eprint_error(msg: impl fmt::Display) {
-    anstream::eprintln!("{} {msg}", "error:".red().bold());
+    anstream::eprintln!("{} {msg}", "error:".red());
 }
 
-/// Prints `"warning: {msg}"` to stderr with a bold-yellow `"warning:"` prefix.
+/// Prints `"warning: {msg}"` to stderr with a yellow `"warning:"` prefix.
 pub fn eprint_warning(msg: impl fmt::Display) {
-    anstream::eprintln!("{} {msg}", "warning:".yellow().bold());
+    anstream::eprintln!("{} {msg}", "warning:".yellow());
 }
 
 // ---------------------------------------------------------------------------

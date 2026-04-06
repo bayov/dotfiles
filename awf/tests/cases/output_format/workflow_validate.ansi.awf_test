@@ -28,7 +28,7 @@ $ export CLICOLOR_FORCE=1
 
 $ awf workflow validate feature --output-format human
 $ assert_stdout equals
-| Workflow [34mfeature[39m: [1m[32m✓ OK[39m[0m
+| Workflow [34mfeature[39m: [32m✓ OK[39m
 
 # --- JSON ---
 

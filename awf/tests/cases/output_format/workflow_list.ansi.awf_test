@@ -28,7 +28,7 @@ $ export CLICOLOR_FORCE=1
 
 $ awf workflow list --output-format human
 $ assert_stdout equals
-| [1mWORKFLOW[0m
+| WORKFLOW
 | ───────────────
 | project:[34mfeature[39m
 

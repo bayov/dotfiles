@@ -32,9 +32,9 @@ $ assert_stdout contains
 
 $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
 $ assert_stdout equals
-| [1mFlow:[0m  [36mfmt-status[39m
-| [1mStage:[0m  [35mdesign[39m
-| [1mSteps[0m:
+| Flow:  [36mfmt-status[39m
+| Stage:  [35mdesign[39m
+| Steps:
 |   [35mwrite-design[39m  [90m[· pending][39m
 
 # --- JSON ---

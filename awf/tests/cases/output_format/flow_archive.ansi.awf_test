@@ -38,7 +38,7 @@ $ assert_stdout contains
 
 $ awf flow archive --flow $FLOWS_DIR/fmt-arc-h --output-format human
 $ assert_stdout equals
-| Archived flow: [1m[36m<...>fmt-arc-h[39m[0m
+| Archived flow: [36m<...>fmt-arc-h[39m
 
 # --- JSON ---
 

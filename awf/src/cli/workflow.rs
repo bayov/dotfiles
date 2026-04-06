@@ -27,7 +27,7 @@ pub struct WorkflowNewOutput {
 
 impl fmt::Display for WorkflowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Created {}", self.path.bold())?;
+        writeln!(f, "Created {}", self.path)?;
         writeln!(
             f,
             "Edit it to define your stages, then run `awf workflow validate {}`.",
@@ -45,7 +45,7 @@ pub struct WorkflowValidateOutput {
 
 impl fmt::Display for WorkflowValidateOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Workflow {}: {}", self.name.blue(), "✓ OK".green().bold())
+        writeln!(f, "Workflow {}: {}", self.name.blue(), "✓ OK".green())
     }
 }
 
@@ -77,7 +77,7 @@ impl fmt::Display for WorkflowListOutput {
             .max()
             .unwrap_or(0)
             .max("WORKFLOW".len());
-        writeln!(f, "{}", "WORKFLOW".bold())?;
+        writeln!(f, "WORKFLOW")?;
         writeln!(f, "{}", "─".repeat(width))?;
         for w in &self.workflows {
             writeln!(f, "{}:{}", w.scope, w.name.blue())?;
@@ -199,11 +199,7 @@ fn validate_single(
         print_output(&output, fmt);
         Ok(false)
     } else {
-        anstream::eprintln!(
-            "Workflow {}: {}",
-            name.blue(),
-            "✗ FAILED".red().bold()
-        );
+        anstream::eprintln!("Workflow {}: {}", name.blue(), "✗ FAILED".red());
         for error in &errors {
             anstream::eprintln!("  {} {error}", "·".red());
         }
