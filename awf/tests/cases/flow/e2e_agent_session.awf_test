@@ -1,0 +1,207 @@
+# Test: Full e2e agent session — research → scope → (skip design) → decompose → implement
+# Simulates a coding agent driving the workflow using --output-format json throughout.
+
+# --- Workflow setup ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Research, scope, design, decompose, and implement a feature."
+|
+| [[stages]]
+| name = "research"
+| description = "Research the problem space."
+| produces = ["research.md"]
+| kind = "agent"
+| args = { instructions = "Research the problem and produce research.md." }
+| skippable = true
+|
+| [[stages]]
+| name = "scope"
+| description = "Define the scope of work."
+| kind = "agent"
+| args = { instructions = "Define the scope of work." }
+|
+| [[stages]]
+| name = "design"
+| description = "Produce a technical design."
+| kind = "agent"
+| args = { instructions = "Produce a technical design document." }
+| skippable = true
+|
+| [[stages]]
+| name = "decompose"
+| description = "Break work into tasks."
+| kind = "agent"
+| args = { instructions = "Break the work into implementation tasks." }
+| skippable = true
+|
+| [[stages]]
+| name = "implement"
+| description = "Write the implementation."
+| kind = "agent"
+| args = { instructions = "Write the implementation." }
+
+# =============================================================================
+# Agent creates the flow
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/add-feature --workflow feature --output-format json
+$ assert_stdout json
+| {
+|   "path": "<any_string>",
+|   "workflow": "feature",
+|   "stage": "research"
+| }
+
+# =============================================================================
+# Stage: research — agent reads instructions, produces artifact, marks done
+# =============================================================================
+
+$ awf flow next-step --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "action": "complete_agent",
+|   "stage": "research"
+| }
+
+$ write_file flows/add-feature/artifacts/research.md
+| # Research
+
+$ awf flow done --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "research"
+| }
+
+$ awf flow next-stage --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "scope",
+|   "is_final": false
+| }
+
+# =============================================================================
+# Stage: scope — agent reads instructions, marks done, advances
+# =============================================================================
+
+$ awf flow next-step --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "action": "complete_agent",
+|   "stage": "scope"
+| }
+
+$ awf flow done --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "scope"
+| }
+
+$ awf flow next-stage --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "design",
+|   "is_final": false
+| }
+
+# =============================================================================
+# Stage: design — agent checks status, decides to skip (stage is skippable)
+# =============================================================================
+
+$ awf flow status --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "design",
+|   "status": "active"
+| }
+
+$ awf flow next-stage --skip --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_exit_code 0
+$ assert_stdout json
+| {
+|   "stage": "decompose",
+|   "is_final": false
+| }
+$ assert_stderr contains
+| Skipped stage "design"
+
+# =============================================================================
+# Stage: decompose — agent reads instructions, marks done, advances
+# =============================================================================
+
+$ awf flow next-step --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "action": "complete_agent",
+|   "stage": "decompose"
+| }
+
+$ awf flow done --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "decompose"
+| }
+
+$ awf flow next-stage --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "implement",
+|   "is_final": true
+| }
+
+# =============================================================================
+# Stage: implement (final) — agent reads instructions, marks done
+# =============================================================================
+
+$ awf flow next-step --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "action": "complete_agent",
+|   "stage": "implement"
+| }
+
+$ awf flow done --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "stage": "implement"
+| }
+
+# =============================================================================
+# Session complete — verify full history
+# =============================================================================
+
+$ awf flow history --flow $FLOWS_DIR/add-feature --output-format json
+$ assert_stdout json
+| {
+|   "entries": [
+|     {
+|       "stage": "research",
+|       "time": "<any_string>",
+|       "status": "completed"
+|     },
+|     {
+|       "stage": "scope",
+|       "time": "<any_string>",
+|       "status": "completed"
+|     },
+|     {
+|       "stage": "design",
+|       "time": "<any_string>",
+|       "status": "skipped"
+|     },
+|     {
+|       "stage": "decompose",
+|       "time": "<any_string>",
+|       "status": "completed"
+|     },
+|     {
+|       "stage": "implement",
+|       "time": "<any_string>",
+|       "status": "completed"
+|     }
+|   ]
+| }
