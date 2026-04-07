@@ -93,6 +93,20 @@
         // inlay hints
         "editorInlayHint.foreground": "#96969666",
         "editorInlayHint.background": "#0000",
+        // VCS decorations
+        "editorOverviewRuler.addedForeground": "#549159",
+        "editorOverviewRuler.deletedForeground": "#d26060",
+        "editorOverviewRuler.modifiedForeground": "#4772c9",
+        "editorGutter.addedBackground": "#549159",
+        "editorGutter.deletedBackground": "#d26060",
+        "editorGutter.modifiedBackground": "#4772c9",
+        // scrollbar (highlights)
+        "editorOverviewRuler.wordHighlightForeground": "#fff4",
+        "editorOverviewRuler.wordHighlightStrongForeground": "#fff4",
+        "editorOverviewRuler.wordHighlightTextForeground": "#fff4",
+        "editorOverviewRuler.rangeHighlightForeground": "#fff4",
+        "editorOverviewRuler.selectionHighlightForeground": "#fff4",
+        "editorOverviewRuler.findMatchForeground": "#fff4",
         // terminal — Base: Tomorrow (dark) (terminal.sexy)
         "terminal.background": "#1d1f21",
         "terminal.foreground": "#c5c8c6",
