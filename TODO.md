@@ -7,7 +7,6 @@ TODO
 Awf
 ---
 
-- Refactor state machine to be a DAG.
 - Skip stage functionality.
 - Review functionality
 - Improve human output format.
