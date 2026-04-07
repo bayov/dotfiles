@@ -16,6 +16,7 @@ Awf
 - Add README.md's
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Implement `dynamic_task_lists_plan.md`
+- Define `research -> scope -> design -> decompose -> implement` workflow
 
 Infeasible
 ----------

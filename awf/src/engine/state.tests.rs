@@ -12,6 +12,7 @@ use chrono::Utc;
 use super::advance_stage;
 use super::record_step_fail;
 use super::record_step_pass;
+use super::skip_stage;
 use crate::model::flow::FlowState;
 use crate::model::flow::StepStatus;
 use crate::model::workflow::Stage;
@@ -53,6 +54,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "design".to_owned(),
                 description: Some("Produce a design doc.".to_owned()),
+                skippable: true,
                 produces: vec!["design.md".to_owned()],
                 steps: vec![Step {
                     name: "write-design".to_owned(),
@@ -65,6 +67,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
+                skippable: false,
                 produces: vec![],
                 steps: vec![
                     Step {
@@ -93,6 +96,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "review".to_owned(),
                 description: None,
+                skippable: false,
                 produces: vec!["changelog-entry.md".to_owned()],
                 steps: vec![
                     Step {
@@ -465,4 +469,80 @@ fn advance_stage_preserves_existing_step_log_entries() {
     assert_eq!(advanced.step_log.len(), 1);
     assert_eq!(advanced.step_log[0].step, "write-design");
     assert_eq!(advanced.step_log[0].stage, "design");
+}
+
+// ---------------------------------------------------------------------------
+// skip_stage — skippable stage
+// ---------------------------------------------------------------------------
+
+#[test]
+fn skip_stage_moves_flow_to_next_stage() {
+    let workflow = feature_workflow();
+
+    // Given: a flow at the design stage (which is skippable)
+    let flow = flow_at("design");
+
+    // When: we skip the stage
+    let updated = skip_stage(&workflow, flow).expect("skip should succeed");
+
+    // Then: the current stage is now implement
+    assert_eq!(updated.current_stage, "implement");
+
+    // Then: the stage history records the skipped design stage
+    assert_eq!(updated.stage_history.len(), 1);
+    let history_entry = &updated.stage_history[0];
+    assert_eq!(history_entry.stage, "design");
+    assert!(history_entry.skipped, "stage should be marked as skipped");
+    assert!(!history_entry.force_completed);
+    assert!(history_entry.completed_at.is_some());
+}
+
+#[test]
+fn skip_stage_errors_on_non_skippable_stage() {
+    let workflow = feature_workflow();
+
+    // Given: a flow at the implement stage (which is NOT skippable)
+    let flow = flow_at("implement");
+
+    // When: we attempt to skip
+    let result = skip_stage(&workflow, flow);
+
+    // Then: StageNotSkippable error is returned
+    assert!(
+        matches!(result, Err(Error::StageNotSkippable { .. })),
+        "expected Err(StageNotSkippable), got {result:?}"
+    );
+}
+
+#[test]
+fn skip_stage_errors_on_last_stage() {
+    // Build a workflow where the last stage is skippable
+    let workflow = Workflow {
+        name: "single".to_owned(),
+        version: 1,
+        description: None,
+        commands: HashMap::new(),
+        stages: vec![Stage {
+            name: "only".to_owned(),
+            description: None,
+            skippable: true,
+            produces: vec![],
+            steps: vec![Step {
+                name: "do-it".to_owned(),
+                kind: StepKind::Agent {
+                    prompt: Some("do.md".to_owned()),
+                    instructions: None,
+                },
+            }],
+        }],
+        default_flow_dir: None,
+    };
+
+    let flow = flow_at("only");
+    let result = skip_stage(&workflow, flow);
+
+    assert!(
+        matches!(result, Err(Error::AlreadyOnLastStage)),
+        "expected Err(AlreadyOnLastStage), got {result:?}"
+    );
 }

@@ -55,6 +55,10 @@ pub struct StageHistoryEntry {
     /// Human-readable reason why the stage was force-advanced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_reason: Option<String>,
+
+    /// `true` when the stage was skipped entirely via `next-stage --skip`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub skipped: bool,
 }
 
 /// A single completed step execution recorded in a flow's step log.

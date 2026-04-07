@@ -68,6 +68,10 @@ pub struct Stage {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
+    /// When `true`, the stage can be skipped entirely via `next-stage --skip`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub skippable: bool,
+
     /// Artifact paths this stage produces and makes available to later stages.
     ///
     /// Defaults to an empty list.

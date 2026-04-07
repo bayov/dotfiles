@@ -78,6 +78,70 @@ pub fn advance_stage(
         completed_at: Some(now),
         force_completed,
         force_reason,
+        skipped: false,
+    });
+
+    // Advance to the next stage and refresh timestamps.
+    flow.current_stage = next_stage_name;
+    flow.stage_started_at = now;
+    flow.updated_at = now;
+
+    Ok(flow)
+}
+
+/// Skips the current stage, recording it as skipped in the history.
+///
+/// Validates that the current stage is marked `skippable` in the workflow.
+/// Bypasses all gates (steps and artifacts).
+///
+/// # Errors
+///
+/// Returns [`Error::StageNotSkippable`] when the current stage is not marked
+/// as `skippable`. Returns [`Error::AlreadyOnLastStage`] when the flow is
+/// already on the last stage.
+#[instrument(skip_all, fields(
+    workflow.name = %workflow.name,
+    flow.id = %flow.id,
+    flow.current_stage = %flow.current_stage,
+))]
+pub fn skip_stage(
+    workflow: &Workflow,
+    mut flow: FlowState,
+) -> Result<FlowState> {
+    let current_idx = workflow
+        .stages
+        .iter()
+        .position(|s| s.name == flow.current_stage)
+        .unwrap_or_else(|| {
+            panic!(
+                "current stage {:?} not found in workflow {:?}",
+                flow.current_stage, workflow.name
+            )
+        });
+
+    // Validate the stage is marked as skippable.
+    if !workflow.stages[current_idx].skippable {
+        return Err(Error::StageNotSkippable {
+            stage: flow.current_stage.clone(),
+        });
+    }
+
+    // Fail fast if already on the last stage — there is nowhere to skip to.
+    if current_idx + 1 >= workflow.stages.len() {
+        return Err(Error::AlreadyOnLastStage);
+    }
+
+    let next_stage_name = workflow.stages[current_idx + 1].name.clone();
+    let now = Utc::now();
+
+    // Record the skipped stage in history.
+    flow.stage_history.push(StageHistoryEntry {
+        stage: flow.current_stage.clone(),
+        started_at: flow.stage_started_at,
+        completed_at: Some(now),
+        force_completed: false,
+        force_reason: None,
+        skipped: true,
     });
 
     // Advance to the next stage and refresh timestamps.

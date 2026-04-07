@@ -65,6 +65,10 @@ pub enum Error {
     #[error("already on the last stage; cannot advance further")]
     AlreadyOnLastStage,
 
+    /// The current stage is not marked as `skippable` in the workflow.
+    #[error("stage {stage:?} is not marked as skippable in the workflow")]
+    StageNotSkippable { stage: String },
+
     /// A workflow definition violated a structural invariant (e.g. mutual
     /// exclusivity of fields, duplicate stage or step names).
     #[error("workflow validation failed: {message}")]

@@ -1,0 +1,124 @@
+# Test: --skip bypasses all gates on skippable stages
+
+# --- Setup ---
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/with-skippable/WORKFLOW.toml
+| name = "with-skippable"
+| version = 1
+|
+| [[stages]]
+| name = "research"
+| skippable = true
+| produces = ["research.md"]
+| steps = [{ name = "do-research", type = "agent", instructions = "Research." }]
+|
+| [[stages]]
+| name = "implement"
+| steps = [{ name = "code", type = "agent", instructions = "Code." }]
+|
+| [[stages]]
+| name = "review"
+| steps = [{ name = "check", type = "command", run = "true" }]
+
+$ write_file .agents/workflows/no-skip/WORKFLOW.toml
+| name = "no-skip"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [{ name = "do-it", type = "command", run = "true" }]
+|
+| [[stages]]
+| name = "done"
+| steps = [{ name = "finish", type = "command", run = "true" }]
+
+# =============================================================================
+# Test 1: --skip bypasses all gates (steps AND artifacts)
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/skip-flow --workflow with-skippable
+$ assert_stdout contains
+| skip-flow
+
+# Without --skip: fails because step is incomplete
+$ awf flow next-stage --flow $FLOWS_DIR/skip-flow
+$ assert_exit_code 1
+$ assert_stderr contains
+| not complete
+
+# With --skip: bypasses step and artifact gates
+$ awf flow next-stage --skip --flow $FLOWS_DIR/skip-flow
+$ assert_exit_code 0
+$ assert_stdout contains
+| implement
+$ assert_stderr contains
+| Skipped stage
+
+# =============================================================================
+# Test 2: --skip on non-skippable stage is rejected
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/no-skip-flow --workflow no-skip
+$ assert_stdout contains
+| no-skip-flow
+
+$ awf flow next-stage --skip --flow $FLOWS_DIR/no-skip-flow
+$ assert_exit_code 1
+$ assert_stderr contains
+| not marked as skippable
+
+# =============================================================================
+# Test 3: --skip records skipped in history
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/skip-history --workflow with-skippable
+$ assert_stdout contains
+| skip-history
+
+$ awf flow next-stage --skip --flow $FLOWS_DIR/skip-history
+$ assert_exit_code 0
+$ assert_stdout contains
+| implement
+$ assert_stderr contains
+| Skipped stage
+
+# History JSON shows skipped: true
+$ awf flow history --flow $FLOWS_DIR/skip-history --output-format json
+$ assert_stdout json
+| {
+|   "entries": [
+|     {
+|       "stage": "research",
+|       "started_at": "<any_string>",
+|       "completed_at": "<any_string>",
+|       "skipped": true,
+|       "steps": []
+|     },
+|     {
+|       "stage": "implement",
+|       "started_at": "<any_string>",
+|       "steps": []
+|     }
+|   ]
+| }
+
+# History human shows skipped
+$ awf flow history --flow $FLOWS_DIR/skip-history --output-format human
+$ assert_stdout contains
+| skipped
+
+# =============================================================================
+# Test 4: --skip and --force cannot be used together
+# =============================================================================
+
+$ awf flow new $FLOWS_DIR/skip-force --workflow with-skippable
+$ assert_stdout contains
+| skip-force
+
+$ awf flow next-stage --skip --force "reason" --flow $FLOWS_DIR/skip-force
+$ assert_exit_code 1
+$ assert_stderr contains
+| cannot be used together

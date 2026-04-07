@@ -143,6 +143,9 @@ pub enum FlowCommands {
         flow: Option<String>,
         #[arg(long)]
         force: Option<String>,
+        /// Skip the current stage entirely (only if marked skippable)
+        #[arg(long)]
+        skip: bool,
     },
     /// Show transition and command history
     History {
@@ -224,8 +227,8 @@ fn dispatch_flow(
         FlowCommands::Validate { flow: flow_flag } => {
             flow::validate(flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::NextStage { flow: flow_flag, force } => {
-            flow::advance(flow_flag.as_deref(), force, &fmt)
+        FlowCommands::NextStage { flow: flow_flag, force, skip } => {
+            flow::advance(flow_flag.as_deref(), force, skip, &fmt)
         }
         FlowCommands::History { flow: flow_flag } => {
             flow::history(flow_flag.as_deref(), &fmt)

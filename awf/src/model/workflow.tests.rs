@@ -237,6 +237,7 @@ fn serialize_then_deserialize_is_identity() {
         stages: vec![Stage {
             name: "cut".to_owned(),
             description: None,
+            skippable: false,
             produces: vec!["CHANGELOG.md".to_owned()],
             steps: vec![
                 Step {
@@ -283,6 +284,7 @@ fn command_step_with_both_command_and_run_fails_validation() {
         stages: vec![Stage {
             name: "build".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![Step {
                 name: "ambiguous-cmd".to_owned(),
@@ -316,6 +318,7 @@ fn command_step_with_neither_command_nor_run_fails_validation() {
         stages: vec![Stage {
             name: "build".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![Step {
                 name: "empty-cmd".to_owned(),
@@ -343,6 +346,7 @@ fn agent_step_with_both_prompt_and_instructions_fails_validation() {
         stages: vec![Stage {
             name: "design".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![Step {
                 name: "write".to_owned(),
@@ -373,6 +377,7 @@ fn agent_step_with_neither_prompt_nor_instructions_fails_validation() {
         stages: vec![Stage {
             name: "design".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![Step {
                 name: "write".to_owned(),
@@ -405,6 +410,7 @@ fn duplicate_stage_names_fail_validation() {
             Stage {
                 name: "build".to_owned(),
                 description: None,
+                skippable: false,
                 produces: vec![],
                 steps: vec![Step {
                     name: "compile".to_owned(),
@@ -417,6 +423,7 @@ fn duplicate_stage_names_fail_validation() {
             Stage {
                 name: "build".to_owned(),
                 description: None,
+                skippable: false,
                 produces: vec![],
                 steps: vec![Step {
                     name: "test".to_owned(),
@@ -448,6 +455,7 @@ fn duplicate_step_names_within_stage_fail_validation() {
         stages: vec![Stage {
             name: "verify".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![
                 Step {
@@ -491,6 +499,7 @@ fn stage_with_no_steps_fails_validation() {
         stages: vec![Stage {
             name: "done".to_owned(),
             description: None,
+            skippable: false,
             produces: vec![],
             steps: vec![],
         }],

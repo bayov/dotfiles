@@ -53,6 +53,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "design".to_owned(),
                 description: Some("Produce a design doc.".to_owned()),
+                skippable: false,
                 produces: vec!["design.md".to_owned()],
                 steps: vec![Step {
                     name: "write-design".to_owned(),
@@ -65,6 +66,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
+                skippable: false,
                 produces: vec![],
                 steps: vec![
                     Step {
@@ -93,6 +95,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "review".to_owned(),
                 description: None,
+                skippable: false,
                 produces: vec!["changelog-entry.md".to_owned()],
                 steps: vec![
                     Step {

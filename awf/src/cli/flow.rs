@@ -25,6 +25,7 @@ use crate::engine::command::run_command;
 use crate::engine::state::advance_stage;
 use crate::engine::state::record_step_fail;
 use crate::engine::state::record_step_pass;
+use crate::engine::state::skip_stage;
 use crate::model::flow::FlowState;
 use crate::model::flow::StepStatus;
 use crate::model::workflow::Step;
@@ -308,6 +309,8 @@ pub struct FlowStageRecord {
     pub force_completed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub force_reason: Option<String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub skipped: bool,
     pub steps: Vec<FlowStepRecord>,
 }
 
@@ -357,7 +360,15 @@ impl fmt::Display for FlowHistoryOutput {
                 }
             }
             if let Some(ref completed_at) = entry.completed_at {
-                if entry.force_completed {
+                if entry.skipped {
+                    let icon = "⏭".yellow();
+                    writeln!(
+                        f,
+                        "    {icon} stage {} at {}",
+                        "skipped".yellow(),
+                        pretty_dt(completed_at).bright_black(),
+                    )?;
+                } else if entry.force_completed {
                     let icon = "⚠".yellow();
                     writeln!(
                         f,
@@ -934,10 +945,10 @@ pub fn validate(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow next-stage [--force] [--flow <path>]`
+// `awf flow next-stage [--force] [--skip] [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow next-stage [--force] [--flow <path>]`.
+/// Handles `awf flow next-stage [--force] [--skip] [--flow <path>]`.
 ///
 /// # Errors
 ///
@@ -945,8 +956,14 @@ pub fn validate(
 pub fn advance(
     flow_flag: Option<&str>,
     force: Option<String>,
+    skip: bool,
     fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
+    if skip && force.is_some() {
+        eprint_error("--skip and --force cannot be used together");
+        process::exit(1);
+    }
+
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -956,51 +973,79 @@ pub fn advance(
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
     super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
-    let artifacts = collect_artifacts(&flow_dir);
 
-    // --force bypasses step gates but never artifact gates.
-    #[allow(clippy::single_match_else, clippy::option_if_let_else)]
-    let force_reason = match force {
-        Some(reason) => {
-            check_produces_or_exit(&workflow, &flow, &artifacts);
-            Some(reason)
-        }
-        None => {
-            if let Err(blocker) = can_advance(&workflow, &flow, &artifacts) {
-                match blocker {
-                    AdvanceBlocker::StepFailed(step) => {
-                        eprint_error(format_args!(
-                            "`{step}` failed. Fix the error then run \
-                             `awf flow run {step}` before advancing."
-                        ));
-                    }
-                    AdvanceBlocker::StepIncomplete(step) => {
-                        eprint_error(format_args!(
-                            "`{step}` is not complete. Complete it before \
-                             advancing."
-                        ));
-                    }
-                    AdvanceBlocker::MissingArtifact(name) => {
-                        eprint_error(format_args!(
-                            "Missing artifact `{name}`. Register it with \
-                             `awf flow artifact put {name} <file>` before \
-                             advancing."
-                        ));
-                    }
-                }
+    let updated_flow = if skip {
+        // --skip bypasses all gates (steps and artifacts).
+        let skipped_stage = flow.current_stage.clone();
+        match skip_stage(&workflow, flow) {
+            Ok(f) => {
+                eprint_warning(format_args!("Skipped stage {skipped_stage:?}"));
+                f
+            }
+            Err(Error::StageNotSkippable { stage }) => {
+                eprint_error(format_args!(
+                    "stage `{stage}` is not marked as skippable in the workflow"
+                ));
                 process::exit(1);
             }
-            None
+            Err(Error::AlreadyOnLastStage) => {
+                eprint_error(
+                    "already on the last stage; nothing to advance to",
+                );
+                process::exit(1);
+            }
+            Err(e) => return Err(e.into()),
         }
-    };
+    } else {
+        let artifacts = collect_artifacts(&flow_dir);
 
-    let updated_flow = match advance_stage(&workflow, flow, force_reason) {
-        Ok(f) => f,
-        Err(Error::AlreadyOnLastStage) => {
-            eprint_error("already on the last stage; nothing to advance to");
-            process::exit(1);
+        // --force bypasses step gates but never artifact gates.
+        #[allow(clippy::single_match_else, clippy::option_if_let_else)]
+        let force_reason = match force {
+            Some(reason) => {
+                check_produces_or_exit(&workflow, &flow, &artifacts);
+                Some(reason)
+            }
+            None => {
+                if let Err(blocker) = can_advance(&workflow, &flow, &artifacts)
+                {
+                    match blocker {
+                        AdvanceBlocker::StepFailed(step) => {
+                            eprint_error(format_args!(
+                                "`{step}` failed. Fix the error then run \
+                                 `awf flow run {step}` before advancing."
+                            ));
+                        }
+                        AdvanceBlocker::StepIncomplete(step) => {
+                            eprint_error(format_args!(
+                                "`{step}` is not complete. Complete it before \
+                                 advancing."
+                            ));
+                        }
+                        AdvanceBlocker::MissingArtifact(name) => {
+                            eprint_error(format_args!(
+                                "Missing artifact `{name}`. Register it with \
+                                 `awf flow artifact put {name} <file>` before \
+                                 advancing."
+                            ));
+                        }
+                    }
+                    process::exit(1);
+                }
+                None
+            }
+        };
+
+        match advance_stage(&workflow, flow, force_reason) {
+            Ok(f) => f,
+            Err(Error::AlreadyOnLastStage) => {
+                eprint_error(
+                    "already on the last stage; nothing to advance to",
+                );
+                process::exit(1);
+            }
+            Err(e) => return Err(e.into()),
         }
-        Err(e) => return Err(e.into()),
     };
 
     let new_stage = updated_flow.current_stage.clone();
@@ -1045,6 +1090,7 @@ pub fn history(
                 .map(|t| t.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
             force_completed: entry.force_completed,
             force_reason: entry.force_reason.clone(),
+            skipped: entry.skipped,
             steps: build_step_records(&flow, &entry.stage),
         })
         .collect();
@@ -1062,6 +1108,7 @@ pub fn history(
             completed_at: None,
             force_completed: false,
             force_reason: None,
+            skipped: false,
             steps: build_step_records(&flow, &flow.current_stage),
         });
     }
