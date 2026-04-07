@@ -29,12 +29,19 @@ $ write_file .agents/workflows/merge-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "check-shared", type = "command", command = "shared-cmd" },
-|     { name = "check-user-only", type = "command", command = "user-only-cmd" },
-|     { name = "check-project-only", type = "command", command = "project-only-cmd" },
-| ]
+| name = "check-shared"
+| kind = "command"
+| args = { command = "shared-cmd" }
+|
+| [[stages]]
+| name = "check-user-only"
+| kind = "command"
+| args = { command = "user-only-cmd" }
+|
+| [[stages]]
+| name = "check-project-only"
+| kind = "command"
+| args = { command = "project-only-cmd" }
 
 # --- Create flows in both search dirs ---
 
@@ -56,18 +63,30 @@ $ assert_stdout contains
 
 # --- shared-cmd: project's "true" overrides user's "false" → PASS ---
 
-$ awf flow run check-shared --flow $FLOWS_DIR/flow-in-user-dir
+$ awf flow run --flow $FLOWS_DIR/flow-in-user-dir
 $ assert_stdout contains
 | PASS
+
+# --- advance to check-user-only stage ---
+
+$ awf flow next-stage --flow $FLOWS_DIR/flow-in-user-dir
+$ assert_stdout contains
+| check-user-only
 
 # --- user-only-cmd: from user config → PASS ---
 
-$ awf flow run check-user-only --flow $FLOWS_DIR/flow-in-user-dir
+$ awf flow run --flow $FLOWS_DIR/flow-in-user-dir
 $ assert_stdout contains
 | PASS
 
+# --- advance to check-project-only stage ---
+
+$ awf flow next-stage --flow $FLOWS_DIR/flow-in-user-dir
+$ assert_stdout contains
+| check-project-only
+
 # --- project-only-cmd: from project config → PASS ---
 
-$ awf flow run check-project-only --flow $FLOWS_DIR/flow-in-user-dir
+$ awf flow run --flow $FLOWS_DIR/flow-in-user-dir
 $ assert_stdout contains
 | PASS

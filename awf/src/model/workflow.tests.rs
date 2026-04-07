@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use super::Stage;
-use super::Step;
-use super::StepKind;
+use super::StageKind;
 use super::Workflow;
 use crate::result::Error;
 
@@ -35,26 +34,30 @@ fn full_workflow_round_trip() {
         name = "design"
         description = "Produce a design doc."
         produces = ["design.md"]
-        steps = [
-            { name = "write-design", type = "agent", prompt = "design.md" },
-        ]
+        kind = "agent"
+        args = { prompt = "design.md" }
 
         [[stages]]
         name = "implement"
         description = "Write the code."
-        steps = [
-            { name = "write-code", type = "agent", prompt = "implement.md" },
-            { name = "format", type = "command", command = "format" },
-            { name = "lint", type = "command", command = "lint" },
-        ]
+        kind = "agent"
+        args = { prompt = "implement.md" }
+
+        [[stages]]
+        name = "format"
+        kind = "command"
+        args = { command = "format" }
+
+        [[stages]]
+        name = "lint"
+        kind = "command"
+        args = { command = "lint" }
 
         [[stages]]
         name = "review"
         produces = ["changelog-entry.md"]
-        steps = [
-            { name = "pre-review-test", type = "command", command = "test" },
-            { name = "do-review", type = "agent", prompt = "review.md" },
-        ]
+        kind = "agent"
+        args = { prompt = "review.md" }
     "#;
 
     // When: we parse the TOML and validate
@@ -78,51 +81,39 @@ fn full_workflow_round_trip() {
     assert_eq!(workflow.commands, expected_commands);
 
     // Then: stage count
-    assert_eq!(workflow.stages.len(), 3);
+    assert_eq!(workflow.stages.len(), 5);
 
     // Then: "design" stage
     let design = &workflow.stages[0];
     assert_eq!(design.name, "design");
     assert_eq!(design.description.as_deref(), Some("Produce a design doc."));
     assert_eq!(design.produces, vec!["design.md"]);
-    assert_eq!(design.steps.len(), 1);
-    assert_eq!(design.steps[0], Step {
-        name: "write-design".to_owned(),
-        kind: StepKind::Agent {
-            prompt: Some("design.md".to_owned()),
-            instructions: None,
-        },
+    assert_eq!(design.kind, StageKind::Agent {
+        prompt: Some("design.md".to_owned()),
+        instructions: None,
     });
 
     // Then: "implement" stage
     let implement = &workflow.stages[1];
     assert_eq!(implement.name, "implement");
     assert!(implement.produces.is_empty());
-    assert_eq!(implement.steps.len(), 3);
-    assert_eq!(implement.steps[0], Step {
-        name: "write-code".to_owned(),
-        kind: StepKind::Agent {
-            prompt: Some("implement.md".to_owned()),
-            instructions: None,
-        },
+    assert_eq!(implement.kind, StageKind::Agent {
+        prompt: Some("implement.md".to_owned()),
+        instructions: None,
     });
-    assert_eq!(implement.steps[1], Step {
-        name: "format".to_owned(),
-        kind: StepKind::Command {
-            command: Some("format".to_owned()),
-            run: None,
-        },
-    });
-    assert_eq!(implement.steps[2], Step {
-        name: "lint".to_owned(),
-        kind: StepKind::Command { command: Some("lint".to_owned()), run: None },
+
+    // Then: "format" stage
+    let format_stage = &workflow.stages[2];
+    assert_eq!(format_stage.name, "format");
+    assert_eq!(format_stage.kind, StageKind::Command {
+        command: Some("format".to_owned()),
+        run: None,
     });
 
     // Then: "review" stage
-    let review = &workflow.stages[2];
+    let review = &workflow.stages[4];
     assert_eq!(review.name, "review");
     assert_eq!(review.produces, vec!["changelog-entry.md"]);
-    assert_eq!(review.steps.len(), 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,9 +130,8 @@ fn defaults_for_optional_fields() {
 
         [[stages]]
         name = "build"
-        steps = [
-            { name = "compile", type = "command", run = "cargo build" },
-        ]
+        kind = "command"
+        args = { run = "cargo build" }
     "#;
 
     // When: we parse the TOML
@@ -158,42 +148,40 @@ fn defaults_for_optional_fields() {
 }
 
 // ---------------------------------------------------------------------------
-// Inline `run` command step
+// Inline `run` command stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn inline_run_command_step_parses_correctly() {
-    // Given: a step using the inline `run` field instead of a `command` alias
+fn inline_run_command_stage_parses_correctly() {
+    // Given: a stage using the inline `run` field instead of a `command` alias
     let toml_input = r#"
         name = "ci"
         version = 1
 
         [[stages]]
         name = "test"
-        steps = [
-            { name = "unit-tests", type = "command", run = "cargo test --workspace" },
-        ]
+        kind = "command"
+        args = { run = "cargo test --workspace" }
     "#;
 
     // When: we parse and validate
     let workflow = parse(toml_input);
-    workflow.validate().expect("inline run step should be valid");
+    workflow.validate().expect("inline run stage should be valid");
 
-    // Then: the step carries the inline run string
-    let step = &workflow.stages[0].steps[0];
-    assert_eq!(step.kind, StepKind::Command {
+    // Then: the stage carries the inline run string
+    assert_eq!(workflow.stages[0].kind, StageKind::Command {
         command: None,
         run: Some("cargo test --workspace".to_owned()),
     });
 }
 
 // ---------------------------------------------------------------------------
-// Inline `instructions` agent step
+// Inline `instructions` agent stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn inline_instructions_agent_step_parses_correctly() {
-    // Given: a step using the inline `instructions` field instead of a prompt
+fn inline_instructions_agent_stage_parses_correctly() {
+    // Given: a stage using the inline `instructions` field instead of a prompt
     // file path
     let toml_input = r#"
         name = "hotfix"
@@ -201,18 +189,16 @@ fn inline_instructions_agent_step_parses_correctly() {
 
         [[stages]]
         name = "patch"
-        steps = [
-            { name = "apply-fix", type = "agent", instructions = "Fix the null-pointer crash in auth.rs." },
-        ]
+        kind = "agent"
+        args = { instructions = "Fix the null-pointer crash in auth.rs." }
     "#;
 
     // When: we parse and validate
     let workflow = parse(toml_input);
-    workflow.validate().expect("inline instructions step should be valid");
+    workflow.validate().expect("inline instructions stage should be valid");
 
-    // Then: the step carries the inline instructions string
-    let step = &workflow.stages[0].steps[0];
-    assert_eq!(step.kind, StepKind::Agent {
+    // Then: the stage carries the inline instructions string
+    assert_eq!(workflow.stages[0].kind, StageKind::Agent {
         prompt: None,
         instructions: Some("Fix the null-pointer crash in auth.rs.".to_owned()),
     });
@@ -234,28 +220,28 @@ fn serialize_then_deserialize_is_identity() {
             m.insert("tag".to_owned(), "git tag -a".to_owned());
             m
         },
-        stages: vec![Stage {
-            name: "cut".to_owned(),
-            description: None,
-            skippable: false,
-            produces: vec!["CHANGELOG.md".to_owned()],
-            steps: vec![
-                Step {
-                    name: "generate-changelog".to_owned(),
-                    kind: StepKind::Agent {
-                        prompt: Some("changelog.md".to_owned()),
-                        instructions: None,
-                    },
+        stages: vec![
+            Stage {
+                name: "generate-changelog".to_owned(),
+                description: None,
+                skippable: false,
+                produces: vec!["CHANGELOG.md".to_owned()],
+                kind: StageKind::Agent {
+                    prompt: Some("changelog.md".to_owned()),
+                    instructions: None,
                 },
-                Step {
-                    name: "push-tag".to_owned(),
-                    kind: StepKind::Command {
-                        command: Some("tag".to_owned()),
-                        run: None,
-                    },
+            },
+            Stage {
+                name: "push-tag".to_owned(),
+                description: None,
+                skippable: false,
+                produces: vec![],
+                kind: StageKind::Command {
+                    command: Some("tag".to_owned()),
+                    run: None,
                 },
-            ],
-        }],
+            },
+        ],
         default_flow_dir: None,
     };
 
@@ -274,8 +260,8 @@ fn serialize_then_deserialize_is_identity() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn command_step_with_both_command_and_run_fails_validation() {
-    // Given: a workflow with a command step that sets both `command` and `run`
+fn command_stage_with_both_command_and_run_fails_validation() {
+    // Given: a workflow with a command stage that sets both `command` and `run`
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -286,13 +272,10 @@ fn command_step_with_both_command_and_run_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            steps: vec![Step {
-                name: "ambiguous-cmd".to_owned(),
-                kind: StepKind::Command {
-                    command: Some("lint".to_owned()),
-                    run: Some("cargo clippy".to_owned()),
-                },
-            }],
+            kind: StageKind::Command {
+                command: Some("lint".to_owned()),
+                run: Some("cargo clippy".to_owned()),
+            },
         }],
         default_flow_dir: None,
     };
@@ -308,8 +291,8 @@ fn command_step_with_both_command_and_run_fails_validation() {
 }
 
 #[test]
-fn command_step_with_neither_command_nor_run_fails_validation() {
-    // Given: a command step with both fields absent
+fn command_stage_with_neither_command_nor_run_fails_validation() {
+    // Given: a command stage with both fields absent
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -320,10 +303,7 @@ fn command_step_with_neither_command_nor_run_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            steps: vec![Step {
-                name: "empty-cmd".to_owned(),
-                kind: StepKind::Command { command: None, run: None },
-            }],
+            kind: StageKind::Command { command: None, run: None },
         }],
         default_flow_dir: None,
     };
@@ -336,8 +316,8 @@ fn command_step_with_neither_command_nor_run_fails_validation() {
 }
 
 #[test]
-fn agent_step_with_both_prompt_and_instructions_fails_validation() {
-    // Given: an agent step that sets both `prompt` and `instructions`
+fn agent_stage_with_both_prompt_and_instructions_fails_validation() {
+    // Given: an agent stage that sets both `prompt` and `instructions`
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -348,13 +328,10 @@ fn agent_step_with_both_prompt_and_instructions_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            steps: vec![Step {
-                name: "write".to_owned(),
-                kind: StepKind::Agent {
-                    prompt: Some("design.md".to_owned()),
-                    instructions: Some("Write a design doc.".to_owned()),
-                },
-            }],
+            kind: StageKind::Agent {
+                prompt: Some("design.md".to_owned()),
+                instructions: Some("Write a design doc.".to_owned()),
+            },
         }],
         default_flow_dir: None,
     };
@@ -367,8 +344,8 @@ fn agent_step_with_both_prompt_and_instructions_fails_validation() {
 }
 
 #[test]
-fn agent_step_with_neither_prompt_nor_instructions_fails_validation() {
-    // Given: an agent step with both fields absent
+fn agent_stage_with_neither_prompt_nor_instructions_fails_validation() {
+    // Given: an agent stage with both fields absent
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -379,10 +356,7 @@ fn agent_step_with_neither_prompt_nor_instructions_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            steps: vec![Step {
-                name: "write".to_owned(),
-                kind: StepKind::Agent { prompt: None, instructions: None },
-            }],
+            kind: StageKind::Agent { prompt: None, instructions: None },
         }],
         default_flow_dir: None,
     };
@@ -412,26 +386,20 @@ fn duplicate_stage_names_fail_validation() {
                 description: None,
                 skippable: false,
                 produces: vec![],
-                steps: vec![Step {
-                    name: "compile".to_owned(),
-                    kind: StepKind::Command {
-                        command: None,
-                        run: Some("cargo build".to_owned()),
-                    },
-                }],
+                kind: StageKind::Command {
+                    command: None,
+                    run: Some("cargo build".to_owned()),
+                },
             },
             Stage {
                 name: "build".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec![],
-                steps: vec![Step {
-                    name: "test".to_owned(),
-                    kind: StepKind::Command {
-                        command: None,
-                        run: Some("cargo test".to_owned()),
-                    },
-                }],
+                kind: StageKind::Command {
+                    command: None,
+                    run: Some("cargo test".to_owned()),
+                },
             },
         ],
         default_flow_dir: None,
@@ -442,76 +410,4 @@ fn duplicate_stage_names_fail_validation() {
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })
     ));
-}
-
-#[test]
-fn duplicate_step_names_within_stage_fail_validation() {
-    // Given: a stage with two steps that both have the name "check"
-    let workflow = Workflow {
-        name: "dup-steps".to_owned(),
-        version: 1,
-        description: None,
-        commands: HashMap::new(),
-        stages: vec![Stage {
-            name: "verify".to_owned(),
-            description: None,
-            skippable: false,
-            produces: vec![],
-            steps: vec![
-                Step {
-                    name: "check".to_owned(),
-                    kind: StepKind::Command {
-                        command: None,
-                        run: Some("cargo check".to_owned()),
-                    },
-                },
-                Step {
-                    name: "check".to_owned(),
-                    kind: StepKind::Command {
-                        command: None,
-                        run: Some("cargo clippy".to_owned()),
-                    },
-                },
-            ],
-        }],
-        default_flow_dir: None,
-    };
-
-    // When / Then
-    assert!(matches!(
-        workflow.validate(),
-        Err(Error::WorkflowValidation { .. })
-    ));
-}
-
-// ---------------------------------------------------------------------------
-// Validation: stages must have at least one step
-// ---------------------------------------------------------------------------
-
-#[test]
-fn stage_with_no_steps_fails_validation() {
-    // Given: a workflow with a stage that has no steps
-    let workflow = Workflow {
-        name: "empty-stage".to_owned(),
-        version: 1,
-        description: None,
-        commands: HashMap::new(),
-        stages: vec![Stage {
-            name: "done".to_owned(),
-            description: None,
-            skippable: false,
-            produces: vec![],
-            steps: vec![],
-        }],
-        default_flow_dir: None,
-    };
-
-    // When: we validate the workflow
-    let result = workflow.validate();
-
-    // Then: validation fails
-    assert!(
-        matches!(result, Err(Error::WorkflowValidation { .. })),
-        "expected WorkflowValidation error, got: {result:?}"
-    );
 }

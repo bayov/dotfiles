@@ -11,9 +11,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "design"
 | description = "Produce a design doc."
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -30,8 +29,7 @@ $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
 $ assert_stdout equals
 | Flow:  [36mfmt-status[39m
 | Stage:  [35mdesign[39m
-| Steps:
-|   [35mwrite-design[39m  [90m[· pending][39m
+| Status: [90m[· pending][39m
 
 # --- JSON ---
 
@@ -40,10 +38,6 @@ $ assert_stdout json
 | {
 |   "flow": "fmt-status",
 |   "stage": "design",
-|   "steps": [
-|     {
-|       "name": "write-design",
-|       "status": "pending"
-|     }
-|   ]
+|   "stage_kind": "agent",
+|   "status": "pending"
 | }

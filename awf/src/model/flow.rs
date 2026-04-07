@@ -1,9 +1,9 @@
-//! Flow state types: [`FlowState`], [`StageHistoryEntry`], [`StepLogEntry`],
-//! and [`StepStatus`].
+//! Flow state types: [`FlowState`], [`StageHistoryEntry`], [`StageLogEntry`],
+//! and [`RunStatus`].
 //!
 //! A flow is a running instance of a workflow. Its state is persisted as a
 //! TOML file in `.awf/flows/` and tracks which stage the flow is currently
-//! in, the history of stage transitions, and a log of completed step
+//! in, the history of stage transitions, and a log of completed stage
 //! executions.
 //!
 //! Flow state files are loaded and written verbatim — there is no validation
@@ -15,16 +15,16 @@ use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// The outcome of a completed step execution.
+/// The outcome of a completed stage execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum StepStatus {
-    /// The step finished successfully (exit code 0 for commands; agent
-    /// completed without error for agent steps).
+pub enum RunStatus {
+    /// The stage finished successfully (exit code 0 for commands; agent
+    /// completed without error for agent stages).
     Pass,
 
-    /// The step finished with a failure (non-zero exit code for commands;
-    /// agent returned an error for agent steps).
+    /// The stage finished with a failure (non-zero exit code for commands;
+    /// agent returned an error for agent stages).
     Fail,
 }
 
@@ -61,58 +61,54 @@ pub struct StageHistoryEntry {
     pub skipped: bool,
 }
 
-/// A single completed step execution recorded in a flow's step log.
+/// A single completed stage execution recorded in a flow's stage log.
 ///
-/// Command steps and agent steps share this struct; fields that do not apply
-/// to a given step type are stored as `None` and omitted during serialization.
+/// Command stages and agent stages share this struct; fields that do not apply
+/// to a given stage kind are stored as `None` and omitted during serialization.
 ///
-/// **Command-specific fields** (present when `step_type` is `"command"`):
+/// **Command-specific fields** (present when `stage_kind` is `"command"`):
 /// `exit_code`, `started_at`, `duration_ms`. `completed_at` is also set for
-/// command steps, computed as `started_at + duration_ms`.
+/// command stages, computed as `started_at + duration_ms`.
 ///
-/// **Agent-specific fields** (present when `step_type` is `"agent"`):
+/// **Agent-specific fields** (present when `stage_kind` is `"agent"`):
 /// `completed_at`.
 ///
-/// The `step_type` field (`type` in TOML) mirrors the `type` tag used in
-/// workflow step definitions and allows tooling to distinguish the two kinds
+/// The `stage_kind` field (`kind` in TOML) mirrors the `kind` tag used in
+/// workflow stage definitions and allows tooling to distinguish the two kinds
 /// of entries without inspecting which optional fields are populated.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct StepLogEntry {
-    /// The name of the step as defined in the workflow (e.g. `"format"`).
-    pub step: String,
-
-    /// The name of the stage in which this step was executed (e.g.
-    /// `"implement"`).
+pub struct StageLogEntry {
+    /// The name of the stage (e.g. `"implement"`).
     pub stage: String,
 
-    /// The kind of step: `"command"` or `"agent"` in TOML.
-    #[serde(rename = "type")]
-    pub step_type: String,
+    /// The kind of stage: `"command"` or `"agent"` in TOML.
+    #[serde(rename = "kind")]
+    pub stage_kind: String,
 
-    /// Whether the step passed or failed.
-    pub status: StepStatus,
+    /// Whether the stage run passed or failed.
+    pub status: RunStatus,
 
     // -----------------------------------------------------------------------
     // Command-specific fields
     // -----------------------------------------------------------------------
-    /// The process exit code (command steps only).
+    /// The process exit code (command stages only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i32>,
 
-    /// The UTC instant at which the command process was started (command steps
-    /// only).
+    /// The UTC instant at which the command process was started (command
+    /// stages only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_at: Option<DateTime<Utc>>,
 
     /// Wall-clock duration of the command execution in milliseconds (command
-    /// steps only).
+    /// stages only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<u64>,
 
     // -----------------------------------------------------------------------
     // Agent-specific fields
     // -----------------------------------------------------------------------
-    /// The UTC instant at which the agent step completed (agent steps only).
+    /// The UTC instant at which the agent stage completed (agent stages only).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub completed_at: Option<DateTime<Utc>>,
 }
@@ -162,10 +158,10 @@ pub struct FlowState {
     #[serde(default)]
     pub stage_history: Vec<StageHistoryEntry>,
 
-    /// Ordered log of every step that has completed (pass or fail) within this
-    /// flow.
+    /// Ordered log of every stage execution that has completed (pass or fail)
+    /// within this flow.
     #[serde(default)]
-    pub step_log: Vec<StepLogEntry>,
+    pub stage_log: Vec<StageLogEntry>,
 }
 
 #[cfg(test)]

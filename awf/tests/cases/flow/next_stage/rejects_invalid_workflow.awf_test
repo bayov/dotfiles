@@ -15,21 +15,19 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "first"
-| steps = [
-|     { name = "run-check", type = "command", command = "check" },
-| ]
+| kind = "command"
+| args = { command = "check" }
 |
 | [[stages]]
 | name = "second"
-| steps = [
-|     { name = "wrap-up", type = "command", run = "true" },
-| ]
+| kind = "command"
+| args = { run = "true" }
 
 $ awf flow new $FLOWS_DIR/adv-flow --workflow will-break
 $ assert_stdout contains
 | adv-flow
 
-$ awf flow run run-check --flow $FLOWS_DIR/adv-flow
+$ awf flow run --flow $FLOWS_DIR/adv-flow
 $ assert_stdout contains
 | PASS
 
@@ -41,15 +39,13 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "first"
-| steps = [
-|     { name = "run-check", type = "command", command = "check" },
-| ]
+| kind = "command"
+| args = { command = "check" }
 |
 | [[stages]]
 | name = "second"
-| steps = [
-|     { name = "wrap-up", type = "command", run = "true" },
-| ]
+| kind = "command"
+| args = { run = "true" }
 
 # next-stage should catch the broken workflow
 $ awf flow next-stage --flow $FLOWS_DIR/adv-flow

@@ -1,4 +1,4 @@
-# Test: --force bypasses step-completion gate but not missing artifacts
+# Test: --force bypasses stage-completion gate but not missing artifacts
 
 # --- Setup ---
 
@@ -10,11 +10,14 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "pass-step", type = "command", run = "true" },
-|     { name = "fail-step", type = "command", run = "false" },
-| ]
+| name = "pass-step"
+| kind = "command"
+| args = { run = "true" }
+|
+| [[stages]]
+| name = "fail-step"
+| kind = "command"
+| args = { run = "false" }
 
 $ write_file .agents/workflows/with-artifact/WORKFLOW.toml
 | name = "with-artifact"
@@ -23,36 +26,39 @@ $ write_file .agents/workflows/with-artifact/WORKFLOW.toml
 | [[stages]]
 | name = "draft"
 | produces = ["draft.md"]
-| steps = [{ name = "write", type = "agent", instructions = "Write it." }]
+| kind = "agent"
+| args = { instructions = "Write it." }
 |
 | [[stages]]
 | name = "done"
-| steps = [{ name = "finalize", type = "agent", instructions = "Finalize." }]
+| kind = "agent"
+| args = { instructions = "Finalize." }
 
 # =============================================================================
-# Test 1: --force bypasses step gate
+# Test 1: --force bypasses stage gate
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/force-flow --workflow run-test
 $ assert_stdout contains
 | force-flow
 
-# Without --force: fails because steps are incomplete
+# Without --force: fails because stage is incomplete (not run yet)
 $ awf flow next-stage --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not complete
 
-# With --force: step gate bypassed.
-# run-test has only one stage, so this errors with "last stage".
-$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-flow
+# With --force: stage gate bypassed.
+# run-test first stage is pass-step; force advances to fail-step.
+# fail-step is the last stage, so next advance errors with "last stage".
+$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-flow
+$ assert_stdout contains
+| fail-step
+
+$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage
-$ assert_stderr not_contains
-| pass-step
-$ assert_stderr not_contains
-| fail-step
 
 # =============================================================================
 # Test 2: --force records force_completed with reason in history
@@ -62,10 +68,10 @@ $ awf flow new $FLOWS_DIR/force-history --workflow with-artifact
 $ assert_stdout contains
 | force-history
 
-# Write artifact and force-advance (step not done but artifact present)
+# Write artifact and force-advance (stage not done but artifact present)
 $ write_file flows/force-history/artifacts/draft.md
 | placeholder
-$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-history
+$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-history
 $ assert_stdout contains
 | done
 
@@ -84,12 +90,12 @@ $ assert_stdout json
 |       "completed_at": "<any_string>",
 |       "force_completed": true,
 |       "force_reason": "<any_string>",
-|       "steps": []
+|       "runs": []
 |     },
 |     {
 |       "stage": "done",
 |       "started_at": "<any_string>",
-|       "steps": []
+|       "runs": []
 |     }
 |   ]
 | }
@@ -103,7 +109,7 @@ $ assert_stdout contains
 | force-no-artifact
 
 # --force without the required artifact: still blocked
-$ awf flow next-stage --force "skipping steps" --flow $FLOWS_DIR/force-no-artifact
+$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-no-artifact
 $ assert_exit_code 1
 $ assert_stderr contains
 | draft.md

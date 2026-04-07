@@ -1,19 +1,20 @@
-# Test: workflow validate rejects a stage with no steps
+# Test: workflow validate rejects a stage with missing args fields
 
-$ write_file .agents/workflows/empty-steps/WORKFLOW.toml
-| name = "empty-steps"
+$ write_file .agents/workflows/empty-args/WORKFLOW.toml
+| name = "empty-args"
 | version = 1
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "do-thing", type = "command", run = "true" },
-| ]
+| kind = "command"
+| args = { run = "true" }
 |
 | [[stages]]
 | name = "done"
+| kind = "command"
+| args = {}
 
-$ awf workflow validate empty-steps
+$ awf workflow validate empty-args
 $ assert_exit_code 1
 $ assert_stderr contains
-| no steps
+| must set either

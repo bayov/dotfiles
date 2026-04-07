@@ -17,10 +17,9 @@ use std::collections::HashSet;
 use tracing::instrument;
 
 use crate::model::flow::FlowState;
-use crate::model::flow::StepStatus;
+use crate::model::flow::RunStatus;
 use crate::model::workflow::Stage;
-use crate::model::workflow::Step;
-use crate::model::workflow::StepKind;
+use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 
 // ---------------------------------------------------------------------------
@@ -29,44 +28,43 @@ use crate::model::workflow::Workflow;
 
 /// The highest-priority action to take next in the current flow.
 ///
-/// Variants are listed in priority order — [`RunStep`] for a failing command
-/// step has the highest urgency, while [`Done`] signals that the entire
-/// workflow is complete.
+/// Variants are listed in priority order — [`RunCommand`] for a failing
+/// command stage has the highest urgency, while [`Done`] signals that the
+/// entire workflow is complete.
 ///
-/// [`RunStep`]: NextAction::RunStep
+/// [`RunCommand`]: NextAction::RunCommand
 /// [`Done`]: NextAction::Done
 #[derive(Debug, PartialEq, Eq)]
 pub enum NextAction<'a> {
-    /// Re-run (or run) this command step.
+    /// Run (or re-run) this command stage.
     ///
-    /// Returned when a command step in the current stage has a `fail` status
-    /// as its most recent log entry (highest priority) or has not yet been run
-    /// at all.
-    RunStep(&'a Step),
+    /// Returned when the current stage is a command kind and its most recent
+    /// log entry is `fail` or it has not yet been run at all.
+    RunCommand(&'a Stage),
 
-    /// Complete this agent step.
+    /// Complete this agent stage.
     ///
-    /// Returned when an agent step in the current stage has not yet received a
-    /// `pass` log entry (i.e. it has not been completed by the agent).
-    CompleteAgentStep(&'a Step),
+    /// Returned when the current stage is an agent kind and has not yet
+    /// received a `pass` log entry.
+    CompleteAgent(&'a Stage),
 
     /// Register the named artifact before advancing.
     ///
-    /// Returned when all steps in the current stage have passed but one of the
-    /// stage's declared `produces` artifacts is absent from the artifact set.
+    /// Returned when the current stage has passed but one of its declared
+    /// `produces` artifacts is absent from the artifact set.
     ProduceArtifact(String),
 
-    /// All steps passed and all required artifacts are present — advance now.
+    /// The stage is complete and all required artifacts are present — advance.
     ///
-    /// Returned when every step in the current stage has a `pass` log entry,
-    /// every `produces` artifact is in the artifact set, and the flow is
-    /// **not** on the last stage.
+    /// Returned when the current stage has a `pass` log entry, every
+    /// `produces` artifact is in the artifact set, and the flow is **not** on
+    /// the last stage.
     CanAdvance,
 
     /// The workflow is fully complete — nothing more to do.
     ///
-    /// Returned when the same conditions as [`CanAdvance`] hold but the flow is
-    /// already on the last stage of the workflow.
+    /// Returned when the same conditions as [`CanAdvance`] hold but the flow
+    /// is already on the last stage of the workflow.
     ///
     /// [`CanAdvance`]: NextAction::CanAdvance
     Done,
@@ -82,15 +80,15 @@ pub enum NextAction<'a> {
 /// the flow from moving to the next stage.
 #[derive(Debug, PartialEq, Eq)]
 pub enum AdvanceBlocker {
-    /// A step's most-recent log entry for the current stage is `fail`.
+    /// The current stage's most-recent log entry is `fail`.
     ///
-    /// The inner `String` is the step name.
-    StepFailed(String),
+    /// The inner `String` is the stage name.
+    StageFailed(String),
 
-    /// A step has no `pass` log entry for the current stage at all.
+    /// The current stage has no `pass` log entry at all.
     ///
-    /// The inner `String` is the step name.
-    StepIncomplete(String),
+    /// The inner `String` is the stage name.
+    StageIncomplete(String),
 
     /// A `produces` artifact declared by the current stage is missing from the
     /// artifact set.
@@ -107,23 +105,20 @@ pub enum AdvanceBlocker {
 ///
 /// The priority order is:
 ///
-/// 1. **Failed command step** — a command step whose most-recent log entry for
-///    this stage is `fail`. Address failures before moving on.
-/// 2. **Incomplete step** — any step (command or agent) with no `pass` entry
-///    for this stage: command steps yield [`NextAction::RunStep`], agent steps
-///    yield [`NextAction::CompleteAgentStep`].
-/// 3. **Missing artifact** — all steps passed but a `produces` artifact from
-///    the stage is not yet in `artifacts`. Returns
-///    [`NextAction::ProduceArtifact`].
-/// 4. **Done / can advance** — all steps passed and all artifacts are present.
+/// 1. **Failed command stage** — the current stage is a command kind and its
+///    most-recent log entry is `fail`.
+/// 2. **Incomplete stage** — the current stage has no `pass` entry: command
+///    stages yield [`NextAction::RunCommand`], agent stages yield
+///    [`NextAction::CompleteAgent`].
+/// 3. **Missing artifact** — stage passed but a `produces` artifact is not yet
+///    in `artifacts`. Returns [`NextAction::ProduceArtifact`].
+/// 4. **Done / can advance** — stage passed and all artifacts are present.
 ///    Returns [`NextAction::Done`] on the last stage,
 ///    [`NextAction::CanAdvance`] otherwise.
 ///
 /// # Panics
 ///
 /// Panics if `flow.current_stage` does not name a stage in `workflow.stages`.
-/// Callers should ensure the flow is consistent with the workflow before
-/// calling this function.
 #[instrument(skip_all, fields(
     workflow.name = %workflow.name,
     flow.id = %flow.id,
@@ -135,40 +130,31 @@ pub fn next_action<'a>(
     artifacts: &HashSet<String>,
 ) -> NextAction<'a> {
     let stage = current_stage(workflow, flow);
+    let last_status = stage_last_status(flow, stage);
 
-    // Priority 1 & 2: scan steps in definition order.
-    //
-    // We do two passes so that a failing command step (priority 1) is always
-    // surfaced before any merely-incomplete step (priority 2), regardless of
-    // definition order.
-
-    // Pass A — find the first failing command step.
-    for step in &stage.steps {
-        if is_command_step(step)
-            && step_last_status(flow, stage, step) == Some(StepStatus::Fail)
-        {
-            return NextAction::RunStep(step);
-        }
+    // Priority 1: failed command stage.
+    if matches!(stage.kind, StageKind::Command { .. })
+        && last_status == Some(RunStatus::Fail)
+    {
+        return NextAction::RunCommand(stage);
     }
 
-    // Pass B — find the first step that has not yet passed.
-    for step in &stage.steps {
-        if step_last_status(flow, stage, step) != Some(StepStatus::Pass) {
-            return match &step.kind {
-                StepKind::Command { .. } => NextAction::RunStep(step),
-                StepKind::Agent { .. } => NextAction::CompleteAgentStep(step),
-            };
-        }
+    // Priority 2: incomplete stage (no pass entry yet).
+    if last_status != Some(RunStatus::Pass) {
+        return match &stage.kind {
+            StageKind::Command { .. } => NextAction::RunCommand(stage),
+            StageKind::Agent { .. } => NextAction::CompleteAgent(stage),
+        };
     }
 
-    // Priority 3 — all steps passed; check for missing artifacts.
+    // Priority 3: all passed; check for missing artifacts.
     for artifact in &stage.produces {
         if !artifacts.contains(artifact) {
             return NextAction::ProduceArtifact(artifact.clone());
         }
     }
 
-    // Priority 4 — everything complete.
+    // Priority 4: everything complete.
     if is_last_stage(workflow, flow) {
         NextAction::Done
     } else {
@@ -178,14 +164,15 @@ pub fn next_action<'a>(
 
 /// Checks whether the current stage is complete and the flow may advance.
 ///
-/// Returns `Ok(())` when every step in the current stage has a `pass` log
-/// entry and every `produces` artifact is present in `artifacts`.
+/// Returns `Ok(())` when the current stage has a `pass` log entry and every
+/// `produces` artifact is present in `artifacts`.
 ///
 /// Returns `Err(blocker)` with the first [`AdvanceBlocker`] found, checked in
 /// this order:
 ///
-/// 1. [`AdvanceBlocker::StepFailed`] — a step's most-recent entry is `fail`.
-/// 2. [`AdvanceBlocker::StepIncomplete`] — a step has no `pass` entry at all.
+/// 1. [`AdvanceBlocker::StageFailed`] — the stage's most-recent entry is
+///    `fail`.
+/// 2. [`AdvanceBlocker::StageIncomplete`] — the stage has no `pass` entry.
 /// 3. [`AdvanceBlocker::MissingArtifact`] — a `produces` artifact is absent.
 ///
 /// # Panics
@@ -203,16 +190,13 @@ pub fn can_advance(
 ) -> Result<(), AdvanceBlocker> {
     let stage = current_stage(workflow, flow);
 
-    // Check each step: fail takes priority over incomplete.
-    for step in &stage.steps {
-        match step_last_status(flow, stage, step) {
-            Some(StepStatus::Fail) => {
-                return Err(AdvanceBlocker::StepFailed(step.name.clone()));
-            }
-            Some(StepStatus::Pass) => {}
-            None => {
-                return Err(AdvanceBlocker::StepIncomplete(step.name.clone()));
-            }
+    match stage_last_status(flow, stage) {
+        Some(RunStatus::Fail) => {
+            return Err(AdvanceBlocker::StageFailed(stage.name.clone()));
+        }
+        Some(RunStatus::Pass) => {}
+        None => {
+            return Err(AdvanceBlocker::StageIncomplete(stage.name.clone()));
         }
     }
 
@@ -248,27 +232,10 @@ fn current_stage<'a>(workflow: &'a Workflow, flow: &FlowState) -> &'a Stage {
         })
 }
 
-/// Returns the status of the most-recent log entry for `step` in `stage`, or
-/// `None` if the step has never been executed during the current stage visit.
-///
-/// Only entries whose `stage` field matches `stage.name` are considered, so
-/// log entries from a previous visit to the same stage (when `repeatable`) are
-/// not included — the caller is responsible for clearing those if needed.
-/// However, for v1 all log entries for the current stage name are used.
-fn step_last_status(
-    flow: &FlowState,
-    stage: &Stage,
-    step: &Step,
-) -> Option<StepStatus> {
-    flow.step_log
-        .iter()
-        .rfind(|e| e.stage == stage.name && e.step == step.name)
-        .map(|e| e.status)
-}
-
-/// Returns `true` if `step` is a command step.
-const fn is_command_step(step: &Step) -> bool {
-    matches!(step.kind, StepKind::Command { .. })
+/// Returns the status of the most-recent log entry for `stage`, or `None` if
+/// the stage has never been executed during the current visit.
+fn stage_last_status(flow: &FlowState, stage: &Stage) -> Option<RunStatus> {
+    flow.stage_log.iter().rfind(|e| e.stage == stage.name).map(|e| e.status)
 }
 
 /// Returns `true` if `flow` is currently on the last stage of `workflow`.

@@ -12,9 +12,8 @@ $ write_file .agents/workflows/broken-cmd/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "run-thing", type = "command", command = "no-such-cmd" },
-| ]
+| kind = "command"
+| args = { command = "no-such-cmd" }
 
 $ awf flow new $FLOWS_DIR/should-not-exist --workflow broken-cmd
 $ assert_exit_code 1
@@ -32,9 +31,8 @@ $ write_file .agents/workflows/broken-prompt/WORKFLOW.toml
 |
 | [[stages]]
 | name = "ask"
-| steps = [
-|     { name = "think", type = "agent", prompt = "ghost.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "ghost.md" }
 
 $ awf flow new $FLOWS_DIR/should-not-exist-2 --workflow broken-prompt
 $ assert_exit_code 1
@@ -57,9 +55,8 @@ $ write_file .agents/workflows/config-cmd/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "step1", type = "command", command = "repo-cmd" },
-| ]
+| kind = "command"
+| args = { command = "repo-cmd" }
 
 $ awf flow new $FLOWS_DIR/config-cmd-flow --workflow config-cmd
 $ assert_stdout contains

@@ -24,7 +24,7 @@ use owo_colors::OwoColorize as _;
 use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::config::WorkflowSearchEntry;
-use crate::model::workflow::StepKind;
+use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::store::fs;
@@ -120,16 +120,15 @@ pub enum FlowCommands {
         #[arg(long)]
         flow: Option<String>,
     },
-    /// Execute a command step
+    /// Execute a command stage
     Run {
-        step: String,
         #[arg(long)]
         flow: Option<String>,
     },
-    /// Mark an agent step complete
-    Step {
-        #[command(subcommand)]
-        command: StepCommands,
+    /// Mark the current agent stage as complete
+    Done {
+        #[arg(long)]
+        flow: Option<String>,
     },
     /// Validate flow artifacts
     Validate {
@@ -154,21 +153,6 @@ pub enum FlowCommands {
     },
     /// Archive a completed flow
     Archive {
-        #[arg(long)]
-        flow: Option<String>,
-    },
-}
-
-// ---------------------------------------------------------------------------
-// Step subcommands
-// ---------------------------------------------------------------------------
-
-/// Subcommands for `awf flow step`.
-#[derive(Subcommand)]
-pub enum StepCommands {
-    /// Mark a step as done
-    Done {
-        step: String,
         #[arg(long)]
         flow: Option<String>,
     },
@@ -220,10 +204,12 @@ fn dispatch_flow(
         FlowCommands::NextStep { flow: flow_flag } => {
             flow::next(flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::Run { step, flow: flow_flag } => {
-            flow::run(&step, flow_flag.as_deref(), &fmt)
+        FlowCommands::Run { flow: flow_flag } => {
+            flow::run(flow_flag.as_deref(), &fmt)
         }
-        FlowCommands::Step { command } => dispatch_step(command, fmt),
+        FlowCommands::Done { flow: flow_flag } => {
+            flow::done(flow_flag.as_deref(), &fmt)
+        }
         FlowCommands::Validate { flow: flow_flag } => {
             flow::validate(flow_flag.as_deref(), &fmt)
         }
@@ -235,19 +221,6 @@ fn dispatch_flow(
         }
         FlowCommands::Archive { flow: flow_flag } => {
             flow::archive(flow_flag.as_deref(), &fmt)
-        }
-    }
-}
-
-/// Dispatches `awf flow step` subcommands.
-#[allow(clippy::needless_pass_by_value)]
-fn dispatch_step(
-    command: StepCommands,
-    fmt: OutputFormat,
-) -> color_eyre::Result<()> {
-    match command {
-        StepCommands::Done { step, flow: flow_flag } => {
-            flow::step_done(&step, flow_flag.as_deref(), &fmt)
         }
     }
 }
@@ -365,7 +338,7 @@ pub fn load_workflow_or_exit(
 /// invariants, command-key references, and prompt-file existence.
 ///
 /// `config_commands` contains repo/user-level command aliases that are also
-/// valid targets for a step's `command` key (in addition to
+/// valid targets for a stage's `command` key (in addition to
 /// `workflow.commands`).
 pub fn collect_workflow_errors(
     workflow: &Workflow,
@@ -381,17 +354,14 @@ pub fn collect_workflow_errors(
 
     // Every `command` key must exist in workflow.commands or config commands.
     for stage in &workflow.stages {
-        for step in &stage.steps {
-            if let StepKind::Command { command: Some(key), .. } = &step.kind
-                && !workflow.commands.contains_key(key.as_str())
-                && !config_commands.contains_key(key.as_str())
-            {
-                errors.push(format!(
-                    "step {:?} in stage {:?}: command key {key:?} is not \
-                     defined in [commands]",
-                    step.name, stage.name
-                ));
-            }
+        if let StageKind::Command { command: Some(key), .. } = &stage.kind
+            && !workflow.commands.contains_key(key.as_str())
+            && !config_commands.contains_key(key.as_str())
+        {
+            errors.push(format!(
+                "stage {:?}: command key {key:?} is not defined in [commands]",
+                stage.name
+            ));
         }
     }
 
@@ -399,17 +369,14 @@ pub fn collect_workflow_errors(
     let wf_dir = fs::find_workflow_dir(entries, &workflow.name);
     if let Some(wf_dir) = wf_dir {
         for stage in &workflow.stages {
-            for step in &stage.steps {
-                if let StepKind::Agent { prompt: Some(filename), .. } =
-                    &step.kind
-                    && !wf_dir.join(filename).exists()
-                {
-                    errors.push(format!(
-                        "step {:?} in stage {:?}: prompt file {filename:?} \
-                         not found in workflow directory",
-                        step.name, stage.name
-                    ));
-                }
+            if let StageKind::Agent { prompt: Some(filename), .. } = &stage.kind
+                && !wf_dir.join(filename).exists()
+            {
+                errors.push(format!(
+                    "stage {:?}: prompt file {filename:?} not found in \
+                     workflow directory",
+                    stage.name
+                ));
             }
         }
     }

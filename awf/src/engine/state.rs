@@ -1,22 +1,22 @@
-//! Stage-transition and step-recording logic for a flow in progress.
+//! Stage-transition and stage-recording logic for a flow in progress.
 //!
 //! The public entry points are:
 //!
 //! - [`advance_stage`] — advances the flow to the next stage in the workflow,
 //!   appending a completed [`StageHistoryEntry`] for the stage being left.
 //!
-//! - [`record_step_pass`] / [`record_step_fail`] — append a [`StepLogEntry`] to
-//!   the flow's step log recording the outcome of a completed step.
+//! - [`record_stage_pass`] / [`record_stage_fail`] — append a [`StageLogEntry`]
+//!   to the flow's stage log recording the outcome of a completed stage run.
 
 use chrono::Utc;
 use tracing::instrument;
 
 use crate::model::flow::FlowState;
+use crate::model::flow::RunStatus;
 use crate::model::flow::StageHistoryEntry;
-use crate::model::flow::StepLogEntry;
-use crate::model::flow::StepStatus;
-use crate::model::workflow::Step;
-use crate::model::workflow::StepKind;
+use crate::model::flow::StageLogEntry;
+use crate::model::workflow::Stage;
+use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::result::Result;
@@ -92,7 +92,7 @@ pub fn advance_stage(
 /// Skips the current stage, recording it as skipped in the history.
 ///
 /// Validates that the current stage is marked `skippable` in the workflow.
-/// Bypasses all gates (steps and artifacts).
+/// Bypasses all gates (stage completion and artifacts).
 ///
 /// # Errors
 ///
@@ -152,25 +152,23 @@ pub fn skip_stage(
     Ok(flow)
 }
 
-/// Appends a passing [`StepLogEntry`] for `step` to the flow's step log.
+/// Appends a passing [`StageLogEntry`] for `stage` to the flow's stage log.
 ///
-/// For command steps, `exit_code`, `started_at`, and `duration_ms` are
-/// recorded. For agent steps, `completed_at` is set to `Utc::now()` and the
+/// For command stages, `exit_code`, `started_at`, and `duration_ms` are
+/// recorded. For agent stages, `completed_at` is set to `Utc::now()` and the
 /// command-specific fields are left as `None`.
 ///
 /// Returns the updated [`FlowState`].
-pub fn record_step_pass(
+pub fn record_stage_pass(
     mut flow: FlowState,
-    step: &Step,
-    stage: &str,
+    stage: &Stage,
     exit_code: Option<i32>,
     started_at: Option<chrono::DateTime<Utc>>,
     duration_ms: Option<u64>,
 ) -> FlowState {
-    flow.step_log.push(build_log_entry(
-        step,
+    flow.stage_log.push(build_stage_log_entry(
         stage,
-        StepStatus::Pass,
+        RunStatus::Pass,
         exit_code,
         started_at,
         duration_ms,
@@ -179,25 +177,23 @@ pub fn record_step_pass(
     flow
 }
 
-/// Appends a failing [`StepLogEntry`] for `step` to the flow's step log.
+/// Appends a failing [`StageLogEntry`] for `stage` to the flow's stage log.
 ///
-/// For command steps, `exit_code`, `started_at`, and `duration_ms` are
-/// recorded. For agent steps, `completed_at` is set to `Utc::now()` and the
+/// For command stages, `exit_code`, `started_at`, and `duration_ms` are
+/// recorded. For agent stages, `completed_at` is set to `Utc::now()` and the
 /// command-specific fields are left as `None`.
 ///
 /// Returns the updated [`FlowState`].
-pub fn record_step_fail(
+pub fn record_stage_fail(
     mut flow: FlowState,
-    step: &Step,
-    stage: &str,
+    stage: &Stage,
     exit_code: Option<i32>,
     started_at: Option<chrono::DateTime<Utc>>,
     duration_ms: Option<u64>,
 ) -> FlowState {
-    flow.step_log.push(build_log_entry(
-        step,
+    flow.stage_log.push(build_stage_log_entry(
         stage,
-        StepStatus::Fail,
+        RunStatus::Fail,
         exit_code,
         started_at,
         duration_ms,
@@ -210,35 +206,33 @@ pub fn record_step_fail(
 // Private helpers
 // ---------------------------------------------------------------------------
 
-/// Constructs a [`StepLogEntry`] from a step's metadata and execution outcome.
+/// Constructs a [`StageLogEntry`] from a stage's metadata and execution
+/// outcome.
 ///
-/// The `step_type` string is derived from the step's [`StepKind`] variant.
-/// Agent steps populate `completed_at = Some(Utc::now())` and leave command
-/// fields (`exit_code`, `started_at`, `duration_ms`) as `None`. Command steps
+/// The `stage_kind` string is derived from the stage's [`StageKind`] variant.
+/// Agent stages populate `completed_at = Some(Utc::now())` and leave command
+/// fields (`exit_code`, `started_at`, `duration_ms`) as `None`. Command stages
 /// record the provided execution metrics and leave `completed_at` as `None`.
-fn build_log_entry(
-    step: &Step,
-    stage: &str,
-    status: StepStatus,
+fn build_stage_log_entry(
+    stage: &Stage,
+    status: RunStatus,
     exit_code: Option<i32>,
     started_at: Option<chrono::DateTime<Utc>>,
     duration_ms: Option<u64>,
-) -> StepLogEntry {
-    match &step.kind {
-        StepKind::Agent { .. } => StepLogEntry {
-            step: step.name.clone(),
-            stage: stage.to_owned(),
-            step_type: "agent".to_owned(),
+) -> StageLogEntry {
+    match &stage.kind {
+        StageKind::Agent { .. } => StageLogEntry {
+            stage: stage.name.clone(),
+            stage_kind: "agent".to_owned(),
             status,
             exit_code: None,
             started_at: None,
             duration_ms: None,
             completed_at: Some(Utc::now()),
         },
-        StepKind::Command { .. } => StepLogEntry {
-            step: step.name.clone(),
-            stage: stage.to_owned(),
-            step_type: "command".to_owned(),
+        StageKind::Command { .. } => StageLogEntry {
+            stage: stage.name.clone(),
+            stage_kind: "command".to_owned(),
             status,
             exit_code,
             completed_at: started_at.zip(duration_ms).map(|(s, d)| {

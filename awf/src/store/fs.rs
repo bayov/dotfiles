@@ -311,7 +311,7 @@ pub fn create_flow(
         updated_at: now,
         archived: false,
         stage_history: vec![],
-        step_log: vec![],
+        stage_log: vec![],
     };
 
     save_flow(flow_dir, &state)
@@ -512,14 +512,13 @@ description = "TODO: describe this workflow."
 name = "first-stage"
 description = "TODO: describe this stage."
 # produces = ["artifact.md"]
-steps = [
-    # {{ name = "write-something", type = "agent", prompt = "first-stage.md" }},
-    # {{ name = "run-tests", type = "command", command = "test" }},
-]
+kind = "agent"
+args = {{ prompt = "first-stage.md" }}
 
 # [[stages]]
-# name = "done"
-# description = "Complete."
+# name = "run-tests"
+# kind = "command"
+# args = {{ command = "test" }}
 "#
     )
 }

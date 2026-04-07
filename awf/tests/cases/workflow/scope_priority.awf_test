@@ -16,10 +16,9 @@ $ write_file .agents/workflows/shared-wf/WORKFLOW.toml
 | test-cmd = "true"
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "run-it", type = "command", command = "test-cmd" },
-| ]
+| name = "run-it"
+| kind = "command"
+| args = { command = "test-cmd" }
 
 # Write "shared-wf" in USER scope (test-cmd = "false" → should FAIL)
 $ write_file user-home/.agents/workflows/shared-wf/WORKFLOW.toml
@@ -30,10 +29,9 @@ $ write_file user-home/.agents/workflows/shared-wf/WORKFLOW.toml
 | test-cmd = "false"
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "run-it", type = "command", command = "test-cmd" },
-| ]
+| name = "run-it"
+| kind = "command"
+| args = { command = "test-cmd" }
 
 # Validate both scope-qualified names
 $ awf workflow validate project:shared-wf
@@ -54,12 +52,12 @@ $ awf flow new $FLOWS_DIR/from-user --workflow user:shared-wf
 $ assert_stdout contains
 | from-user
 
-# Run step from project scope flow (test-cmd = "true") — should PASS
-$ awf flow run run-it --flow $FLOWS_DIR/from-project
+# Run stage from project scope flow (test-cmd = "true") — should PASS
+$ awf flow run --flow $FLOWS_DIR/from-project
 $ assert_stdout contains
 | PASS
 
-# Run step from user scope flow (test-cmd = "false") — should FAIL
-$ awf flow run run-it --flow $FLOWS_DIR/from-user
+# Run stage from user scope flow (test-cmd = "false") — should FAIL
+$ awf flow run --flow $FLOWS_DIR/from-user
 $ assert_stdout contains
 | FAIL

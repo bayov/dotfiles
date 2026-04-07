@@ -17,26 +17,31 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | produces = ["design.md"]
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 |
 | [[stages]]
-| name = "implement"
+| name = "write-code"
 | description = "Write the code."
-| steps = [
-|     { name = "write-code", type = "agent", prompt = "implement.md" },
-|     { name = "test", type = "command", command = "test" },
-| ]
+| kind = "agent"
+| args = { prompt = "implement.md" }
 |
 | [[stages]]
-| name = "review"
+| name = "test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "pre-review-test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "do-review"
 | description = "Code review and integration."
 | produces = ["changelog-entry.md"]
-| steps = [
-|     { name = "pre-review-test", type = "command", command = "test" },
-|     { name = "do-review", type = "agent", prompt = "review.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "review.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -55,12 +60,7 @@ $ awf flow new $FLOWS_DIR/add-oauth --workflow feature
 $ assert_stdout contains
 | add-oauth
 
-# --- Mark write-design step as done ---
-$ awf flow step done write-design --flow $FLOWS_DIR/add-oauth
-$ assert_stdout contains
-| write-design
-
 # --- Get JSON status and verify structure ---
 $ awf flow status --flow $FLOWS_DIR/add-oauth --output-format json
 $ assert_stdout json
-| {"flow": "<any_string>", "stage": "<any_string>", "steps": "<any_array>"}
+| {"flow": "<any_string>", "stage": "<any_string>", "stage_kind": "<any_string>", "status": "<any_string>"}

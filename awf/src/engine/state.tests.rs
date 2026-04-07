@@ -1,8 +1,8 @@
-//! Tests for [`super::advance_stage`], [`super::record_step_pass`], and
-//! [`super::record_step_fail`].
+//! Tests for [`super::advance_stage`], [`super::record_stage_pass`], and
+//! [`super::record_stage_fail`].
 //!
-//! All tests use the canonical "feature" workflow fixture with three stages:
-//! `design` → `implement` → `review`.
+//! All tests use the canonical "feature" workflow fixture with stages:
+//! `design` → `implement` → `format` → `lint` → `review`.
 
 use std::collections::HashMap;
 
@@ -10,14 +10,13 @@ use chrono::DateTime;
 use chrono::Utc;
 
 use super::advance_stage;
-use super::record_step_fail;
-use super::record_step_pass;
+use super::record_stage_fail;
+use super::record_stage_pass;
 use super::skip_stage;
 use crate::model::flow::FlowState;
-use crate::model::flow::StepStatus;
+use crate::model::flow::RunStatus;
 use crate::model::workflow::Stage;
-use crate::model::workflow::Step;
-use crate::model::workflow::StepKind;
+use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 
@@ -28,11 +27,11 @@ use crate::result::Error;
 /// Builds the canonical "feature" workflow used across all tests.
 ///
 /// Stages:
-/// - `design` (produces `design.md`): agent step `write-design`
-/// - `implement` (no produces): agent step `write-code`, command steps `format`
-///   and `lint`
-/// - `review` (produces `changelog-entry.md`): command step `pre-review-test`,
-///   agent step `do-review`
+/// - `design` (produces `design.md`): agent stage
+/// - `implement`: agent stage
+/// - `format`: command stage
+/// - `lint`: command stage
+/// - `review` (produces `changelog-entry.md`): agent stage
 fn feature_workflow() -> Workflow {
     Workflow {
         name: "feature".to_owned(),
@@ -56,64 +55,50 @@ fn feature_workflow() -> Workflow {
                 description: Some("Produce a design doc.".to_owned()),
                 skippable: true,
                 produces: vec!["design.md".to_owned()],
-                steps: vec![Step {
-                    name: "write-design".to_owned(),
-                    kind: StepKind::Agent {
-                        prompt: Some("design.md".to_owned()),
-                        instructions: None,
-                    },
-                }],
+                kind: StageKind::Agent {
+                    prompt: Some("design.md".to_owned()),
+                    instructions: None,
+                },
             },
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
                 skippable: false,
                 produces: vec![],
-                steps: vec![
-                    Step {
-                        name: "write-code".to_owned(),
-                        kind: StepKind::Agent {
-                            prompt: Some("implement.md".to_owned()),
-                            instructions: None,
-                        },
-                    },
-                    Step {
-                        name: "format".to_owned(),
-                        kind: StepKind::Command {
-                            command: Some("format".to_owned()),
-                            run: None,
-                        },
-                    },
-                    Step {
-                        name: "lint".to_owned(),
-                        kind: StepKind::Command {
-                            command: Some("lint".to_owned()),
-                            run: None,
-                        },
-                    },
-                ],
+                kind: StageKind::Agent {
+                    prompt: Some("implement.md".to_owned()),
+                    instructions: None,
+                },
+            },
+            Stage {
+                name: "format".to_owned(),
+                description: None,
+                skippable: false,
+                produces: vec![],
+                kind: StageKind::Command {
+                    command: Some("format".to_owned()),
+                    run: None,
+                },
+            },
+            Stage {
+                name: "lint".to_owned(),
+                description: None,
+                skippable: false,
+                produces: vec![],
+                kind: StageKind::Command {
+                    command: Some("lint".to_owned()),
+                    run: None,
+                },
             },
             Stage {
                 name: "review".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec!["changelog-entry.md".to_owned()],
-                steps: vec![
-                    Step {
-                        name: "pre-review-test".to_owned(),
-                        kind: StepKind::Command {
-                            command: Some("test".to_owned()),
-                            run: None,
-                        },
-                    },
-                    Step {
-                        name: "do-review".to_owned(),
-                        kind: StepKind::Agent {
-                            prompt: Some("review.md".to_owned()),
-                            instructions: None,
-                        },
-                    },
-                ],
+                kind: StageKind::Agent {
+                    prompt: Some("review.md".to_owned()),
+                    instructions: None,
+                },
             },
         ],
         default_flow_dir: None,
@@ -121,7 +106,7 @@ fn feature_workflow() -> Workflow {
 }
 
 /// Builds a minimal [`FlowState`] for the "feature" workflow at the given
-/// stage with no step log and no stage history.
+/// stage with no stage log and no stage history.
 fn flow_at(stage: &str) -> FlowState {
     FlowState {
         id: "add-oauth".to_owned(),
@@ -133,26 +118,32 @@ fn flow_at(stage: &str) -> FlowState {
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
         stage_history: vec![],
-        step_log: vec![],
+        stage_log: vec![],
     }
 }
 
-/// Builds a minimal [`Step`] with a [`StepKind::Agent`] kind.
-fn agent_step(name: &str) -> Step {
-    Step {
+/// Builds a minimal agent [`Stage`].
+fn agent_stage(name: &str) -> Stage {
+    Stage {
         name: name.to_owned(),
-        kind: StepKind::Agent {
+        description: None,
+        skippable: false,
+        produces: vec![],
+        kind: StageKind::Agent {
             prompt: Some(format!("{name}.md")),
             instructions: None,
         },
     }
 }
 
-/// Builds a minimal [`Step`] with a [`StepKind::Command`] kind.
-fn command_step(name: &str) -> Step {
-    Step {
+/// Builds a minimal command [`Stage`].
+fn command_stage(name: &str) -> Stage {
+    Stage {
         name: name.to_owned(),
-        kind: StepKind::Command {
+        description: None,
+        skippable: false,
+        produces: vec![],
+        kind: StageKind::Command {
             run: Some(format!("run-{name}")),
             command: None,
         },
@@ -250,33 +241,31 @@ fn advance_stage_returns_already_on_last_stage_when_on_last_stage() {
 }
 
 // ---------------------------------------------------------------------------
-// record_step_pass — command step
+// record_stage_pass — command stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_step_pass_appends_passing_command_entry_to_step_log() {
-    let flow = flow_at("implement");
-    let step = command_step("format");
+fn record_stage_pass_appends_passing_command_entry_to_stage_log() {
+    let flow = flow_at("format");
+    let stage = command_stage("format");
 
-    // Given: the implement stage flow and a command step named "format"
+    // Given: the format stage flow and a command stage
     // When: we record a passing run (exit code 0, 450 ms)
-    let updated = record_step_pass(
+    let updated = record_stage_pass(
         flow,
-        &step,
-        "implement",
+        &stage,
         Some(0),
         Some(ts("2026-04-04T14:00:00Z")),
         Some(450),
     );
 
-    // Then: one entry is in the step log
-    assert_eq!(updated.step_log.len(), 1);
-    let entry = &updated.step_log[0];
+    // Then: one entry is in the stage log
+    assert_eq!(updated.stage_log.len(), 1);
+    let entry = &updated.stage_log[0];
 
-    assert_eq!(entry.step, "format");
-    assert_eq!(entry.stage, "implement");
-    assert_eq!(entry.step_type, "command");
-    assert_eq!(entry.status, StepStatus::Pass);
+    assert_eq!(entry.stage, "format");
+    assert_eq!(entry.stage_kind, "command");
+    assert_eq!(entry.status, RunStatus::Pass);
     assert_eq!(entry.exit_code, Some(0));
     assert_eq!(entry.started_at, Some(ts("2026-04-04T14:00:00Z")));
     assert_eq!(entry.duration_ms, Some(450));
@@ -288,33 +277,31 @@ fn record_step_pass_appends_passing_command_entry_to_step_log() {
 }
 
 // ---------------------------------------------------------------------------
-// record_step_fail — command step
+// record_stage_fail — command stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_step_fail_appends_failing_command_entry_to_step_log() {
-    let flow = flow_at("implement");
-    let step = command_step("lint");
+fn record_stage_fail_appends_failing_command_entry_to_stage_log() {
+    let flow = flow_at("lint");
+    let stage = command_stage("lint");
 
-    // Given: the implement stage flow and a command step named "lint"
+    // Given: the lint stage flow and a command stage
     // When: we record a failing run (exit code 1, 800 ms)
-    let updated = record_step_fail(
+    let updated = record_stage_fail(
         flow,
-        &step,
-        "implement",
+        &stage,
         Some(1),
         Some(ts("2026-04-04T14:05:00Z")),
         Some(800),
     );
 
-    // Then: one failing entry is in the step log
-    assert_eq!(updated.step_log.len(), 1);
-    let entry = &updated.step_log[0];
+    // Then: one failing entry is in the stage log
+    assert_eq!(updated.stage_log.len(), 1);
+    let entry = &updated.stage_log[0];
 
-    assert_eq!(entry.step, "lint");
-    assert_eq!(entry.stage, "implement");
-    assert_eq!(entry.step_type, "command");
-    assert_eq!(entry.status, StepStatus::Fail);
+    assert_eq!(entry.stage, "lint");
+    assert_eq!(entry.stage_kind, "command");
+    assert_eq!(entry.status, RunStatus::Fail);
     assert_eq!(entry.exit_code, Some(1));
     assert_eq!(entry.started_at, Some(ts("2026-04-04T14:05:00Z")));
     assert_eq!(entry.duration_ms, Some(800));
@@ -326,149 +313,128 @@ fn record_step_fail_appends_failing_command_entry_to_step_log() {
 }
 
 // ---------------------------------------------------------------------------
-// record_step_pass — agent step
+// record_stage_pass — agent stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_step_pass_appends_passing_agent_entry_with_completed_at() {
+fn record_stage_pass_appends_passing_agent_entry_with_completed_at() {
     let flow = flow_at("design");
-    let step = agent_step("write-design");
+    let stage = agent_stage("design");
 
-    // Given: the design stage flow and an agent step named "write-design"
+    // Given: the design stage flow and an agent stage
     // When: we record a passing agent completion (command fields are None)
     let before = Utc::now();
-    let updated = record_step_pass(flow, &step, "design", None, None, None);
+    let updated = record_stage_pass(flow, &stage, None, None, None);
     let after = Utc::now();
 
-    // Then: one passing agent entry is in the step log
-    assert_eq!(updated.step_log.len(), 1);
-    let entry = &updated.step_log[0];
+    // Then: one passing agent entry is in the stage log
+    assert_eq!(updated.stage_log.len(), 1);
+    let entry = &updated.stage_log[0];
 
-    assert_eq!(entry.step, "write-design");
     assert_eq!(entry.stage, "design");
-    assert_eq!(entry.step_type, "agent");
-    assert_eq!(entry.status, StepStatus::Pass);
+    assert_eq!(entry.stage_kind, "agent");
+    assert_eq!(entry.status, RunStatus::Pass);
     assert!(entry.exit_code.is_none());
     assert!(entry.started_at.is_none());
     assert!(entry.duration_ms.is_none());
 
-    // Then: completed_at is set to a time within the record_step_pass call
+    // Then: completed_at is set to a time within the record_stage_pass call
     let completed_at =
-        entry.completed_at.expect("agent step should have completed_at set");
+        entry.completed_at.expect("agent stage should have completed_at set");
     assert!(
         completed_at >= before && completed_at <= after,
-        "completed_at should be within the record_step_pass call window"
+        "completed_at should be within the record_stage_pass call window"
     );
 }
 
 // ---------------------------------------------------------------------------
-// record_step_fail — agent step
+// record_stage_fail — agent stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_step_fail_appends_failing_agent_entry_with_completed_at() {
+fn record_stage_fail_appends_failing_agent_entry_with_completed_at() {
     let flow = flow_at("design");
-    let step = agent_step("write-design");
+    let stage = agent_stage("design");
 
-    // Given: the design stage flow and an agent step named "write-design"
+    // Given: the design stage flow and an agent stage
     // When: we record a failing agent completion
     let before = Utc::now();
-    let updated = record_step_fail(flow, &step, "design", None, None, None);
+    let updated = record_stage_fail(flow, &stage, None, None, None);
     let after = Utc::now();
 
-    // Then: one failing agent entry is in the step log
-    assert_eq!(updated.step_log.len(), 1);
-    let entry = &updated.step_log[0];
+    // Then: one failing agent entry is in the stage log
+    assert_eq!(updated.stage_log.len(), 1);
+    let entry = &updated.stage_log[0];
 
-    assert_eq!(entry.step, "write-design");
-    assert_eq!(entry.step_type, "agent");
-    assert_eq!(entry.status, StepStatus::Fail);
+    assert_eq!(entry.stage, "design");
+    assert_eq!(entry.stage_kind, "agent");
+    assert_eq!(entry.status, RunStatus::Fail);
     assert!(entry.exit_code.is_none());
 
     // Then: completed_at is set
     let completed_at =
-        entry.completed_at.expect("agent step should have completed_at set");
+        entry.completed_at.expect("agent stage should have completed_at set");
     assert!(
         completed_at >= before && completed_at <= after,
-        "completed_at should be within the record_step_fail call window"
+        "completed_at should be within the record_stage_fail call window"
     );
 }
 
 // ---------------------------------------------------------------------------
-// multiple entries accumulate in step_log
+// multiple entries accumulate in stage_log
 // ---------------------------------------------------------------------------
 
 #[test]
-fn multiple_record_calls_accumulate_entries_in_step_log() {
-    let flow = flow_at("implement");
-    let write_code = agent_step("write-code");
-    let format_step = command_step("format");
-    let lint_step = command_step("lint");
+fn multiple_record_calls_accumulate_entries_in_stage_log() {
+    let flow = flow_at("format");
+    let format_stage = command_stage("format");
 
-    // Given: several steps being recorded in sequence
-    // When: we record write-code (pass), format (fail then pass), lint (pass)
-    let flow =
-        record_step_pass(flow, &write_code, "implement", None, None, None);
-    let flow = record_step_fail(
+    // Given: the format stage being run multiple times
+    // When: we record fail then pass
+    let flow = record_stage_fail(
         flow,
-        &format_step,
-        "implement",
+        &format_stage,
         Some(1),
         Some(ts("2026-04-04T14:10:00Z")),
         Some(300),
     );
-    let flow = record_step_pass(
+    let flow = record_stage_pass(
         flow,
-        &format_step,
-        "implement",
+        &format_stage,
         Some(0),
         Some(ts("2026-04-04T14:11:00Z")),
         Some(280),
     );
-    let flow = record_step_pass(
-        flow,
-        &lint_step,
-        "implement",
-        Some(0),
-        Some(ts("2026-04-04T14:12:00Z")),
-        Some(420),
-    );
 
-    // Then: four entries are present in definition/call order
-    assert_eq!(flow.step_log.len(), 4);
-    assert_eq!(flow.step_log[0].step, "write-code");
-    assert_eq!(flow.step_log[0].status, StepStatus::Pass);
-    assert_eq!(flow.step_log[1].step, "format");
-    assert_eq!(flow.step_log[1].status, StepStatus::Fail);
-    assert_eq!(flow.step_log[2].step, "format");
-    assert_eq!(flow.step_log[2].status, StepStatus::Pass);
-    assert_eq!(flow.step_log[3].step, "lint");
-    assert_eq!(flow.step_log[3].status, StepStatus::Pass);
+    // Then: two entries are present in call order
+    assert_eq!(flow.stage_log.len(), 2);
+    assert_eq!(flow.stage_log[0].stage, "format");
+    assert_eq!(flow.stage_log[0].status, RunStatus::Fail);
+    assert_eq!(flow.stage_log[1].stage, "format");
+    assert_eq!(flow.stage_log[1].status, RunStatus::Pass);
 }
 
 // ---------------------------------------------------------------------------
-// advance preserves accumulated step log
+// advance preserves accumulated stage log
 // ---------------------------------------------------------------------------
 
 #[test]
-fn advance_stage_preserves_existing_step_log_entries() {
+fn advance_stage_preserves_existing_stage_log_entries() {
     let workflow = feature_workflow();
 
-    // Given: a flow at design with a completed agent step
+    // Given: a flow at design with a completed agent stage
     let flow = flow_at("design");
-    let write_design = agent_step("write-design");
-    let flow =
-        record_step_pass(flow, &write_design, "design", None, None, None);
-    assert_eq!(flow.step_log.len(), 1);
+    let design_stage = agent_stage("design");
+    let flow = record_stage_pass(flow, &design_stage, None, None, None);
+    assert_eq!(flow.stage_log.len(), 1);
 
     // When: we advance the stage
     let advanced =
         advance_stage(&workflow, flow, None).expect("advance should succeed");
 
-    // Then: the step log entry from the design stage is still present
-    assert_eq!(advanced.step_log.len(), 1);
-    assert_eq!(advanced.step_log[0].step, "write-design");
-    assert_eq!(advanced.step_log[0].stage, "design");
+    // Then: the stage log entry from the design stage is still present
+    assert_eq!(advanced.stage_log.len(), 1);
+    assert_eq!(advanced.stage_log[0].stage, "design");
 }
 
 // ---------------------------------------------------------------------------
@@ -527,13 +493,10 @@ fn skip_stage_errors_on_last_stage() {
             description: None,
             skippable: true,
             produces: vec![],
-            steps: vec![Step {
-                name: "do-it".to_owned(),
-                kind: StepKind::Agent {
-                    prompt: Some("do.md".to_owned()),
-                    instructions: None,
-                },
-            }],
+            kind: StageKind::Agent {
+                prompt: Some("do.md".to_owned()),
+                instructions: None,
+            },
         }],
         default_flow_dir: None,
     };

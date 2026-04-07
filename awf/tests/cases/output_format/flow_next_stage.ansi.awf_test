@@ -9,11 +9,13 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [{ name = "prep", type = "command", run = "true" }]
+| kind = "command"
+| args = { run = "true" }
 |
 | [[stages]]
 | name = "done"
-| steps = [{ name = "wrap-up", type = "command", run = "true" }]
+| kind = "command"
+| args = { run = "true" }
 
 # Separate flows (advance mutates state)
 
@@ -27,13 +29,13 @@ $ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
 $ assert_stdout contains
 | fmt-adv-j
 
-# Run the step so advance is allowed
+# Run the stage so advance is allowed
 
-$ awf flow run prep --flow $FLOWS_DIR/fmt-adv-h
+$ awf flow run --flow $FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>)
 
-$ awf flow run prep --flow $FLOWS_DIR/fmt-adv-j
+$ awf flow run --flow $FLOWS_DIR/fmt-adv-j
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>)
 

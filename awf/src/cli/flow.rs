@@ -23,13 +23,13 @@ use crate::engine::actions::can_advance;
 use crate::engine::actions::next_action;
 use crate::engine::command::run_command;
 use crate::engine::state::advance_stage;
-use crate::engine::state::record_step_fail;
-use crate::engine::state::record_step_pass;
+use crate::engine::state::record_stage_fail;
+use crate::engine::state::record_stage_pass;
 use crate::engine::state::skip_stage;
 use crate::model::flow::FlowState;
-use crate::model::flow::StepStatus;
-use crate::model::workflow::Step;
-use crate::model::workflow::StepKind;
+use crate::model::flow::RunStatus;
+use crate::model::workflow::Stage;
+use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::store::fs;
@@ -118,35 +118,25 @@ impl fmt::Display for FlowListOutput {
 // Output types — `awf flow status`
 // ---------------------------------------------------------------------------
 
-/// A single step's status as computed for the `status` command output.
-#[derive(Debug, Serialize)]
-pub struct StepStatusLine {
-    pub name: String,
-    pub status: String,
-}
-
 /// The complete status payload for `awf flow status`.
 #[derive(Debug, Serialize)]
 pub struct FlowStatusOutput {
     pub flow: String,
     pub stage: String,
-    pub steps: Vec<StepStatusLine>,
+    pub stage_kind: String,
+    pub status: String,
 }
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Flow:  {}", self.flow.cyan())?;
         writeln!(f, "Stage:  {}", self.stage.magenta())?;
-        writeln!(f, "Steps:")?;
-        for step in &self.steps {
-            let badge = match step.status.as_str() {
-                "pass" => "[✓ pass]".green().to_string(),
-                "fail" => "[✗ fail]".red().to_string(),
-                _ => "[· pending]".bright_black().to_string(),
-            };
-            writeln!(f, "  {}  {badge}", step.name.magenta())?;
-        }
-        Ok(())
+        let badge = match self.status.as_str() {
+            "pass" => "[✓ pass]".green().to_string(),
+            "fail" => "[✗ fail]".red().to_string(),
+            _ => "[· pending]".bright_black().to_string(),
+        };
+        writeln!(f, "Status: {badge}")
     }
 }
 
@@ -157,20 +147,19 @@ impl fmt::Display for FlowStatusOutput {
 /// Output payload for `awf flow next-step`.
 #[derive(Debug, Serialize)]
 pub struct FlowNextOutput {
-    /// Discriminator: `"run_step"`, `"complete_agent_step"`,
+    /// Discriminator: `"run_command"`, `"complete_agent"`,
     /// `"produce_artifact"`, `"can_advance"`, or `"done"`.
     pub action: String,
-    /// The step name (for `run_step` and `complete_agent_step`).
+    /// The stage name (for `run_command` and `complete_agent`).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step: Option<String>,
+    pub stage: Option<String>,
     /// The artifact name (for `produce_artifact`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub artifact: Option<String>,
     /// The name of the next stage (for `can_advance`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_stage: Option<String>,
-    /// The raw prompt file contents (for `complete_agent_step`, when
-    /// available).
+    /// The raw prompt file contents (for `complete_agent`, when available).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     /// Human-readable instruction.
@@ -194,7 +183,7 @@ impl fmt::Display for FlowNextOutput {
 /// Output payload for `awf flow run`.
 #[derive(Debug, Serialize)]
 pub struct FlowRunOutput {
-    pub step: String,
+    pub stage: String,
     pub command: String,
     /// `"pass"` or `"fail"`.
     pub status: String,
@@ -216,8 +205,8 @@ impl fmt::Display for FlowRunOutput {
         if self.status == "fail" {
             writeln!(
                 f,
-                "Fix the error, then run: awf flow run {}",
-                self.step.magenta()
+                "Fix the error, then run: {}",
+                "awf flow run".magenta()
             )?;
         }
         Ok(())
@@ -225,22 +214,22 @@ impl fmt::Display for FlowRunOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Output types — `awf flow step done`
+// Output types — `awf flow done`
 // ---------------------------------------------------------------------------
 
-/// Output payload for `awf flow step done`.
+/// Output payload for `awf flow done`.
 #[derive(Debug, Serialize)]
-pub struct FlowStepDoneOutput {
-    pub step: String,
+pub struct FlowDoneOutput {
+    pub stage: String,
 }
 
-impl fmt::Display for FlowStepDoneOutput {
+impl fmt::Display for FlowDoneOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "{} Step {} marked complete.",
+            "{} Stage {} marked complete.",
             "✓".green(),
-            self.step.magenta()
+            self.stage.magenta()
         )
     }
 }
@@ -286,12 +275,11 @@ impl fmt::Display for FlowAdvanceOutput {
 // Output types — `awf flow history`
 // ---------------------------------------------------------------------------
 
-/// A single completed step record within a stage history entry.
+/// A single run record within a stage history entry.
 #[derive(Debug, Serialize)]
-pub struct FlowStepRecord {
-    pub step: String,
+pub struct FlowRunRecord {
+    pub stage_kind: String,
     pub status: String,
-    pub step_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub completed_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -311,7 +299,7 @@ pub struct FlowStageRecord {
     pub force_reason: Option<String>,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub skipped: bool,
-    pub steps: Vec<FlowStepRecord>,
+    pub runs: Vec<FlowRunRecord>,
 }
 
 /// Output payload for `awf flow history`.
@@ -329,33 +317,30 @@ impl fmt::Display for FlowHistoryOutput {
                 entry.stage.magenta(),
                 pretty_dt(&entry.started_at).bright_black(),
             )?;
-            for step in &entry.steps {
-                let (icon, verb, name_colored) = match step.status.as_str() {
-                    "pass" => (
-                        "✓".green().to_string(),
-                        "completed at",
-                        step.step.green().to_string(),
-                    ),
-                    "fail" => (
-                        "✗".red().to_string(),
-                        "failed at",
-                        step.step.red().to_string(),
-                    ),
-                    _ => ("?".to_string(), "at", step.step.blue().to_string()),
+            for run in &entry.runs {
+                let (icon, verb) = match run.status.as_str() {
+                    "pass" => ("✓".green().to_string(), "completed at"),
+                    "fail" => ("✗".red().to_string(), "failed at"),
+                    _ => ("?".to_string(), "at"),
                 };
-                match (&step.completed_at, step.duration_ms) {
+                let name_colored = match run.status.as_str() {
+                    "pass" => entry.stage.green().to_string(),
+                    "fail" => entry.stage.red().to_string(),
+                    _ => entry.stage.blue().to_string(),
+                };
+                match (&run.completed_at, run.duration_ms) {
                     (Some(ts), Some(ms)) => writeln!(
                         f,
-                        "    {icon} {name_colored} step {verb} {}",
+                        "    {icon} {name_colored} {verb} {}",
                         format!("{} ({} ms)", pretty_dt(ts), ms).bright_black(),
                     )?,
                     (Some(ts), None) => writeln!(
                         f,
-                        "    {icon} {name_colored} step {verb} {}",
+                        "    {icon} {name_colored} {verb} {}",
                         pretty_dt(ts).bright_black(),
                     )?,
                     _ => {
-                        writeln!(f, "    {icon} {name_colored} step {verb} ?")?;
+                        writeln!(f, "    {icon} {name_colored} {verb} ?")?;
                     }
                 }
             }
@@ -577,42 +562,33 @@ pub fn status(
     let current_stage =
         workflow.stages.iter().find(|s| s.name == flow.current_stage);
 
-    let steps = match current_stage {
+    let (status_str, kind_str) = match current_stage {
         Some(stage) => {
-            let current_stage_entries: Vec<_> = flow
-                .step_log
+            let status = flow
+                .stage_log
                 .iter()
-                .filter(|e| e.stage == flow.current_stage)
-                .collect();
-
-            stage
-                .steps
-                .iter()
-                .map(|step| {
-                    let status_str = current_stage_entries
-                        .iter()
-                        .rfind(|e| e.step == step.name)
-                        .map_or_else(
-                            || "pending".to_string(),
-                            |entry| match entry.status {
-                                StepStatus::Pass => "pass".to_string(),
-                                StepStatus::Fail => "fail".to_string(),
-                            },
-                        );
-                    StepStatusLine {
-                        name: step.name.clone(),
-                        status: status_str,
-                    }
-                })
-                .collect()
+                .rfind(|e| e.stage == flow.current_stage)
+                .map_or_else(
+                    || "pending".to_string(),
+                    |entry| match entry.status {
+                        RunStatus::Pass => "pass".to_string(),
+                        RunStatus::Fail => "fail".to_string(),
+                    },
+                );
+            let kind = match &stage.kind {
+                StageKind::Command { .. } => "command",
+                StageKind::Agent { .. } => "agent",
+            };
+            (status, kind.to_string())
         }
-        None => vec![],
+        None => ("pending".to_string(), "unknown".to_string()),
     };
 
     let output = FlowStatusOutput {
         flow: flow.id.clone(),
         stage: flow.current_stage.clone(),
-        steps,
+        stage_kind: kind_str,
+        status: status_str,
     };
 
     print_output(&output, fmt);
@@ -644,21 +620,21 @@ pub fn next(
     let artifacts = collect_artifacts(&flow_dir);
 
     let output = match next_action(&workflow, &flow, &artifacts) {
-        NextAction::RunStep(step) => FlowNextOutput {
-            action: "run_step".to_string(),
-            step: Some(step.name.clone()),
+        NextAction::RunCommand(stage) => FlowNextOutput {
+            action: "run_command".to_string(),
+            stage: Some(stage.name.clone()),
             artifact: None,
             next_stage: None,
             prompt: None,
             message: format!(
-                "[command] {} \u{2014} next step to run: awf flow run {}",
-                step.name, step.name
+                "[command] {} \u{2014} run: awf flow run",
+                stage.name
             ),
         },
-        NextAction::CompleteAgentStep(step) => {
+        NextAction::CompleteAgent(stage) => {
             let prompt =
-                if let StepKind::Agent { prompt: Some(ref filename), .. } =
-                    step.kind
+                if let StageKind::Agent { prompt: Some(ref filename), .. } =
+                    stage.kind
                 {
                     match fs::load_prompt_file(
                         &entries,
@@ -677,25 +653,22 @@ pub fn next(
                     None
                 };
             FlowNextOutput {
-                action: "complete_agent_step".to_string(),
-                step: Some(step.name.clone()),
+                action: "complete_agent".to_string(),
+                stage: Some(stage.name.clone()),
                 artifact: None,
                 next_stage: None,
                 prompt,
-                message: format!(
-                    "Mark complete with: awf flow step done {}",
-                    step.name
-                ),
+                message: "Mark complete with: awf flow done".to_string(),
             }
         }
         NextAction::ProduceArtifact(name) => FlowNextOutput {
             action: "produce_artifact".to_string(),
-            step: None,
+            stage: None,
             artifact: Some(name.clone()),
             next_stage: None,
             prompt: None,
             message: format!(
-                "All steps complete. Produce artifact: {name}\n\
+                "Stage complete. Produce artifact: {name}\n\
                  Write it to the artifacts/ directory inside the flow path."
             ),
         },
@@ -708,19 +681,19 @@ pub fn next(
                 .map_or_else(|| "next".to_string(), |s| s.name.clone());
             FlowNextOutput {
                 action: "can_advance".to_string(),
-                step: None,
+                stage: None,
                 artifact: None,
                 next_stage: Some(next_stage_name.clone()),
                 prompt: None,
                 message: format!(
-                    "All steps complete. Run `awf flow next-stage` to move to \
+                    "Stage complete. Run `awf flow next-stage` to move to \
                      {next_stage_name}."
                 ),
             }
         }
         NextAction::Done => FlowNextOutput {
             action: "done".to_string(),
-            step: None,
+            stage: None,
             artifact: None,
             next_stage: None,
             prompt: None,
@@ -733,16 +706,17 @@ pub fn next(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow run <step> [--flow <path>]`
+// `awf flow run [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow run <step> [--flow <path>]`.
+/// Handles `awf flow run [--flow <path>]`.
+///
+/// Runs the current stage if it is a command stage.
 ///
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
 pub fn run(
-    step_name: &str,
     flow_flag: Option<&str>,
     fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
@@ -755,27 +729,21 @@ pub fn run(
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
 
-    let step = find_step_in_current_stage(&workflow, &flow, step_name)
-        .unwrap_or_else(|| {
-            eprint_error(format_args!(
-                "step {step_name:?} not found in current stage {:?}",
-                flow.current_stage
-            ));
-            process::exit(1);
-        });
+    let stage = current_stage_or_exit(&workflow, &flow);
 
-    if matches!(step.kind, StepKind::Agent { .. }) {
+    if matches!(stage.kind, StageKind::Agent { .. }) {
         eprint_error(format_args!(
-            "Step {step_name:?} is an agent step. Use \
-             `awf flow step done {step_name}` instead."
+            "Stage {:?} is an agent stage. Use `awf flow done` instead.",
+            stage.name
         ));
         process::exit(1);
     }
 
-    let shell_cmd = resolve_shell_command(step, &workflow, &config.commands)
+    let shell_cmd = resolve_shell_command(stage, &workflow, &config.commands)
         .unwrap_or_else(|| {
             eprint_error(format_args!(
-                "step {step_name:?} has no resolvable shell command"
+                "stage {:?} has no resolvable shell command",
+                stage.name
             ));
             process::exit(1);
         });
@@ -783,21 +751,18 @@ pub fn run(
     let started_at = Utc::now();
     let result = run_command(&shell_cmd)?;
 
-    let stage = flow.current_stage.clone();
     let flow = if result.exit_code == 0 {
-        record_step_pass(
+        record_stage_pass(
             flow,
-            step,
-            &stage,
+            stage,
             Some(result.exit_code),
             Some(started_at),
             Some(result.duration_ms),
         )
     } else {
-        record_step_fail(
+        record_stage_fail(
             flow,
-            step,
-            &stage,
+            stage,
             Some(result.exit_code),
             Some(started_at),
             Some(result.duration_ms),
@@ -808,7 +773,7 @@ pub fn run(
 
     let status = if result.exit_code == 0 { "pass" } else { "fail" };
     let output = FlowRunOutput {
-        step: step_name.to_string(),
+        stage: stage.name.clone(),
         command: shell_cmd,
         status: status.to_string(),
         duration_ms: result.duration_ms,
@@ -818,16 +783,17 @@ pub fn run(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow step done <step> [--flow <path>]`
+// `awf flow done [--flow <path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow step done <step> [--flow <path>]`.
+/// Handles `awf flow done [--flow <path>]`.
+///
+/// Marks the current agent stage as complete.
 ///
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn step_done(
-    step_name: &str,
+pub fn done(
     flow_flag: Option<&str>,
     fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
@@ -840,29 +806,21 @@ pub fn step_done(
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
 
-    let step = find_step_in_current_stage(&workflow, &flow, step_name)
-        .unwrap_or_else(|| {
-            eprint_error(format_args!(
-                "step {step_name:?} not found in current stage {:?}",
-                flow.current_stage
-            ));
-            process::exit(1);
-        });
+    let stage = current_stage_or_exit(&workflow, &flow);
 
-    if matches!(step.kind, StepKind::Command { .. }) {
+    if matches!(stage.kind, StageKind::Command { .. }) {
         eprint_error(format_args!(
-            "Step {step_name:?} is a command step. Use \
-             `awf flow run {step_name}` instead."
+            "Stage {:?} is a command stage. Use `awf flow run` instead.",
+            stage.name
         ));
         process::exit(1);
     }
 
-    let stage = flow.current_stage.clone();
-    let flow = record_step_pass(flow, step, &stage, None, None, None);
+    let flow = record_stage_pass(flow, stage, None, None, None);
 
     fs::save_flow(&flow_dir, &flow)?;
 
-    let output = FlowStepDoneOutput { step: step_name.to_string() };
+    let output = FlowDoneOutput { stage: stage.name.clone() };
     print_output(&output, fmt);
     Ok(())
 }
@@ -975,7 +933,7 @@ pub fn advance(
     super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
 
     let updated_flow = if skip {
-        // --skip bypasses all gates (steps and artifacts).
+        // --skip bypasses all gates (stage completion and artifacts).
         let skipped_stage = flow.current_stage.clone();
         match skip_stage(&workflow, flow) {
             Ok(f) => {
@@ -999,7 +957,7 @@ pub fn advance(
     } else {
         let artifacts = collect_artifacts(&flow_dir);
 
-        // --force bypasses step gates but never artifact gates.
+        // --force bypasses stage gates but never artifact gates.
         #[allow(clippy::single_match_else, clippy::option_if_let_else)]
         let force_reason = match force {
             Some(reason) => {
@@ -1010,16 +968,16 @@ pub fn advance(
                 if let Err(blocker) = can_advance(&workflow, &flow, &artifacts)
                 {
                     match blocker {
-                        AdvanceBlocker::StepFailed(step) => {
+                        AdvanceBlocker::StageFailed(name) => {
                             eprint_error(format_args!(
-                                "`{step}` failed. Fix the error then run \
-                                 `awf flow run {step}` before advancing."
+                                "stage `{name}` failed. Fix the error then \
+                                 run `awf flow run` before advancing."
                             ));
                         }
-                        AdvanceBlocker::StepIncomplete(step) => {
+                        AdvanceBlocker::StageIncomplete(name) => {
                             eprint_error(format_args!(
-                                "`{step}` is not complete. Complete it before \
-                                 advancing."
+                                "stage `{name}` is not complete. Complete it \
+                                 before advancing."
                             ));
                         }
                         AdvanceBlocker::MissingArtifact(name) => {
@@ -1091,7 +1049,7 @@ pub fn history(
             force_completed: entry.force_completed,
             force_reason: entry.force_reason.clone(),
             skipped: entry.skipped,
-            steps: build_step_records(&flow, &entry.stage),
+            runs: build_stage_runs(&flow, &entry.stage),
         })
         .collect();
 
@@ -1109,7 +1067,7 @@ pub fn history(
             force_completed: false,
             force_reason: None,
             skipped: false,
-            steps: build_step_records(&flow, &flow.current_stage),
+            runs: build_stage_runs(&flow, &flow.current_stage),
         });
     }
 
@@ -1158,32 +1116,28 @@ pub fn archive(
 // Private helpers
 // ---------------------------------------------------------------------------
 
-/// Builds `FlowStepRecord` entries for all steps in `stage_name` from the
-/// flow's step log.
-fn build_step_records(
-    flow: &FlowState,
-    stage_name: &str,
-) -> Vec<FlowStepRecord> {
-    flow.step_log
+/// Builds `FlowRunRecord` entries for all runs of `stage_name` from the
+/// flow's stage log.
+fn build_stage_runs(flow: &FlowState, stage_name: &str) -> Vec<FlowRunRecord> {
+    flow.stage_log
         .iter()
         .filter(|e| e.stage == stage_name)
         .map(|entry| {
             let status_str = match entry.status {
-                StepStatus::Pass => "pass",
-                StepStatus::Fail => "fail",
+                RunStatus::Pass => "pass",
+                RunStatus::Fail => "fail",
             };
             let completed_at = entry
                 .completed_at
                 .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string());
-            let duration_ms = if entry.step_type == "command" {
+            let duration_ms = if entry.stage_kind == "command" {
                 entry.duration_ms
             } else {
                 None
             };
-            FlowStepRecord {
-                step: entry.step.clone(),
+            FlowRunRecord {
+                stage_kind: entry.stage_kind.clone(),
                 status: status_str.to_string(),
-                step_type: entry.step_type.clone(),
                 completed_at,
                 duration_ms,
             }
@@ -1204,7 +1158,7 @@ fn pretty_dt(s: &str) -> String {
 }
 
 /// Checks that all `produces` artifacts for the current stage exist, exiting
-/// with an error if any are missing. Used by `--force` which bypasses step
+/// with an error if any are missing. Used by `--force` which bypasses stage
 /// gates but still requires artifacts.
 fn check_produces_or_exit(
     workflow: &Workflow,
@@ -1275,35 +1229,42 @@ fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
     names
 }
 
-/// Finds a step by name in `flow.current_stage`.
-fn find_step_in_current_stage<'a>(
+/// Finds the current stage in the workflow, exiting if not found.
+fn current_stage_or_exit<'a>(
     workflow: &'a Workflow,
     flow: &FlowState,
-    step_name: &str,
-) -> Option<&'a Step> {
-    let stage =
-        workflow.stages.iter().find(|s| s.name == flow.current_stage)?;
-    stage.steps.iter().find(|s| s.name == step_name)
+) -> &'a Stage {
+    workflow
+        .stages
+        .iter()
+        .find(|s| s.name == flow.current_stage)
+        .unwrap_or_else(|| {
+            eprint_error(format_args!(
+                "current stage {:?} not found in workflow {:?}",
+                flow.current_stage, workflow.name
+            ));
+            process::exit(1);
+        })
 }
 
-/// Resolves the shell command string for a command step.
+/// Resolves the shell command string for a command stage.
 ///
-/// For `command` alias steps, looks up the alias in `workflow.commands` first,
+/// For `command` alias stages, looks up the alias in `workflow.commands` first,
 /// then falls back to `repo_commands` (from `.config/awf.toml`). This allows
 /// common commands like `test` and `format` to be defined once at the repo
 /// level rather than repeated in every workflow.
 fn resolve_shell_command(
-    step: &Step,
+    stage: &Stage,
     workflow: &Workflow,
     repo_commands: &HashMap<String, String>,
 ) -> Option<String> {
-    match &step.kind {
-        StepKind::Command { command: Some(alias), run: None } => workflow
+    match &stage.kind {
+        StageKind::Command { command: Some(alias), run: None } => workflow
             .commands
             .get(alias.as_str())
             .or_else(|| repo_commands.get(alias.as_str()))
             .cloned(),
-        StepKind::Command { run: Some(inline), command: None } => {
+        StageKind::Command { run: Some(inline), command: None } => {
             Some(inline.clone())
         }
         _ => None,

@@ -11,9 +11,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "design"
 | description = "Produce a design doc."
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design

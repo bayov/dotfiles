@@ -12,9 +12,8 @@ $ write_file .agents/workflows/test-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "do-work", type = "command", run = "true" },
-| ]
+| kind = "command"
+| args = { run = "true" }
 
 # --- Create flow with explicit --flow ---
 

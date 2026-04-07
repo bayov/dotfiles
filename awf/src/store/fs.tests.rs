@@ -42,16 +42,13 @@ test = "cargo test"
 name = "design"
 description = "Produce a design doc."
 produces = ["design.md"]
-steps = [
-    { name = "write-design", type = "agent", prompt = "design.md" },
-]
+kind = "agent"
+args = { prompt = "design.md" }
 
 [[stages]]
 name = "implement"
-requires = ["design.md"]
-steps = [
-    { name = "test", type = "command", command = "test" },
-]
+kind = "command"
+args = { command = "test" }
 "#;
 
 // ---------------------------------------------------------------------------
@@ -396,7 +393,7 @@ fn save_flow_round_trips_through_load_flow() {
             .to_utc(),
         archived: false,
         stage_history: vec![],
-        step_log: vec![],
+        stage_log: vec![],
     };
 
     // When: save then load

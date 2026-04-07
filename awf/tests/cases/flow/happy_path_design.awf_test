@@ -1,5 +1,5 @@
 # Test: flow happy path design stage
-# Creates a flow, writes the design artifact, marks step done, and advances.
+# Creates a flow, writes the design artifact, marks stage done, and advances.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,26 +17,31 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | produces = ["design.md"]
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 |
 | [[stages]]
-| name = "implement"
+| name = "write-code"
 | description = "Write the code."
-| steps = [
-|     { name = "write-code", type = "agent", prompt = "implement.md" },
-|     { name = "test", type = "command", command = "test" },
-| ]
+| kind = "agent"
+| args = { prompt = "implement.md" }
 |
 | [[stages]]
-| name = "review"
+| name = "test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "pre-review-test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "do-review"
 | description = "Code review and integration."
 | produces = ["changelog-entry.md"]
-| steps = [
-|     { name = "pre-review-test", type = "command", command = "test" },
-|     { name = "do-review", type = "agent", prompt = "review.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "review.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -59,12 +64,12 @@ $ assert_stdout contains
 $ write_file flows/add-oauth/artifacts/design.md
 | # My design
 
-# Step 3: Mark step done
-$ awf flow step done write-design --flow $FLOWS_DIR/add-oauth
+# Step 3: Mark agent stage done
+$ awf flow done --flow $FLOWS_DIR/add-oauth
 $ assert_stdout contains
-| write-design
+| design
 
 # Step 4: Advance
 $ awf flow next-stage --flow $FLOWS_DIR/add-oauth
 $ assert_stdout contains
-| implement
+| write-code

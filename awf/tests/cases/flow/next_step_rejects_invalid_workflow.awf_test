@@ -15,9 +15,8 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "run-check", type = "command", command = "check" },
-| ]
+| kind = "command"
+| args = { command = "check" }
 
 $ awf flow new $FLOWS_DIR/ns-flow --workflow will-break
 $ assert_stdout contains
@@ -31,9 +30,8 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [
-|     { name = "run-check", type = "command", command = "check" },
-| ]
+| kind = "command"
+| args = { command = "check" }
 
 # next-step should catch the broken workflow
 $ awf flow next-step --flow $FLOWS_DIR/ns-flow

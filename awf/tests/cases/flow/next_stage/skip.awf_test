@@ -13,15 +13,18 @@ $ write_file .agents/workflows/with-skippable/WORKFLOW.toml
 | name = "research"
 | skippable = true
 | produces = ["research.md"]
-| steps = [{ name = "do-research", type = "agent", instructions = "Research." }]
+| kind = "agent"
+| args = { instructions = "Research." }
 |
 | [[stages]]
 | name = "implement"
-| steps = [{ name = "code", type = "agent", instructions = "Code." }]
+| kind = "agent"
+| args = { instructions = "Code." }
 |
 | [[stages]]
 | name = "review"
-| steps = [{ name = "check", type = "command", run = "true" }]
+| kind = "command"
+| args = { run = "true" }
 
 $ write_file .agents/workflows/no-skip/WORKFLOW.toml
 | name = "no-skip"
@@ -29,27 +32,29 @@ $ write_file .agents/workflows/no-skip/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = [{ name = "do-it", type = "command", run = "true" }]
+| kind = "command"
+| args = { run = "true" }
 |
 | [[stages]]
 | name = "done"
-| steps = [{ name = "finish", type = "command", run = "true" }]
+| kind = "command"
+| args = { run = "true" }
 
 # =============================================================================
-# Test 1: --skip bypasses all gates (steps AND artifacts)
+# Test 1: --skip bypasses all gates (stage completion AND artifacts)
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/skip-flow --workflow with-skippable
 $ assert_stdout contains
 | skip-flow
 
-# Without --skip: fails because step is incomplete
+# Without --skip: fails because stage is incomplete
 $ awf flow next-stage --flow $FLOWS_DIR/skip-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not complete
 
-# With --skip: bypasses step and artifact gates
+# With --skip: bypasses stage and artifact gates
 $ awf flow next-stage --skip --flow $FLOWS_DIR/skip-flow
 $ assert_exit_code 0
 $ assert_stdout contains
@@ -95,12 +100,12 @@ $ assert_stdout json
 |       "started_at": "<any_string>",
 |       "completed_at": "<any_string>",
 |       "skipped": true,
-|       "steps": []
+|       "runs": []
 |     },
 |     {
 |       "stage": "implement",
 |       "started_at": "<any_string>",
-|       "steps": []
+|       "runs": []
 |     }
 |   ]
 | }

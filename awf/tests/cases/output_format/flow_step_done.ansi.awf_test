@@ -1,4 +1,4 @@
-# Test: awf flow step done — human and json output
+# Test: awf flow done — human and json output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -11,14 +11,13 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "design"
 | description = "Produce a design doc."
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-# Separate flows (step done mutates state)
+# Separate flows (done mutates state)
 
 $ export FORCE_COLOR=1
 
@@ -32,14 +31,14 @@ $ assert_stdout contains
 
 # --- Human ---
 
-$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-h --output-format human
+$ awf flow done --flow $FLOWS_DIR/fmt-done-h --output-format human
 $ assert_stdout equals
-| [32m✓[39m Step [35mwrite-design[39m marked complete.
+| [32m✓[39m Stage [35mdesign[39m marked complete.
 
 # --- JSON ---
 
-$ awf flow step done write-design --flow $FLOWS_DIR/fmt-done-j --output-format json
+$ awf flow done --flow $FLOWS_DIR/fmt-done-j --output-format json
 $ assert_stdout json
 | {
-|   "step": "write-design"
+|   "stage": "design"
 | }

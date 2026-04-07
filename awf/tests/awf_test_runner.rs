@@ -473,7 +473,9 @@ fn run_test_case(case: &TestCase) {
                 let mut cmd =
                     Command::cargo_bin("awf").expect("awf binary not found");
                 cmd.current_dir(tmp.path());
-                if !force_color {
+                if force_color {
+                    cmd.env("CLICOLOR_FORCE", "1");
+                } else {
                     cmd.env("NO_COLOR", "1");
                 }
                 cmd.envs(env.iter().cloned());

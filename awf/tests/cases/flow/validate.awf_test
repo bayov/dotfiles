@@ -19,27 +19,32 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | produces = ["design.md"]
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 |
 | [[stages]]
-| name = "implement"
+| name = "write-code"
 | description = "Write the code."
-| steps = [
-|     { name = "write-code", type = "agent", prompt = "implement.md" },
-|     { name = "test", type = "command", command = "test" },
-| ]
+| kind = "agent"
+| args = { prompt = "implement.md" }
 |
 | [[stages]]
-| name = "review"
+| name = "test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "pre-review-test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "do-review"
 | description = "Code review and integration."
 | produces = ["changelog-entry.md"]
-| steps = [
-|     { name = "pre-review-test", type = "command", command = "test" },
-|     { name = "do-review", type = "agent", prompt = "review.md" },
-| ]
-|
+| kind = "agent"
+| args = { prompt = "review.md" }
+
 $ write_file .agents/workflows/feature/design.md
 | # Design
 | Write a design document.
@@ -61,11 +66,13 @@ $ write_file .agents/workflows/produces-only/WORKFLOW.toml
 | [[stages]]
 | name = "draft"
 | produces = ["draft.md"]
-| steps = [{ name = "write", type = "agent", instructions = "Write it." }]
+| kind = "agent"
+| args = { instructions = "Write it." }
 |
 | [[stages]]
 | name = "polish"
-| steps = [{ name = "refine", type = "agent", instructions = "Refine it." }]
+| kind = "agent"
+| args = { instructions = "Refine it." }
 
 # -------------------------------------------------------
 # Test 1: validate passes when no stages completed
@@ -90,13 +97,13 @@ $ assert_stdout contains
 $ write_file flows/validate-ok/artifacts/design.md
 | # Design
 
-$ awf flow step done write-design --flow $FLOWS_DIR/validate-ok
+$ awf flow done --flow $FLOWS_DIR/validate-ok
 $ assert_stdout contains
-| write-design
+| design
 
 $ awf flow next-stage --flow $FLOWS_DIR/validate-ok
 $ assert_stdout contains
-| implement
+| write-code
 
 $ awf flow validate --flow $FLOWS_DIR/validate-ok
 $ assert_stdout contains
@@ -113,9 +120,9 @@ $ assert_stdout contains
 # Write the artifact, advance, then delete to create invalid state
 $ write_file flows/validate-missing/artifacts/draft.md
 | placeholder
-$ awf flow step done write --flow $FLOWS_DIR/validate-missing
+$ awf flow done --flow $FLOWS_DIR/validate-missing
 $ assert_stdout contains
-| write
+| draft
 $ awf flow next-stage --flow $FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | polish

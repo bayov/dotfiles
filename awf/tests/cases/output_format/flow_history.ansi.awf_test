@@ -1,6 +1,6 @@
 # Test: awf flow history — human and json output
-# Builds a multi-stage flow with passing agent steps, a failing command step,
-# and a force-advance, then checks the final history in both formats.
+# Builds a multi-stage flow with a passing agent stage, a failing command stage,
+# a passing command stage, and a force-advance, then checks the final history in both formats.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -18,25 +18,30 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | produces = ["design.md"]
-| steps = [
-|     { name = "write-design", type = "agent", prompt = "design.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "design.md" }
 |
 | [[stages]]
-| name = "implement"
+| name = "write-code"
 | description = "Write the code."
-| steps = [
-|     { name = "write-code", type = "agent", prompt = "implement.md" },
-|     { name = "lint", type = "command", command = "lint" },
-|     { name = "test", type = "command", command = "test" },
-| ]
+| kind = "agent"
+| args = { prompt = "implement.md" }
 |
 | [[stages]]
-| name = "review"
+| name = "lint"
+| kind = "command"
+| args = { command = "lint" }
+|
+| [[stages]]
+| name = "test"
+| kind = "command"
+| args = { command = "test" }
+|
+| [[stages]]
+| name = "do-review"
 | description = "Final review."
-| steps = [
-|     { name = "do-review", type = "agent", prompt = "review.md" },
-| ]
+| kind = "agent"
+| args = { prompt = "review.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -47,7 +52,7 @@ $ write_file .agents/workflows/feature/implement.md
 $ write_file .agents/workflows/feature/review.md
 | # Review
 
-# --- Build up flow state: design → implement → review (force) ---
+# --- Build up flow state: design → write-code → lint (fail, force) → test → do-review ---
 
 $ export FORCE_COLOR=1
 
@@ -55,42 +60,60 @@ $ awf flow new $FLOWS_DIR/fmt-history --workflow feature
 $ assert_stdout contains
 | fmt-history
 
-$ awf flow step done write-design --flow $FLOWS_DIR/fmt-history
+# Complete design stage
+$ awf flow done --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
-| write-design
+| design
 $ write_file flows/fmt-history/artifacts/design.md
 | # Design doc
 $ awf flow next-stage --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
-| implement
+| write-code
 
-$ awf flow step done write-code --flow $FLOWS_DIR/fmt-history
+# Complete write-code stage
+$ awf flow done --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-code
-$ awf flow run lint --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --flow $FLOWS_DIR/fmt-history
+$ assert_stdout contains
+| lint
+
+# Run lint (fails)
+$ awf flow run --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | FAIL
-$ awf flow run test --flow $FLOWS_DIR/fmt-history
-$ assert_stdout contains
-| PASS
+
+# Force advance past lint
 $ awf flow next-stage --force "force moving to next stage despite lint failure" --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
-| review
+| test
+
+# Run test (passes)
+$ awf flow run --flow $FLOWS_DIR/fmt-history
+$ assert_stdout contains
+| PASS
+$ awf flow next-stage --flow $FLOWS_DIR/fmt-history
+$ assert_stdout contains
+| do-review
 
 # --- Human output ---
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
 | • stage [35mdesign[39m started at [90m<...>[39m
-|     [32m✓[39m [32mwrite-design[39m step completed at [90m<...>[39m
+|     [32m✓[39m [32mdesign[39m completed at [90m<...>[39m
 |     [32m✓[39m stage completed at [90m<...>[39m
-| • stage [35mimplement[39m started at [90m<...>[39m
-|     [32m✓[39m [32mwrite-code[39m step completed at [90m<...>[39m
-|     [31m✗[39m [31mlint[39m step failed at [90m<...>[39m
-|     [32m✓[39m [32mtest[39m step completed at [90m<...>[39m
+| • stage [35mwrite-code[39m started at [90m<...>[39m
+|     [32m✓[39m [32mwrite-code[39m completed at [90m<...>[39m
+|     [32m✓[39m stage completed at [90m<...>[39m
+| • stage [35mlint[39m started at [90m<...>[39m
+|     [31m✗[39m [31mlint[39m failed at [90m<...>[39m
 |     [33m⚠[39m stage [33mforce completed[39m at [90m<...>[39m
 |         [33mforce moving to next stage despite lint failure[39m
-| • stage [35mreview[39m started at [90m<...>[39m
+| • stage [35mtest[39m started at [90m<...>[39m
+|     [32m✓[39m [32mtest[39m completed at [90m<...>[39m
+|     [32m✓[39m stage completed at [90m<...>[39m
+| • stage [35mdo-review[39m started at [90m<...>[39m
 
 # --- JSON output ---
 
@@ -102,48 +125,58 @@ $ assert_stdout json
 |       "stage": "design",
 |       "started_at": "<any_string>",
 |       "completed_at": "<any_string>",
-|       "steps": [
+|       "runs": [
 |         {
-|           "step": "write-design",
+|           "stage_kind": "agent",
 |           "status": "pass",
-|           "step_type": "agent",
 |           "completed_at": "<any_string>"
 |         }
 |       ]
 |     },
 |     {
-|       "stage": "implement",
+|       "stage": "write-code",
+|       "started_at": "<any_string>",
+|       "completed_at": "<any_string>",
+|       "runs": [
+|         {
+|           "stage_kind": "agent",
+|           "status": "pass",
+|           "completed_at": "<any_string>"
+|         }
+|       ]
+|     },
+|     {
+|       "stage": "lint",
 |       "started_at": "<any_string>",
 |       "completed_at": "<any_string>",
 |       "force_completed": true,
 |       "force_reason": "force moving to next stage despite lint failure",
-|       "steps": [
+|       "runs": [
 |         {
-|           "step": "write-code",
-|           "status": "pass",
-|           "step_type": "agent",
-|           "completed_at": "<any_string>"
-|         },
-|         {
-|           "step": "lint",
+|           "stage_kind": "command",
 |           "status": "fail",
-|           "step_type": "command",
-|           "completed_at": "<any_string>",
-|           "duration_ms": "<any_number>"
-|         },
-|         {
-|           "step": "test",
-|           "status": "pass",
-|           "step_type": "command",
 |           "completed_at": "<any_string>",
 |           "duration_ms": "<any_number>"
 |         }
 |       ]
 |     },
 |     {
-|       "stage": "review",
+|       "stage": "test",
 |       "started_at": "<any_string>",
-|       "steps": []
+|       "completed_at": "<any_string>",
+|       "runs": [
+|         {
+|           "stage_kind": "command",
+|           "status": "pass",
+|           "completed_at": "<any_string>",
+|           "duration_ms": "<any_number>"
+|         }
+|       ]
+|     },
+|     {
+|       "stage": "do-review",
+|       "started_at": "<any_string>",
+|       "runs": []
 |     }
 |   ]
 | }

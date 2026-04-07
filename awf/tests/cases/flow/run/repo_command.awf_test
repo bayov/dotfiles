@@ -1,5 +1,5 @@
 # Test: flow_run_resolves_command_from_repo_config
-# A step referencing a command defined in repo config (not workflow) should resolve.
+# A stage referencing a command defined in repo config (not workflow) should resolve.
 
 # --- Setup ---
 $ write_file .config/awf.toml
@@ -13,10 +13,9 @@ $ write_file .agents/workflows/repo-cmd-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "true-step", type = "command", command = "repo-true" },
-| ]
+| name = "true-step"
+| kind = "command"
+| args = { command = "repo-true" }
 
 # --- Test steps ---
 
@@ -24,6 +23,6 @@ $ awf flow new $FLOWS_DIR/repo-flow --workflow repo-cmd-test
 $ assert_stdout contains
 | repo-flow
 
-$ awf flow run true-step --flow $FLOWS_DIR/repo-flow
+$ awf flow run --flow $FLOWS_DIR/repo-flow
 $ assert_stdout contains
 | PASS

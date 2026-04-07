@@ -1,4 +1,4 @@
-# Test: advance blocked by failed step, then unblocked after fix
+# Test: advance blocked by failed stage, then unblocked after fix
 # Converts: advance_blocked_by_failed_step
 
 # --- Setup: run-test workflow ---
@@ -11,11 +11,14 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "pass-step", type = "command", run = "true" },
-|     { name = "fail-step", type = "command", run = "false" },
-| ]
+| name = "pass-step"
+| kind = "command"
+| args = { run = "true" }
+|
+| [[stages]]
+| name = "fail-step"
+| kind = "command"
+| args = { run = "false" }
 
 # --- Test ---
 
@@ -23,13 +26,18 @@ $ awf flow new $FLOWS_DIR/blocker-flow --workflow run-test
 $ assert_stdout contains
 | blocker-flow
 
-# Run pass-step: succeeds
-$ awf flow run pass-step --flow $FLOWS_DIR/blocker-flow
+# Run pass-step stage: succeeds
+$ awf flow run --flow $FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
-# Run fail-step: reports FAIL (exit 0 — failure is in the step, not the CLI)
-$ awf flow run fail-step --flow $FLOWS_DIR/blocker-flow
+# Advance to fail-step stage
+$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
+$ assert_stdout contains
+| fail-step
+
+# Run fail-step stage: reports FAIL (exit 0 — failure is in the stage, not the CLI)
+$ awf flow run --flow $FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | FAIL
 
@@ -45,19 +53,22 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "work"
-| steps = [
-|     { name = "pass-step", type = "command", run = "true" },
-|     { name = "fail-step", type = "command", run = "true" },
-| ]
+| name = "pass-step"
+| kind = "command"
+| args = { run = "true" }
+|
+| [[stages]]
+| name = "fail-step"
+| kind = "command"
+| args = { run = "true" }
 
 # Re-run fail-step: now passes
-$ awf flow run fail-step --flow $FLOWS_DIR/blocker-flow
+$ awf flow run --flow $FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
 # Advance: no longer blocked by fail-step.
-# run-test has only one stage, so this errors with "last stage".
+# run-test has only two stages and we're on the last, so this errors with "last stage".
 $ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains

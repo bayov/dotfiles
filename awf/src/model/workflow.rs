@@ -1,8 +1,9 @@
-//! Workflow definition types: [`Workflow`], [`Stage`], and [`Step`].
+//! Workflow definition types: [`Workflow`] and [`Stage`].
 //!
-//! A workflow is a named sequence of stages. Each stage contains one or more
-//! steps that are either shell commands or agent invocations. Workflow files
-//! are stored as TOML on disk and deserialized via serde.
+//! A workflow is a named sequence of stages. Each stage is a single action —
+//! either a shell command or an agent invocation — identified by a `kind` field
+//! with kind-specific arguments in an `args` table. Workflow files are stored
+//! as TOML on disk and deserialized via serde.
 //!
 //! After deserialisation, call [`Workflow::validate`] to enforce invariants
 //! that cannot be expressed in the type system alone (e.g. mutual exclusivity
@@ -35,8 +36,8 @@ pub struct Workflow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Named shell commands that can be referenced by [`StepKind::Command`]
-    /// steps via the `command` key.
+    /// Named shell commands that can be referenced by [`StageKind::Command`]
+    /// stages via the `command` key.
     ///
     /// Keys are short aliases (e.g. `"lint"`); values are the shell strings
     /// (e.g. `"cargo clippy -- -D warnings"`).
@@ -57,8 +58,8 @@ pub struct Workflow {
 
 /// A single stage within a [`Workflow`].
 ///
-/// Stages group related [`Step`]s and declare which artifacts they require
-/// or produce, enabling the runner to enforce ordering and caching.
+/// Each stage is a single action identified by its [`StageKind`]. The `kind`
+/// field selects the action type and `args` carries the kind-specific payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Stage {
     /// Unique name for this stage within its workflow (e.g. `"implement"`).
@@ -78,42 +79,34 @@ pub struct Stage {
     #[serde(default)]
     pub produces: Vec<String>,
 
-    /// The ordered list of steps to execute in this stage.
-    #[serde(default)]
-    pub steps: Vec<Step>,
-}
-
-/// A single executable step within a [`Stage`].
-///
-/// The `name` field identifies the step within its stage. The `type` field in
-/// TOML (`"command"` or `"agent"`) selects which variant is used. See
-/// [`StepKind`] for the payload carried by each variant.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Step {
-    /// Unique name for this step within its parent stage (e.g. `"run-tests"`).
-    pub name: String,
-
-    /// The kind-specific data for this step.
+    /// The kind-specific payload for this stage.
     #[serde(flatten)]
-    pub kind: StepKind,
+    pub kind: StageKind,
 }
 
-/// The kind-specific payload of a [`Step`].
+/// The kind-specific payload of a [`Stage`].
 ///
-/// Serializes with an internally-tagged `type` field
-/// (`"command"` or `"agent"`), matching the TOML inline-table format:
+/// Serializes with an adjacently-tagged representation: `kind` selects the
+/// variant and `args` carries the payload:
 ///
 /// ```toml
-/// { name = "lint", type = "command", command = "lint" }
-/// { name = "write-design", type = "agent", prompt = "design.md" }
+/// [[stages]]
+/// name = "lint"
+/// kind = "command"
+/// args = { command = "lint" }
+///
+/// [[stages]]
+/// name = "write-design"
+/// kind = "agent"
+/// args = { prompt = "design.md" }
 /// ```
 ///
 /// After deserialisation, validate mutual exclusivity with
 /// [`Workflow::validate`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
-pub enum StepKind {
-    /// A shell command step.
+#[serde(tag = "kind", content = "args", rename_all = "lowercase")]
+pub enum StageKind {
+    /// A shell command stage.
     ///
     /// Exactly one of `command` (an alias into [`Workflow::commands`]) or
     /// `run` (an inline shell string) must be set. [`Workflow::validate`]
@@ -129,7 +122,7 @@ pub enum StepKind {
         run: Option<String>,
     },
 
-    /// An agent invocation step.
+    /// An agent invocation stage.
     ///
     /// Exactly one of `prompt` (a path to a prompt file) or `instructions`
     /// (an inline instruction string) must be set. [`Workflow::validate`]
@@ -152,10 +145,9 @@ impl Workflow {
     /// Checks performed:
     ///
     /// - Stage names are unique within the workflow.
-    /// - Step names are unique within each stage.
-    /// - Every [`StepKind::Command`] step has exactly one of `command` or `run`
-    ///   set (not both, not neither).
-    /// - Every [`StepKind::Agent`] step has exactly one of `prompt` or
+    /// - Every [`StageKind::Command`] stage has exactly one of `command` or
+    ///   `run` set (not both, not neither).
+    /// - Every [`StageKind::Agent`] stage has exactly one of `prompt` or
     ///   `instructions` set (not both, not neither).
     ///
     /// # Errors
@@ -167,20 +159,7 @@ impl Workflow {
         self.validate_stage_names_unique()?;
 
         for stage in &self.stages {
-            if stage.steps.is_empty() {
-                return Err(Error::WorkflowValidation {
-                    message: format!(
-                        "stage {:?} in workflow {:?} has no steps",
-                        stage.name, self.name
-                    ),
-                });
-            }
-
-            self.validate_step_names_unique(stage)?;
-
-            for step in &stage.steps {
-                validate_step_kind(step)?;
-            }
+            validate_stage_kind(stage)?;
         }
 
         Ok(())
@@ -203,68 +182,51 @@ impl Workflow {
 
         Ok(())
     }
-
-    /// Checks that all step names within `stage` are distinct.
-    fn validate_step_names_unique(&self, stage: &Stage) -> Result<()> {
-        let mut seen = HashSet::new();
-
-        for step in &stage.steps {
-            if !seen.insert(step.name.as_str()) {
-                return Err(Error::WorkflowValidation {
-                    message: format!(
-                        "duplicate step name {:?} in stage {:?} of workflow {:?}",
-                        step.name, stage.name, self.name
-                    ),
-                });
-            }
-        }
-
-        Ok(())
-    }
 }
 
-/// Validates the mutual-exclusivity constraints on a single [`Step`]'s kind.
+/// Validates the mutual-exclusivity constraints on a single [`Stage`]'s kind.
 ///
-/// - [`StepKind::Command`]: exactly one of `command` or `run` must be `Some`.
-/// - [`StepKind::Agent`]: exactly one of `prompt` or `instructions` must be
+/// - [`StageKind::Command`]: exactly one of `command` or `run` must be `Some`.
+/// - [`StageKind::Agent`]: exactly one of `prompt` or `instructions` must be
 ///   `Some`.
 ///
 /// # Errors
 ///
 /// Returns [`Error::WorkflowValidation`] when the constraint is violated.
-fn validate_step_kind(step: &Step) -> Result<()> {
-    match &step.kind {
-        StepKind::Command { command, run } => match (command, run) {
+fn validate_stage_kind(stage: &Stage) -> Result<()> {
+    match &stage.kind {
+        StageKind::Command { command, run } => match (command, run) {
             (Some(_), None) | (None, Some(_)) => Ok(()),
             (Some(_), Some(_)) => Err(Error::WorkflowValidation {
                 message: format!(
-                    "step {:?}: command step must not set both `command` and \
+                    "stage {:?}: command stage must not set both `command` and \
                      `run`",
-                    step.name
+                    stage.name
                 ),
             }),
             (None, None) => Err(Error::WorkflowValidation {
                 message: format!(
-                    "step {:?}: command step must set either `command` or `run`",
-                    step.name
+                    "stage {:?}: command stage must set either `command` or \
+                     `run`",
+                    stage.name
                 ),
             }),
         },
-        StepKind::Agent { prompt, instructions } => {
+        StageKind::Agent { prompt, instructions } => {
             match (prompt, instructions) {
                 (Some(_), None) | (None, Some(_)) => Ok(()),
                 (Some(_), Some(_)) => Err(Error::WorkflowValidation {
                     message: format!(
-                        "step {:?}: agent step must not set both `prompt` and \
-                     `instructions`",
-                        step.name
+                        "stage {:?}: agent stage must not set both `prompt` \
+                         and `instructions`",
+                        stage.name
                     ),
                 }),
                 (None, None) => Err(Error::WorkflowValidation {
                     message: format!(
-                        "step {:?}: agent step must set either `prompt` or \
-                     `instructions`",
-                        step.name
+                        "stage {:?}: agent stage must set either `prompt` or \
+                         `instructions`",
+                        stage.name
                     ),
                 }),
             }
