@@ -127,14 +127,14 @@ pub struct FlowStatusOutput {
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Flow:  {}", self.flow.cyan())?;
-        writeln!(f, "Stage:  {}", self.stage.magenta())?;
+        writeln!(f, "  flow: {}", self.flow.cyan())?;
+        writeln!(f, " stage: {}", self.stage.magenta())?;
         let badge = match self.status.as_str() {
             "pass" => "[✓ pass]".green().to_string(),
             "fail" => "[✗ fail]".red().to_string(),
             _ => "[· pending]".bright_black().to_string(),
         };
-        writeln!(f, "Status: {badge}")
+        writeln!(f, "status: {badge}")
     }
 }
 

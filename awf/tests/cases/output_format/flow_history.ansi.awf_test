@@ -93,6 +93,8 @@ $ assert_stdout contains
 $ awf flow next-stage --skip --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | lint
+$ assert_stderr contains
+| Skipped stage "optional-check"
 
 # Run lint (fails)
 $ awf flow run --flow $FLOWS_DIR/fmt-history
