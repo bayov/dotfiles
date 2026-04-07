@@ -7,7 +7,6 @@ TODO
 Awf
 ---
 
-- Skip stage functionality.
 - Review functionality
 - Improve human output format.
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
