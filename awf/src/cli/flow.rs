@@ -9,7 +9,6 @@ use std::path::PathBuf;
 use std::process;
 
 use chrono::Local;
-use chrono::Utc;
 use owo_colors::OwoColorize as _;
 use serde::Serialize;
 
@@ -27,7 +26,6 @@ use crate::engine::state::record_stage_fail;
 use crate::engine::state::record_stage_pass;
 use crate::engine::state::skip_stage;
 use crate::model::flow::FlowState;
-use crate::model::flow::RunStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -275,103 +273,73 @@ impl fmt::Display for FlowAdvanceOutput {
 // Output types — `awf flow history`
 // ---------------------------------------------------------------------------
 
-/// A single run record within a stage history entry.
+/// A single entry in the history output, mirroring [`StageHistoryEntry`] with
+/// timestamps serialized as ISO 8601 strings.
 #[derive(Debug, Serialize)]
-pub struct FlowRunRecord {
-    pub stage_kind: String,
+pub struct FlowHistoryEntry {
+    pub stage: String,
+    pub time: String,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub completed_at: Option<String>,
+    pub force_reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<u64>,
-}
-
-/// A stage record within the history output.
-#[derive(Debug, Serialize)]
-pub struct FlowStageRecord {
-    pub stage: String,
-    pub started_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub completed_at: Option<String>,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    pub force_completed: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub force_reason: Option<String>,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    pub skipped: bool,
-    pub runs: Vec<FlowRunRecord>,
 }
 
 /// Output payload for `awf flow history`.
 #[derive(Debug, Serialize)]
 pub struct FlowHistoryOutput {
-    pub entries: Vec<FlowStageRecord>,
+    #[serde(skip)]
+    pub flow_path: String,
+    #[serde(skip)]
+    pub flow_started_at: String,
+    pub entries: Vec<FlowHistoryEntry>,
 }
 
 impl fmt::Display for FlowHistoryOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "{} flow started at {}",
+            self.flow_path.cyan(),
+            pretty_dt(&self.flow_started_at).bright_black(),
+        )?;
         for entry in &self.entries {
-            writeln!(
-                f,
-                "• stage {} started at {}",
-                entry.stage.magenta(),
-                pretty_dt(&entry.started_at).bright_black(),
-            )?;
-            for run in &entry.runs {
-                let (icon, verb) = match run.status.as_str() {
-                    "pass" => ("✓".green().to_string(), "completed at"),
-                    "fail" => ("✗".red().to_string(), "failed at"),
-                    _ => ("?".to_string(), "at"),
-                };
-                let name_colored = match run.status.as_str() {
-                    "pass" => entry.stage.green().to_string(),
-                    "fail" => entry.stage.red().to_string(),
-                    _ => entry.stage.blue().to_string(),
-                };
-                match (&run.completed_at, run.duration_ms) {
-                    (Some(ts), Some(ms)) => writeln!(
-                        f,
-                        "    {icon} {name_colored} {verb} {}",
-                        format!("{} ({} ms)", pretty_dt(ts), ms).bright_black(),
-                    )?,
-                    (Some(ts), None) => writeln!(
-                        f,
-                        "    {icon} {name_colored} {verb} {}",
-                        pretty_dt(ts).bright_black(),
-                    )?,
-                    _ => {
-                        writeln!(f, "    {icon} {name_colored} {verb} ?")?;
-                    }
-                }
-            }
-            if let Some(ref completed_at) = entry.completed_at {
-                if entry.skipped {
-                    let icon = "⏭".yellow();
+            match entry.status.as_str() {
+                "completed" => writeln!(
+                    f,
+                    "    {} {} completed at {}",
+                    "✓".green(),
+                    entry.stage.green(),
+                    pretty_dt(&entry.time).bright_black(),
+                )?,
+                "failed" => writeln!(
+                    f,
+                    "    {} {} failed at {}",
+                    "✗".red(),
+                    entry.stage.red(),
+                    pretty_dt(&entry.time).bright_black(),
+                )?,
+                "force_completed" => {
                     writeln!(
                         f,
-                        "    {icon} stage {} at {}",
-                        "skipped".yellow(),
-                        pretty_dt(completed_at).bright_black(),
-                    )?;
-                } else if entry.force_completed {
-                    let icon = "⚠".yellow();
-                    writeln!(
-                        f,
-                        "    {icon} stage {} at {}",
-                        "force completed".yellow(),
-                        pretty_dt(completed_at).bright_black(),
+                        "    {} {} force completed at {}",
+                        "⚠".yellow(),
+                        entry.stage.yellow(),
+                        pretty_dt(&entry.time).bright_black(),
                     )?;
                     if let Some(ref reason) = entry.force_reason {
-                        writeln!(f, "        {}", reason.yellow())?;
+                        writeln!(f, "        {}", reason.bright_black())?;
                     }
-                } else {
-                    let icon = "✓".green();
-                    writeln!(
-                        f,
-                        "    {icon} stage completed at {}",
-                        pretty_dt(completed_at).bright_black(),
-                    )?;
                 }
+                "skipped" => writeln!(
+                    f,
+                    "    {} {} skipped at {}",
+                    "⏭".yellow(),
+                    entry.stage.yellow(),
+                    pretty_dt(&entry.time).bright_black(),
+                )?,
+                _ => {}
             }
         }
         Ok(())
@@ -565,14 +533,23 @@ pub fn status(
     let (status_str, kind_str) = match current_stage {
         Some(stage) => {
             let status = flow
-                .stage_log
+                .stage_history
                 .iter()
-                .rfind(|e| e.stage == flow.current_stage)
+                .rfind(|e| {
+                    e.stage == flow.current_stage
+                        && matches!(
+                            e.status,
+                            crate::model::flow::StageStatus::Completed
+                                | crate::model::flow::StageStatus::Failed
+                        )
+                })
                 .map_or_else(
                     || "pending".to_string(),
                     |entry| match entry.status {
-                        RunStatus::Pass => "pass".to_string(),
-                        RunStatus::Fail => "fail".to_string(),
+                        crate::model::flow::StageStatus::Completed => {
+                            "pass".to_string()
+                        }
+                        _ => "fail".to_string(),
                     },
                 );
             let kind = match &stage.kind {
@@ -748,25 +725,12 @@ pub fn run(
             process::exit(1);
         });
 
-    let started_at = Utc::now();
     let result = run_command(&shell_cmd)?;
 
     let flow = if result.exit_code == 0 {
-        record_stage_pass(
-            flow,
-            stage,
-            Some(result.exit_code),
-            Some(started_at),
-            Some(result.duration_ms),
-        )
+        record_stage_pass(flow, stage, Some(result.duration_ms))
     } else {
-        record_stage_fail(
-            flow,
-            stage,
-            Some(result.exit_code),
-            Some(started_at),
-            Some(result.duration_ms),
-        )
+        record_stage_fail(flow, stage, Some(result.duration_ms))
     };
 
     fs::save_flow(&flow_dir, &flow)?;
@@ -816,7 +780,7 @@ pub fn done(
         process::exit(1);
     }
 
-    let flow = record_stage_pass(flow, stage, None, None, None);
+    let flow = record_stage_pass(flow, stage, None);
 
     fs::save_flow(&flow_dir, &flow)?;
 
@@ -855,7 +819,14 @@ pub fn validate(
     let completed_stage_names: HashSet<&str> = flow
         .stage_history
         .iter()
-        .filter(|e| e.completed_at.is_some())
+        .filter(|e| {
+            matches!(
+                e.status,
+                crate::model::flow::StageStatus::Completed
+                    | crate::model::flow::StageStatus::ForceCompleted
+                    | crate::model::flow::StageStatus::Skipped
+            )
+        })
         .map(|e| e.stage.as_str())
         .collect();
 
@@ -1034,44 +1005,36 @@ pub fn history(
 
     let flow = load_flow_or_exit(&flow_dir)?;
 
-    let mut entries: Vec<FlowStageRecord> = flow
+    let entries: Vec<FlowHistoryEntry> = flow
         .stage_history
         .iter()
-        .map(|entry| FlowStageRecord {
-            stage: entry.stage.clone(),
-            started_at: entry
-                .started_at
-                .format("%Y-%m-%dT%H:%M:%SZ")
-                .to_string(),
-            completed_at: entry
-                .completed_at
-                .map(|t| t.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
-            force_completed: entry.force_completed,
-            force_reason: entry.force_reason.clone(),
-            skipped: entry.skipped,
-            runs: build_stage_runs(&flow, &entry.stage),
+        .map(|entry| {
+            let status = match entry.status {
+                crate::model::flow::StageStatus::Completed => "completed",
+                crate::model::flow::StageStatus::Failed => "failed",
+                crate::model::flow::StageStatus::ForceCompleted => {
+                    "force_completed"
+                }
+                crate::model::flow::StageStatus::Skipped => "skipped",
+            };
+            FlowHistoryEntry {
+                stage: entry.stage.clone(),
+                time: entry.time.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                status: status.to_owned(),
+                force_reason: entry.force_reason.clone(),
+                duration_ms: entry.duration_ms,
+            }
         })
         .collect();
 
-    let current_already_shown =
-        flow.stage_history.iter().any(|e| e.stage == flow.current_stage);
-
-    if !current_already_shown {
-        entries.push(FlowStageRecord {
-            stage: flow.current_stage.clone(),
-            started_at: flow
-                .stage_started_at
-                .format("%Y-%m-%dT%H:%M:%SZ")
-                .to_string(),
-            completed_at: None,
-            force_completed: false,
-            force_reason: None,
-            skipped: false,
-            runs: build_stage_runs(&flow, &flow.current_stage),
-        });
-    }
-
-    let output = FlowHistoryOutput { entries };
+    let output = FlowHistoryOutput {
+        flow_path: flow_dir.display().to_string(),
+        flow_started_at: flow
+            .created_at
+            .format("%Y-%m-%dT%H:%M:%SZ")
+            .to_string(),
+        entries,
+    };
     print_output(&output, fmt);
     Ok(())
 }
@@ -1115,35 +1078,6 @@ pub fn archive(
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
-
-/// Builds `FlowRunRecord` entries for all runs of `stage_name` from the
-/// flow's stage log.
-fn build_stage_runs(flow: &FlowState, stage_name: &str) -> Vec<FlowRunRecord> {
-    flow.stage_log
-        .iter()
-        .filter(|e| e.stage == stage_name)
-        .map(|entry| {
-            let status_str = match entry.status {
-                RunStatus::Pass => "pass",
-                RunStatus::Fail => "fail",
-            };
-            let completed_at = entry
-                .completed_at
-                .map(|ts| ts.format("%Y-%m-%dT%H:%M:%SZ").to_string());
-            let duration_ms = if entry.stage_kind == "command" {
-                entry.duration_ms
-            } else {
-                None
-            };
-            FlowRunRecord {
-                stage_kind: entry.stage_kind.clone(),
-                status: status_str.to_string(),
-                completed_at,
-                duration_ms,
-            }
-        })
-        .collect()
-}
 
 /// Parses an ISO 8601 timestamp and formats it in the local timezone as
 /// `"YYYY-MM-DD HH:MM:SS ±HH:MM"`. Returns the input unchanged if it cannot

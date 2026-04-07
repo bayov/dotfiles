@@ -393,7 +393,6 @@ fn save_flow_round_trips_through_load_flow() {
             .to_utc(),
         archived: false,
         stage_history: vec![],
-        stage_log: vec![],
     };
 
     // When: save then load

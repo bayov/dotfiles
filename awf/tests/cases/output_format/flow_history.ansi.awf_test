@@ -100,20 +100,13 @@ $ assert_stdout contains
 
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
-| • stage [35mdesign[39m started at [90m<...>[39m
+| [36m<...>/fmt-history[39m flow started at [90m<...>[39m
 |     [32m✓[39m [32mdesign[39m completed at [90m<...>[39m
-|     [32m✓[39m stage completed at [90m<...>[39m
-| • stage [35mwrite-code[39m started at [90m<...>[39m
 |     [32m✓[39m [32mwrite-code[39m completed at [90m<...>[39m
-|     [32m✓[39m stage completed at [90m<...>[39m
-| • stage [35mlint[39m started at [90m<...>[39m
 |     [31m✗[39m [31mlint[39m failed at [90m<...>[39m
-|     [33m⚠[39m stage [33mforce completed[39m at [90m<...>[39m
-|         [33mforce moving to next stage despite lint failure[39m
-| • stage [35mtest[39m started at [90m<...>[39m
+|     [33m⚠[39m [33mlint[39m force completed at [90m<...>[39m
+|         [90mforce moving to next stage despite lint failure[39m
 |     [32m✓[39m [32mtest[39m completed at [90m<...>[39m
-|     [32m✓[39m stage completed at [90m<...>[39m
-| • stage [35mdo-review[39m started at [90m<...>[39m
 
 # --- JSON output ---
 
@@ -123,60 +116,31 @@ $ assert_stdout json
 |   "entries": [
 |     {
 |       "stage": "design",
-|       "started_at": "<any_string>",
-|       "completed_at": "<any_string>",
-|       "runs": [
-|         {
-|           "stage_kind": "agent",
-|           "status": "pass",
-|           "completed_at": "<any_string>"
-|         }
-|       ]
+|       "time": "<any_string>",
+|       "status": "completed"
 |     },
 |     {
 |       "stage": "write-code",
-|       "started_at": "<any_string>",
-|       "completed_at": "<any_string>",
-|       "runs": [
-|         {
-|           "stage_kind": "agent",
-|           "status": "pass",
-|           "completed_at": "<any_string>"
-|         }
-|       ]
+|       "time": "<any_string>",
+|       "status": "completed"
 |     },
 |     {
 |       "stage": "lint",
-|       "started_at": "<any_string>",
-|       "completed_at": "<any_string>",
-|       "force_completed": true,
-|       "force_reason": "force moving to next stage despite lint failure",
-|       "runs": [
-|         {
-|           "stage_kind": "command",
-|           "status": "fail",
-|           "completed_at": "<any_string>",
-|           "duration_ms": "<any_number>"
-|         }
-|       ]
+|       "time": "<any_string>",
+|       "status": "failed",
+|       "duration_ms": "<any_number>"
+|     },
+|     {
+|       "stage": "lint",
+|       "time": "<any_string>",
+|       "status": "force_completed",
+|       "force_reason": "force moving to next stage despite lint failure"
 |     },
 |     {
 |       "stage": "test",
-|       "started_at": "<any_string>",
-|       "completed_at": "<any_string>",
-|       "runs": [
-|         {
-|           "stage_kind": "command",
-|           "status": "pass",
-|           "completed_at": "<any_string>",
-|           "duration_ms": "<any_number>"
-|         }
-|       ]
-|     },
-|     {
-|       "stage": "do-review",
-|       "started_at": "<any_string>",
-|       "runs": []
+|       "time": "<any_string>",
+|       "status": "completed",
+|       "duration_ms": "<any_number>"
 |     }
 |   ]
 | }

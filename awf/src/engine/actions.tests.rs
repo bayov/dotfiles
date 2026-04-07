@@ -14,8 +14,8 @@ use super::NextAction;
 use super::can_advance;
 use super::next_action;
 use crate::model::flow::FlowState;
-use crate::model::flow::RunStatus;
-use crate::model::flow::StageLogEntry;
+use crate::model::flow::StageHistoryEntry;
+use crate::model::flow::StageStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -106,8 +106,8 @@ fn feature_workflow() -> Workflow {
 }
 
 /// Builds a minimal [`FlowState`] for the "feature" workflow at the given
-/// stage with the provided stage log entries.
-fn flow_at(stage: &str, stage_log: Vec<StageLogEntry>) -> FlowState {
+/// stage with the provided stage history entries.
+fn flow_at(stage: &str, stage_history: Vec<StageHistoryEntry>) -> FlowState {
     FlowState {
         id: "add-oauth".to_owned(),
         workflow: "feature".to_owned(),
@@ -117,47 +117,40 @@ fn flow_at(stage: &str, stage_log: Vec<StageLogEntry>) -> FlowState {
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
-        stage_history: vec![],
-        stage_log,
+        stage_history,
     }
 }
 
-/// Builds a passing [`StageLogEntry`] for a command stage.
-fn pass_cmd(stage: &str) -> StageLogEntry {
-    StageLogEntry {
+/// Builds a [`StageStatus::Completed`] entry for a command stage.
+fn pass_cmd(stage: &str) -> StageHistoryEntry {
+    StageHistoryEntry {
         stage: stage.to_owned(),
-        stage_kind: "command".to_owned(),
-        status: RunStatus::Pass,
-        exit_code: Some(0),
-        started_at: Some(ts("2026-04-04T14:00:00Z")),
+        time: ts("2026-04-04T14:00:00Z"),
+        status: StageStatus::Completed,
+        force_reason: None,
         duration_ms: Some(500),
-        completed_at: None,
     }
 }
 
-/// Builds a failing [`StageLogEntry`] for a command stage.
-fn fail_cmd(stage: &str) -> StageLogEntry {
-    StageLogEntry {
+/// Builds a [`StageStatus::Failed`] entry for a command stage.
+fn fail_cmd(stage: &str) -> StageHistoryEntry {
+    StageHistoryEntry {
         stage: stage.to_owned(),
-        stage_kind: "command".to_owned(),
-        status: RunStatus::Fail,
-        exit_code: Some(1),
-        started_at: Some(ts("2026-04-04T14:00:00Z")),
+        time: ts("2026-04-04T14:00:00Z"),
+        status: StageStatus::Failed,
+        force_reason: None,
         duration_ms: Some(800),
-        completed_at: None,
     }
 }
 
-/// Builds a passing [`StageLogEntry`] for an agent stage.
-fn pass_agent(stage: &str) -> StageLogEntry {
-    StageLogEntry {
+/// Builds a [`StageStatus::Completed`] entry for an agent stage.
+fn pass_agent(stage: &str) -> StageHistoryEntry {
+    StageHistoryEntry {
         stage: stage.to_owned(),
-        stage_kind: "agent".to_owned(),
-        status: RunStatus::Pass,
-        exit_code: None,
-        started_at: None,
+        time: ts("2026-04-04T13:00:00Z"),
+        status: StageStatus::Completed,
+        force_reason: None,
         duration_ms: None,
-        completed_at: Some(ts("2026-04-04T13:00:00Z")),
     }
 }
 
@@ -191,7 +184,7 @@ fn next_action_returns_run_command_for_failing_command_stage() {
 fn next_action_returns_run_command_for_pending_command_stage() {
     let workflow = feature_workflow();
 
-    // Given: the format stage with no log entries
+    // Given: the format stage with no history entries
     let flow = flow_at("format", vec![]);
 
     // When: we ask for the next action
@@ -210,7 +203,7 @@ fn next_action_returns_run_command_for_pending_command_stage() {
 fn next_action_returns_complete_agent_for_pending_agent_stage() {
     let workflow = feature_workflow();
 
-    // Given: the implement stage with no log entries
+    // Given: the implement stage with no history entries
     let flow = flow_at("implement", vec![]);
 
     // When: we ask for the next action
@@ -309,7 +302,7 @@ fn can_advance_returns_stage_failed_when_last_entry_is_fail() {
 fn can_advance_returns_stage_incomplete_when_stage_has_no_pass_entry() {
     let workflow = feature_workflow();
 
-    // Given: the format stage with no log entries
+    // Given: the format stage with no history entries
     let flow = flow_at("format", vec![]);
 
     // When: we check whether the stage can advance

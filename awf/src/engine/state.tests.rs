@@ -14,7 +14,7 @@ use super::record_stage_fail;
 use super::record_stage_pass;
 use super::skip_stage;
 use crate::model::flow::FlowState;
-use crate::model::flow::RunStatus;
+use crate::model::flow::StageStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -106,7 +106,7 @@ fn feature_workflow() -> Workflow {
 }
 
 /// Builds a minimal [`FlowState`] for the "feature" workflow at the given
-/// stage with no stage log and no stage history.
+/// stage with no stage history.
 fn flow_at(stage: &str) -> FlowState {
     FlowState {
         id: "add-oauth".to_owned(),
@@ -118,7 +118,6 @@ fn flow_at(stage: &str) -> FlowState {
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
         stage_history: vec![],
-        stage_log: vec![],
     }
 }
 
@@ -160,27 +159,17 @@ fn ts(s: &str) -> DateTime<Utc> { s.parse().expect("timestamp should parse") }
 #[test]
 fn advance_stage_moves_flow_from_design_to_implement() {
     let workflow = feature_workflow();
+    let flow = flow_at("design");
 
-    // Given: a flow at the design stage, entered at a known time
-    let mut flow = flow_at("design");
-    flow.stage_started_at = ts("2026-04-04T10:00:00Z");
-
-    // When: we advance the stage
+    // When: we advance the stage normally (no history entry written)
     let updated =
         advance_stage(&workflow, flow, None).expect("advance should succeed");
 
     // Then: the current stage is now implement
     assert_eq!(updated.current_stage, "implement");
 
-    // Then: the stage history records the completed design stage
-    assert_eq!(updated.stage_history.len(), 1);
-    let history_entry = &updated.stage_history[0];
-    assert_eq!(history_entry.stage, "design");
-    assert_eq!(history_entry.started_at, ts("2026-04-04T10:00:00Z"));
-    assert!(
-        history_entry.completed_at.is_some(),
-        "completed_at should be set after advancing"
-    );
+    // Then: no entry is appended for a normal advance
+    assert_eq!(updated.stage_history.len(), 0);
 }
 
 #[test]
@@ -220,6 +209,32 @@ fn advance_stage_updates_updated_at() {
 }
 
 // ---------------------------------------------------------------------------
+// advance_stage — force advance
+// ---------------------------------------------------------------------------
+
+#[test]
+fn advance_stage_appends_force_completed_entry() {
+    let workflow = feature_workflow();
+    let flow = flow_at("design");
+
+    // When: we force-advance the stage
+    let updated =
+        advance_stage(&workflow, flow, Some("skipping for now".to_owned()))
+            .expect("advance should succeed");
+
+    // Then: the current stage is now implement
+    assert_eq!(updated.current_stage, "implement");
+
+    // Then: a force_completed entry is appended
+    assert_eq!(updated.stage_history.len(), 1);
+    let entry = &updated.stage_history[0];
+    assert_eq!(entry.stage, "design");
+    assert_eq!(entry.status, StageStatus::ForceCompleted);
+    assert_eq!(entry.force_reason.as_deref(), Some("skipping for now"));
+    assert!(entry.duration_ms.is_none());
+}
+
+// ---------------------------------------------------------------------------
 // advance_stage — last stage error
 // ---------------------------------------------------------------------------
 
@@ -245,34 +260,26 @@ fn advance_stage_returns_already_on_last_stage_when_on_last_stage() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_stage_pass_appends_passing_command_entry_to_stage_log() {
+fn record_stage_pass_appends_passing_command_entry_to_stage_history() {
     let flow = flow_at("format");
     let stage = command_stage("format");
 
-    // Given: the format stage flow and a command stage
-    // When: we record a passing run (exit code 0, 450 ms)
-    let updated = record_stage_pass(
-        flow,
-        &stage,
-        Some(0),
-        Some(ts("2026-04-04T14:00:00Z")),
-        Some(450),
-    );
+    // When: we record a passing command run (450 ms)
+    let before = Utc::now();
+    let updated = record_stage_pass(flow, &stage, Some(450));
+    let after = Utc::now();
 
-    // Then: one entry is in the stage log
-    assert_eq!(updated.stage_log.len(), 1);
-    let entry = &updated.stage_log[0];
+    // Then: one completed entry is in the stage history
+    assert_eq!(updated.stage_history.len(), 1);
+    let entry = &updated.stage_history[0];
 
     assert_eq!(entry.stage, "format");
-    assert_eq!(entry.stage_kind, "command");
-    assert_eq!(entry.status, RunStatus::Pass);
-    assert_eq!(entry.exit_code, Some(0));
-    assert_eq!(entry.started_at, Some(ts("2026-04-04T14:00:00Z")));
+    assert_eq!(entry.status, StageStatus::Completed);
     assert_eq!(entry.duration_ms, Some(450));
-    assert_eq!(
-        entry.completed_at,
-        Some(ts("2026-04-04T14:00:00.450Z")),
-        "completed_at should be started_at + duration_ms"
+    assert!(entry.force_reason.is_none());
+    assert!(
+        entry.time >= before && entry.time <= after,
+        "time should be within the record_stage_pass call window"
     );
 }
 
@@ -281,35 +288,20 @@ fn record_stage_pass_appends_passing_command_entry_to_stage_log() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_stage_fail_appends_failing_command_entry_to_stage_log() {
+fn record_stage_fail_appends_failing_command_entry_to_stage_history() {
     let flow = flow_at("lint");
     let stage = command_stage("lint");
 
-    // Given: the lint stage flow and a command stage
-    // When: we record a failing run (exit code 1, 800 ms)
-    let updated = record_stage_fail(
-        flow,
-        &stage,
-        Some(1),
-        Some(ts("2026-04-04T14:05:00Z")),
-        Some(800),
-    );
+    // When: we record a failing command run (800 ms)
+    let updated = record_stage_fail(flow, &stage, Some(800));
 
-    // Then: one failing entry is in the stage log
-    assert_eq!(updated.stage_log.len(), 1);
-    let entry = &updated.stage_log[0];
+    // Then: one failed entry is in the stage history
+    assert_eq!(updated.stage_history.len(), 1);
+    let entry = &updated.stage_history[0];
 
     assert_eq!(entry.stage, "lint");
-    assert_eq!(entry.stage_kind, "command");
-    assert_eq!(entry.status, RunStatus::Fail);
-    assert_eq!(entry.exit_code, Some(1));
-    assert_eq!(entry.started_at, Some(ts("2026-04-04T14:05:00Z")));
+    assert_eq!(entry.status, StageStatus::Failed);
     assert_eq!(entry.duration_ms, Some(800));
-    assert_eq!(
-        entry.completed_at,
-        Some(ts("2026-04-04T14:05:00.800Z")),
-        "completed_at should be started_at + duration_ms"
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -317,33 +309,27 @@ fn record_stage_fail_appends_failing_command_entry_to_stage_log() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_stage_pass_appends_passing_agent_entry_with_completed_at() {
+fn record_stage_pass_appends_passing_agent_entry_with_time() {
     let flow = flow_at("design");
     let stage = agent_stage("design");
 
-    // Given: the design stage flow and an agent stage
-    // When: we record a passing agent completion (command fields are None)
+    // When: we record a passing agent completion
     let before = Utc::now();
-    let updated = record_stage_pass(flow, &stage, None, None, None);
+    let updated = record_stage_pass(flow, &stage, None);
     let after = Utc::now();
 
-    // Then: one passing agent entry is in the stage log
-    assert_eq!(updated.stage_log.len(), 1);
-    let entry = &updated.stage_log[0];
+    // Then: one completed agent entry is in the stage history
+    assert_eq!(updated.stage_history.len(), 1);
+    let entry = &updated.stage_history[0];
 
     assert_eq!(entry.stage, "design");
-    assert_eq!(entry.stage_kind, "agent");
-    assert_eq!(entry.status, RunStatus::Pass);
-    assert!(entry.exit_code.is_none());
-    assert!(entry.started_at.is_none());
-    assert!(entry.duration_ms.is_none());
+    assert_eq!(entry.status, StageStatus::Completed);
+    assert!(entry.duration_ms.is_none(), "agent stages have no duration_ms");
 
-    // Then: completed_at is set to a time within the record_stage_pass call
-    let completed_at =
-        entry.completed_at.expect("agent stage should have completed_at set");
+    // Then: time is set within the call window
     assert!(
-        completed_at >= before && completed_at <= after,
-        "completed_at should be within the record_stage_pass call window"
+        entry.time >= before && entry.time <= after,
+        "time should be within the record_stage_pass call window"
     );
 }
 
@@ -352,89 +338,71 @@ fn record_stage_pass_appends_passing_agent_entry_with_completed_at() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn record_stage_fail_appends_failing_agent_entry_with_completed_at() {
+fn record_stage_fail_appends_failing_agent_entry_with_time() {
     let flow = flow_at("design");
     let stage = agent_stage("design");
 
-    // Given: the design stage flow and an agent stage
     // When: we record a failing agent completion
     let before = Utc::now();
-    let updated = record_stage_fail(flow, &stage, None, None, None);
+    let updated = record_stage_fail(flow, &stage, None);
     let after = Utc::now();
 
-    // Then: one failing agent entry is in the stage log
-    assert_eq!(updated.stage_log.len(), 1);
-    let entry = &updated.stage_log[0];
+    // Then: one failed agent entry is in the stage history
+    assert_eq!(updated.stage_history.len(), 1);
+    let entry = &updated.stage_history[0];
 
     assert_eq!(entry.stage, "design");
-    assert_eq!(entry.stage_kind, "agent");
-    assert_eq!(entry.status, RunStatus::Fail);
-    assert!(entry.exit_code.is_none());
-
-    // Then: completed_at is set
-    let completed_at =
-        entry.completed_at.expect("agent stage should have completed_at set");
+    assert_eq!(entry.status, StageStatus::Failed);
+    assert!(entry.duration_ms.is_none());
     assert!(
-        completed_at >= before && completed_at <= after,
-        "completed_at should be within the record_stage_fail call window"
+        entry.time >= before && entry.time <= after,
+        "time should be within the record_stage_fail call window"
     );
 }
 
 // ---------------------------------------------------------------------------
-// multiple entries accumulate in stage_log
+// multiple entries accumulate
 // ---------------------------------------------------------------------------
 
 #[test]
-fn multiple_record_calls_accumulate_entries_in_stage_log() {
+fn multiple_record_calls_accumulate_entries_in_stage_history() {
     let flow = flow_at("format");
     let format_stage = command_stage("format");
 
-    // Given: the format stage being run multiple times
     // When: we record fail then pass
-    let flow = record_stage_fail(
-        flow,
-        &format_stage,
-        Some(1),
-        Some(ts("2026-04-04T14:10:00Z")),
-        Some(300),
-    );
-    let flow = record_stage_pass(
-        flow,
-        &format_stage,
-        Some(0),
-        Some(ts("2026-04-04T14:11:00Z")),
-        Some(280),
-    );
+    let flow = record_stage_fail(flow, &format_stage, Some(300));
+    let flow = record_stage_pass(flow, &format_stage, Some(280));
 
     // Then: two entries are present in call order
-    assert_eq!(flow.stage_log.len(), 2);
-    assert_eq!(flow.stage_log[0].stage, "format");
-    assert_eq!(flow.stage_log[0].status, RunStatus::Fail);
-    assert_eq!(flow.stage_log[1].stage, "format");
-    assert_eq!(flow.stage_log[1].status, RunStatus::Pass);
+    assert_eq!(flow.stage_history.len(), 2);
+    assert_eq!(flow.stage_history[0].stage, "format");
+    assert_eq!(flow.stage_history[0].status, StageStatus::Failed);
+    assert_eq!(flow.stage_history[1].stage, "format");
+    assert_eq!(flow.stage_history[1].status, StageStatus::Completed);
 }
 
 // ---------------------------------------------------------------------------
-// advance preserves accumulated stage log
+// advance preserves accumulated stage history
 // ---------------------------------------------------------------------------
 
 #[test]
-fn advance_stage_preserves_existing_stage_log_entries() {
+fn advance_stage_preserves_existing_stage_history_entries() {
     let workflow = feature_workflow();
 
     // Given: a flow at design with a completed agent stage
     let flow = flow_at("design");
     let design_stage = agent_stage("design");
-    let flow = record_stage_pass(flow, &design_stage, None, None, None);
-    assert_eq!(flow.stage_log.len(), 1);
+    let flow = record_stage_pass(flow, &design_stage, None);
+    assert_eq!(flow.stage_history.len(), 1);
 
-    // When: we advance the stage
+    // When: we advance the stage normally
     let advanced =
         advance_stage(&workflow, flow, None).expect("advance should succeed");
 
-    // Then: the stage log entry from the design stage is still present
-    assert_eq!(advanced.stage_log.len(), 1);
-    assert_eq!(advanced.stage_log[0].stage, "design");
+    // Then: the completed entry from the design stage is still present
+    assert_eq!(advanced.stage_history.len(), 1);
+    assert_eq!(advanced.stage_history[0].stage, "design");
+    assert_eq!(advanced.stage_history[0].status, StageStatus::Completed);
 }
 
 // ---------------------------------------------------------------------------
@@ -454,13 +422,13 @@ fn skip_stage_moves_flow_to_next_stage() {
     // Then: the current stage is now implement
     assert_eq!(updated.current_stage, "implement");
 
-    // Then: the stage history records the skipped design stage
+    // Then: a skipped entry is appended
     assert_eq!(updated.stage_history.len(), 1);
-    let history_entry = &updated.stage_history[0];
-    assert_eq!(history_entry.stage, "design");
-    assert!(history_entry.skipped, "stage should be marked as skipped");
-    assert!(!history_entry.force_completed);
-    assert!(history_entry.completed_at.is_some());
+    let entry = &updated.stage_history[0];
+    assert_eq!(entry.stage, "design");
+    assert_eq!(entry.status, StageStatus::Skipped);
+    assert!(entry.force_reason.is_none());
+    assert!(entry.duration_ms.is_none());
 }
 
 #[test]

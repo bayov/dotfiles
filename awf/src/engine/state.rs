@@ -2,19 +2,21 @@
 //!
 //! The public entry points are:
 //!
-//! - [`advance_stage`] — advances the flow to the next stage in the workflow,
-//!   appending a completed [`StageHistoryEntry`] for the stage being left.
+//! - [`advance_stage`] — advances the flow to the next stage in the workflow.
+//!   For a force-advance, appends a [`StageHistoryEntry`] with
+//!   [`StageStatus::ForceCompleted`] before moving forward. For a normal
+//!   advance, the passing entry was already appended by [`record_stage_pass`].
 //!
-//! - [`record_stage_pass`] / [`record_stage_fail`] — append a [`StageLogEntry`]
-//!   to the flow's stage log recording the outcome of a completed stage run.
+//! - [`record_stage_pass`] / [`record_stage_fail`] — append a
+//!   [`StageHistoryEntry`] to the flow's stage history recording the outcome of
+//!   a completed stage run.
 
 use chrono::Utc;
 use tracing::instrument;
 
 use crate::model::flow::FlowState;
-use crate::model::flow::RunStatus;
 use crate::model::flow::StageHistoryEntry;
-use crate::model::flow::StageLogEntry;
+use crate::model::flow::StageStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -27,11 +29,14 @@ use crate::result::Result;
 
 /// Advances the flow to the next stage in the workflow.
 ///
-/// Appends a completed [`StageHistoryEntry`] for the stage being left (using
-/// `flow.stage_started_at` as `started_at` and `Utc::now()` as `completed_at`),
-/// sets `current_stage` and `stage_started_at` to the next stage, and updates
-/// `updated_at`. When `force_reason` is `Some`, the history entry is marked
-/// with `force_completed = true` and the reason is stored.
+/// For a force-advance (`force_reason` is `Some`), appends a
+/// [`StageHistoryEntry`] with [`StageStatus::ForceCompleted`] and the given
+/// reason before moving forward. For a normal advance, the
+/// [`StageStatus::Completed`] entry was already appended by
+/// [`record_stage_pass`] and no additional entry is written.
+///
+/// Sets `current_stage` and `stage_started_at` to the next stage and updates
+/// `updated_at`.
 ///
 /// # Errors
 ///
@@ -70,16 +75,17 @@ pub fn advance_stage(
     let next_stage_name = workflow.stages[current_idx + 1].name.clone();
     let now = Utc::now();
 
-    // Record the completed stage in history before moving forward.
-    let force_completed = force_reason.is_some();
-    flow.stage_history.push(StageHistoryEntry {
-        stage: flow.current_stage.clone(),
-        started_at: flow.stage_started_at,
-        completed_at: Some(now),
-        force_completed,
-        force_reason,
-        skipped: false,
-    });
+    // For a force-advance, record the transition event. For a normal advance
+    // the completed entry was already appended by record_stage_pass.
+    if let Some(reason) = force_reason {
+        flow.stage_history.push(StageHistoryEntry {
+            stage: flow.current_stage.clone(),
+            time: now,
+            status: StageStatus::ForceCompleted,
+            force_reason: Some(reason),
+            duration_ms: None,
+        });
+    }
 
     // Advance to the next stage and refresh timestamps.
     flow.current_stage = next_stage_name;
@@ -137,11 +143,10 @@ pub fn skip_stage(
     // Record the skipped stage in history.
     flow.stage_history.push(StageHistoryEntry {
         stage: flow.current_stage.clone(),
-        started_at: flow.stage_started_at,
-        completed_at: Some(now),
-        force_completed: false,
+        time: now,
+        status: StageStatus::Skipped,
         force_reason: None,
-        skipped: true,
+        duration_ms: None,
     });
 
     // Advance to the next stage and refresh timestamps.
@@ -152,96 +157,58 @@ pub fn skip_stage(
     Ok(flow)
 }
 
-/// Appends a passing [`StageLogEntry`] for `stage` to the flow's stage log.
+/// Appends a [`StageStatus::Completed`] entry for `stage` to the flow's
+/// stage history.
 ///
-/// For command stages, `exit_code`, `started_at`, and `duration_ms` are
-/// recorded. For agent stages, `completed_at` is set to `Utc::now()` and the
-/// command-specific fields are left as `None`.
+/// For command stages, `duration_ms` is recorded. For agent stages,
+/// `duration_ms` should be `None`.
 ///
 /// Returns the updated [`FlowState`].
 pub fn record_stage_pass(
     mut flow: FlowState,
     stage: &Stage,
-    exit_code: Option<i32>,
-    started_at: Option<chrono::DateTime<Utc>>,
     duration_ms: Option<u64>,
 ) -> FlowState {
-    flow.stage_log.push(build_stage_log_entry(
-        stage,
-        RunStatus::Pass,
-        exit_code,
-        started_at,
-        duration_ms,
-    ));
+    flow.stage_history.push(StageHistoryEntry {
+        stage: stage.name.clone(),
+        time: Utc::now(),
+        status: StageStatus::Completed,
+        force_reason: None,
+        duration_ms: if matches!(stage.kind, StageKind::Command { .. }) {
+            duration_ms
+        } else {
+            None
+        },
+    });
     flow.updated_at = Utc::now();
     flow
 }
 
-/// Appends a failing [`StageLogEntry`] for `stage` to the flow's stage log.
+/// Appends a [`StageStatus::Failed`] entry for `stage` to the flow's stage
+/// history.
 ///
-/// For command stages, `exit_code`, `started_at`, and `duration_ms` are
-/// recorded. For agent stages, `completed_at` is set to `Utc::now()` and the
-/// command-specific fields are left as `None`.
+/// For command stages, `duration_ms` is recorded. For agent stages,
+/// `duration_ms` should be `None`.
 ///
 /// Returns the updated [`FlowState`].
 pub fn record_stage_fail(
     mut flow: FlowState,
     stage: &Stage,
-    exit_code: Option<i32>,
-    started_at: Option<chrono::DateTime<Utc>>,
     duration_ms: Option<u64>,
 ) -> FlowState {
-    flow.stage_log.push(build_stage_log_entry(
-        stage,
-        RunStatus::Fail,
-        exit_code,
-        started_at,
-        duration_ms,
-    ));
+    flow.stage_history.push(StageHistoryEntry {
+        stage: stage.name.clone(),
+        time: Utc::now(),
+        status: StageStatus::Failed,
+        force_reason: None,
+        duration_ms: if matches!(stage.kind, StageKind::Command { .. }) {
+            duration_ms
+        } else {
+            None
+        },
+    });
     flow.updated_at = Utc::now();
     flow
-}
-
-// ---------------------------------------------------------------------------
-// Private helpers
-// ---------------------------------------------------------------------------
-
-/// Constructs a [`StageLogEntry`] from a stage's metadata and execution
-/// outcome.
-///
-/// The `stage_kind` string is derived from the stage's [`StageKind`] variant.
-/// Agent stages populate `completed_at = Some(Utc::now())` and leave command
-/// fields (`exit_code`, `started_at`, `duration_ms`) as `None`. Command stages
-/// record the provided execution metrics and leave `completed_at` as `None`.
-fn build_stage_log_entry(
-    stage: &Stage,
-    status: RunStatus,
-    exit_code: Option<i32>,
-    started_at: Option<chrono::DateTime<Utc>>,
-    duration_ms: Option<u64>,
-) -> StageLogEntry {
-    match &stage.kind {
-        StageKind::Agent { .. } => StageLogEntry {
-            stage: stage.name.clone(),
-            stage_kind: "agent".to_owned(),
-            status,
-            exit_code: None,
-            started_at: None,
-            duration_ms: None,
-            completed_at: Some(Utc::now()),
-        },
-        StageKind::Command { .. } => StageLogEntry {
-            stage: stage.name.clone(),
-            stage_kind: "command".to_owned(),
-            status,
-            exit_code,
-            completed_at: started_at.zip(duration_ms).map(|(s, d)| {
-                s + chrono::Duration::milliseconds(d.cast_signed())
-            }),
-            started_at,
-            duration_ms,
-        },
-    }
 }
 
 // ---------------------------------------------------------------------------

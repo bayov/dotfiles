@@ -17,7 +17,7 @@ use std::collections::HashSet;
 use tracing::instrument;
 
 use crate::model::flow::FlowState;
-use crate::model::flow::RunStatus;
+use crate::model::flow::StageStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -134,13 +134,13 @@ pub fn next_action<'a>(
 
     // Priority 1: failed command stage.
     if matches!(stage.kind, StageKind::Command { .. })
-        && last_status == Some(RunStatus::Fail)
+        && last_status == Some(StageStatus::Failed)
     {
         return NextAction::RunCommand(stage);
     }
 
     // Priority 2: incomplete stage (no pass entry yet).
-    if last_status != Some(RunStatus::Pass) {
+    if last_status != Some(StageStatus::Completed) {
         return match &stage.kind {
             StageKind::Command { .. } => NextAction::RunCommand(stage),
             StageKind::Agent { .. } => NextAction::CompleteAgent(stage),
@@ -191,12 +191,15 @@ pub fn can_advance(
     let stage = current_stage(workflow, flow);
 
     match stage_last_status(flow, stage) {
-        Some(RunStatus::Fail) => {
+        Some(StageStatus::Failed) => {
             return Err(AdvanceBlocker::StageFailed(stage.name.clone()));
         }
-        Some(RunStatus::Pass) => {}
+        Some(StageStatus::Completed) => {}
         None => {
             return Err(AdvanceBlocker::StageIncomplete(stage.name.clone()));
+        }
+        Some(_) => {
+            unreachable!("stage_last_status only returns Completed or Failed")
         }
     }
 
@@ -232,10 +235,20 @@ fn current_stage<'a>(workflow: &'a Workflow, flow: &FlowState) -> &'a Stage {
         })
 }
 
-/// Returns the status of the most-recent log entry for `stage`, or `None` if
-/// the stage has never been executed during the current visit.
-fn stage_last_status(flow: &FlowState, stage: &Stage) -> Option<RunStatus> {
-    flow.stage_log.iter().rfind(|e| e.stage == stage.name).map(|e| e.status)
+/// Returns the status of the most-recent run entry for `stage` (i.e. the last
+/// [`StageStatus::Completed`] or [`StageStatus::Failed`] entry), or `None` if
+/// the stage has never been run.
+fn stage_last_status(flow: &FlowState, stage: &Stage) -> Option<StageStatus> {
+    flow.stage_history
+        .iter()
+        .rfind(|e| {
+            e.stage == stage.name
+                && matches!(
+                    e.status,
+                    StageStatus::Completed | StageStatus::Failed
+                )
+        })
+        .map(|e| e.status)
 }
 
 /// Returns `true` if `flow` is currently on the last stage of `workflow`.

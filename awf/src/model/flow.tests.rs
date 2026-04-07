@@ -2,9 +2,8 @@ use chrono::DateTime;
 use chrono::Utc;
 
 use super::FlowState;
-use super::RunStatus;
 use super::StageHistoryEntry;
-use super::StageLogEntry;
+use super::StageStatus;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -20,13 +19,12 @@ fn parse(toml: &str) -> FlowState {
 }
 
 // ---------------------------------------------------------------------------
-// TOML round-trip: full flow state with both stage kinds
+// TOML round-trip: full flow state
 // ---------------------------------------------------------------------------
 
 #[test]
 fn full_flow_state_round_trip() {
-    // Given: a FlowState built in memory with both agent and command stage log
-    // entries and stage history with and without completed_at
+    // Given: a FlowState built in memory with a variety of history entries
     let original = FlowState {
         id: "add-oauth".to_owned(),
         workflow: "feature".to_owned(),
@@ -39,51 +37,24 @@ fn full_flow_state_round_trip() {
         stage_history: vec![
             StageHistoryEntry {
                 stage: "design".to_owned(),
-                started_at: ts("2026-04-04T10:00:00Z"),
-                completed_at: Some(ts("2026-04-04T12:00:00Z")),
-                force_completed: false,
+                time: ts("2026-04-04T12:00:00Z"),
+                status: StageStatus::Completed,
                 force_reason: None,
-                skipped: false,
+                duration_ms: None,
             },
             StageHistoryEntry {
-                stage: "implement".to_owned(),
-                started_at: ts("2026-04-04T12:00:00Z"),
-                completed_at: None,
-                force_completed: false,
-                force_reason: None,
-                skipped: false,
-            },
-        ],
-        stage_log: vec![
-            // Agent stage
-            StageLogEntry {
-                stage: "design".to_owned(),
-                stage_kind: "agent".to_owned(),
-                status: RunStatus::Pass,
-                exit_code: None,
-                started_at: None,
-                duration_ms: None,
-                completed_at: Some(ts("2026-04-04T13:00:00Z")),
-            },
-            // Passing command stage
-            StageLogEntry {
-                stage: "format".to_owned(),
-                stage_kind: "command".to_owned(),
-                status: RunStatus::Pass,
-                exit_code: Some(0),
-                started_at: Some(ts("2026-04-04T14:30:00Z")),
-                duration_ms: Some(1200),
-                completed_at: None,
-            },
-            // Failing command stage
-            StageLogEntry {
                 stage: "lint".to_owned(),
-                stage_kind: "command".to_owned(),
-                status: RunStatus::Fail,
-                exit_code: Some(1),
-                started_at: Some(ts("2026-04-04T14:31:00Z")),
-                duration_ms: Some(8500),
-                completed_at: None,
+                time: ts("2026-04-04T14:00:00Z"),
+                status: StageStatus::Failed,
+                force_reason: None,
+                duration_ms: Some(800),
+            },
+            StageHistoryEntry {
+                stage: "lint".to_owned(),
+                time: ts("2026-04-04T14:01:00Z"),
+                status: StageStatus::ForceCompleted,
+                force_reason: Some("known flake".to_owned()),
+                duration_ms: None,
             },
         ],
     };
@@ -99,7 +70,7 @@ fn full_flow_state_round_trip() {
 }
 
 // ---------------------------------------------------------------------------
-// TOML parse: canonical format from design doc
+// TOML parse: canonical format
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -117,30 +88,20 @@ fn parse_canonical_toml_format() {
 
         [[stage_history]]
         stage = "design"
-        started_at = "2026-04-04T10:00:00Z"
-        completed_at = "2026-04-04T12:00:00Z"
+        time = "2026-04-04T12:00:00Z"
+        status = "completed"
 
-        [[stage_log]]
-        stage = "implement"
-        kind = "agent"
-        status = "pass"
-        completed_at = "2026-04-04T13:00:00Z"
-
-        [[stage_log]]
-        stage = "format"
-        kind = "command"
-        status = "pass"
-        exit_code = 0
-        started_at = "2026-04-04T14:30:00Z"
-        duration_ms = 1200
-
-        [[stage_log]]
+        [[stage_history]]
         stage = "lint"
-        kind = "command"
-        status = "fail"
-        exit_code = 1
-        started_at = "2026-04-04T14:31:00Z"
-        duration_ms = 8500
+        time = "2026-04-04T14:00:00Z"
+        status = "failed"
+        duration_ms = 800
+
+        [[stage_history]]
+        stage = "lint"
+        time = "2026-04-04T14:01:00Z"
+        status = "force_completed"
+        force_reason = "known flake"
     "#;
 
     // When: we parse the TOML
@@ -148,121 +109,88 @@ fn parse_canonical_toml_format() {
 
     // Then: top-level fields match
     assert_eq!(flow.id, "add-oauth");
-    assert_eq!(flow.workflow, "feature");
-    assert_eq!(flow.workflow_version, 1);
     assert_eq!(flow.current_stage, "format");
     assert_eq!(flow.created_at, ts("2026-04-04T10:00:00Z"));
-    assert_eq!(flow.updated_at, ts("2026-04-04T14:32:00Z"));
-    assert!(!flow.archived);
 
-    // Then: stage history
-    assert_eq!(flow.stage_history.len(), 1);
-    let history_entry = &flow.stage_history[0];
-    assert_eq!(history_entry.stage, "design");
-    assert_eq!(history_entry.started_at, ts("2026-04-04T10:00:00Z"));
-    assert_eq!(history_entry.completed_at, Some(ts("2026-04-04T12:00:00Z")));
+    // Then: stage history has three entries
+    assert_eq!(flow.stage_history.len(), 3);
 
-    // Then: stage log has three entries
-    assert_eq!(flow.stage_log.len(), 3);
+    let e0 = &flow.stage_history[0];
+    assert_eq!(e0.stage, "design");
+    assert_eq!(e0.time, ts("2026-04-04T12:00:00Z"));
+    assert_eq!(e0.status, StageStatus::Completed);
+    assert!(e0.force_reason.is_none());
+    assert!(e0.duration_ms.is_none());
 
-    // Then: agent stage entry
-    let agent_entry = &flow.stage_log[0];
-    assert_eq!(agent_entry.stage, "implement");
-    assert_eq!(agent_entry.stage_kind, "agent");
-    assert_eq!(agent_entry.status, RunStatus::Pass);
-    assert_eq!(agent_entry.completed_at, Some(ts("2026-04-04T13:00:00Z")));
-    assert!(agent_entry.exit_code.is_none());
-    assert!(agent_entry.started_at.is_none());
-    assert!(agent_entry.duration_ms.is_none());
+    let e1 = &flow.stage_history[1];
+    assert_eq!(e1.stage, "lint");
+    assert_eq!(e1.status, StageStatus::Failed);
+    assert_eq!(e1.duration_ms, Some(800));
 
-    // Then: passing command stage entry
-    let format_entry = &flow.stage_log[1];
-    assert_eq!(format_entry.stage, "format");
-    assert_eq!(format_entry.stage_kind, "command");
-    assert_eq!(format_entry.status, RunStatus::Pass);
-    assert_eq!(format_entry.exit_code, Some(0));
-    assert_eq!(format_entry.started_at, Some(ts("2026-04-04T14:30:00Z")));
-    assert_eq!(format_entry.duration_ms, Some(1200));
-    assert!(format_entry.completed_at.is_none());
-
-    // Then: failing command stage entry
-    let test_entry = &flow.stage_log[2];
-    assert_eq!(test_entry.stage, "lint");
-    assert_eq!(test_entry.stage_kind, "command");
-    assert_eq!(test_entry.status, RunStatus::Fail);
-    assert_eq!(test_entry.exit_code, Some(1));
-    assert_eq!(test_entry.started_at, Some(ts("2026-04-04T14:31:00Z")));
-    assert_eq!(test_entry.duration_ms, Some(8500));
-    assert!(test_entry.completed_at.is_none());
+    let e2 = &flow.stage_history[2];
+    assert_eq!(e2.stage, "lint");
+    assert_eq!(e2.status, StageStatus::ForceCompleted);
+    assert_eq!(e2.force_reason.as_deref(), Some("known flake"));
 }
 
 // ---------------------------------------------------------------------------
-// RunStatus serialization
+// StageStatus serialization
 // ---------------------------------------------------------------------------
 
 #[test]
-fn run_status_serializes_as_lowercase() {
-    // Given: both RunStatus variants
-    // When: we serialize them as part of a minimal FlowState
-    let mut flow = FlowState {
-        id: "x".to_owned(),
-        workflow: "w".to_owned(),
-        workflow_version: 1,
-        current_stage: "s".to_owned(),
-        stage_started_at: ts("2026-04-04T10:00:00Z"),
-        created_at: ts("2026-04-04T10:00:00Z"),
-        updated_at: ts("2026-04-04T10:00:00Z"),
-        archived: false,
-        stage_history: vec![],
-        stage_log: vec![StageLogEntry {
-            stage: "s".to_owned(),
-            stage_kind: "command".to_owned(),
-            status: RunStatus::Pass,
-            exit_code: None,
-            started_at: None,
-            duration_ms: None,
-            completed_at: None,
-        }],
-    };
+fn stage_status_serializes_as_snake_case() {
+    // Given: a flow with one history entry for each status variant
+    let statuses = [
+        (StageStatus::Completed, "completed"),
+        (StageStatus::Failed, "failed"),
+        (StageStatus::ForceCompleted, "force_completed"),
+        (StageStatus::Skipped, "skipped"),
+    ];
 
-    let serialized =
-        toml::to_string(&flow).expect("serialization should succeed");
+    for (status, expected) in statuses {
+        let flow = FlowState {
+            id: "x".to_owned(),
+            workflow: "w".to_owned(),
+            workflow_version: 1,
+            current_stage: "s".to_owned(),
+            stage_started_at: ts("2026-04-04T10:00:00Z"),
+            created_at: ts("2026-04-04T10:00:00Z"),
+            updated_at: ts("2026-04-04T10:00:00Z"),
+            archived: false,
+            stage_history: vec![StageHistoryEntry {
+                stage: "s".to_owned(),
+                time: ts("2026-04-04T10:00:00Z"),
+                status,
+                force_reason: None,
+                duration_ms: None,
+            }],
+        };
 
-    // Then: status appears as "pass" (lowercase)
-    assert!(
-        serialized.contains(r#"status = "pass""#),
-        "expected 'status = \"pass\"' in:\n{serialized}"
-    );
+        let serialized =
+            toml::to_string(&flow).expect("serialization should succeed");
 
-    // When: we change the status to Fail and re-serialize
-    flow.stage_log[0].status = RunStatus::Fail;
-    let serialized =
-        toml::to_string(&flow).expect("serialization should succeed");
-
-    // Then: status appears as "fail" (lowercase)
-    assert!(
-        serialized.contains(r#"status = "fail""#),
-        "expected 'status = \"fail\"' in:\n{serialized}"
-    );
+        assert!(
+            serialized.contains(&format!(r#"status = "{expected}""#)),
+            "expected 'status = \"{expected}\"' in:\n{serialized}"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Stage history: active stage has no completed_at
+// Optional fields: force_reason and duration_ms omitted when None
 // ---------------------------------------------------------------------------
 
 #[test]
-fn stage_history_entry_without_completed_at_omits_field() {
-    // Given: a stage history entry with no completed_at (stage still active)
+fn optional_fields_omitted_when_none() {
+    // Given: a completed entry with no force_reason or duration_ms
     let entry = StageHistoryEntry {
-        stage: "implement".to_owned(),
-        started_at: ts("2026-04-04T12:00:00Z"),
-        completed_at: None,
-        force_completed: false,
+        stage: "design".to_owned(),
+        time: ts("2026-04-04T12:00:00Z"),
+        status: StageStatus::Completed,
         force_reason: None,
-        skipped: false,
+        duration_ms: None,
     };
 
-    // When: we embed it in a flow state and serialize
     let flow = FlowState {
         id: "x".to_owned(),
         workflow: "w".to_owned(),
@@ -273,19 +201,23 @@ fn stage_history_entry_without_completed_at_omits_field() {
         updated_at: ts("2026-04-04T12:00:00Z"),
         archived: false,
         stage_history: vec![entry],
-        stage_log: vec![],
     };
     let serialized =
         toml::to_string(&flow).expect("serialization should succeed");
 
-    // Then: completed_at is absent from the serialized output
+    // Then: optional fields are absent
     assert!(
-        !serialized.contains("completed_at"),
-        "completed_at should be omitted when None, but found in:\n{serialized}"
+        !serialized.contains("force_reason"),
+        "force_reason should be omitted when None"
+    );
+    assert!(
+        !serialized.contains("duration_ms"),
+        "duration_ms should be omitted when None"
     );
 
-    // Then: the round-trip preserves the None value
+    // Then: the round-trip preserves the None values
     let roundtripped: FlowState =
         toml::from_str(&serialized).expect("deserialization should succeed");
-    assert_eq!(roundtripped.stage_history[0].completed_at, None);
+    assert_eq!(roundtripped.stage_history[0].force_reason, None);
+    assert_eq!(roundtripped.stage_history[0].duration_ms, None);
 }

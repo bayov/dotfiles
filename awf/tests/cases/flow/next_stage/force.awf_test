@@ -86,16 +86,9 @@ $ assert_stdout json
 |   "entries": [
 |     {
 |       "stage": "draft",
-|       "started_at": "<any_string>",
-|       "completed_at": "<any_string>",
-|       "force_completed": true,
-|       "force_reason": "<any_string>",
-|       "runs": []
-|     },
-|     {
-|       "stage": "done",
-|       "started_at": "<any_string>",
-|       "runs": []
+|       "time": "<any_string>",
+|       "status": "force_completed",
+|       "force_reason": "<any_string>"
 |     }
 |   ]
 | }

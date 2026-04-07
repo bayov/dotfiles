@@ -311,7 +311,6 @@ pub fn create_flow(
         updated_at: now,
         archived: false,
         stage_history: vec![],
-        stage_log: vec![],
     };
 
     save_flow(flow_dir, &state)
