@@ -166,9 +166,11 @@ def _interactive_main() -> None:
     except GenerateError as e:
         sys.stderr.write(f"  {RED}\u2717{RESET} {RED}{e}{RESET}\n")
         if "prompt_input_file" in e.error_info:
+            input_file = e.error_info["prompt_input_file"]
+            output_file = e.error_info["prompt_output_file"]
             sys.stderr.write(
-                f"     {GRAY}input:{RESET} {CYAN}{e.error_info['prompt_input_file']}{RESET}\n"
-                f"    {GRAY}output:{RESET} {CYAN}{e.error_info['prompt_output_file']}{RESET}\n"
+                f"     {GRAY}input:{RESET} {CYAN}{input_file}{RESET}\n"
+                f"    {GRAY}output:{RESET} {CYAN}{output_file}{RESET}\n"
             )
         if raw := e.error_info.get("raw_output"):
             inner_width = (
