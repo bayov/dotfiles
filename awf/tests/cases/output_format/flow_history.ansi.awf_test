@@ -1,6 +1,6 @@
 # Test: awf flow history — human and json output
 # Builds a multi-stage flow with passing agent steps, a failing command step,
-# and a passing command step, then checks the final history in both formats.
+# and a force-advance, then checks the final history in both formats.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -25,7 +25,6 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "implement"
 | description = "Write the code."
-| requires = ["design.md"]
 | steps = [
 |     { name = "write-code", type = "agent", prompt = "implement.md" },
 |     { name = "lint", type = "command", command = "lint" },
@@ -33,8 +32,11 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | ]
 |
 | [[stages]]
-| name = "done"
-| description = "Complete."
+| name = "review"
+| description = "Final review."
+| steps = [
+|     { name = "do-review", type = "agent", prompt = "review.md" },
+| ]
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -42,7 +44,10 @@ $ write_file .agents/workflows/feature/design.md
 $ write_file .agents/workflows/feature/implement.md
 | # Implement
 
-# --- Build up flow state: design → implement → done ---
+$ write_file .agents/workflows/feature/review.md
+| # Review
+
+# --- Build up flow state: design → implement → review (force) ---
 
 $ export FORCE_COLOR=1
 
@@ -70,10 +75,10 @@ $ assert_stdout contains
 | PASS
 $ awf flow next-stage --force "force moving to next stage despite lint failure" --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
-| done
+| review
 
 # --- Human output ---
- 
+
 $ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
 $ assert_stdout equals
 | • stage [35mdesign[39m started at [90m<...>[39m
@@ -85,7 +90,7 @@ $ assert_stdout equals
 |     [32m✓[39m [32mtest[39m step completed at [90m<...>[39m
 |     [33m⚠[39m stage [33mforce completed[39m at [90m<...>[39m
 |         [33mforce moving to next stage despite lint failure[39m
-| • stage [35mdone[39m started at [90m<...>[39m
+| • stage [35mreview[39m started at [90m<...>[39m
 
 # --- JSON output ---
 
@@ -136,7 +141,7 @@ $ assert_stdout json
 |       ]
 |     },
 |     {
-|       "stage": "done",
+|       "stage": "review",
 |       "started_at": "<any_string>",
 |       "steps": []
 |     }

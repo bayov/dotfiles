@@ -13,7 +13,9 @@ $ write_file .agents/workflows/xdg-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # --- Create flow using XDG config's flow_search_dirs ---
 

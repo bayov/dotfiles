@@ -16,7 +16,9 @@ $ write_file .agents/workflows/with-default/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # --- Workflow without default_flow_dir ---
 
@@ -26,7 +28,9 @@ $ write_file .agents/workflows/no-default/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # -------------------------------------------------------
 # Test 1: bare name with default_flow_dir → creates at <default_flow_dir>/<name>

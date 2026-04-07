@@ -12,7 +12,9 @@ $ write_file .agents/workflows/alpha/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 $ write_file .agents/workflows/beta/WORKFLOW.toml
 | name = "beta"
@@ -20,7 +22,9 @@ $ write_file .agents/workflows/beta/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # List should show both workflows
 $ awf workflow list

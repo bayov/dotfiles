@@ -30,8 +30,8 @@ use crate::model::workflow::Workflow;
 /// Stages:
 /// - `design`: agent step `write-design`; produces `design.md`
 /// - `implement`: agent step `write-code`, command steps `format` and `lint`
-/// - `review` (repeatable): command step `pre-review-test`, agent step
-///   `do-review`; produces `changelog-entry.md`
+/// - `review`: command step `pre-review-test`, agent step `do-review`; produces
+///   `changelog-entry.md`
 fn feature_workflow() -> Workflow {
     Workflow {
         name: "feature".to_owned(),
@@ -53,9 +53,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "design".to_owned(),
                 description: Some("Produce a design doc.".to_owned()),
-                repeatable: false,
                 produces: vec!["design.md".to_owned()],
-                requires: vec![],
                 steps: vec![Step {
                     name: "write-design".to_owned(),
                     kind: StepKind::Agent {
@@ -67,9 +65,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
-                repeatable: false,
                 produces: vec![],
-                requires: vec!["design.md".to_owned()],
                 steps: vec![
                     Step {
                         name: "write-code".to_owned(),
@@ -97,9 +93,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "review".to_owned(),
                 description: None,
-                repeatable: true,
                 produces: vec!["changelog-entry.md".to_owned()],
-                requires: vec![],
                 steps: vec![
                     Step {
                         name: "pre-review-test".to_owned(),

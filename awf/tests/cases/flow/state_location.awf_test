@@ -24,7 +24,6 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "implement"
 | description = "Write the code."
-| requires = ["design.md"]
 | steps = [
 |     { name = "write-code", type = "agent", prompt = "implement.md" },
 |     { name = "test", type = "command", command = "test" },
@@ -33,16 +32,11 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "review"
 | description = "Code review and integration."
-| repeatable = true
 | produces = ["changelog-entry.md"]
 | steps = [
 |     { name = "pre-review-test", type = "command", command = "test" },
 |     { name = "do-review", type = "agent", prompt = "review.md" },
 | ]
-|
-| [[stages]]
-| name = "done"
-| description = "Complete."
 
 $ write_file .agents/workflows/feature/design.md
 | # Design

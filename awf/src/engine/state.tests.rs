@@ -1,22 +1,18 @@
-//! Tests for [`super::can_enter_stage`], [`super::advance_stage`],
-//! [`super::record_step_pass`], and [`super::record_step_fail`].
+//! Tests for [`super::advance_stage`], [`super::record_step_pass`], and
+//! [`super::record_step_fail`].
 //!
 //! All tests use the canonical "feature" workflow fixture with three stages:
 //! `design` → `implement` → `review`.
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use chrono::DateTime;
 use chrono::Utc;
 
-use super::EnterResult;
 use super::advance_stage;
-use super::can_enter_stage;
 use super::record_step_fail;
 use super::record_step_pass;
 use crate::model::flow::FlowState;
-use crate::model::flow::StageHistoryEntry;
 use crate::model::flow::StepStatus;
 use crate::model::workflow::Stage;
 use crate::model::workflow::Step;
@@ -31,12 +27,11 @@ use crate::result::Error;
 /// Builds the canonical "feature" workflow used across all tests.
 ///
 /// Stages:
-/// - `design` (requires nothing, produces `design.md`): agent step
-///   `write-design`
-/// - `implement` (requires `design.md`, no produces): agent step `write-code`,
-///   command steps `format` and `lint`
-/// - `review` (repeatable, produces `changelog-entry.md`): command step
-///   `pre-review-test`, agent step `do-review`
+/// - `design` (produces `design.md`): agent step `write-design`
+/// - `implement` (no produces): agent step `write-code`, command steps `format`
+///   and `lint`
+/// - `review` (produces `changelog-entry.md`): command step `pre-review-test`,
+///   agent step `do-review`
 fn feature_workflow() -> Workflow {
     Workflow {
         name: "feature".to_owned(),
@@ -58,9 +53,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "design".to_owned(),
                 description: Some("Produce a design doc.".to_owned()),
-                repeatable: false,
                 produces: vec!["design.md".to_owned()],
-                requires: vec![],
                 steps: vec![Step {
                     name: "write-design".to_owned(),
                     kind: StepKind::Agent {
@@ -72,9 +65,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
-                repeatable: false,
                 produces: vec![],
-                requires: vec!["design.md".to_owned()],
                 steps: vec![
                     Step {
                         name: "write-code".to_owned(),
@@ -102,9 +93,7 @@ fn feature_workflow() -> Workflow {
             Stage {
                 name: "review".to_owned(),
                 description: None,
-                repeatable: true,
                 produces: vec!["changelog-entry.md".to_owned()],
-                requires: vec![],
                 steps: vec![
                     Step {
                         name: "pre-review-test".to_owned(),
@@ -168,118 +157,6 @@ fn command_step(name: &str) -> Step {
 
 /// Parse an RFC 3339 timestamp into [`DateTime<Utc>`], panicking on failure.
 fn ts(s: &str) -> DateTime<Utc> { s.parse().expect("timestamp should parse") }
-
-// ---------------------------------------------------------------------------
-// can_enter_stage — Ok
-// ---------------------------------------------------------------------------
-
-#[test]
-fn can_enter_stage_returns_ok_on_first_visit_with_no_requirements() {
-    let workflow = feature_workflow();
-    let flow = flow_at("design");
-    let artifacts = HashSet::new();
-
-    // Given: the design stage has no `requires`, and has never been visited
-    // When: we check if we can enter the design stage
-    let result = can_enter_stage(&workflow, &flow, "design", &artifacts);
-
-    // Then: the stage may be entered
-    assert_eq!(result, EnterResult::Ok);
-}
-
-#[test]
-fn can_enter_stage_returns_ok_when_required_artifacts_are_present() {
-    let workflow = feature_workflow();
-    let flow = flow_at("implement");
-    let mut artifacts = HashSet::new();
-    artifacts.insert("design.md".to_owned());
-
-    // Given: the implement stage requires `design.md`, which is present
-    // When: we check if we can enter the implement stage
-    let result = can_enter_stage(&workflow, &flow, "implement", &artifacts);
-
-    // Then: the stage may be entered
-    assert_eq!(result, EnterResult::Ok);
-}
-
-// ---------------------------------------------------------------------------
-// can_enter_stage — MissingRequires
-// ---------------------------------------------------------------------------
-
-#[test]
-fn can_enter_stage_returns_missing_requires_when_artifact_absent() {
-    let workflow = feature_workflow();
-    let flow = flow_at("design");
-    let artifacts = HashSet::new(); // design.md not present
-
-    // Given: the implement stage requires `design.md`, which is absent
-    // When: we check if we can enter the implement stage
-    let result = can_enter_stage(&workflow, &flow, "implement", &artifacts);
-
-    // Then: MissingRequires lists the missing artifact
-    assert_eq!(
-        result,
-        EnterResult::MissingRequires(vec!["design.md".to_owned()])
-    );
-}
-
-// ---------------------------------------------------------------------------
-// can_enter_stage — AlreadyCompleted (non-repeatable)
-// ---------------------------------------------------------------------------
-
-#[test]
-fn can_enter_stage_returns_already_completed_for_non_repeatable_visited_stage()
-{
-    let workflow = feature_workflow();
-
-    // Given: design has been completed and appears in stage_history
-    let mut flow = flow_at("implement");
-    flow.stage_history.push(StageHistoryEntry {
-        stage: "design".to_owned(),
-        started_at: ts("2026-04-04T10:00:00Z"),
-        completed_at: Some(ts("2026-04-04T12:00:00Z")),
-        force_completed: false,
-        force_reason: None,
-    });
-
-    let mut artifacts = HashSet::new();
-    artifacts.insert("design.md".to_owned()); // requirement satisfied
-
-    // When: we check if we can re-enter the design stage (repeatable = false)
-    let result = can_enter_stage(&workflow, &flow, "design", &artifacts);
-
-    // Then: AlreadyCompleted is returned with design's produces list
-    assert_eq!(result, EnterResult::AlreadyCompleted {
-        produces: vec!["design.md".to_owned()],
-    });
-}
-
-// ---------------------------------------------------------------------------
-// can_enter_stage — repeatable stage is always Ok if requirements met
-// ---------------------------------------------------------------------------
-
-#[test]
-fn can_enter_stage_returns_ok_for_repeatable_stage_even_if_in_history() {
-    let workflow = feature_workflow();
-
-    // Given: review has already been visited and appears in stage_history
-    let mut flow = flow_at("review");
-    flow.stage_history.push(StageHistoryEntry {
-        stage: "review".to_owned(),
-        started_at: ts("2026-04-04T10:00:00Z"),
-        completed_at: Some(ts("2026-04-04T11:00:00Z")),
-        force_completed: false,
-        force_reason: None,
-    });
-
-    let artifacts = HashSet::new(); // review has no requires
-
-    // When: we check if we can enter the review stage again (repeatable = true)
-    let result = can_enter_stage(&workflow, &flow, "review", &artifacts);
-
-    // Then: the stage may be entered again
-    assert_eq!(result, EnterResult::Ok);
-}
 
 // ---------------------------------------------------------------------------
 // advance_stage — normal advance

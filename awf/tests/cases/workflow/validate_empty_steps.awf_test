@@ -1,0 +1,19 @@
+# Test: workflow validate rejects a stage with no steps
+
+$ write_file .agents/workflows/empty-steps/WORKFLOW.toml
+| name = "empty-steps"
+| version = 1
+|
+| [[stages]]
+| name = "work"
+| steps = [
+|     { name = "do-thing", type = "command", run = "true" },
+| ]
+|
+| [[stages]]
+| name = "done"
+
+$ awf workflow validate empty-steps
+$ assert_exit_code 1
+$ assert_stderr contains
+| no steps

@@ -27,7 +27,7 @@ $ write_file .agents/workflows/with-artifact/WORKFLOW.toml
 |
 | [[stages]]
 | name = "done"
-| steps = []
+| steps = [{ name = "finalize", type = "agent", instructions = "Finalize." }]
 
 # =============================================================================
 # Test 1: --force bypasses step gate

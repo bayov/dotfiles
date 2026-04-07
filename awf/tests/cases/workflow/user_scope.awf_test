@@ -13,7 +13,9 @@ $ write_file user-home/.agents/workflows/user-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # Write a workflow in the PROJECT scope
 $ write_file .agents/workflows/project-wf/WORKFLOW.toml
@@ -22,7 +24,9 @@ $ write_file .agents/workflows/project-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # List workflows — should show both scopes
 $ awf workflow list

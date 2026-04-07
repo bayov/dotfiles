@@ -22,9 +22,7 @@ use crate::engine::actions::NextAction;
 use crate::engine::actions::can_advance;
 use crate::engine::actions::next_action;
 use crate::engine::command::run_command;
-use crate::engine::state::EnterResult;
 use crate::engine::state::advance_stage;
-use crate::engine::state::can_enter_stage;
 use crate::engine::state::record_step_fail;
 use crate::engine::state::record_step_pass;
 use crate::model::flow::FlowState;
@@ -995,47 +993,6 @@ pub fn advance(
             None
         }
     };
-
-    let next_stage_name = {
-        let current_idx = workflow
-            .stages
-            .iter()
-            .position(|s| s.name == flow.current_stage)
-            .unwrap_or_else(|| {
-                eprint_error(format_args!(
-                    "current stage {:?} not found in workflow",
-                    flow.current_stage
-                ));
-                process::exit(1);
-            });
-
-        let Some(next) = workflow.stages.get(current_idx + 1) else {
-            eprint_error("already on the last stage; nothing to advance to");
-            process::exit(1);
-        };
-
-        next.name.clone()
-    };
-
-    match can_enter_stage(&workflow, &flow, &next_stage_name, &artifacts) {
-        EnterResult::Ok => {}
-        EnterResult::MissingRequires(missing) => {
-            eprint_error(format_args!(
-                "Cannot enter stage `{next_stage_name}`. Missing \
-                 required artifacts: {}",
-                missing.join(", ")
-            ));
-            process::exit(1);
-        }
-        EnterResult::AlreadyCompleted { produces } => {
-            eprint_warning(format_args!(
-                "Stage `{next_stage_name}` has already been completed \
-                 (produces: {}). Re-entering it will overwrite previous \
-                 results.",
-                produces.join(", ")
-            ));
-        }
-    }
 
     let updated_flow = match advance_stage(&workflow, flow, force_reason) {
         Ok(f) => f,

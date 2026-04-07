@@ -9,7 +9,9 @@ $ write_file user-home/custom-workflows/custom-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # Write project config that defines the custom scope
 $ write_file .config/awf.toml

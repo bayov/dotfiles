@@ -1,5 +1,4 @@
 # Test: awf flow next-stage — human and json output
-# Uses a minimal workflow (two stages, no steps) so advance works immediately.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -10,9 +9,11 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
+| steps = [{ name = "prep", type = "command", run = "true" }]
 |
 | [[stages]]
 | name = "done"
+| steps = [{ name = "wrap-up", type = "command", run = "true" }]
 
 # Separate flows (advance mutates state)
 
@@ -25,6 +26,16 @@ $ assert_stdout contains
 $ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
 $ assert_stdout contains
 | fmt-adv-j
+
+# Run the step so advance is allowed
+
+$ awf flow run prep --flow $FLOWS_DIR/fmt-adv-h
+$ assert_stdout equals
+| [32mPASS[39m  true  (<...>)
+
+$ awf flow run prep --flow $FLOWS_DIR/fmt-adv-j
+$ assert_stdout equals
+| [32mPASS[39m  true  (<...>)
 
 # --- Human ---
 

@@ -12,7 +12,9 @@ $ write_file .agents/workflows/test-wf/WORKFLOW.toml
 |
 | [[stages]]
 | name = "work"
-| steps = []
+| steps = [
+|     { name = "do-work", type = "command", run = "true" },
+| ]
 
 # --- Create flow using user config's flow_search_dirs ---
 

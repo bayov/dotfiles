@@ -1,20 +1,12 @@
 //! Stage-transition and step-recording logic for a flow in progress.
 //!
-//! The three public entry points are:
-//!
-//! - [`can_enter_stage`] — given a workflow, flow state, target stage name, and
-//!   the set of already-produced artifacts, returns an [`EnterResult`]
-//!   describing whether the stage may be entered.
+//! The public entry points are:
 //!
 //! - [`advance_stage`] — advances the flow to the next stage in the workflow,
 //!   appending a completed [`StageHistoryEntry`] for the stage being left.
 //!
 //! - [`record_step_pass`] / [`record_step_fail`] — append a [`StepLogEntry`] to
 //!   the flow's step log recording the outcome of a completed step.
-//!
-//! All functions except [`advance_stage`] are pure (no I/O).
-
-use std::collections::HashSet;
 
 use chrono::Utc;
 use tracing::instrument;
@@ -23,7 +15,6 @@ use crate::model::flow::FlowState;
 use crate::model::flow::StageHistoryEntry;
 use crate::model::flow::StepLogEntry;
 use crate::model::flow::StepStatus;
-use crate::model::workflow::Stage;
 use crate::model::workflow::Step;
 use crate::model::workflow::StepKind;
 use crate::model::workflow::Workflow;
@@ -31,86 +22,8 @@ use crate::result::Error;
 use crate::result::Result;
 
 // ---------------------------------------------------------------------------
-// EnterResult
-// ---------------------------------------------------------------------------
-
-/// The outcome of checking whether a stage may be entered.
-///
-/// Returned by [`can_enter_stage`].
-#[derive(Debug, PartialEq, Eq)]
-pub enum EnterResult {
-    /// The stage may be entered — all requirements are satisfied.
-    Ok,
-
-    /// One or more required artifacts are absent from the artifact set.
-    ///
-    /// The inner `Vec` lists each missing artifact name.
-    MissingRequires(Vec<String>),
-
-    /// The stage has already been completed and is not marked `repeatable`.
-    ///
-    /// The inner `produces` field lists the artifact names declared by the
-    /// stage's `produces` list. The CLI layer can use these names to read
-    /// and display the already-produced artifacts.
-    AlreadyCompleted { produces: Vec<String> },
-}
-
-// ---------------------------------------------------------------------------
 // Public functions
 // ---------------------------------------------------------------------------
-
-/// Checks whether the named stage may be entered given the current flow state
-/// and artifact set.
-///
-/// The check proceeds in priority order:
-///
-/// 1. If any artifact in the stage's `requires` list is absent from
-///    `artifacts`, returns [`EnterResult::MissingRequires`] with the names of
-///    all missing artifacts.
-/// 2. If the stage already appears in `flow.stage_history` **and** the stage's
-///    `repeatable` flag is `false`, returns [`EnterResult::AlreadyCompleted`]
-///    with the stage's `produces` list.
-/// 3. Otherwise returns [`EnterResult::Ok`].
-///
-/// # Panics
-///
-/// Panics if `stage_name` does not name a stage in `workflow.stages`.
-#[instrument(skip_all, fields(
-    workflow.name = %workflow.name,
-    flow.id = %flow.id,
-    stage_name = stage_name,
-))]
-pub fn can_enter_stage(
-    workflow: &Workflow,
-    flow: &FlowState,
-    stage_name: &str,
-    artifacts: &HashSet<String>,
-) -> EnterResult {
-    let stage = find_stage(workflow, stage_name);
-
-    // Check 1: all required artifacts must be present.
-    let missing: Vec<String> = stage
-        .requires
-        .iter()
-        .filter(|req| !artifacts.contains(*req))
-        .cloned()
-        .collect();
-
-    if !missing.is_empty() {
-        return EnterResult::MissingRequires(missing);
-    }
-
-    // Check 2: if non-repeatable, the stage must not already be in history.
-    if !stage.repeatable
-        && flow.stage_history.iter().any(|e| e.stage == stage_name)
-    {
-        return EnterResult::AlreadyCompleted {
-            produces: stage.produces.clone(),
-        };
-    }
-
-    EnterResult::Ok
-}
 
 /// Advances the flow to the next stage in the workflow.
 ///
@@ -232,17 +145,6 @@ pub fn record_step_fail(
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
-
-/// Finds the [`Stage`] in `workflow` with the given `name`.
-///
-/// # Panics
-///
-/// Panics if no stage with that name exists.
-fn find_stage<'a>(workflow: &'a Workflow, name: &str) -> &'a Stage {
-    workflow.stages.iter().find(|s| s.name == name).unwrap_or_else(|| {
-        panic!("stage {name:?} not found in workflow {:?}", workflow.name)
-    })
-}
 
 /// Constructs a [`StepLogEntry`] from a step's metadata and execution outcome.
 ///

@@ -21,7 +21,9 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "second"
-| steps = []
+| steps = [
+|     { name = "wrap-up", type = "command", run = "true" },
+| ]
 
 $ awf flow new $FLOWS_DIR/adv-flow --workflow will-break
 $ assert_stdout contains
@@ -45,7 +47,9 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 |
 | [[stages]]
 | name = "second"
-| steps = []
+| steps = [
+|     { name = "wrap-up", type = "command", run = "true" },
+| ]
 
 # next-stage should catch the broken workflow
 $ awf flow next-stage --flow $FLOWS_DIR/adv-flow

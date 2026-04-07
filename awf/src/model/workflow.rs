@@ -68,24 +68,11 @@ pub struct Stage {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Whether this stage may be executed more than once in a flow.
-    ///
-    /// Defaults to `false`.
-    #[serde(default)]
-    pub repeatable: bool,
-
     /// Artifact paths this stage produces and makes available to later stages.
     ///
     /// Defaults to an empty list.
     #[serde(default)]
     pub produces: Vec<String>,
-
-    /// Artifact paths this stage requires to have been produced by a prior
-    /// stage before it can run.
-    ///
-    /// Defaults to an empty list.
-    #[serde(default)]
-    pub requires: Vec<String>,
 
     /// The ordered list of steps to execute in this stage.
     #[serde(default)]
@@ -176,6 +163,15 @@ impl Workflow {
         self.validate_stage_names_unique()?;
 
         for stage in &self.stages {
+            if stage.steps.is_empty() {
+                return Err(Error::WorkflowValidation {
+                    message: format!(
+                        "stage {:?} in workflow {:?} has no steps",
+                        stage.name, self.name
+                    ),
+                });
+            }
+
             self.validate_step_names_unique(stage)?;
 
             for step in &stage.steps {

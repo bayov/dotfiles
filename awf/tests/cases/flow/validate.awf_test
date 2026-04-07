@@ -26,7 +26,6 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "implement"
 | description = "Write the code."
-| requires = ["design.md"]
 | steps = [
 |     { name = "write-code", type = "agent", prompt = "implement.md" },
 |     { name = "test", type = "command", command = "test" },
@@ -35,17 +34,12 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "review"
 | description = "Code review and integration."
-| repeatable = true
 | produces = ["changelog-entry.md"]
 | steps = [
 |     { name = "pre-review-test", type = "command", command = "test" },
 |     { name = "do-review", type = "agent", prompt = "review.md" },
 | ]
 |
-| [[stages]]
-| name = "done"
-| description = "Complete."
-
 $ write_file .agents/workflows/feature/design.md
 | # Design
 | Write a design document.
@@ -70,8 +64,8 @@ $ write_file .agents/workflows/produces-only/WORKFLOW.toml
 | steps = [{ name = "write", type = "agent", instructions = "Write it." }]
 |
 | [[stages]]
-| name = "done"
-| steps = []
+| name = "polish"
+| steps = [{ name = "refine", type = "agent", instructions = "Refine it." }]
 
 # -------------------------------------------------------
 # Test 1: validate passes when no stages completed
@@ -124,7 +118,7 @@ $ assert_stdout contains
 | write
 $ awf flow next-stage --flow $FLOWS_DIR/validate-missing
 $ assert_stdout contains
-| done
+| polish
 $ delete flows/validate-missing/artifacts/draft.md
 
 $ awf flow validate --flow $FLOWS_DIR/validate-missing

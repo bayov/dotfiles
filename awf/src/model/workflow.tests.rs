@@ -42,7 +42,6 @@ fn full_workflow_round_trip() {
         [[stages]]
         name = "implement"
         description = "Write the code."
-        requires = ["design.md"]
         steps = [
             { name = "write-code", type = "agent", prompt = "implement.md" },
             { name = "format", type = "command", command = "format" },
@@ -51,7 +50,6 @@ fn full_workflow_round_trip() {
 
         [[stages]]
         name = "review"
-        repeatable = true
         produces = ["changelog-entry.md"]
         steps = [
             { name = "pre-review-test", type = "command", command = "test" },
@@ -86,9 +84,7 @@ fn full_workflow_round_trip() {
     let design = &workflow.stages[0];
     assert_eq!(design.name, "design");
     assert_eq!(design.description.as_deref(), Some("Produce a design doc."));
-    assert!(!design.repeatable);
     assert_eq!(design.produces, vec!["design.md"]);
-    assert!(design.requires.is_empty());
     assert_eq!(design.steps.len(), 1);
     assert_eq!(design.steps[0], Step {
         name: "write-design".to_owned(),
@@ -101,9 +97,7 @@ fn full_workflow_round_trip() {
     // Then: "implement" stage
     let implement = &workflow.stages[1];
     assert_eq!(implement.name, "implement");
-    assert!(!implement.repeatable);
     assert!(implement.produces.is_empty());
-    assert_eq!(implement.requires, vec!["design.md"]);
     assert_eq!(implement.steps.len(), 3);
     assert_eq!(implement.steps[0], Step {
         name: "write-code".to_owned(),
@@ -127,9 +121,7 @@ fn full_workflow_round_trip() {
     // Then: "review" stage
     let review = &workflow.stages[2];
     assert_eq!(review.name, "review");
-    assert!(review.repeatable);
     assert_eq!(review.produces, vec!["changelog-entry.md"]);
-    assert!(review.requires.is_empty());
     assert_eq!(review.steps.len(), 2);
 }
 
@@ -162,9 +154,7 @@ fn defaults_for_optional_fields() {
     // Then: stage optional fields are defaulted
     let stage = &workflow.stages[0];
     assert!(stage.description.is_none());
-    assert!(!stage.repeatable, "repeatable should default to false");
     assert!(stage.produces.is_empty(), "produces should default to []");
-    assert!(stage.requires.is_empty(), "requires should default to []");
 }
 
 // ---------------------------------------------------------------------------
@@ -247,9 +237,7 @@ fn serialize_then_deserialize_is_identity() {
         stages: vec![Stage {
             name: "cut".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec!["CHANGELOG.md".to_owned()],
-            requires: vec![],
             steps: vec![
                 Step {
                     name: "generate-changelog".to_owned(),
@@ -295,9 +283,7 @@ fn command_step_with_both_command_and_run_fails_validation() {
         stages: vec![Stage {
             name: "build".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec![],
-            requires: vec![],
             steps: vec![Step {
                 name: "ambiguous-cmd".to_owned(),
                 kind: StepKind::Command {
@@ -330,9 +316,7 @@ fn command_step_with_neither_command_nor_run_fails_validation() {
         stages: vec![Stage {
             name: "build".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec![],
-            requires: vec![],
             steps: vec![Step {
                 name: "empty-cmd".to_owned(),
                 kind: StepKind::Command { command: None, run: None },
@@ -359,9 +343,7 @@ fn agent_step_with_both_prompt_and_instructions_fails_validation() {
         stages: vec![Stage {
             name: "design".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec![],
-            requires: vec![],
             steps: vec![Step {
                 name: "write".to_owned(),
                 kind: StepKind::Agent {
@@ -391,9 +373,7 @@ fn agent_step_with_neither_prompt_nor_instructions_fails_validation() {
         stages: vec![Stage {
             name: "design".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec![],
-            requires: vec![],
             steps: vec![Step {
                 name: "write".to_owned(),
                 kind: StepKind::Agent { prompt: None, instructions: None },
@@ -425,9 +405,7 @@ fn duplicate_stage_names_fail_validation() {
             Stage {
                 name: "build".to_owned(),
                 description: None,
-                repeatable: false,
                 produces: vec![],
-                requires: vec![],
                 steps: vec![Step {
                     name: "compile".to_owned(),
                     kind: StepKind::Command {
@@ -439,9 +417,7 @@ fn duplicate_stage_names_fail_validation() {
             Stage {
                 name: "build".to_owned(),
                 description: None,
-                repeatable: false,
                 produces: vec![],
-                requires: vec![],
                 steps: vec![Step {
                     name: "test".to_owned(),
                     kind: StepKind::Command {
@@ -472,9 +448,7 @@ fn duplicate_step_names_within_stage_fail_validation() {
         stages: vec![Stage {
             name: "verify".to_owned(),
             description: None,
-            repeatable: false,
             produces: vec![],
-            requires: vec![],
             steps: vec![
                 Step {
                     name: "check".to_owned(),
@@ -500,4 +474,35 @@ fn duplicate_step_names_within_stage_fail_validation() {
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })
     ));
+}
+
+// ---------------------------------------------------------------------------
+// Validation: stages must have at least one step
+// ---------------------------------------------------------------------------
+
+#[test]
+fn stage_with_no_steps_fails_validation() {
+    // Given: a workflow with a stage that has no steps
+    let workflow = Workflow {
+        name: "empty-stage".to_owned(),
+        version: 1,
+        description: None,
+        commands: HashMap::new(),
+        stages: vec![Stage {
+            name: "done".to_owned(),
+            description: None,
+            produces: vec![],
+            steps: vec![],
+        }],
+        default_flow_dir: None,
+    };
+
+    // When: we validate the workflow
+    let result = workflow.validate();
+
+    // Then: validation fails
+    assert!(
+        matches!(result, Err(Error::WorkflowValidation { .. })),
+        "expected WorkflowValidation error, got: {result:?}"
+    );
 }
