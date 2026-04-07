@@ -65,4 +65,4 @@ $ awf flow status --flow $FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | design
 $ assert_stdout contains
-| pending
+| active

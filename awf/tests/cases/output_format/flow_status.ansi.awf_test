@@ -29,7 +29,7 @@ $ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
 $ assert_stdout equals
 |   flow: [36mfmt-status[39m
 |  stage: [35mdesign[39m
-| status: [90m[· pending][39m
+| status: [32m[● active][39m
 
 # --- JSON ---
 
@@ -38,6 +38,5 @@ $ assert_stdout json
 | {
 |   "flow": "fmt-status",
 |   "stage": "design",
-|   "stage_kind": "agent",
-|   "status": "pending"
+|   "status": "active"
 | }

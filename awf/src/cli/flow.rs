@@ -121,7 +121,6 @@ impl fmt::Display for FlowListOutput {
 pub struct FlowStatusOutput {
     pub flow: String,
     pub stage: String,
-    pub stage_kind: String,
     pub status: String,
 }
 
@@ -130,9 +129,8 @@ impl fmt::Display for FlowStatusOutput {
         writeln!(f, "  flow: {}", self.flow.cyan())?;
         writeln!(f, " stage: {}", self.stage.magenta())?;
         let badge = match self.status.as_str() {
-            "pass" => "[✓ pass]".green().to_string(),
-            "fail" => "[✗ fail]".red().to_string(),
-            _ => "[· pending]".bright_black().to_string(),
+            "archived" => "[· archived]".bright_black().to_string(),
+            _ => "[● active]".green().to_string(),
         };
         writeln!(f, "status: {badge}")
     }
@@ -521,51 +519,14 @@ pub fn status(
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
-    let entries =
-        crate::config::effective_workflow_entries(&project_root, &config);
-
     let flow = load_flow_or_exit(&flow_dir)?;
-    let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
 
-    let current_stage =
-        workflow.stages.iter().find(|s| s.name == flow.current_stage);
-
-    let (status_str, kind_str) = match current_stage {
-        Some(stage) => {
-            let status = flow
-                .stage_history
-                .iter()
-                .rfind(|e| {
-                    e.stage == flow.current_stage
-                        && matches!(
-                            e.status,
-                            crate::model::flow::StageStatus::Completed
-                                | crate::model::flow::StageStatus::Failed
-                        )
-                })
-                .map_or_else(
-                    || "pending".to_string(),
-                    |entry| match entry.status {
-                        crate::model::flow::StageStatus::Completed => {
-                            "pass".to_string()
-                        }
-                        _ => "fail".to_string(),
-                    },
-                );
-            let kind = match &stage.kind {
-                StageKind::Command { .. } => "command",
-                StageKind::Agent { .. } => "agent",
-            };
-            (status, kind.to_string())
-        }
-        None => ("pending".to_string(), "unknown".to_string()),
-    };
+    let status_str = if flow.archived { "archived" } else { "active" };
 
     let output = FlowStatusOutput {
         flow: flow.id.clone(),
-        stage: flow.current_stage.clone(),
-        stage_kind: kind_str,
-        status: status_str,
+        stage: flow.current_stage,
+        status: status_str.to_string(),
     };
 
     print_output(&output, fmt);
