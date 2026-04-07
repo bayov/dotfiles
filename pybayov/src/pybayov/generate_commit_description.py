@@ -20,6 +20,7 @@ from random import randint
 from pybayov import echo_box as _eb
 from pybayov import quick_prompt as _qp
 from pybayov import spinner as _spinner
+from pybayov.util import CYAN, GRAY, RED, RESET
 
 DOTFILES_DIR: Path = Path(
     os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
@@ -92,6 +93,7 @@ def generate() -> dict[str, str]:
                 ),
                 "prompt_input_file": str(input_file),
                 "prompt_output_file": str(output_file),
+                "raw_output": output_text,
             }
         )
 
@@ -162,7 +164,36 @@ def _interactive_main() -> None:
             box_args=_spinner.BoxArgs(box_title="Commit Description"),
         )
     except GenerateError as e:
-        sys.stderr.write(f"{e}\n")
+        sys.stderr.write(f"  {RED}\u2717{RESET} {RED}{e}{RESET}\n")
+        if "prompt_input_file" in e.error_info:
+            sys.stderr.write(
+                f"     {GRAY}input:{RESET} {CYAN}{e.error_info['prompt_input_file']}{RESET}\n"
+                f"    {GRAY}output:{RESET} {CYAN}{e.error_info['prompt_output_file']}{RESET}\n"
+            )
+        if raw := e.error_info.get("raw_output"):
+            inner_width = (
+                _eb.DEFAULT_WIDTH - _eb.DEFAULT_PAD_LEFT - _eb.DEFAULT_PAD_RIGHT
+            )
+            lines = [
+                w
+                for raw_line in raw.splitlines() or [""]
+                for w in _eb.word_wrap(raw_line, inner_width)
+            ]
+            sys.stderr.write(
+                _eb.render_box(
+                    lines,
+                    _eb.BoxConfig(
+                        margin_top=_eb.DEFAULT_MARGIN,
+                        margin_right=_eb.DEFAULT_MARGIN,
+                        margin_bottom=0,
+                        margin_left=_eb.DEFAULT_MARGIN,
+                        title="Raw Prompt Output",
+                        title_color=1,
+                        title_bg=_eb.lighten(_eb.DEFAULT_BG),
+                    ),
+                )
+                + "\n"
+            )
         sys.exit(1)
 
     if not description:
