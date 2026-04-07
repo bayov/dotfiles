@@ -17,15 +17,19 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-# --- Human ---
-
 $ export FORCE_COLOR=1
+
+# =============================================================================
+# Success
+# =============================================================================
+
+# Human
 
 $ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature --output-format human
 $ assert_stdout equals
 | Created flow: [36m<...>/fmt-new-h[39m (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 
-# --- JSON ---
+# JSON
 
 $ awf flow new $FLOWS_DIR/fmt-new-j --workflow feature --output-format json
 $ assert_stdout json
@@ -34,3 +38,63 @@ $ assert_stdout json
 |   "workflow": "feature",
 |   "stage": "design"
 | }
+
+# =============================================================================
+# Error: workflow not found
+# =============================================================================
+
+# Human
+
+$ awf flow new $FLOWS_DIR/fmt-new-notfound-h --workflow no-such-workflow --output-format human
+$ assert_exit_code 1
+$ assert_stdout empty
+$ assert_stderr equals
+| [31merror:[39m workflow "no-such-workflow" not found
+|
+|   Searched in:
+|     [36m[project][39m  <...>/.agents/workflows
+|     [36m[user][39m  <...>/.agents/workflows
+|
+|   Available workflows:
+|     [90mproject[39m:[36mfeature[39m
+
+# JSON
+
+$ awf flow new $FLOWS_DIR/fmt-new-notfound-j --workflow no-such-workflow --output-format json
+$ assert_exit_code 1
+$ assert_stdout empty
+$ assert_stderr equals
+| [31merror:[39m workflow "no-such-workflow" not found
+|
+|   Searched in:
+|     [36m[project][39m  <...>/.agents/workflows
+|     [36m[user][39m  <...>/.agents/workflows
+|
+|   Available workflows:
+|     [90mproject[39m:[36mfeature[39m
+
+# =============================================================================
+# Error: flow already exists
+# =============================================================================
+
+# Human
+
+$ awf flow new $FLOWS_DIR/fmt-new-dup-h --workflow feature --output-format human
+$ assert_stdout contains
+| fmt-new-dup-h
+$ awf flow new $FLOWS_DIR/fmt-new-dup-h --workflow feature --output-format human
+$ assert_exit_code 1
+$ assert_stdout empty
+$ assert_stderr equals
+| [31merror:[39m flow already exists at <...>/fmt-new-dup-h
+
+# JSON
+
+$ awf flow new $FLOWS_DIR/fmt-new-dup-j --workflow feature --output-format json
+$ assert_stdout contains
+| fmt-new-dup-j
+$ awf flow new $FLOWS_DIR/fmt-new-dup-j --workflow feature --output-format json
+$ assert_exit_code 1
+$ assert_stdout empty
+$ assert_stderr equals
+| [31merror:[39m flow already exists at <...>/fmt-new-dup-j
