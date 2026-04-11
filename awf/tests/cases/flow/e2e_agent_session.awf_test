@@ -50,56 +50,58 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 # =============================================================================
 
 $ awf flow new $FLOWS_DIR/add-feature --workflow feature
-$ assert_stdout contains
-| research
+$ assert_stdout equals
+| Created flow: <...>/add-feature (workflow: feature, stage: research)
 
 # =============================================================================
 # Stage: research — agent reads instructions, produces artifact, marks done
 # =============================================================================
 
 $ awf flow next-step --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| awf flow done
+$ assert_stdout equals
+| → Mark complete with: awf flow done
 
 $ write_file flows/add-feature/artifacts/research.md
 | # Research
 
 $ awf flow done --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| research
+$ assert_stdout equals
+| ✓ Stage research marked complete.
 
 $ awf flow next-stage --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| scope
+$ assert_stdout equals
+| ▶ Entered stage: scope
 
 # =============================================================================
 # Stage: scope — agent reads instructions, marks done, advances
 # =============================================================================
 
 $ awf flow next-step --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| awf flow done
+$ assert_stdout equals
+| → Mark complete with: awf flow done
 
 $ awf flow done --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| scope
+$ assert_stdout equals
+| ✓ Stage scope marked complete.
 
 $ awf flow next-stage --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| design
+$ assert_stdout equals
+| ▶ Entered stage: design
 
 # =============================================================================
 # Stage: design — agent checks status, decides to skip (stage is skippable)
 # =============================================================================
 
 $ awf flow status --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| design
+$ assert_stdout equals
+|   flow: add-feature
+|  stage: design
+| status: [● active]
 
 $ awf flow next-stage --skip --flow $FLOWS_DIR/add-feature
 $ assert_exit_code 0
-$ assert_stdout contains
-| decompose
+$ assert_stdout equals
+| ▶ Entered stage: decompose
 $ assert_stderr contains
 | Skipped stage "design"
 
@@ -108,41 +110,39 @@ $ assert_stderr contains
 # =============================================================================
 
 $ awf flow next-step --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| awf flow done
+$ assert_stdout equals
+| → Mark complete with: awf flow done
 
 $ awf flow done --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| decompose
+$ assert_stdout equals
+| ✓ Stage decompose marked complete.
 
 $ awf flow next-stage --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| implement
+$ assert_stdout equals
+| ▶ Entered stage: implement
+|   This is the final stage.
 
 # =============================================================================
 # Stage: implement (final) — agent reads instructions, marks done
 # =============================================================================
 
 $ awf flow next-step --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| awf flow done
+$ assert_stdout equals
+| → Mark complete with: awf flow done
 
 $ awf flow done --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| implement
+$ assert_stdout equals
+| ✓ Stage implement marked complete.
 
 # =============================================================================
 # Session complete — verify full history
 # =============================================================================
 
 $ awf flow history --flow $FLOWS_DIR/add-feature
-$ assert_stdout contains
-| research
-$ assert_stdout contains
-| scope
-$ assert_stdout contains
-| skipped
-$ assert_stdout contains
-| decompose
-$ assert_stdout contains
-| implement
+$ assert_stdout equals
+| <...>/add-feature flow started at <...>
+|     ✓ research completed at <...>
+|     ✓ scope completed at <...>
+|     ⏭ design skipped at <...>
+|     ✓ decompose completed at <...>
+|     ✓ implement completed at <...>
