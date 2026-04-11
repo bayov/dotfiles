@@ -10,9 +10,7 @@ use std::process;
 
 use chrono::Local;
 use owo_colors::OwoColorize as _;
-use serde::Serialize;
 
-use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::cli::output::eprint_warning;
 use crate::cli::output::print_output;
@@ -38,7 +36,7 @@ use crate::store::resolve::resolve_flow_path;
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow new`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowNewOutput {
     pub path: String,
     pub workflow: String,
@@ -62,7 +60,7 @@ impl fmt::Display for FlowNewOutput {
 // ---------------------------------------------------------------------------
 
 /// A single flow entry in the list output.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowListEntry {
     pub path: String,
     pub workflow: String,
@@ -71,13 +69,10 @@ pub struct FlowListEntry {
 }
 
 /// Output payload for `awf flow list`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowListOutput {
     pub flows: Vec<FlowListEntry>,
     /// Controls the empty-list hint and whether the ARCHIVED column is shown.
-    /// Skipped from serialisation — this is a query parameter, not output
-    /// data.
-    #[serde(skip)]
     pub include_archived: bool,
 }
 
@@ -117,7 +112,7 @@ impl fmt::Display for FlowListOutput {
 // ---------------------------------------------------------------------------
 
 /// The complete status payload for `awf flow status`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowStatusOutput {
     pub flow: String,
     pub stage: String,
@@ -141,22 +136,9 @@ impl fmt::Display for FlowStatusOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow next-step`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowNextOutput {
-    /// Discriminator: `"run_command"`, `"complete_agent"`,
-    /// `"produce_artifact"`, `"can_advance"`, or `"done"`.
-    pub action: String,
-    /// The stage name (for `run_command` and `complete_agent`).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stage: Option<String>,
-    /// The artifact name (for `produce_artifact`).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub artifact: Option<String>,
-    /// The name of the next stage (for `can_advance`).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_stage: Option<String>,
     /// The raw prompt file contents (for `complete_agent`, when available).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     /// Human-readable instruction.
     pub message: String,
@@ -177,9 +159,8 @@ impl fmt::Display for FlowNextOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow run`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowRunOutput {
-    pub stage: String,
     pub command: String,
     /// `"pass"` or `"fail"`.
     pub status: String,
@@ -214,7 +195,7 @@ impl fmt::Display for FlowRunOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow done`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowDoneOutput {
     pub stage: String,
 }
@@ -235,10 +216,8 @@ impl fmt::Display for FlowDoneOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow validate` (success path).
-#[derive(Debug, Serialize)]
-pub struct FlowValidateOutput {
-    pub valid: bool,
-}
+#[derive(Debug)]
+pub struct FlowValidateOutput;
 
 impl fmt::Display for FlowValidateOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -251,7 +230,7 @@ impl fmt::Display for FlowValidateOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow next-stage`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowAdvanceOutput {
     pub stage: String,
     pub is_final: bool,
@@ -273,23 +252,18 @@ impl fmt::Display for FlowAdvanceOutput {
 
 /// A single entry in the history output, mirroring [`StageHistoryEntry`] with
 /// timestamps serialized as ISO 8601 strings.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowHistoryEntry {
     pub stage: String,
     pub time: String,
     pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub force_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<u64>,
 }
 
 /// Output payload for `awf flow history`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowHistoryOutput {
-    #[serde(skip)]
     pub flow_path: String,
-    #[serde(skip)]
     pub flow_started_at: String,
     pub entries: Vec<FlowHistoryEntry>,
 }
@@ -349,7 +323,7 @@ impl fmt::Display for FlowHistoryOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow archive`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct FlowArchiveOutput {
     pub archived_flow: String,
 }
@@ -373,11 +347,7 @@ impl fmt::Display for FlowArchiveOutput {
 ///
 /// Returns an error for unexpected I/O failures or if the workflow cannot be
 /// loaded.
-pub fn new(
-    flow_arg: &str,
-    workflow: &str,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
@@ -405,7 +375,7 @@ pub fn new(
                 workflow: workflow.to_string(),
                 stage: first_stage.to_string(),
             };
-            print_output(&output, fmt);
+            print_output(&output);
             Ok(())
         }
         Err(Error::FlowAlreadyExists { .. }) => {
@@ -472,10 +442,7 @@ fn resolve_new_flow_dir(
 ///
 /// Returns an error for unexpected I/O failures or if no project root can be
 /// found.
-pub fn list(
-    include_archived: bool,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn list(include_archived: bool) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
 
@@ -498,7 +465,7 @@ pub fn list(
             .collect(),
         include_archived,
     };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -512,10 +479,7 @@ pub fn list(
 ///
 /// Returns an error for unexpected I/O failures or if the workflow/flow cannot
 /// be loaded.
-pub fn status(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -529,7 +493,7 @@ pub fn status(
         status: status_str.to_string(),
     };
 
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -542,10 +506,7 @@ pub fn status(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn next(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -559,10 +520,6 @@ pub fn next(
 
     let output = match next_action(&workflow, &flow, &artifacts) {
         NextAction::RunCommand(stage) => FlowNextOutput {
-            action: "run_command".to_string(),
-            stage: Some(stage.name.clone()),
-            artifact: None,
-            next_stage: None,
             prompt: None,
             message: format!(
                 "[command] {} \u{2014} run: awf flow run",
@@ -591,19 +548,11 @@ pub fn next(
                     None
                 };
             FlowNextOutput {
-                action: "complete_agent".to_string(),
-                stage: Some(stage.name.clone()),
-                artifact: None,
-                next_stage: None,
                 prompt,
                 message: "Mark complete with: awf flow done".to_string(),
             }
         }
         NextAction::ProduceArtifact(name) => FlowNextOutput {
-            action: "produce_artifact".to_string(),
-            stage: None,
-            artifact: Some(name.clone()),
-            next_stage: None,
             prompt: None,
             message: format!(
                 "Stage complete. Produce artifact: {name}\n\
@@ -618,10 +567,6 @@ pub fn next(
                 .and_then(|idx| workflow.stages.get(idx + 1))
                 .map_or_else(|| "next".to_string(), |s| s.name.clone());
             FlowNextOutput {
-                action: "can_advance".to_string(),
-                stage: None,
-                artifact: None,
-                next_stage: Some(next_stage_name.clone()),
                 prompt: None,
                 message: format!(
                     "Stage complete. Run `awf flow next-stage` to move to \
@@ -630,16 +575,12 @@ pub fn next(
             }
         }
         NextAction::Done => FlowNextOutput {
-            action: "done".to_string(),
-            stage: None,
-            artifact: None,
-            next_stage: None,
             prompt: None,
             message: "All stages complete. The workflow is done.".to_string(),
         },
     };
 
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -654,10 +595,7 @@ pub fn next(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn run(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn run(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -698,12 +636,11 @@ pub fn run(
 
     let status = if result.exit_code == 0 { "pass" } else { "fail" };
     let output = FlowRunOutput {
-        stage: stage.name.clone(),
         command: shell_cmd,
         status: status.to_string(),
         duration_ms: result.duration_ms,
     };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -718,10 +655,7 @@ pub fn run(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn done(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn done(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -746,7 +680,7 @@ pub fn done(
     fs::save_flow(&flow_dir, &flow)?;
 
     let output = FlowDoneOutput { stage: stage.name.clone() };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -764,10 +698,7 @@ pub fn done(
 /// # Errors
 ///
 /// Returns an error if validation fails or for unexpected I/O failures.
-pub fn validate(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -819,8 +750,8 @@ pub fn validate(
         .collect();
 
     if missing.is_empty() && redundant.is_empty() {
-        let output = FlowValidateOutput { valid: true };
-        print_output(&output, fmt);
+        let output = FlowValidateOutput;
+        print_output(&output);
         return Ok(());
     }
 
@@ -847,7 +778,6 @@ pub fn advance(
     flow_flag: Option<&str>,
     force: Option<String>,
     skip: bool,
-    fmt: &OutputFormat,
 ) -> color_eyre::Result<()> {
     if skip && force.is_some() {
         eprint_error("--skip and --force cannot be used together");
@@ -943,7 +873,7 @@ pub fn advance(
 
     let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
     let output = FlowAdvanceOutput { stage: new_stage, is_final };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -956,10 +886,7 @@ pub fn advance(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn history(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -983,7 +910,6 @@ pub fn history(
                 time: entry.time.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
                 status: status.to_owned(),
                 force_reason: entry.force_reason.clone(),
-                duration_ms: entry.duration_ms,
             }
         })
         .collect();
@@ -996,7 +922,7 @@ pub fn history(
             .to_string(),
         entries,
     };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }
 
@@ -1009,10 +935,7 @@ pub fn history(
 /// # Errors
 ///
 /// Returns an error for unexpected I/O failures.
-pub fn archive(
-    flow_flag: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn archive(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
@@ -1022,7 +945,7 @@ pub fn archive(
             let output = FlowArchiveOutput {
                 archived_flow: flow_dir.display().to_string(),
             };
-            print_output(&output, fmt);
+            print_output(&output);
             Ok(())
         }
         Err(Error::FlowNotFound { .. }) => {

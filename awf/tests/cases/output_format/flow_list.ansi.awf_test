@@ -1,4 +1,4 @@
-# Test: awf flow list — human and json output
+# Test: awf flow list — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -53,77 +53,19 @@ $ awf flow archive --flow $FLOWS_DIR/echo
 $ assert_stdout contains
 | echo
 
-# --- Human (active only) ---
+# --- Active only ---
 
-$ awf flow list --output-format human
+$ awf flow list
 $ assert_stdout equals
 | • [36m<...>/alpha[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 | • [36m<...>/bravo[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 
-# --- Human (all, including archived) ---
+# --- All, including archived ---
 
-$ awf flow list --all --output-format human
+$ awf flow list --all
 $ assert_stdout equals
 | • [36m<...>/alpha[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 | • [36m<...>/bravo[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m)
 | • [36m<...>/charlie[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m, [90marchived[39m)
 | • [36m<...>/delta[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m, [90marchived[39m)
 | • [36m<...>/echo[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m, [90marchived[39m)
-
-# --- JSON ---
-
-$ awf flow list --output-format json
-$ assert_stdout json
-| {
-|   "flows": [
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": false
-|     },
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": false
-|     }
-|   ]
-| }
-
-$ awf flow list --all --output-format json
-$ assert_stdout json
-| {
-|   "flows": [
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": false
-|     },
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": false
-|     },
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": true
-|     },
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": true
-|     },
-|     {
-|       "path": "<any_string>",
-|       "workflow": "feature",
-|       "stage": "design",
-|       "archived": true
-|     }
-|   ]
-| }

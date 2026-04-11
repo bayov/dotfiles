@@ -5,9 +5,7 @@ use std::fmt;
 use std::process;
 
 use owo_colors::OwoColorize as _;
-use serde::Serialize;
 
-use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::cli::output::print_output;
 use crate::config::WorkflowSearchEntry;
@@ -19,7 +17,7 @@ use crate::store::fs;
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf workflow new`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct WorkflowNewOutput {
     pub path: String,
     pub name: String,
@@ -37,10 +35,9 @@ impl fmt::Display for WorkflowNewOutput {
 }
 
 /// Output payload for `awf workflow validate` (success path).
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct WorkflowValidateOutput {
     pub name: String,
-    pub status: String,
 }
 
 impl fmt::Display for WorkflowValidateOutput {
@@ -50,14 +47,14 @@ impl fmt::Display for WorkflowValidateOutput {
 }
 
 /// A single workflow entry in the list output.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct WorkflowListEntry {
     pub scope: String,
     pub name: String,
 }
 
 /// Output payload for `awf workflow list`.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct WorkflowListOutput {
     pub workflows: Vec<WorkflowListEntry>,
 }
@@ -100,7 +97,7 @@ impl fmt::Display for WorkflowListOutput {
 ///
 /// Returns an error for unexpected I/O failures or if no project root can be
 /// found.
-pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
+pub fn new(name: &str) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let agents_root = project_root.join(".agents");
 
@@ -110,7 +107,7 @@ pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
                 path: format!(".agents/workflows/{name}/WORKFLOW.toml"),
                 name: name.to_string(),
             };
-            print_output(&output, fmt);
+            print_output(&output);
             Ok(())
         }
         Err(Error::WorkflowAlreadyExists { name: n }) => {
@@ -141,10 +138,7 @@ pub fn new(name: &str, fmt: &OutputFormat) -> color_eyre::Result<()> {
 ///
 /// Returns an error for unexpected I/O failures or if a workflow cannot be
 /// loaded/parsed.
-pub fn validate(
-    name: Option<&str>,
-    fmt: &OutputFormat,
-) -> color_eyre::Result<()> {
+pub fn validate(name: Option<&str>) -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
@@ -169,7 +163,7 @@ pub fn validate(
 
     let mut any_failed = false;
     for n in &names {
-        if validate_single(n, &entries, &config.commands, fmt)? {
+        if validate_single(n, &entries, &config.commands)? {
             any_failed = true;
         }
     }
@@ -185,18 +179,14 @@ fn validate_single(
     name: &str,
     entries: &[WorkflowSearchEntry],
     config_commands: &std::collections::HashMap<String, String>,
-    fmt: &OutputFormat,
 ) -> color_eyre::Result<bool> {
     let workflow = super::load_workflow_or_exit(entries, name)?;
     let errors =
         super::collect_workflow_errors(&workflow, entries, config_commands);
 
     if errors.is_empty() {
-        let output = WorkflowValidateOutput {
-            name: name.to_string(),
-            status: "ok".to_string(),
-        };
-        print_output(&output, fmt);
+        let output = WorkflowValidateOutput { name: name.to_string() };
+        print_output(&output);
         Ok(false)
     } else {
         anstream::eprintln!("Workflow {}: {}", name.blue(), "✗ FAILED".red());
@@ -219,7 +209,7 @@ fn validate_single(
 ///
 /// Returns an error for unexpected I/O failures or if no project root can be
 /// found.
-pub fn list(fmt: &OutputFormat) -> color_eyre::Result<()> {
+pub fn list() -> color_eyre::Result<()> {
     let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
     let config = crate::config::load(&project_root)?;
     let entries =
@@ -233,6 +223,6 @@ pub fn list(fmt: &OutputFormat) -> color_eyre::Result<()> {
             .map(|l| WorkflowListEntry { scope: l.scope, name: l.name })
             .collect(),
     };
-    print_output(&output, fmt);
+    print_output(&output);
     Ok(())
 }

@@ -3,10 +3,6 @@
 //! This module declares the top-level [`Cli`] struct (parsed by Clap), the
 //! [`Commands`] enum that routes to either the `workflow` or `flow` subcommand
 //! group, and all nested subcommand enums.
-//!
-//! The global `--output-format` flag (default `human`) is threaded through
-//! every handler so that all output can be rendered in the requested format via
-//! [`output::render`].
 
 pub mod flow;
 pub mod output;
@@ -21,7 +17,6 @@ use clap::Parser;
 use clap::Subcommand;
 use owo_colors::OwoColorize as _;
 
-use crate::cli::output::OutputFormat;
 use crate::cli::output::eprint_error;
 use crate::config::WorkflowSearchEntry;
 use crate::model::workflow::StageKind;
@@ -39,15 +34,6 @@ use crate::store::fs;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
-
-    /// Output format for all command results.
-    #[arg(
-        long,
-        global = true,
-        default_value = "human",
-        env = "AWF_OUTPUT_FORMAT"
-    )]
-    pub output_format: OutputFormat,
 }
 
 // ---------------------------------------------------------------------------
@@ -165,62 +151,50 @@ pub enum FlowCommands {
 /// Dispatches a parsed [`Cli`] to the appropriate handler.
 pub fn dispatch(cli: Cli) -> color_eyre::Result<()> {
     match cli.command {
-        Commands::Workflow { command } => {
-            dispatch_workflow(command, cli.output_format)
-        }
-        Commands::Flow { command } => dispatch_flow(command, cli.output_format),
+        Commands::Workflow { command } => dispatch_workflow(command),
+        Commands::Flow { command } => dispatch_flow(command),
     }
 }
 
 /// Dispatches `awf workflow` subcommands.
-#[allow(clippy::needless_pass_by_value)]
-fn dispatch_workflow(
-    command: WorkflowCommands,
-    fmt: OutputFormat,
-) -> color_eyre::Result<()> {
+fn dispatch_workflow(command: WorkflowCommands) -> color_eyre::Result<()> {
     match command {
-        WorkflowCommands::New { name } => workflow::new(&name, &fmt),
+        WorkflowCommands::New { name } => workflow::new(&name),
         WorkflowCommands::Validate { name } => {
-            workflow::validate(name.as_deref(), &fmt)
+            workflow::validate(name.as_deref())
         }
-        WorkflowCommands::List => workflow::list(&fmt),
+        WorkflowCommands::List => workflow::list(),
     }
 }
 
 /// Dispatches `awf flow` subcommands.
-#[allow(clippy::needless_pass_by_value)]
-fn dispatch_flow(
-    command: FlowCommands,
-    fmt: OutputFormat,
-) -> color_eyre::Result<()> {
+fn dispatch_flow(command: FlowCommands) -> color_eyre::Result<()> {
     match command {
-        FlowCommands::New { flow, workflow } => {
-            flow::new(&flow, &workflow, &fmt)
-        }
-        FlowCommands::List { all } => flow::list(all, &fmt),
+        FlowCommands::New { flow, workflow } => flow::new(&flow, &workflow),
+        FlowCommands::List { all } => flow::list(all),
         FlowCommands::Status { flow: flow_flag } => {
-            flow::status(flow_flag.as_deref(), &fmt)
+            flow::status(flow_flag.as_deref())
         }
         FlowCommands::NextStep { flow: flow_flag } => {
-            flow::next(flow_flag.as_deref(), &fmt)
+            flow::next(flow_flag.as_deref())
         }
         FlowCommands::Run { flow: flow_flag } => {
-            flow::run(flow_flag.as_deref(), &fmt)
+            flow::run(flow_flag.as_deref())
         }
         FlowCommands::Done { flow: flow_flag } => {
-            flow::done(flow_flag.as_deref(), &fmt)
+            flow::done(flow_flag.as_deref())
         }
         FlowCommands::Validate { flow: flow_flag } => {
-            flow::validate(flow_flag.as_deref(), &fmt)
+            flow::validate(flow_flag.as_deref())
         }
         FlowCommands::NextStage { flow: flow_flag, force, skip } => {
-            flow::advance(flow_flag.as_deref(), force, skip, &fmt)
+            flow::advance(flow_flag.as_deref(), force, skip)
         }
         FlowCommands::History { flow: flow_flag } => {
-            flow::history(flow_flag.as_deref(), &fmt)
+            flow::history(flow_flag.as_deref())
         }
         FlowCommands::Archive { flow: flow_flag } => {
-            flow::archive(flow_flag.as_deref(), &fmt)
+            flow::archive(flow_flag.as_deref())
         }
     }
 }

@@ -1,4 +1,4 @@
-# Test: awf workflow validate — human and json output
+# Test: awf workflow validate — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,19 +17,8 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-# --- Human ---
-
 $ export FORCE_COLOR=1
 
-$ awf workflow validate feature --output-format human
+$ awf workflow validate feature
 $ assert_stdout equals
 | Workflow [34mfeature[39m: [32m✓ OK[39m
-
-# --- JSON ---
-
-$ awf workflow validate feature --output-format json
-$ assert_stdout json
-| {
-|   "name": "feature",
-|   "status": "ok"
-| }

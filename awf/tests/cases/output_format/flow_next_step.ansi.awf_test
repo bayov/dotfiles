@@ -1,4 +1,4 @@
-# Test: awf flow next-step — human and json output
+# Test: awf flow next-step — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -23,20 +23,7 @@ $ awf flow new $FLOWS_DIR/fmt-next --workflow feature
 $ assert_stdout contains
 | fmt-next
 
-# --- Human ---
-
-$ awf flow next-step --flow $FLOWS_DIR/fmt-next --output-format human
+$ awf flow next-step --flow $FLOWS_DIR/fmt-next
 $ assert_stdout equals
 | # Design
 | [36m→[39m Mark complete with: awf flow done
-
-# --- JSON ---
-
-$ awf flow next-step --flow $FLOWS_DIR/fmt-next --output-format json
-$ assert_stdout json
-| {
-|   "action": "complete_agent",
-|   "stage": "design",
-|   "prompt": "<any_string>",
-|   "message": "Mark complete with: awf flow done"
-| }

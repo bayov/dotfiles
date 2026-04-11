@@ -90,21 +90,8 @@ $ assert_stdout contains
 $ assert_stderr contains
 | Skipped stage
 
-# History JSON shows skipped: true
-$ awf flow history --flow $FLOWS_DIR/skip-history --output-format json
-$ assert_stdout json
-| {
-|   "entries": [
-|     {
-|       "stage": "research",
-|       "time": "<any_string>",
-|       "status": "skipped"
-|     }
-|   ]
-| }
-
-# History human shows skipped
-$ awf flow history --flow $FLOWS_DIR/skip-history --output-format human
+# History shows skipped
+$ awf flow history --flow $FLOWS_DIR/skip-history
 $ assert_stdout contains
 | skipped
 

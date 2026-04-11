@@ -1,4 +1,4 @@
-# Test: awf workflow list — human and json output
+# Test: awf workflow list — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,25 +17,10 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-# --- Human ---
-
 $ export FORCE_COLOR=1
 
-$ awf workflow list --output-format human
+$ awf workflow list
 $ assert_stdout equals
 | WORKFLOW
 | ───────────────
 | project:[34mfeature[39m
-
-# --- JSON ---
-
-$ awf workflow list --output-format json
-$ assert_stdout json
-| {
-|   "workflows": [
-|     {
-|       "scope": "project",
-|       "name": "feature"
-|     }
-|   ]
-| }

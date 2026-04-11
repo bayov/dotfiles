@@ -1,7 +1,6 @@
-# Test: awf flow history — human and json output
+# Test: awf flow history — output
 # Builds a multi-stage flow with a passing agent stage, a skipped agent stage, a failing
-# command stage, a force-advance, and a passing command stage, then checks the final history
-# in both formats.
+# command stage, a force-advance, and a passing command stage, then checks the final history.
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -114,9 +113,9 @@ $ awf flow next-stage --flow $FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | do-review
 
-# --- Human output ---
+# --- Check history output ---
 
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format human
+$ awf flow history --flow $FLOWS_DIR/fmt-history
 $ assert_stdout equals
 | [36m<...>/fmt-history[39m flow started at [90m<...>[39m
 |     [32m✓[39m [32mdesign[39m completed at [90m<...>[39m
@@ -126,45 +125,3 @@ $ assert_stdout equals
 |     [33m⚠[39m [33mlint[39m force completed at [90m<...>[39m
 |         [90mforce moving to next stage despite lint failure[39m
 |     [32m✓[39m [32mtest[39m completed at [90m<...>[39m
-
-# --- JSON output ---
-
-$ awf flow history --flow $FLOWS_DIR/fmt-history --output-format json
-$ assert_stdout json
-| {
-|   "entries": [
-|     {
-|       "stage": "design",
-|       "time": "<any_string>",
-|       "status": "completed"
-|     },
-|     {
-|       "stage": "write-code",
-|       "time": "<any_string>",
-|       "status": "completed"
-|     },
-|     {
-|       "stage": "optional-check",
-|       "time": "<any_string>",
-|       "status": "skipped"
-|     },
-|     {
-|       "stage": "lint",
-|       "time": "<any_string>",
-|       "status": "failed",
-|       "duration_ms": "<any_number>"
-|     },
-|     {
-|       "stage": "lint",
-|       "time": "<any_string>",
-|       "status": "force_completed",
-|       "force_reason": "force moving to next stage despite lint failure"
-|     },
-|     {
-|       "stage": "test",
-|       "time": "<any_string>",
-|       "status": "completed",
-|       "duration_ms": "<any_number>"
-|     }
-|   ]
-| }

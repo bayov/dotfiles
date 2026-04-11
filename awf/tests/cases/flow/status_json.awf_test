@@ -1,4 +1,4 @@
-# Test: flow status JSON output is valid
+# Test: flow status output is valid
 
 # --- Feature workflow setup ---
 $ write_file .config/awf.toml
@@ -60,7 +60,11 @@ $ awf flow new $FLOWS_DIR/add-oauth --workflow feature
 $ assert_stdout contains
 | add-oauth
 
-# --- Get JSON status and verify structure ---
-$ awf flow status --flow $FLOWS_DIR/add-oauth --output-format json
-$ assert_stdout json
-| {"flow": "<any_string>", "stage": "<any_string>", "status": "active"}
+# --- Get status and verify structure ---
+$ awf flow status --flow $FLOWS_DIR/add-oauth
+$ assert_stdout contains
+| add-oauth
+$ assert_stdout contains
+| design
+$ assert_stdout contains
+| active

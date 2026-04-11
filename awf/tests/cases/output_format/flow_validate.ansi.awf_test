@@ -1,4 +1,4 @@
-# Test: awf flow validate — human and json output
+# Test: awf flow validate — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -23,16 +23,6 @@ $ awf flow new $FLOWS_DIR/fmt-validate --workflow feature
 $ assert_stdout contains
 | fmt-validate
 
-# --- Human ---
-
-$ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format human
+$ awf flow validate --flow $FLOWS_DIR/fmt-validate
 $ assert_stdout equals
 | [32m✓ Flow artifacts valid.[39m
-
-# --- JSON ---
-
-$ awf flow validate --flow $FLOWS_DIR/fmt-validate --output-format json
-$ assert_stdout json
-| {
-|   "valid": true
-| }

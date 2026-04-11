@@ -1,4 +1,4 @@
-# Test: awf flow archive — human and json output
+# Test: awf flow archive — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,28 +17,12 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-# Separate flows (archive mutates state)
-
 $ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-arc-h --workflow feature
 $ assert_stdout contains
 | fmt-arc-h
 
-$ awf flow new $FLOWS_DIR/fmt-arc-j --workflow feature
-$ assert_stdout contains
-| fmt-arc-j
-
-# --- Human ---
-
-$ awf flow archive --flow $FLOWS_DIR/fmt-arc-h --output-format human
+$ awf flow archive --flow $FLOWS_DIR/fmt-arc-h
 $ assert_stdout equals
 | Archived flow: [36m<...>/fmt-arc-h[39m
-
-# --- JSON ---
-
-$ awf flow archive --flow $FLOWS_DIR/fmt-arc-j --output-format json
-$ assert_stdout json
-| {
-|   "archived_flow": "<any_string>"
-| }

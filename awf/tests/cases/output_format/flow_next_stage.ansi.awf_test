@@ -1,4 +1,4 @@
-# Test: awf flow next-stage — human and json output
+# Test: awf flow next-stage — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -17,17 +17,11 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 | kind = "command"
 | args = { run = "true" }
 
-# Separate flows (advance mutates state)
-
 $ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
 $ assert_stdout contains
 | fmt-adv-h
-
-$ awf flow new $FLOWS_DIR/fmt-adv-j --workflow minimal
-$ assert_stdout contains
-| fmt-adv-j
 
 # Run the stage so advance is allowed
 
@@ -35,22 +29,7 @@ $ awf flow run --flow $FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>)
 
-$ awf flow run --flow $FLOWS_DIR/fmt-adv-j
-$ assert_stdout equals
-| [32mPASS[39m  true  (<...>)
-
-# --- Human ---
-
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h --output-format human
+$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32m▶ Entered stage:[39m [35mdone[39m
 | [90m  This is the final stage.[39m
-
-# --- JSON ---
-
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-j --output-format json
-$ assert_stdout json
-| {
-|   "stage": "done",
-|   "is_final": true
-| }

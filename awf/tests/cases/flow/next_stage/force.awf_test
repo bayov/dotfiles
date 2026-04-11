@@ -76,22 +76,9 @@ $ assert_stdout contains
 | done
 
 # History shows force completed with reason
-$ awf flow history --flow $FLOWS_DIR/force-history --output-format human
+$ awf flow history --flow $FLOWS_DIR/force-history
 $ assert_stdout contains
 | force completed
-
-$ awf flow history --flow $FLOWS_DIR/force-history --output-format json
-$ assert_stdout json
-| {
-|   "entries": [
-|     {
-|       "stage": "draft",
-|       "time": "<any_string>",
-|       "status": "force_completed",
-|       "force_reason": "<any_string>"
-|     }
-|   ]
-| }
 
 # =============================================================================
 # Test 3: --force still rejects missing produces artifacts

@@ -1,4 +1,4 @@
-# Test: awf flow run — human and json output
+# Test: awf flow run — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -12,31 +12,12 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | kind = "command"
 | args = { run = "true" }
 
-# Separate flows for each format (run mutates state)
-
 $ export FORCE_COLOR=1
 
 $ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
 $ assert_stdout contains
 | fmt-run-h
 
-$ awf flow new $FLOWS_DIR/fmt-run-j --workflow run-test
-$ assert_stdout contains
-| fmt-run-j
-
-# --- Human ---
-
-$ awf flow run --flow $FLOWS_DIR/fmt-run-h --output-format human
+$ awf flow run --flow $FLOWS_DIR/fmt-run-h
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>ms)
-
-# --- JSON ---
-
-$ awf flow run --flow $FLOWS_DIR/fmt-run-j --output-format json
-$ assert_stdout json
-| {
-|   "stage": "pass-step",
-|   "command": "true",
-|   "status": "pass",
-|   "duration_ms": "<any_number>"
-| }

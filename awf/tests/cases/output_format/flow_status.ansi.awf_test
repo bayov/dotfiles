@@ -1,4 +1,4 @@
-# Test: awf flow status — human and json output
+# Test: awf flow status — output
 
 $ write_file .config/awf.toml
 | flow_search_dirs = ["$FLOWS_DIR"]
@@ -21,22 +21,10 @@ $ awf flow new $FLOWS_DIR/fmt-status --workflow feature
 $ assert_stdout contains
 | fmt-status
 
-# --- Human ---
-
 $ export FORCE_COLOR=1
 
-$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format human
+$ awf flow status --flow $FLOWS_DIR/fmt-status
 $ assert_stdout equals
 |   flow: [36mfmt-status[39m
 |  stage: [35mdesign[39m
 | status: [32m[● active][39m
-
-# --- JSON ---
-
-$ awf flow status --flow $FLOWS_DIR/fmt-status --output-format json
-$ assert_stdout json
-| {
-|   "flow": "fmt-status",
-|   "stage": "design",
-|   "status": "active"
-| }
