@@ -981,31 +981,7 @@ pub fn advance(
                 Some(reason)
             }
             None => {
-                if let Err(blocker) = can_advance(&workflow, &flow, &artifacts)
-                {
-                    match blocker {
-                        AdvanceBlocker::StageFailed(name) => {
-                            eprint_error(format_args!(
-                                "stage `{name}` failed. Fix the error then \
-                                 run `awf flow run` before advancing."
-                            ));
-                        }
-                        AdvanceBlocker::StageIncomplete(name) => {
-                            eprint_error(format_args!(
-                                "stage `{name}` is not complete. Complete it \
-                                 before advancing."
-                            ));
-                        }
-                        AdvanceBlocker::MissingArtifact(name) => {
-                            eprint_error(format_args!(
-                                "Missing artifact `{name}`. Register it with \
-                                 `awf flow artifact put {name} <file>` before \
-                                 advancing."
-                            ));
-                        }
-                    }
-                    process::exit(1);
-                }
+                check_can_advance_or_exit(&workflow, &flow, &artifacts);
                 None
             }
         };
@@ -1030,6 +1006,37 @@ pub fn advance(
     let output = build_advance_output(&workflow, new_stage, &flow_dir, &wf_dir);
     print_output(&output);
     Ok(())
+}
+
+fn check_can_advance_or_exit(
+    workflow: &Workflow,
+    flow: &FlowState,
+    artifacts: &HashSet<String>,
+) {
+    if let Err(blocker) = can_advance(workflow, flow, artifacts) {
+        match blocker {
+            AdvanceBlocker::StageFailed(name) => {
+                eprint_error(format_args!(
+                    "stage `{name}` failed. Fix the error then \
+                     run `awf flow run` before advancing."
+                ));
+            }
+            AdvanceBlocker::StageIncomplete(name) => {
+                eprint_error(format_args!(
+                    "stage `{name}` is not complete. Complete it \
+                     before advancing."
+                ));
+            }
+            AdvanceBlocker::MissingArtifact(name) => {
+                eprint_error(format_args!(
+                    "Missing artifact `{name}`. Register it with \
+                     `awf flow artifact put {name} <file>` before \
+                     advancing."
+                ));
+            }
+        }
+        process::exit(1);
+    }
 }
 
 // ---------------------------------------------------------------------------
