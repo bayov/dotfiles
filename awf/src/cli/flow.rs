@@ -278,6 +278,7 @@ impl fmt::Display for FlowRunOutput {
 #[derive(Debug)]
 pub struct FlowDoneOutput {
     pub stage: String,
+    pub flow_path: String,
 }
 
 impl fmt::Display for FlowDoneOutput {
@@ -287,6 +288,12 @@ impl fmt::Display for FlowDoneOutput {
             "{} Stage {} marked complete.",
             "✓".green(),
             self.stage.magenta()
+        )?;
+        writeln!(f)?;
+        writeln!(
+            f,
+            "Workflow complete. Use `awf flow archive --flow={}` to archive it.",
+            self.flow_path.cyan()
         )
     }
 }
@@ -314,6 +321,8 @@ impl fmt::Display for FlowValidateOutput {
 pub struct FlowAdvanceOutput {
     pub stage: String,
     pub is_final: bool,
+    pub flow_path: String,
+    pub next_action: FirstStageAction,
 }
 
 impl fmt::Display for FlowAdvanceOutput {
@@ -321,6 +330,27 @@ impl fmt::Display for FlowAdvanceOutput {
         writeln!(f, "{} {}", "▶ Entered stage:".green(), self.stage.magenta())?;
         if self.is_final {
             writeln!(f, "{}", "  This is the final stage.".bright_black())?;
+        }
+        writeln!(f)?;
+        writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
+        match &self.next_action {
+            FirstStageAction::AgentComplete { instructions } => {
+                if let Some(instr) = instructions {
+                    writeln!(f, "    - Instructions: {instr}")?;
+                }
+                writeln!(
+                    f,
+                    "    - Proceed to the next stage with: `awf flow next-stage --flow={}`",
+                    self.flow_path.cyan()
+                )?;
+            }
+            FirstStageAction::RunCommand => {
+                writeln!(
+                    f,
+                    "    - Run: `awf flow run --flow={}`",
+                    self.flow_path.cyan()
+                )?;
+            }
         }
         Ok(())
     }
@@ -879,7 +909,10 @@ pub fn advance(
     // Final agent stage: completion was recorded above; nothing left to
     // advance to, so report success and return.
     if !skip && force.is_none() && is_final_agent_stage(&workflow, &flow) {
-        let output = FlowDoneOutput { stage: flow.current_stage };
+        let output = FlowDoneOutput {
+            stage: flow.current_stage,
+            flow_path: flow_dir.display().to_string(),
+        };
         print_output(&output);
         return Ok(());
     }
@@ -961,8 +994,7 @@ pub fn advance(
     let new_stage = updated_flow.current_stage.clone();
     fs::save_flow(&flow_dir, &updated_flow)?;
 
-    let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
-    let output = FlowAdvanceOutput { stage: new_stage, is_final };
+    let output = build_advance_output(&workflow, new_stage, &flow_dir);
     print_output(&output);
     Ok(())
 }
@@ -1135,6 +1167,33 @@ fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
         }
     }
     names
+}
+
+/// Builds the `FlowAdvanceOutput` for the newly entered stage.
+fn build_advance_output(
+    workflow: &Workflow,
+    new_stage: String,
+    flow_dir: &Path,
+) -> FlowAdvanceOutput {
+    let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
+    let next_action = workflow
+        .stages
+        .iter()
+        .find(|s| s.name == new_stage)
+        .map_or(FirstStageAction::RunCommand, |s| match &s.kind {
+            StageKind::Agent { instructions, .. } => {
+                FirstStageAction::AgentComplete {
+                    instructions: instructions.clone(),
+                }
+            }
+            StageKind::Command { .. } => FirstStageAction::RunCommand,
+        });
+    FlowAdvanceOutput {
+        stage: new_stage,
+        is_final,
+        flow_path: flow_dir.display().to_string(),
+        next_action,
+    }
 }
 
 /// Auto-completes an agent stage that has not yet been recorded as complete.

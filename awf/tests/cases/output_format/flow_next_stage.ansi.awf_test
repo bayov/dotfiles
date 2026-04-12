@@ -33,3 +33,6 @@ $ awf flow next-stage --flow=$FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32m▶ Entered stage:[39m [35mdone[39m
 | [90m  This is the final stage.[39m
+|
+| Next up (stage: [35mdone[39m):
+|     - Run: `awf flow run --flow=[36m<...>/fmt-adv-h[39m`

@@ -26,3 +26,5 @@ $ assert_stdout contains
 $ awf flow next-stage --flow=$FLOWS_DIR/fmt-done-h
 $ assert_stdout equals
 | [32m✓[39m Stage [35mdesign[39m marked complete.
+|
+| Workflow complete. Use `awf flow archive --flow=[36m<...>/fmt-done-h[39m` to archive it.
