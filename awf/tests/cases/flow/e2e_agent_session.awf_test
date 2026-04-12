@@ -1,5 +1,6 @@
 # Test: Full e2e agent session — research → scope → (skip design) → decompose → implement
 # Simulates a coding agent driving the workflow throughout.
+# Mix of prompt (inline) and prompt_file stages.
 
 # --- Workflow setup ---
 
@@ -23,7 +24,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "scope"
 | description = "Define the scope of work."
 | kind = "agent"
-| args = { prompt = "Define the scope of work." }
+| args = { prompt_file = "scope.md" }
 |
 | [[stages]]
 | name = "design"
@@ -36,7 +37,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "decompose"
 | description = "Break work into tasks."
 | kind = "agent"
-| args = { prompt = "Break the work into implementation tasks." }
+| args = { prompt_file = "decompose.md" }
 | skippable = true
 |
 | [[stages]]
@@ -44,6 +45,14 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | description = "Write the implementation."
 | kind = "agent"
 | args = { prompt = "Write the implementation." }
+
+$ write_file .agents/workflows/feature/scope.md
+| # Scope
+| Define the scope of work.
+
+$ write_file .agents/workflows/feature/decompose.md
+| # Decompose
+| Break the work into implementation tasks.
 
 # =============================================================================
 # Agent creates the flow
@@ -64,7 +73,7 @@ $ assert_stdout equals
 | 3. design (skippable)
 |     - Produce a technical design document.
 | 4. decompose (skippable)
-|     - Break the work into implementation tasks.
+|     - Break work into tasks.
 | 5. implement
 |     - Write the implementation.
 |
@@ -84,11 +93,11 @@ $ assert_stdout equals
 | ▶ Entered stage: scope
 |
 | Next up (stage: scope):
-|     - Instructions: Define the scope of work.
+|     - Follow the instructions at: <...>/.agents/workflows/feature/scope.md
 |     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
-# Stage: scope — agent reads instructions, advances
+# Stage: scope — agent follows prompt file, advances
 # =============================================================================
 
 $ awf flow next-stage --flow=$FLOWS_DIR/add-feature
@@ -115,13 +124,13 @@ $ assert_stdout equals
 | ▶ Entered stage: decompose
 |
 | Next up (stage: decompose):
-|     - Instructions: Break the work into implementation tasks.
+|     - Follow the instructions at: <...>/.agents/workflows/feature/decompose.md
 |     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 $ assert_stderr contains
 | Skipped stage "design"
 
 # =============================================================================
-# Stage: decompose — agent reads instructions, advances
+# Stage: decompose — agent follows prompt file, advances
 # =============================================================================
 
 $ awf flow next-stage --flow=$FLOWS_DIR/add-feature
