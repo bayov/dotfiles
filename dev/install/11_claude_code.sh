@@ -17,7 +17,7 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.local/share/fnm:$PATH"
 eval "$(fnm env --shell bash)"
 
-npx playwright install chrome
+npx --yes playwright install chrome
 
 # Print version
 claude --version
