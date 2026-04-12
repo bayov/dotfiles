@@ -22,10 +22,10 @@ $ write_file .agents/workflows/priority-test/WORKFLOW.toml
 
 # --- Test steps ---
 
-$ awf flow new $FLOWS_DIR/priority-flow --workflow priority-test
+$ awf flow new $FLOWS_DIR/priority-flow --workflow=priority-test
 $ assert_stdout contains
 | priority-flow
 
-$ awf flow run --flow $FLOWS_DIR/priority-flow
+$ awf flow run --flow=$FLOWS_DIR/priority-flow
 $ assert_stdout contains
 | PASS

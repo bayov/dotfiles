@@ -56,17 +56,17 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 # --- Create a new flow ---
-$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow=feature
 $ assert_stdout contains
 | add-oauth
 
 # --- Mark design agent stage as done ---
-$ awf flow done --flow $FLOWS_DIR/add-oauth
+$ awf flow done --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | design
 
 # --- Advance should fail: design.md artifact is missing ---
-$ awf flow next-stage --flow $FLOWS_DIR/add-oauth
+$ awf flow next-stage --flow=$FLOWS_DIR/add-oauth
 $ assert_exit_code 1
 $ assert_stderr contains
 | design.md
@@ -76,6 +76,6 @@ $ write_file flows/add-oauth/artifacts/design.md
 | # My design
 
 # --- Advance should now succeed ---
-$ awf flow next-stage --flow $FLOWS_DIR/add-oauth
+$ awf flow next-stage --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | write-code

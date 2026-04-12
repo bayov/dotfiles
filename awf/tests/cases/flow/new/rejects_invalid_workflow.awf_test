@@ -15,7 +15,7 @@ $ write_file .agents/workflows/broken-cmd/WORKFLOW.toml
 | kind = "command"
 | args = { command = "no-such-cmd" }
 
-$ awf flow new $FLOWS_DIR/should-not-exist --workflow broken-cmd
+$ awf flow new $FLOWS_DIR/should-not-exist --workflow=broken-cmd
 $ assert_exit_code 1
 $ assert_stderr contains
 | no-such-cmd
@@ -34,7 +34,7 @@ $ write_file .agents/workflows/broken-prompt/WORKFLOW.toml
 | kind = "agent"
 | args = { prompt = "ghost.md" }
 
-$ awf flow new $FLOWS_DIR/should-not-exist-2 --workflow broken-prompt
+$ awf flow new $FLOWS_DIR/should-not-exist-2 --workflow=broken-prompt
 $ assert_exit_code 1
 $ assert_stderr contains
 | ghost.md
@@ -58,6 +58,6 @@ $ write_file .agents/workflows/config-cmd/WORKFLOW.toml
 | kind = "command"
 | args = { command = "repo-cmd" }
 
-$ awf flow new $FLOWS_DIR/config-cmd-flow --workflow config-cmd
+$ awf flow new $FLOWS_DIR/config-cmd-flow --workflow=config-cmd
 $ assert_stdout contains
 | config-cmd-flow

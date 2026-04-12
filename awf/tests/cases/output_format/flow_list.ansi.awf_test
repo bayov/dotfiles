@@ -21,35 +21,35 @@ $ export FORCE_COLOR=1
 
 # Create 5 flows: 2 active, 3 archived
 
-$ awf flow new $FLOWS_DIR/alpha --workflow feature
+$ awf flow new $FLOWS_DIR/alpha --workflow=feature
 $ assert_stdout contains
 | alpha
 
-$ awf flow new $FLOWS_DIR/bravo --workflow feature
+$ awf flow new $FLOWS_DIR/bravo --workflow=feature
 $ assert_stdout contains
 | bravo
 
-$ awf flow new $FLOWS_DIR/charlie --workflow feature
+$ awf flow new $FLOWS_DIR/charlie --workflow=feature
 $ assert_stdout contains
 | charlie
 
-$ awf flow new $FLOWS_DIR/delta --workflow feature
+$ awf flow new $FLOWS_DIR/delta --workflow=feature
 $ assert_stdout contains
 | delta
 
-$ awf flow new $FLOWS_DIR/echo --workflow feature
+$ awf flow new $FLOWS_DIR/echo --workflow=feature
 $ assert_stdout contains
 | echo
 
-$ awf flow archive --flow $FLOWS_DIR/charlie
+$ awf flow archive --flow=$FLOWS_DIR/charlie
 $ assert_stdout contains
 | charlie
 
-$ awf flow archive --flow $FLOWS_DIR/delta
+$ awf flow archive --flow=$FLOWS_DIR/delta
 $ assert_stdout contains
 | delta
 
-$ awf flow archive --flow $FLOWS_DIR/echo
+$ awf flow archive --flow=$FLOWS_DIR/echo
 $ assert_stdout contains
 | echo
 

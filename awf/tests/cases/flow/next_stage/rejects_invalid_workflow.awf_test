@@ -23,11 +23,11 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 | kind = "command"
 | args = { run = "true" }
 
-$ awf flow new $FLOWS_DIR/adv-flow --workflow will-break
+$ awf flow new $FLOWS_DIR/adv-flow --workflow=will-break
 $ assert_stdout contains
 | adv-flow
 
-$ awf flow run --flow $FLOWS_DIR/adv-flow
+$ awf flow run --flow=$FLOWS_DIR/adv-flow
 $ assert_stdout contains
 | PASS
 
@@ -48,7 +48,7 @@ $ write_file .agents/workflows/will-break/WORKFLOW.toml
 | args = { run = "true" }
 
 # next-stage should catch the broken workflow
-$ awf flow next-stage --flow $FLOWS_DIR/adv-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/adv-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | failed validation

@@ -35,12 +35,34 @@ use crate::store::resolve::resolve_flow_path;
 // Output types — `awf flow new`
 // ---------------------------------------------------------------------------
 
+/// Per-stage data for the agent guidance section of `awf flow new`.
+#[derive(Debug)]
+pub struct FlowNewStage {
+    pub name: String,
+    pub description: Option<String>,
+    /// Agent instructions (for non-current stages: shown in place of
+    /// description).
+    pub instructions: Option<String>,
+    pub skippable: bool,
+    pub produces: Vec<String>,
+    pub is_current: bool,
+}
+
+/// What the agent should do next for the first stage.
+#[derive(Debug)]
+pub enum FirstStageAction {
+    AgentComplete { instructions: Option<String> },
+    RunCommand,
+}
+
 /// Output payload for `awf flow new`.
 #[derive(Debug)]
 pub struct FlowNewOutput {
     pub path: String,
     pub workflow: String,
     pub stage: String,
+    pub stages: Vec<FlowNewStage>,
+    pub first_stage_action: FirstStageAction,
 }
 
 impl fmt::Display for FlowNewOutput {
@@ -51,7 +73,66 @@ impl fmt::Display for FlowNewOutput {
             self.path.cyan(),
             self.workflow.blue(),
             self.stage.magenta(),
-        )
+        )?;
+
+        writeln!(f)?;
+        writeln!(
+            f,
+            "From now on, the \"active flow\" is {}.",
+            self.path.cyan()
+        )?;
+        writeln!(f)?;
+
+        writeln!(
+            f,
+            "Workflow `{}` has {} stages:",
+            self.workflow.blue(),
+            self.stages.len()
+        )?;
+        for (i, stage) in self.stages.iter().enumerate() {
+            let suffix = if stage.is_current {
+                " (current)"
+            } else if stage.skippable {
+                " (skippable)"
+            } else {
+                ""
+            };
+            writeln!(f, "{}. {}{}", i + 1, stage.name.magenta(), suffix)?;
+            // Current stage: show description (instructions appear in "Next
+            // step"). Other stages: show instructions as a preview, falling
+            // back to description.
+            let blurb = if stage.is_current {
+                stage.description.as_deref()
+            } else {
+                stage.instructions.as_deref().or(stage.description.as_deref())
+            };
+            if let Some(text) = blurb {
+                writeln!(f, "    - {text}")?;
+            }
+            for artifact in &stage.produces {
+                writeln!(f, "    - Produces: {artifact}")?;
+            }
+        }
+
+        writeln!(f)?;
+        writeln!(f, "Next step is `{}`:", self.stage.magenta())?;
+        match &self.first_stage_action {
+            FirstStageAction::AgentComplete { instructions } => {
+                if let Some(instr) = instructions {
+                    writeln!(f, "    - Instructions: {instr}")?;
+                }
+                writeln!(
+                    f,
+                    "    - Mark complete with: `awf flow done --flow={}`",
+                    self.path.cyan()
+                )?;
+            }
+            FirstStageAction::RunCommand => {
+                writeln!(f, "    - Run: `awf flow run`")?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -85,7 +166,7 @@ impl fmt::Display for FlowListOutput {
             return writeln!(
                 f,
                 "No flows found. Create one with: awf flow new \
-                 --flow <path> --workflow <workflow>"
+                 --flow=<path> --workflow=<workflow>"
             );
         }
 
@@ -335,10 +416,10 @@ impl fmt::Display for FlowArchiveOutput {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow new [--flow <path>] --workflow <name>`
+// `awf flow new [--flow=<path>] --workflow=<name>`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow new [--flow <path>] --workflow <workflow>`.
+/// Handles `awf flow new [--flow=<path>] --workflow=<workflow>`.
 ///
 /// Resolves the flow path, loads the workflow to find its first stage, and
 /// creates a new flow at the path.
@@ -370,10 +451,41 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
 
     match fs::create_flow(&flow_dir, workflow, first_stage) {
         Ok(()) => {
+            let stages = wf
+                .stages
+                .iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    let instructions = match &s.kind {
+                        StageKind::Agent { instructions, .. } => {
+                            instructions.clone()
+                        }
+                        StageKind::Command { .. } => None,
+                    };
+                    FlowNewStage {
+                        name: s.name.clone(),
+                        description: s.description.clone(),
+                        instructions,
+                        skippable: s.skippable,
+                        produces: s.produces.clone(),
+                        is_current: i == 0,
+                    }
+                })
+                .collect();
+            let first_stage_action = match wf.stages.first().map(|s| &s.kind) {
+                Some(StageKind::Agent { instructions, .. }) => {
+                    FirstStageAction::AgentComplete {
+                        instructions: instructions.clone(),
+                    }
+                }
+                _ => FirstStageAction::RunCommand,
+            };
             let output = FlowNewOutput {
                 path: flow_dir.display().to_string(),
                 workflow: workflow.to_string(),
                 stage: first_stage.to_string(),
+                stages,
+                first_stage_action,
             };
             print_output(&output);
             Ok(())
@@ -470,10 +582,10 @@ pub fn list(include_archived: bool) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow status [--flow <path>]`
+// `awf flow status [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow status [--flow <path>]`.
+/// Handles `awf flow status [--flow=<path>]`.
 ///
 /// # Errors
 ///
@@ -498,10 +610,10 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow next-step [--flow <path>]`
+// `awf flow next-step [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow next-step [--flow <path>]`.
+/// Handles `awf flow next-step [--flow=<path>]`.
 ///
 /// # Errors
 ///
@@ -585,10 +697,10 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow run [--flow <path>]`
+// `awf flow run [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow run [--flow <path>]`.
+/// Handles `awf flow run [--flow=<path>]`.
 ///
 /// Runs the current stage if it is a command stage.
 ///
@@ -645,10 +757,10 @@ pub fn run(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow done [--flow <path>]`
+// `awf flow done [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow done [--flow <path>]`.
+/// Handles `awf flow done [--flow=<path>]`.
 ///
 /// Marks the current agent stage as complete.
 ///
@@ -685,10 +797,10 @@ pub fn done(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow validate [--flow <path>]`
+// `awf flow validate [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow validate [--flow <path>]`.
+/// Handles `awf flow validate [--flow=<path>]`.
 ///
 /// Checks that:
 /// - All artifacts declared as `produces` by completed stages exist on disk.
@@ -766,10 +878,10 @@ pub fn validate(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow next-stage [--force] [--skip] [--flow <path>]`
+// `awf flow next-stage [--force] [--skip] [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow next-stage [--force] [--skip] [--flow <path>]`.
+/// Handles `awf flow next-stage [--force] [--skip] [--flow=<path>]`.
 ///
 /// # Errors
 ///
@@ -878,10 +990,10 @@ pub fn advance(
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow history [--flow <path>]`
+// `awf flow history [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow history [--flow <path>]`.
+/// Handles `awf flow history [--flow=<path>]`.
 ///
 /// # Errors
 ///
@@ -927,10 +1039,10 @@ pub fn history(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 }
 
 // ---------------------------------------------------------------------------
-// `awf flow archive [--flow <path>]`
+// `awf flow archive [--flow=<path>]`
 // ---------------------------------------------------------------------------
 
-/// Handles `awf flow archive [--flow <path>]`.
+/// Handles `awf flow archive [--flow=<path>]`.
 ///
 /// # Errors
 ///
@@ -1009,7 +1121,7 @@ fn resolve_or_exit(
         Ok(path) => Ok(path),
         Err(Error::FlowPathRequired) => {
             eprint_error(
-                "no flow specified; pass --flow <path> or set AWF_ACTIVE_FLOW",
+                "no flow specified; pass --flow=<path> or set AWF_ACTIVE_FLOW",
             );
             process::exit(1);
         }

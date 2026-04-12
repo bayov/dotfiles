@@ -38,12 +38,12 @@ $ write_file .agents/workflows/with-artifact/WORKFLOW.toml
 # Test 1: --force bypasses stage gate
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/force-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/force-flow --workflow=run-test
 $ assert_stdout contains
 | force-flow
 
 # Without --force: fails because stage is incomplete (not run yet)
-$ awf flow next-stage --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not complete
@@ -51,11 +51,11 @@ $ assert_stderr contains
 # With --force: stage gate bypassed.
 # run-test first stage is pass-step; force advances to fail-step.
 # fail-step is the last stage, so next advance errors with "last stage".
-$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --force="skipping stage" --flow=$FLOWS_DIR/force-flow
 $ assert_stdout contains
 | fail-step
 
-$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-flow
+$ awf flow next-stage --force="skipping stage" --flow=$FLOWS_DIR/force-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage
@@ -64,19 +64,19 @@ $ assert_stderr contains
 # Test 2: --force records force_completed with reason in history
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/force-history --workflow with-artifact
+$ awf flow new $FLOWS_DIR/force-history --workflow=with-artifact
 $ assert_stdout contains
 | force-history
 
 # Write artifact and force-advance (stage not done but artifact present)
 $ write_file flows/force-history/artifacts/draft.md
 | placeholder
-$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-history
+$ awf flow next-stage --force="skipping stage" --flow=$FLOWS_DIR/force-history
 $ assert_stdout contains
 | done
 
 # History shows force completed with reason
-$ awf flow history --flow $FLOWS_DIR/force-history
+$ awf flow history --flow=$FLOWS_DIR/force-history
 $ assert_stdout contains
 | force completed
 
@@ -84,12 +84,12 @@ $ assert_stdout contains
 # Test 3: --force still rejects missing produces artifacts
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/force-no-artifact --workflow with-artifact
+$ awf flow new $FLOWS_DIR/force-no-artifact --workflow=with-artifact
 $ assert_stdout contains
 | force-no-artifact
 
 # --force without the required artifact: still blocked
-$ awf flow next-stage --force "skipping stage" --flow $FLOWS_DIR/force-no-artifact
+$ awf flow next-stage --force="skipping stage" --flow=$FLOWS_DIR/force-no-artifact
 $ assert_exit_code 1
 $ assert_stderr contains
 | draft.md

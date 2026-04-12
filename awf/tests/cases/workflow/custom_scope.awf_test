@@ -30,6 +30,6 @@ $ assert_stdout contains
 | OK
 
 # Create a flow using the custom-scope workflow
-$ awf flow new $FLOWS_DIR/from-custom --workflow custom-wf
+$ awf flow new $FLOWS_DIR/from-custom --workflow=custom-wf
 $ assert_stdout contains
 | from-custom

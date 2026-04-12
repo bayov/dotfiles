@@ -49,26 +49,45 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 # Agent creates the flow
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/add-feature --workflow feature
+$ awf flow new $FLOWS_DIR/add-feature --workflow=feature
 $ assert_stdout equals
 | Created flow: <...>/add-feature (workflow: feature, stage: research)
+|
+| From now on, the "active flow" is <...>/add-feature.
+|
+| Workflow `feature` has 5 stages:
+| 1. research (current)
+|     - Research the problem space.
+|     - Produces: research.md
+| 2. scope
+|     - Define the scope of work.
+| 3. design (skippable)
+|     - Produce a technical design document.
+| 4. decompose (skippable)
+|     - Break the work into implementation tasks.
+| 5. implement
+|     - Write the implementation.
+|
+| Next step is `research`:
+|     - Instructions: Research the problem and produce research.md.
+|     - Mark complete with: `awf flow done --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: research — agent reads instructions, produces artifact, marks done
 # =============================================================================
 
-$ awf flow next-step --flow $FLOWS_DIR/add-feature
+$ awf flow next-step --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | → Mark complete with: awf flow done
 
 $ write_file flows/add-feature/artifacts/research.md
 | # Research
 
-$ awf flow done --flow $FLOWS_DIR/add-feature
+$ awf flow done --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ✓ Stage research marked complete.
 
-$ awf flow next-stage --flow $FLOWS_DIR/add-feature
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: scope
 
@@ -76,15 +95,15 @@ $ assert_stdout equals
 # Stage: scope — agent reads instructions, marks done, advances
 # =============================================================================
 
-$ awf flow next-step --flow $FLOWS_DIR/add-feature
+$ awf flow next-step --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | → Mark complete with: awf flow done
 
-$ awf flow done --flow $FLOWS_DIR/add-feature
+$ awf flow done --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ✓ Stage scope marked complete.
 
-$ awf flow next-stage --flow $FLOWS_DIR/add-feature
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: design
 
@@ -92,13 +111,13 @@ $ assert_stdout equals
 # Stage: design — agent checks status, decides to skip (stage is skippable)
 # =============================================================================
 
-$ awf flow status --flow $FLOWS_DIR/add-feature
+$ awf flow status --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 |   flow: add-feature
 |  stage: design
 | status: [● active]
 
-$ awf flow next-stage --skip --flow $FLOWS_DIR/add-feature
+$ awf flow next-stage --skip --flow=$FLOWS_DIR/add-feature
 $ assert_exit_code 0
 $ assert_stdout equals
 | ▶ Entered stage: decompose
@@ -109,15 +128,15 @@ $ assert_stderr contains
 # Stage: decompose — agent reads instructions, marks done, advances
 # =============================================================================
 
-$ awf flow next-step --flow $FLOWS_DIR/add-feature
+$ awf flow next-step --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | → Mark complete with: awf flow done
 
-$ awf flow done --flow $FLOWS_DIR/add-feature
+$ awf flow done --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ✓ Stage decompose marked complete.
 
-$ awf flow next-stage --flow $FLOWS_DIR/add-feature
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: implement
 |   This is the final stage.
@@ -126,11 +145,11 @@ $ assert_stdout equals
 # Stage: implement (final) — agent reads instructions, marks done
 # =============================================================================
 
-$ awf flow next-step --flow $FLOWS_DIR/add-feature
+$ awf flow next-step --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | → Mark complete with: awf flow done
 
-$ awf flow done --flow $FLOWS_DIR/add-feature
+$ awf flow done --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ✓ Stage implement marked complete.
 
@@ -138,7 +157,7 @@ $ assert_stdout equals
 # Session complete — verify full history
 # =============================================================================
 
-$ awf flow history --flow $FLOWS_DIR/add-feature
+$ awf flow history --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | <...>/add-feature flow started at <...>
 |     ✓ research completed at <...>

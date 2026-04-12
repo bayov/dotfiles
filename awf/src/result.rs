@@ -21,7 +21,7 @@ pub enum Error {
 
     /// A flow path could not be determined (no `--flow` flag and no
     /// `AWF_ACTIVE_FLOW` environment variable).
-    #[error("no flow specified: pass --flow <path> or set AWF_ACTIVE_FLOW")]
+    #[error("no flow specified: pass --flow=<path> or set AWF_ACTIVE_FLOW")]
     FlowPathRequired,
 
     /// A workflow was referenced in multiple scopes without disambiguation.

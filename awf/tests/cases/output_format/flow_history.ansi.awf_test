@@ -66,56 +66,56 @@ $ write_file .agents/workflows/feature/review.md
 
 $ export FORCE_COLOR=1
 
-$ awf flow new $FLOWS_DIR/fmt-history --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-history --workflow=feature
 $ assert_stdout contains
 | fmt-history
 
 # Complete design stage
-$ awf flow done --flow $FLOWS_DIR/fmt-history
+$ awf flow done --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | design
 $ write_file flows/fmt-history/artifacts/design.md
 | # Design doc
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-code
 
 # Complete write-code stage
-$ awf flow done --flow $FLOWS_DIR/fmt-history
+$ awf flow done --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-code
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | optional-check
 
 # Skip optional-check stage
-$ awf flow next-stage --skip --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --skip --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | lint
 $ assert_stderr contains
 | Skipped stage "optional-check"
 
 # Run lint (fails)
-$ awf flow run --flow $FLOWS_DIR/fmt-history
+$ awf flow run --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | FAIL
 
 # Force advance past lint
-$ awf flow next-stage --force "force moving to next stage despite lint failure" --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --force="force moving to next stage despite lint failure" --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | test
 
 # Run test (passes)
-$ awf flow run --flow $FLOWS_DIR/fmt-history
+$ awf flow run --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | PASS
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-history
+$ awf flow next-stage --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | do-review
 
 # --- Check history output ---
 
-$ awf flow history --flow $FLOWS_DIR/fmt-history
+$ awf flow history --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout equals
 | [36m<...>/fmt-history[39m flow started at [90m<...>[39m
 |     [32m✓[39m [32mdesign[39m completed at [90m<...>[39m

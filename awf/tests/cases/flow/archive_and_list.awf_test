@@ -59,7 +59,7 @@ $ write_file .agents/workflows/feature/review.md
 
 # --- Test ---
 
-$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow=feature
 $ assert_stdout contains
 | add-oauth
 
@@ -69,12 +69,12 @@ $ assert_stdout contains
 | add-oauth
 
 # Archive the flow
-$ awf flow archive --flow $FLOWS_DIR/add-oauth
+$ awf flow archive --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | add-oauth
 
 # Status still works after archiving (path-based load)
-$ awf flow status --flow $FLOWS_DIR/add-oauth
+$ awf flow status --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | design
 

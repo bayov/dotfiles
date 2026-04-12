@@ -22,27 +22,27 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 # --- Test ---
 
-$ awf flow new $FLOWS_DIR/blocker-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/blocker-flow --workflow=run-test
 $ assert_stdout contains
 | blocker-flow
 
 # Run pass-step stage: succeeds
-$ awf flow run --flow $FLOWS_DIR/blocker-flow
+$ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
 # Advance to fail-step stage
-$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | fail-step
 
 # Run fail-step stage: reports FAIL (exit 0 — failure is in the stage, not the CLI)
-$ awf flow run --flow $FLOWS_DIR/blocker-flow
+$ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | FAIL
 
 # Advance should fail because fail-step failed
-$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | fail-step
@@ -63,13 +63,13 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | args = { run = "true" }
 
 # Re-run fail-step: now passes
-$ awf flow run --flow $FLOWS_DIR/blocker-flow
+$ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
 # Advance: no longer blocked by fail-step.
 # run-test has only two stages and we're on the last, so this errors with "last stage".
-$ awf flow next-stage --flow $FLOWS_DIR/blocker-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage

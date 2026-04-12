@@ -17,13 +17,13 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 $ write_file .agents/workflows/feature/design.md
 | # Design
 
-$ awf flow new $FLOWS_DIR/fmt-status --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-status --workflow=feature
 $ assert_stdout contains
 | fmt-status
 
 $ export FORCE_COLOR=1
 
-$ awf flow status --flow $FLOWS_DIR/fmt-status
+$ awf flow status --flow=$FLOWS_DIR/fmt-status
 $ assert_stdout equals
 |   flow: [36mfmt-status[39m
 |  stage: [35mdesign[39m

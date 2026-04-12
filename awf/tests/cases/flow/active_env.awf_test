@@ -1,5 +1,5 @@
 # Test: AWF_ACTIVE_FLOW env var as default flow path
-# When set, --flow flag is not required. When unset, commands fail without --flow.
+# When set, --flow=flag is not required. When unset, commands fail without --flow.
 
 $ export HOME=$USER_DIR
 
@@ -15,9 +15,9 @@ $ write_file .agents/workflows/test-wf/WORKFLOW.toml
 | kind = "command"
 | args = { run = "true" }
 
-# --- Create flow with explicit --flow ---
+# --- Create flow with explicit --flow=---
 
-$ awf flow new $FLOWS_DIR/env-flow --workflow test-wf
+$ awf flow new $FLOWS_DIR/env-flow --workflow=test-wf
 $ assert_stdout contains
 | env-flow
 
@@ -25,7 +25,7 @@ $ assert_stdout contains
 
 $ export AWF_ACTIVE_FLOW=$FLOWS_DIR/env-flow
 
-# --- Commands work without --flow flag ---
+# --- Commands work without --flow=flag ---
 
 $ awf flow status
 $ assert_stdout contains
@@ -35,7 +35,7 @@ $ awf flow history
 $ assert_stdout contains
 | started
 
-# --- Unset and verify commands fail without --flow ---
+# --- Unset and verify commands fail without --flow=---
 
 $ unset AWF_ACTIVE_FLOW
 

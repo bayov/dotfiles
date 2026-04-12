@@ -14,10 +14,10 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 
 $ export FORCE_COLOR=1
 
-$ awf flow new $FLOWS_DIR/fmt-run-h --workflow run-test
+$ awf flow new $FLOWS_DIR/fmt-run-h --workflow=run-test
 $ assert_stdout contains
 | fmt-run-h
 
-$ awf flow run --flow $FLOWS_DIR/fmt-run-h
+$ awf flow run --flow=$FLOWS_DIR/fmt-run-h
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>ms)

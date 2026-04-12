@@ -19,11 +19,11 @@ $ write_file .agents/workflows/feature/design.md
 
 $ export FORCE_COLOR=1
 
-$ awf flow new $FLOWS_DIR/fmt-next --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-next --workflow=feature
 $ assert_stdout contains
 | fmt-next
 
-$ awf flow next-step --flow $FLOWS_DIR/fmt-next
+$ awf flow next-step --flow=$FLOWS_DIR/fmt-next
 $ assert_stdout equals
 | # Design
 | [36m→[39m Mark complete with: awf flow done

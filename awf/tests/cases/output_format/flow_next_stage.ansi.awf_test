@@ -19,17 +19,17 @@ $ write_file .agents/workflows/minimal/WORKFLOW.toml
 
 $ export FORCE_COLOR=1
 
-$ awf flow new $FLOWS_DIR/fmt-adv-h --workflow minimal
+$ awf flow new $FLOWS_DIR/fmt-adv-h --workflow=minimal
 $ assert_stdout contains
 | fmt-adv-h
 
 # Run the stage so advance is allowed
 
-$ awf flow run --flow $FLOWS_DIR/fmt-adv-h
+$ awf flow run --flow=$FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32mPASS[39m  true  (<...>)
 
-$ awf flow next-stage --flow $FLOWS_DIR/fmt-adv-h
+$ awf flow next-stage --flow=$FLOWS_DIR/fmt-adv-h
 $ assert_stdout equals
 | [32m▶ Entered stage:[39m [35mdone[39m
 | [90m  This is the final stage.[39m

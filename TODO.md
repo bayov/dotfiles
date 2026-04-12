@@ -7,6 +7,7 @@ TODO
 Awf
 ---
 
+- Break into modules
 - Review functionality
 - Improve human output format.
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).

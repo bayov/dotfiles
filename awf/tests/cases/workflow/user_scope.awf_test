@@ -41,6 +41,6 @@ $ assert_stdout contains
 | OK
 
 # Create a flow using the user-scope workflow
-$ awf flow new $FLOWS_DIR/from-user-wf --workflow user-wf
+$ awf flow new $FLOWS_DIR/from-user-wf --workflow=user-wf
 $ assert_stdout contains
 | from-user-wf

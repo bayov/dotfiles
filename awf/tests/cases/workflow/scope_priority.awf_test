@@ -43,21 +43,21 @@ $ assert_stdout contains
 | OK
 
 # Create a flow from the project-scope version
-$ awf flow new $FLOWS_DIR/from-project --workflow project:shared-wf
+$ awf flow new $FLOWS_DIR/from-project --workflow=project:shared-wf
 $ assert_stdout contains
 | from-project
 
 # Create a flow from the user-scope version
-$ awf flow new $FLOWS_DIR/from-user --workflow user:shared-wf
+$ awf flow new $FLOWS_DIR/from-user --workflow=user:shared-wf
 $ assert_stdout contains
 | from-user
 
 # Run stage from project scope flow (test-cmd = "true") — should PASS
-$ awf flow run --flow $FLOWS_DIR/from-project
+$ awf flow run --flow=$FLOWS_DIR/from-project
 $ assert_stdout contains
 | PASS
 
 # Run stage from user scope flow (test-cmd = "false") — should FAIL
-$ awf flow run --flow $FLOWS_DIR/from-user
+$ awf flow run --flow=$FLOWS_DIR/from-user
 $ assert_stdout contains
 | FAIL

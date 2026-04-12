@@ -56,12 +56,12 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 # --- Create a new flow ---
-$ awf flow new $FLOWS_DIR/add-oauth --workflow feature
+$ awf flow new $FLOWS_DIR/add-oauth --workflow=feature
 $ assert_stdout contains
 | add-oauth
 
 # --- Get status and verify structure ---
-$ awf flow status --flow $FLOWS_DIR/add-oauth
+$ awf flow status --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | add-oauth
 $ assert_stdout contains

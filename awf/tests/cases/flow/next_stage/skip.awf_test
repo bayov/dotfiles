@@ -44,18 +44,18 @@ $ write_file .agents/workflows/no-skip/WORKFLOW.toml
 # Test 1: --skip bypasses all gates (stage completion AND artifacts)
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/skip-flow --workflow with-skippable
+$ awf flow new $FLOWS_DIR/skip-flow --workflow=with-skippable
 $ assert_stdout contains
 | skip-flow
 
 # Without --skip: fails because stage is incomplete
-$ awf flow next-stage --flow $FLOWS_DIR/skip-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/skip-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not complete
 
 # With --skip: bypasses stage and artifact gates
-$ awf flow next-stage --skip --flow $FLOWS_DIR/skip-flow
+$ awf flow next-stage --skip --flow=$FLOWS_DIR/skip-flow
 $ assert_exit_code 0
 $ assert_stdout contains
 | implement
@@ -66,11 +66,11 @@ $ assert_stderr contains
 # Test 2: --skip on non-skippable stage is rejected
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/no-skip-flow --workflow no-skip
+$ awf flow new $FLOWS_DIR/no-skip-flow --workflow=no-skip
 $ assert_stdout contains
 | no-skip-flow
 
-$ awf flow next-stage --skip --flow $FLOWS_DIR/no-skip-flow
+$ awf flow next-stage --skip --flow=$FLOWS_DIR/no-skip-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | not marked as skippable
@@ -79,11 +79,11 @@ $ assert_stderr contains
 # Test 3: --skip records skipped in history
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/skip-history --workflow with-skippable
+$ awf flow new $FLOWS_DIR/skip-history --workflow=with-skippable
 $ assert_stdout contains
 | skip-history
 
-$ awf flow next-stage --skip --flow $FLOWS_DIR/skip-history
+$ awf flow next-stage --skip --flow=$FLOWS_DIR/skip-history
 $ assert_exit_code 0
 $ assert_stdout contains
 | implement
@@ -91,7 +91,7 @@ $ assert_stderr contains
 | Skipped stage
 
 # History shows skipped
-$ awf flow history --flow $FLOWS_DIR/skip-history
+$ awf flow history --flow=$FLOWS_DIR/skip-history
 $ assert_stdout contains
 | skipped
 
@@ -99,11 +99,11 @@ $ assert_stdout contains
 # Test 4: --skip and --force cannot be used together
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/skip-force --workflow with-skippable
+$ awf flow new $FLOWS_DIR/skip-force --workflow=with-skippable
 $ assert_stdout contains
 | skip-force
 
-$ awf flow next-stage --skip --force "reason" --flow $FLOWS_DIR/skip-force
+$ awf flow next-stage --skip --force="reason" --flow=$FLOWS_DIR/skip-force
 $ assert_exit_code 1
 $ assert_stderr contains
 | cannot be used together

@@ -78,11 +78,11 @@ $ write_file .agents/workflows/produces-only/WORKFLOW.toml
 # Test 1: validate passes when no stages completed
 # -------------------------------------------------------
 
-$ awf flow new $FLOWS_DIR/validate-empty --workflow feature
+$ awf flow new $FLOWS_DIR/validate-empty --workflow=feature
 $ assert_stdout contains
 | validate-empty
 
-$ awf flow validate --flow $FLOWS_DIR/validate-empty
+$ awf flow validate --flow=$FLOWS_DIR/validate-empty
 $ assert_stdout contains
 | valid
 
@@ -90,22 +90,22 @@ $ assert_stdout contains
 # Test 2: validate passes when completed stage artifacts present
 # -------------------------------------------------------
 
-$ awf flow new $FLOWS_DIR/validate-ok --workflow feature
+$ awf flow new $FLOWS_DIR/validate-ok --workflow=feature
 $ assert_stdout contains
 | validate-ok
 
 $ write_file flows/validate-ok/artifacts/design.md
 | # Design
 
-$ awf flow done --flow $FLOWS_DIR/validate-ok
+$ awf flow done --flow=$FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | design
 
-$ awf flow next-stage --flow $FLOWS_DIR/validate-ok
+$ awf flow next-stage --flow=$FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | write-code
 
-$ awf flow validate --flow $FLOWS_DIR/validate-ok
+$ awf flow validate --flow=$FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | valid
 
@@ -113,22 +113,22 @@ $ assert_stdout contains
 # Test 3: validate fails for missing artifact
 # -------------------------------------------------------
 
-$ awf flow new $FLOWS_DIR/validate-missing --workflow produces-only
+$ awf flow new $FLOWS_DIR/validate-missing --workflow=produces-only
 $ assert_stdout contains
 | validate-missing
 
 # Write the artifact, advance, then delete to create invalid state
 $ write_file flows/validate-missing/artifacts/draft.md
 | placeholder
-$ awf flow done --flow $FLOWS_DIR/validate-missing
+$ awf flow done --flow=$FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | draft
-$ awf flow next-stage --flow $FLOWS_DIR/validate-missing
+$ awf flow next-stage --flow=$FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | polish
 $ delete flows/validate-missing/artifacts/draft.md
 
-$ awf flow validate --flow $FLOWS_DIR/validate-missing
+$ awf flow validate --flow=$FLOWS_DIR/validate-missing
 $ assert_exit_code 1
 $ assert_stderr contains
 | missing artifact: draft.md
@@ -137,14 +137,14 @@ $ assert_stderr contains
 # Test 4: validate fails for redundant artifact
 # -------------------------------------------------------
 
-$ awf flow new $FLOWS_DIR/validate-redundant --workflow feature
+$ awf flow new $FLOWS_DIR/validate-redundant --workflow=feature
 $ assert_stdout contains
 | validate-redundant
 
 $ write_file flows/validate-redundant/artifacts/stray.txt
 | oops
 
-$ awf flow validate --flow $FLOWS_DIR/validate-redundant
+$ awf flow validate --flow=$FLOWS_DIR/validate-redundant
 $ assert_exit_code 1
 $ assert_stderr contains
 | redundant artifact: stray.txt

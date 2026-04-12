@@ -56,7 +56,7 @@ $ write_file .agents/workflows/feature/review.md
 | Perform code review.
 
 # --- Create a new flow ---
-$ awf flow new $FLOWS_DIR/path-check --workflow feature
+$ awf flow new $FLOWS_DIR/path-check --workflow=feature
 $ assert_stdout contains
 | path-check
 

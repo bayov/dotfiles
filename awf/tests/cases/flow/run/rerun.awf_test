@@ -14,12 +14,12 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | args = { run = "false" }
 
 # Step 1: Create flow
-$ awf flow new $FLOWS_DIR/retry-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/retry-flow --workflow=run-test
 $ assert_stdout contains
 | retry-flow
 
 # Step 2: Run fail-step (fails)
-$ awf flow run --flow $FLOWS_DIR/retry-flow
+$ awf flow run --flow=$FLOWS_DIR/retry-flow
 $ assert_stdout contains
 | FAIL
 
@@ -34,11 +34,11 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | args = { run = "true" }
 
 # Step 4: Run fail-step again (should now pass)
-$ awf flow run --flow $FLOWS_DIR/retry-flow
+$ awf flow run --flow=$FLOWS_DIR/retry-flow
 $ assert_stdout contains
 | PASS
 
 # Step 5: Check status reflects active
-$ awf flow status --flow $FLOWS_DIR/retry-flow
+$ awf flow status --flow=$FLOWS_DIR/retry-flow
 $ assert_stdout contains
 | active

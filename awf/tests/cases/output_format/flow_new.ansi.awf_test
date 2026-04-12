@@ -23,15 +23,24 @@ $ export FORCE_COLOR=1
 # Success
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/fmt-new-h --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-new-h --workflow=feature
 $ assert_stdout equals
 | Created flow: [36m<...>/fmt-new-h[39m (workflow: [34mfeature[39m, stage: [35mdesign[39m)
+|
+| From now on, the "active flow" is [36m<...>/fmt-new-h[39m.
+|
+| Workflow `[34mfeature[39m` has 1 stages:
+| 1. [35mdesign[39m (current)
+|     - Produce a design doc.
+|
+| Next step is `[35mdesign[39m`:
+|     - Mark complete with: `awf flow done --flow=[36m<...>/fmt-new-h[39m`
 
 # =============================================================================
 # Error: workflow not found
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/fmt-new-notfound --workflow no-such-workflow
+$ awf flow new $FLOWS_DIR/fmt-new-notfound --workflow=no-such-workflow
 $ assert_exit_code 1
 $ assert_stdout empty
 $ assert_stderr equals
@@ -48,10 +57,10 @@ $ assert_stderr equals
 # Error: flow already exists
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/fmt-new-dup --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-new-dup --workflow=feature
 $ assert_stdout contains
 | fmt-new-dup
-$ awf flow new $FLOWS_DIR/fmt-new-dup --workflow feature
+$ awf flow new $FLOWS_DIR/fmt-new-dup --workflow=feature
 $ assert_exit_code 1
 $ assert_stdout empty
 $ assert_stderr equals

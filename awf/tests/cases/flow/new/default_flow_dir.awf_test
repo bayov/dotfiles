@@ -34,7 +34,7 @@ $ write_file .agents/workflows/no-default/WORKFLOW.toml
 # Test 1: bare name with default_flow_dir → creates at <default_flow_dir>/<name>
 # -------------------------------------------------------
 
-$ awf flow new my-flow --workflow with-default
+$ awf flow new my-flow --workflow=with-default
 $ assert_stdout contains
 | my-flow
 
@@ -44,7 +44,7 @@ $ assert_exists flows/my-flow/flow_state.toml
 # Test 2: bare name WITHOUT default_flow_dir → error
 # -------------------------------------------------------
 
-$ awf flow new orphan-flow --workflow no-default
+$ awf flow new orphan-flow --workflow=no-default
 $ assert_exit_code 1
 $ assert_stderr contains
 | default_flow_dir
@@ -53,7 +53,7 @@ $ assert_stderr contains
 # Test 3: absolute path → used as-is (ignores default_flow_dir)
 # -------------------------------------------------------
 
-$ awf flow new $FLOWS_DIR/abs-flow --workflow no-default
+$ awf flow new $FLOWS_DIR/abs-flow --workflow=no-default
 $ assert_stdout contains
 | abs-flow
 
@@ -63,7 +63,7 @@ $ assert_exists flows/abs-flow/flow_state.toml
 # Test 4: relative path (./…) → resolved from CWD
 # -------------------------------------------------------
 
-$ awf flow new ./flows/rel-flow --workflow no-default
+$ awf flow new ./flows/rel-flow --workflow=no-default
 $ assert_stdout contains
 | rel-flow
 

@@ -75,25 +75,25 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 # Test 1: flow_next_failing_step_hints_run
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/next-flow --workflow run-test
+$ awf flow new $FLOWS_DIR/next-flow --workflow=run-test
 $ assert_stdout contains
 | next-flow
 
 # Run first stage (pass-step) and advance to fail-step
-$ awf flow run --flow $FLOWS_DIR/next-flow
+$ awf flow run --flow=$FLOWS_DIR/next-flow
 $ assert_stdout contains
 | PASS
 
-$ awf flow next-stage --flow $FLOWS_DIR/next-flow
+$ awf flow next-stage --flow=$FLOWS_DIR/next-flow
 $ assert_stdout contains
 | fail-step
 
 # Run fail-step stage
-$ awf flow run --flow $FLOWS_DIR/next-flow
+$ awf flow run --flow=$FLOWS_DIR/next-flow
 $ assert_stdout contains
 | FAIL
 
-$ awf flow next-step --flow $FLOWS_DIR/next-flow
+$ awf flow next-step --flow=$FLOWS_DIR/next-flow
 $ assert_stdout contains
 | awf flow run
 
@@ -101,11 +101,11 @@ $ assert_stdout contains
 # Test 2: flow_next_incomplete_agent_step_hints_done
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/next-agent --workflow feature
+$ awf flow new $FLOWS_DIR/next-agent --workflow=feature
 $ assert_stdout contains
 | next-agent
 
-$ awf flow next-step --flow $FLOWS_DIR/next-agent
+$ awf flow next-step --flow=$FLOWS_DIR/next-agent
 $ assert_stdout contains
 | Mark complete with
 
@@ -113,15 +113,15 @@ $ assert_stdout contains
 # Test 3: flow_next_missing_artifact_mentions_artifact_name
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/next-artifact --workflow feature
+$ awf flow new $FLOWS_DIR/next-artifact --workflow=feature
 $ assert_stdout contains
 | next-artifact
 
-$ awf flow done --flow $FLOWS_DIR/next-artifact
+$ awf flow done --flow=$FLOWS_DIR/next-artifact
 $ assert_stdout contains
 | design
 
-$ awf flow next-step --flow $FLOWS_DIR/next-artifact
+$ awf flow next-step --flow=$FLOWS_DIR/next-artifact
 $ assert_stdout contains
 | design.md
 
@@ -129,17 +129,17 @@ $ assert_stdout contains
 # Test 4: flow_next_can_advance_mentions_advance_command
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/next-advance --workflow feature
+$ awf flow new $FLOWS_DIR/next-advance --workflow=feature
 $ assert_stdout contains
 | next-advance
 
 $ write_file flows/next-advance/artifacts/design.md
 | # My design
 
-$ awf flow done --flow $FLOWS_DIR/next-advance
+$ awf flow done --flow=$FLOWS_DIR/next-advance
 $ assert_stdout contains
 | design
 
-$ awf flow next-step --flow $FLOWS_DIR/next-advance
+$ awf flow next-step --flow=$FLOWS_DIR/next-advance
 $ assert_stdout contains
 | awf flow next-stage
