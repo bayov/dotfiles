@@ -16,34 +16,34 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | description = "Research the problem space."
 | produces = ["research.md"]
 | kind = "agent"
-| args = { instructions = "Research the problem and produce research.md." }
+| args = { prompt = "Research the problem and produce research.md." }
 | skippable = true
 |
 | [[stages]]
 | name = "scope"
 | description = "Define the scope of work."
 | kind = "agent"
-| args = { instructions = "Define the scope of work." }
+| args = { prompt = "Define the scope of work." }
 |
 | [[stages]]
 | name = "design"
 | description = "Produce a technical design."
 | kind = "agent"
-| args = { instructions = "Produce a technical design document." }
+| args = { prompt = "Produce a technical design document." }
 | skippable = true
 |
 | [[stages]]
 | name = "decompose"
 | description = "Break work into tasks."
 | kind = "agent"
-| args = { instructions = "Break the work into implementation tasks." }
+| args = { prompt = "Break the work into implementation tasks." }
 | skippable = true
 |
 | [[stages]]
 | name = "implement"
 | description = "Write the implementation."
 | kind = "agent"
-| args = { instructions = "Write the implementation." }
+| args = { prompt = "Write the implementation." }
 
 # =============================================================================
 # Agent creates the flow
@@ -70,7 +70,7 @@ $ assert_stdout equals
 |
 | Next up (stage: research):
 |     - Instructions: Research the problem and produce research.md.
-|     - Proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: research — agent reads instructions, produces artifact, advances
@@ -85,7 +85,7 @@ $ assert_stdout equals
 |
 | Next up (stage: scope):
 |     - Instructions: Define the scope of work.
-|     - Proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: scope — agent reads instructions, advances
@@ -97,7 +97,7 @@ $ assert_stdout equals
 |
 | Next up (stage: design):
 |     - Instructions: Produce a technical design document.
-|     - Proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: design — agent checks status, decides to skip (stage is skippable)
@@ -116,7 +116,7 @@ $ assert_stdout equals
 |
 | Next up (stage: decompose):
 |     - Instructions: Break the work into implementation tasks.
-|     - Proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 $ assert_stderr contains
 | Skipped stage "design"
 
@@ -131,7 +131,7 @@ $ assert_stdout equals
 |
 | Next up (stage: implement):
 |     - Instructions: Write the implementation.
-|     - Proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: implement (final) — agent reads instructions, advances

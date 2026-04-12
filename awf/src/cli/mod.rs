@@ -331,18 +331,24 @@ pub fn collect_workflow_errors(
         }
     }
 
-    // Every `prompt` file must exist on disk.
+    // Every `prompt_file` must exist on disk.
     let wf_dir = fs::find_workflow_dir(entries, &workflow.name);
     if let Some(wf_dir) = wf_dir {
         for stage in &workflow.stages {
-            if let StageKind::Agent { prompt: Some(filename), .. } = &stage.kind
-                && !wf_dir.join(filename).exists()
+            if let StageKind::Agent { prompt_file: Some(rel_or_abs), .. } =
+                &stage.kind
             {
-                errors.push(format!(
-                    "stage {:?}: prompt file {filename:?} not found in \
-                     workflow directory",
-                    stage.name
-                ));
+                let path = if rel_or_abs.starts_with('/') {
+                    std::path::PathBuf::from(rel_or_abs)
+                } else {
+                    wf_dir.join(rel_or_abs)
+                };
+                if !path.exists() {
+                    errors.push(format!(
+                        "stage {:?}: prompt file {rel_or_abs:?} not found",
+                        stage.name
+                    ));
+                }
             }
         }
     }

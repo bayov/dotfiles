@@ -18,13 +18,13 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | description = "Produce a design doc."
 | produces = ["design.md"]
 | kind = "agent"
-| args = { prompt = "design.md" }
+| args = { prompt_file = "design.md" }
 |
 | [[stages]]
 | name = "write-code"
 | description = "Write the code."
 | kind = "agent"
-| args = { prompt = "implement.md" }
+| args = { prompt_file = "implement.md" }
 |
 | [[stages]]
 | name = "test"
@@ -41,7 +41,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | description = "Code review and integration."
 | produces = ["changelog-entry.md"]
 | kind = "agent"
-| args = { prompt = "review.md" }
+| args = { prompt_file = "review.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design

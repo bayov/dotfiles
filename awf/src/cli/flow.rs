@@ -35,14 +35,23 @@ use crate::store::resolve::resolve_flow_path;
 // Output types — `awf flow new`
 // ---------------------------------------------------------------------------
 
+/// The prompt payload for an agent stage.
+#[derive(Debug)]
+pub enum AgentPrompt {
+    /// Inline instruction string passed directly to the agent.
+    Inline(String),
+    /// Resolved absolute path to a prompt file.
+    File(PathBuf),
+}
+
 /// Per-stage data for the agent guidance section of `awf flow new`.
 #[derive(Debug)]
 pub struct FlowNewStage {
     pub name: String,
     pub description: Option<String>,
-    /// Agent instructions (for non-current stages: shown in place of
-    /// description).
-    pub instructions: Option<String>,
+    /// Inline agent prompt text (for stage-listing previews of non-current
+    /// stages). `None` for command stages or `prompt_file` stages.
+    pub prompt: Option<String>,
     pub skippable: bool,
     pub produces: Vec<String>,
     pub is_current: bool,
@@ -51,7 +60,7 @@ pub struct FlowNewStage {
 /// What the agent should do next for the first stage.
 #[derive(Debug)]
 pub enum FirstStageAction {
-    AgentComplete { instructions: Option<String> },
+    AgentComplete { prompt: Option<AgentPrompt> },
     RunCommand,
 }
 
@@ -97,13 +106,13 @@ impl fmt::Display for FlowNewOutput {
                 ""
             };
             writeln!(f, "{}. {}{}", i + 1, stage.name.magenta(), suffix)?;
-            // Current stage: show description (instructions appear in "Next
-            // step"). Other stages: show instructions as a preview, falling
+            // Current stage: show description (prompt appears in "Next up"
+            // section). Other stages: show inline prompt as a preview, falling
             // back to description.
             let blurb = if stage.is_current {
                 stage.description.as_deref()
             } else {
-                stage.instructions.as_deref().or(stage.description.as_deref())
+                stage.prompt.as_deref().or(stage.description.as_deref())
             };
             if let Some(text) = blurb {
                 writeln!(f, "    - {text}")?;
@@ -116,13 +125,23 @@ impl fmt::Display for FlowNewOutput {
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
         match &self.first_stage_action {
-            FirstStageAction::AgentComplete { instructions } => {
-                if let Some(instr) = instructions {
-                    writeln!(f, "    - Instructions: {instr}")?;
+            FirstStageAction::AgentComplete { prompt } => {
+                match prompt {
+                    Some(AgentPrompt::Inline(text)) => {
+                        writeln!(f, "    - Instructions: {text}")?;
+                    }
+                    Some(AgentPrompt::File(path)) => {
+                        writeln!(
+                            f,
+                            "    - Follow the instructions at: {}",
+                            path.display()
+                        )?;
+                    }
+                    None => {}
                 }
                 writeln!(
                     f,
-                    "    - Proceed to the next stage with: `awf flow next-stage --flow={}`",
+                    "    - When done, proceed to the next stage with: `awf flow next-stage --flow={}`",
                     self.path.cyan()
                 )?;
             }
@@ -216,21 +235,19 @@ impl fmt::Display for FlowStatusOutput {
 // ---------------------------------------------------------------------------
 
 /// Output payload for `awf flow next-step`.
+///
+/// Each entry in `lines` is printed as a separate `→ {line}` row.
 #[derive(Debug)]
 pub struct FlowNextOutput {
-    /// The raw prompt file contents (for `complete_agent`, when available).
-    pub prompt: Option<String>,
-    /// Human-readable instruction.
-    pub message: String,
+    pub lines: Vec<String>,
 }
 
 impl fmt::Display for FlowNextOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(ref prompt) = self.prompt {
-            // Replicate `println!("{prompt}")`: write contents then a newline.
-            writeln!(f, "{prompt}")?;
+        for line in &self.lines {
+            writeln!(f, "{} {}", "→".cyan(), line)?;
         }
-        writeln!(f, "{} {}", "→".cyan(), self.message)
+        Ok(())
     }
 }
 
@@ -334,13 +351,23 @@ impl fmt::Display for FlowAdvanceOutput {
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
         match &self.next_action {
-            FirstStageAction::AgentComplete { instructions } => {
-                if let Some(instr) = instructions {
-                    writeln!(f, "    - Instructions: {instr}")?;
+            FirstStageAction::AgentComplete { prompt } => {
+                match prompt {
+                    Some(AgentPrompt::Inline(text)) => {
+                        writeln!(f, "    - Instructions: {text}")?;
+                    }
+                    Some(AgentPrompt::File(path)) => {
+                        writeln!(
+                            f,
+                            "    - Follow the instructions at: {}",
+                            path.display()
+                        )?;
+                    }
+                    None => {}
                 }
                 writeln!(
                     f,
-                    "    - Proceed to the next stage with: `awf flow next-stage --flow={}`",
+                    "    - When done, proceed to the next stage with: `awf flow next-stage --flow={}`",
                     self.flow_path.cyan()
                 )?;
             }
@@ -478,6 +505,8 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
         |s| s.name.as_str(),
     );
 
+    let wf_dir = fs::find_workflow_dir(&entries, workflow).unwrap_or_default();
+
     match fs::create_flow(&flow_dir, workflow, first_stage) {
         Ok(()) => {
             let stages = wf
@@ -485,16 +514,16 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
                 .iter()
                 .enumerate()
                 .map(|(i, s)| {
-                    let instructions = match &s.kind {
-                        StageKind::Agent { instructions, .. } => {
-                            instructions.clone()
+                    let prompt = match &s.kind {
+                        StageKind::Agent { prompt: Some(text), .. } => {
+                            Some(text.clone())
                         }
-                        StageKind::Command { .. } => None,
+                        _ => None,
                     };
                     FlowNewStage {
                         name: s.name.clone(),
                         description: s.description.clone(),
-                        instructions,
+                        prompt,
                         skippable: s.skippable,
                         produces: s.produces.clone(),
                         is_current: i == 0,
@@ -502,9 +531,13 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
                 })
                 .collect();
             let first_stage_action = match wf.stages.first().map(|s| &s.kind) {
-                Some(StageKind::Agent { instructions, .. }) => {
+                Some(StageKind::Agent { prompt, prompt_file }) => {
                     FirstStageAction::AgentComplete {
-                        instructions: instructions.clone(),
+                        prompt: build_agent_prompt_from_fields(
+                            prompt.as_deref(),
+                            prompt_file.as_deref(),
+                            &wf_dir,
+                        ),
                     }
                 }
                 _ => FirstStageAction::RunCommand,
@@ -661,44 +694,42 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 
     let output = match next_action(&workflow, &flow, &artifacts) {
         NextAction::RunCommand(stage) => FlowNextOutput {
-            prompt: None,
-            message: format!(
+            lines: vec![format!(
                 "[command] {} \u{2014} run: awf flow run",
                 stage.name
-            ),
+            )],
         },
         NextAction::CompleteAgent(stage) => {
-            let prompt =
-                if let StageKind::Agent { prompt: Some(ref filename), .. } =
-                    stage.kind
-                {
-                    match fs::load_prompt_file(
-                        &entries,
-                        &flow.workflow,
-                        filename,
-                    ) {
-                        Ok(contents) => Some(contents),
-                        Err(e) => {
-                            eprint_warning(format_args!(
-                                "could not load prompt file {filename:?}: {e}"
-                            ));
-                            None
-                        }
-                    }
-                } else {
-                    None
-                };
-            FlowNextOutput {
-                prompt,
-                message: "Mark complete with: awf flow next-stage".to_string(),
+            let mut lines = Vec::new();
+            match &stage.kind {
+                StageKind::Agent { prompt: Some(text), .. } => {
+                    lines.push(format!("Instructions: {text}"));
+                }
+                StageKind::Agent { prompt_file: Some(rel_or_abs), .. } => {
+                    let wf_dir =
+                        fs::find_workflow_dir(&entries, &flow.workflow)
+                            .unwrap_or_default();
+                    let path = if rel_or_abs.starts_with('/') {
+                        PathBuf::from(rel_or_abs)
+                    } else {
+                        wf_dir.join(rel_or_abs)
+                    };
+                    lines.push(format!(
+                        "Follow the instructions at: {}",
+                        path.display()
+                    ));
+                }
+                _ => {}
             }
+            lines.push("Mark complete with: awf flow next-stage".to_string());
+            FlowNextOutput { lines }
         }
         NextAction::ProduceArtifact(name) => FlowNextOutput {
-            prompt: None,
-            message: format!(
-                "Stage complete. Produce artifact: {name}\n\
-                 Write it to the artifacts/ directory inside the flow path."
-            ),
+            lines: vec![
+                format!("Stage complete. Produce artifact: {name}"),
+                "Write it to the artifacts/ directory inside the flow path."
+                    .to_string(),
+            ],
         },
         NextAction::CanAdvance => {
             let next_stage_name = workflow
@@ -708,16 +739,16 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
                 .and_then(|idx| workflow.stages.get(idx + 1))
                 .map_or_else(|| "next".to_string(), |s| s.name.clone());
             FlowNextOutput {
-                prompt: None,
-                message: format!(
+                lines: vec![format!(
                     "Stage complete. Run `awf flow next-stage` to move to \
                      {next_stage_name}."
-                ),
+                )],
             }
         }
         NextAction::Done => FlowNextOutput {
-            prompt: None,
-            message: "All stages complete. The workflow is done.".to_string(),
+            lines: vec![
+                "All stages complete. The workflow is done.".to_string(),
+            ],
         },
     };
 
@@ -750,7 +781,7 @@ pub fn run(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 
     if matches!(stage.kind, StageKind::Agent { .. }) {
         eprint_error(format_args!(
-            "Stage {:?} is an agent stage. Use `awf flow done` instead.",
+            "Stage {:?} is an agent stage. Use `awf flow next-stage` instead.",
             stage.name
         ));
         process::exit(1);
@@ -994,7 +1025,9 @@ pub fn advance(
     let new_stage = updated_flow.current_stage.clone();
     fs::save_flow(&flow_dir, &updated_flow)?;
 
-    let output = build_advance_output(&workflow, new_stage, &flow_dir);
+    let wf_dir =
+        fs::find_workflow_dir(&entries, &workflow.name).unwrap_or_default();
+    let output = build_advance_output(&workflow, new_stage, &flow_dir, &wf_dir);
     print_output(&output);
     Ok(())
 }
@@ -1174,6 +1207,7 @@ fn build_advance_output(
     workflow: &Workflow,
     new_stage: String,
     flow_dir: &Path,
+    wf_dir: &Path,
 ) -> FlowAdvanceOutput {
     let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
     let next_action = workflow
@@ -1181,9 +1215,13 @@ fn build_advance_output(
         .iter()
         .find(|s| s.name == new_stage)
         .map_or(FirstStageAction::RunCommand, |s| match &s.kind {
-            StageKind::Agent { instructions, .. } => {
+            StageKind::Agent { prompt, prompt_file } => {
                 FirstStageAction::AgentComplete {
-                    instructions: instructions.clone(),
+                    prompt: build_agent_prompt_from_fields(
+                        prompt.as_deref(),
+                        prompt_file.as_deref(),
+                        wf_dir,
+                    ),
                 }
             }
             StageKind::Command { .. } => FirstStageAction::RunCommand,
@@ -1194,6 +1232,27 @@ fn build_advance_output(
         flow_path: flow_dir.display().to_string(),
         next_action,
     }
+}
+
+/// Builds an [`AgentPrompt`] from the raw `prompt`/`prompt_file` field values
+/// and the workflow directory.
+fn build_agent_prompt_from_fields(
+    prompt: Option<&str>,
+    prompt_file: Option<&str>,
+    wf_dir: &Path,
+) -> Option<AgentPrompt> {
+    if let Some(text) = prompt {
+        return Some(AgentPrompt::Inline(text.to_owned()));
+    }
+    if let Some(rel_or_abs) = prompt_file {
+        let path = if rel_or_abs.starts_with('/') {
+            PathBuf::from(rel_or_abs)
+        } else {
+            wf_dir.join(rel_or_abs)
+        };
+        return Some(AgentPrompt::File(path));
+    }
+    None
 }
 
 /// Auto-completes an agent stage that has not yet been recorded as complete.

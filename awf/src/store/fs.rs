@@ -170,42 +170,6 @@ pub fn load_workflow(
     }
 }
 
-/// Loads a prompt file from a workflow's directory.
-///
-/// Searches the entries for the workflow identified by `workflow_name_ref`
-/// (same format as [`load_workflow`]), then reads
-/// `<entry.dir>/<workflow_name>/<filename>`.
-///
-/// # Errors
-///
-/// - [`Error::Io`] — file not found or unreadable.
-pub fn load_prompt_file(
-    entries: &[WorkflowSearchEntry],
-    workflow_name_ref: &str,
-    filename: &str,
-) -> Result<String> {
-    let (scope_filter, bare_name) = parse_name_ref(workflow_name_ref);
-
-    for entry in entries {
-        if scope_filter.is_some_and(|s| s != entry.scope.as_str()) {
-            continue;
-        }
-        assert_safe_path(&entry.dir);
-        let path = entry.dir.join(bare_name).join(filename);
-        if path.exists() {
-            return std::fs::read_to_string(&path).map_err(Error::Io);
-        }
-    }
-
-    Err(Error::Io(std::io::Error::new(
-        std::io::ErrorKind::NotFound,
-        format!(
-            "prompt file {filename:?} not found for workflow \
-             {workflow_name_ref:?}"
-        ),
-    )))
-}
-
 /// Creates a workflow template directory under `<agents_root>/workflows/`.
 ///
 /// Creates `<agents_root>/workflows/<name>/WORKFLOW.toml` with stub content.

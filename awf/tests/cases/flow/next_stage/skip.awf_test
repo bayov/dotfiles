@@ -14,12 +14,12 @@ $ write_file .agents/workflows/with-skippable/WORKFLOW.toml
 | skippable = true
 | produces = ["research.md"]
 | kind = "agent"
-| args = { instructions = "Research." }
+| args = { prompt = "Research." }
 |
 | [[stages]]
 | name = "implement"
 | kind = "agent"
-| args = { instructions = "Code." }
+| args = { prompt = "Code." }
 |
 | [[stages]]
 | name = "review"

@@ -32,7 +32,7 @@ $ write_file .agents/workflows/broken-prompt/WORKFLOW.toml
 | [[stages]]
 | name = "ask"
 | kind = "agent"
-| args = { prompt = "ghost.md" }
+| args = { prompt_file = "ghost.md" }
 
 $ awf flow new $FLOWS_DIR/should-not-exist-2 --workflow=broken-prompt
 $ assert_exit_code 1

@@ -7,7 +7,7 @@
 //!
 //! After deserialisation, call [`Workflow::validate`] to enforce invariants
 //! that cannot be expressed in the type system alone (e.g. mutual exclusivity
-//! of `command`/`run` and `prompt`/`instructions`).
+//! of `command`/`run` and `prompt`/`prompt_file`).
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -124,18 +124,20 @@ pub enum StageKind {
 
     /// An agent invocation stage.
     ///
-    /// Exactly one of `prompt` (a path to a prompt file) or `instructions`
-    /// (an inline instruction string) must be set. [`Workflow::validate`]
-    /// enforces this constraint.
+    /// Exactly one of `prompt` (an inline instruction string) or `prompt_file`
+    /// (a path to a prompt file, absolute or relative to the workflow
+    /// directory) must be set. [`Workflow::validate`] enforces this
+    /// constraint.
     Agent {
-        /// Path to a prompt file that provides the agent's task description.
+        /// Inline instruction string passed directly to the agent.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prompt: Option<String>,
 
-        /// Inline instruction string passed directly to the agent (alternative
-        /// to `prompt`).
+        /// Path to a prompt file that provides the agent's task description.
+        /// An absolute path is used as-is; a relative path is resolved from
+        /// the workflow directory.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        instructions: Option<String>,
+        prompt_file: Option<String>,
     },
 }
 
@@ -148,7 +150,7 @@ impl Workflow {
     /// - Every [`StageKind::Command`] stage has exactly one of `command` or
     ///   `run` set (not both, not neither).
     /// - Every [`StageKind::Agent`] stage has exactly one of `prompt` or
-    ///   `instructions` set (not both, not neither).
+    ///   `prompt_file` set (not both, not neither).
     ///
     /// # Errors
     ///
@@ -187,7 +189,7 @@ impl Workflow {
 /// Validates the mutual-exclusivity constraints on a single [`Stage`]'s kind.
 ///
 /// - [`StageKind::Command`]: exactly one of `command` or `run` must be `Some`.
-/// - [`StageKind::Agent`]: exactly one of `prompt` or `instructions` must be
+/// - [`StageKind::Agent`]: exactly one of `prompt` or `prompt_file` must be
 ///   `Some`.
 ///
 /// # Errors
@@ -212,20 +214,20 @@ fn validate_stage_kind(stage: &Stage) -> Result<()> {
                 ),
             }),
         },
-        StageKind::Agent { prompt, instructions } => {
-            match (prompt, instructions) {
+        StageKind::Agent { prompt, prompt_file } => {
+            match (prompt, prompt_file) {
                 (Some(_), None) | (None, Some(_)) => Ok(()),
                 (Some(_), Some(_)) => Err(Error::WorkflowValidation {
                     message: format!(
                         "stage {:?}: agent stage must not set both `prompt` \
-                         and `instructions`",
+                         and `prompt_file`",
                         stage.name
                     ),
                 }),
                 (None, None) => Err(Error::WorkflowValidation {
                     message: format!(
                         "stage {:?}: agent stage must set either `prompt` or \
-                         `instructions`",
+                         `prompt_file`",
                         stage.name
                     ),
                 }),

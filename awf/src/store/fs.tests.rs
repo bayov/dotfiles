@@ -10,7 +10,6 @@ use super::create_workflow_template;
 use super::find_workflow_dir;
 use super::list_workflows;
 use super::load_flow;
-use super::load_prompt_file;
 use super::load_workflow;
 use super::read_artifact;
 use super::save_flow;
@@ -246,43 +245,6 @@ fn create_workflow_template_returns_invalid_id_for_name_with_space() {
     );
     assert!(
         !agents_root.path().join("workflows/has space/WORKFLOW.toml").exists()
-    );
-}
-
-// ---------------------------------------------------------------------------
-// load_prompt_file
-// ---------------------------------------------------------------------------
-
-#[test]
-fn load_prompt_file_returns_content() {
-    // Given: a workflow dir with a prompt file
-    let root = TempDir::new().unwrap();
-    root.child("workflows/feature/design.md")
-        .write_str("# Design Prompt\nDo the thing.")
-        .unwrap();
-    let entries = [make_entry(root.child("workflows").path(), "project")];
-
-    // When: load the prompt file
-    let contents = load_prompt_file(&entries, "feature", "design.md").unwrap();
-
-    // Then: full contents returned
-    assert_eq!(contents, "# Design Prompt\nDo the thing.");
-}
-
-#[test]
-fn load_prompt_file_returns_io_error_for_missing_file() {
-    // Given: workflow dir exists but no prompt file
-    let root = TempDir::new().unwrap();
-    root.child("workflows/feature").create_dir_all().unwrap();
-    let entries = [make_entry(root.child("workflows").path(), "project")];
-
-    // When: load nonexistent file
-    let result = load_prompt_file(&entries, "feature", "missing.md");
-
-    // Then: Io error
-    assert!(
-        matches!(result, Err(Error::Io(_))),
-        "expected Err(Error::Io(_)), got {result:?}",
     );
 }
 

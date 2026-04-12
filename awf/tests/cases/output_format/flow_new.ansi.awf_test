@@ -12,7 +12,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | kind = "agent"
-| args = { prompt = "design.md" }
+| args = { prompt_file = "design.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design
@@ -34,7 +34,8 @@ $ assert_stdout equals
 |     - Produce a design doc.
 |
 | Next up (stage: [35mdesign[39m):
-|     - Proceed to the next stage with: `awf flow next-stage --flow=[36m<...>/fmt-new-h[39m`
+|     - Follow the instructions at: <...>/.agents/workflows/feature/design.md
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=[36m<...>/fmt-new-h[39m`
 
 # =============================================================================
 # Error: workflow not found

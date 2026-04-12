@@ -27,12 +27,12 @@ $ write_file .agents/workflows/with-artifact/WORKFLOW.toml
 | name = "draft"
 | produces = ["draft.md"]
 | kind = "agent"
-| args = { instructions = "Write it." }
+| args = { prompt = "Write it." }
 |
 | [[stages]]
 | name = "done"
 | kind = "agent"
-| args = { instructions = "Finalize." }
+| args = { prompt = "Finalize." }
 
 # =============================================================================
 # Test 1: --force bypasses stage gate

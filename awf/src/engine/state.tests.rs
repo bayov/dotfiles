@@ -56,8 +56,8 @@ fn feature_workflow() -> Workflow {
                 skippable: true,
                 produces: vec!["design.md".to_owned()],
                 kind: StageKind::Agent {
-                    prompt: Some("design.md".to_owned()),
-                    instructions: None,
+                    prompt_file: Some("design.md".to_owned()),
+                    prompt: None,
                 },
             },
             Stage {
@@ -66,8 +66,8 @@ fn feature_workflow() -> Workflow {
                 skippable: false,
                 produces: vec![],
                 kind: StageKind::Agent {
-                    prompt: Some("implement.md".to_owned()),
-                    instructions: None,
+                    prompt_file: Some("implement.md".to_owned()),
+                    prompt: None,
                 },
             },
             Stage {
@@ -96,8 +96,8 @@ fn feature_workflow() -> Workflow {
                 skippable: false,
                 produces: vec!["changelog-entry.md".to_owned()],
                 kind: StageKind::Agent {
-                    prompt: Some("review.md".to_owned()),
-                    instructions: None,
+                    prompt_file: Some("review.md".to_owned()),
+                    prompt: None,
                 },
             },
         ],
@@ -129,8 +129,8 @@ fn agent_stage(name: &str) -> Stage {
         skippable: false,
         produces: vec![],
         kind: StageKind::Agent {
-            prompt: Some(format!("{name}.md")),
-            instructions: None,
+            prompt_file: Some(format!("{name}.md")),
+            prompt: None,
         },
     }
 }
@@ -462,8 +462,8 @@ fn skip_stage_errors_on_last_stage() {
             skippable: true,
             produces: vec![],
             kind: StageKind::Agent {
-                prompt: Some("do.md".to_owned()),
-                instructions: None,
+                prompt_file: Some("do.md".to_owned()),
+                prompt: None,
             },
         }],
         default_flow_dir: None,

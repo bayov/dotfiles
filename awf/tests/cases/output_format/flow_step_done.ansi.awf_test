@@ -12,7 +12,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "design"
 | description = "Produce a design doc."
 | kind = "agent"
-| args = { prompt = "design.md" }
+| args = { prompt_file = "design.md" }
 
 $ write_file .agents/workflows/feature/design.md
 | # Design

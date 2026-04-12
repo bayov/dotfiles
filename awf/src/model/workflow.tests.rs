@@ -35,13 +35,13 @@ fn full_workflow_round_trip() {
         description = "Produce a design doc."
         produces = ["design.md"]
         kind = "agent"
-        args = { prompt = "design.md" }
+        args = { prompt_file = "design.md" }
 
         [[stages]]
         name = "implement"
         description = "Write the code."
         kind = "agent"
-        args = { prompt = "implement.md" }
+        args = { prompt_file = "implement.md" }
 
         [[stages]]
         name = "format"
@@ -57,7 +57,7 @@ fn full_workflow_round_trip() {
         name = "review"
         produces = ["changelog-entry.md"]
         kind = "agent"
-        args = { prompt = "review.md" }
+        args = { prompt_file = "review.md" }
     "#;
 
     // When: we parse the TOML and validate
@@ -89,8 +89,8 @@ fn full_workflow_round_trip() {
     assert_eq!(design.description.as_deref(), Some("Produce a design doc."));
     assert_eq!(design.produces, vec!["design.md"]);
     assert_eq!(design.kind, StageKind::Agent {
-        prompt: Some("design.md".to_owned()),
-        instructions: None,
+        prompt_file: Some("design.md".to_owned()),
+        prompt: None,
     });
 
     // Then: "implement" stage
@@ -98,8 +98,8 @@ fn full_workflow_round_trip() {
     assert_eq!(implement.name, "implement");
     assert!(implement.produces.is_empty());
     assert_eq!(implement.kind, StageKind::Agent {
-        prompt: Some("implement.md".to_owned()),
-        instructions: None,
+        prompt_file: Some("implement.md".to_owned()),
+        prompt: None,
     });
 
     // Then: "format" stage
@@ -176,13 +176,12 @@ fn inline_run_command_stage_parses_correctly() {
 }
 
 // ---------------------------------------------------------------------------
-// Inline `instructions` agent stage
+// Inline `prompt` agent stage
 // ---------------------------------------------------------------------------
 
 #[test]
-fn inline_instructions_agent_stage_parses_correctly() {
-    // Given: a stage using the inline `instructions` field instead of a prompt
-    // file path
+fn inline_prompt_agent_stage_parses_correctly() {
+    // Given: a stage using the inline `prompt` field (instruction text)
     let toml_input = r#"
         name = "hotfix"
         version = 1
@@ -190,17 +189,17 @@ fn inline_instructions_agent_stage_parses_correctly() {
         [[stages]]
         name = "patch"
         kind = "agent"
-        args = { instructions = "Fix the null-pointer crash in auth.rs." }
+        args = { prompt = "Fix the null-pointer crash in auth.rs." }
     "#;
 
     // When: we parse and validate
     let workflow = parse(toml_input);
-    workflow.validate().expect("inline instructions stage should be valid");
+    workflow.validate().expect("inline prompt stage should be valid");
 
-    // Then: the stage carries the inline instructions string
+    // Then: the stage carries the inline prompt string
     assert_eq!(workflow.stages[0].kind, StageKind::Agent {
-        prompt: None,
-        instructions: Some("Fix the null-pointer crash in auth.rs.".to_owned()),
+        prompt: Some("Fix the null-pointer crash in auth.rs.".to_owned()),
+        prompt_file: None,
     });
 }
 
@@ -227,8 +226,8 @@ fn serialize_then_deserialize_is_identity() {
                 skippable: false,
                 produces: vec!["CHANGELOG.md".to_owned()],
                 kind: StageKind::Agent {
-                    prompt: Some("changelog.md".to_owned()),
-                    instructions: None,
+                    prompt_file: Some("changelog.md".to_owned()),
+                    prompt: None,
                 },
             },
             Stage {
@@ -316,8 +315,8 @@ fn command_stage_with_neither_command_nor_run_fails_validation() {
 }
 
 #[test]
-fn agent_stage_with_both_prompt_and_instructions_fails_validation() {
-    // Given: an agent stage that sets both `prompt` and `instructions`
+fn agent_stage_with_both_prompt_and_prompt_file_fails_validation() {
+    // Given: an agent stage that sets both `prompt` and `prompt_file`
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -329,8 +328,8 @@ fn agent_stage_with_both_prompt_and_instructions_fails_validation() {
             skippable: false,
             produces: vec![],
             kind: StageKind::Agent {
-                prompt: Some("design.md".to_owned()),
-                instructions: Some("Write a design doc.".to_owned()),
+                prompt: Some("Write a design doc.".to_owned()),
+                prompt_file: Some("design.md".to_owned()),
             },
         }],
         default_flow_dir: None,
@@ -344,7 +343,7 @@ fn agent_stage_with_both_prompt_and_instructions_fails_validation() {
 }
 
 #[test]
-fn agent_stage_with_neither_prompt_nor_instructions_fails_validation() {
+fn agent_stage_with_neither_prompt_nor_prompt_file_fails_validation() {
     // Given: an agent stage with both fields absent
     let workflow = Workflow {
         name: "bad".to_owned(),
@@ -356,7 +355,7 @@ fn agent_stage_with_neither_prompt_nor_instructions_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            kind: StageKind::Agent { prompt: None, instructions: None },
+            kind: StageKind::Agent { prompt: None, prompt_file: None },
         }],
         default_flow_dir: None,
     };
