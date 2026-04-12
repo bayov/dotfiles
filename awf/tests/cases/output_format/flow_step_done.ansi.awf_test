@@ -23,6 +23,6 @@ $ awf flow new $FLOWS_DIR/fmt-done-h --workflow=feature
 $ assert_stdout contains
 | fmt-done-h
 
-$ awf flow done --flow=$FLOWS_DIR/fmt-done-h
+$ awf flow next-stage --flow=$FLOWS_DIR/fmt-done-h
 $ assert_stdout equals
 | [32m✓[39m Stage [35mdesign[39m marked complete.

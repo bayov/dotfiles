@@ -60,11 +60,6 @@ $ awf flow new $FLOWS_DIR/add-oauth --workflow=feature
 $ assert_stdout contains
 | add-oauth
 
-# --- Mark design agent stage as done ---
-$ awf flow done --flow=$FLOWS_DIR/add-oauth
-$ assert_stdout contains
-| design
-
 # --- Advance should fail: design.md artifact is missing ---
 $ awf flow next-stage --flow=$FLOWS_DIR/add-oauth
 $ assert_exit_code 1

@@ -111,11 +111,6 @@ pub enum FlowCommands {
         #[arg(long)]
         flow: Option<String>,
     },
-    /// Mark the current agent stage as complete
-    Done {
-        #[arg(long)]
-        flow: Option<String>,
-    },
     /// Validate flow artifacts
     Validate {
         #[arg(long)]
@@ -180,9 +175,6 @@ fn dispatch_flow(command: FlowCommands) -> color_eyre::Result<()> {
         }
         FlowCommands::Run { flow: flow_flag } => {
             flow::run(flow_flag.as_deref())
-        }
-        FlowCommands::Done { flow: flow_flag } => {
-            flow::done(flow_flag.as_deref())
         }
         FlowCommands::Validate { flow: flow_flag } => {
             flow::validate(flow_flag.as_deref())

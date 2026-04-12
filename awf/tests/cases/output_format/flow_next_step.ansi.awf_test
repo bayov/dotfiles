@@ -26,4 +26,4 @@ $ assert_stdout contains
 $ awf flow next-step --flow=$FLOWS_DIR/fmt-next
 $ assert_stdout equals
 | # Design
-| [36m→[39m Mark complete with: awf flow done
+| [36m→[39m Mark complete with: awf flow next-stage

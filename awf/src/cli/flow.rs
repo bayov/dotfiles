@@ -69,16 +69,15 @@ impl fmt::Display for FlowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "Created flow: {} (workflow: {}, stage: {})",
-            self.path.cyan(),
+            "Created `{}` flow: {}",
             self.workflow.blue(),
-            self.stage.magenta(),
+            self.path.cyan(),
         )?;
 
         writeln!(f)?;
         writeln!(
             f,
-            "From now on, the \"active flow\" is {}.",
+            "From now on, \"active flow\" refers to `{}`.",
             self.path.cyan()
         )?;
         writeln!(f)?;
@@ -115,7 +114,7 @@ impl fmt::Display for FlowNewOutput {
         }
 
         writeln!(f)?;
-        writeln!(f, "Next step is `{}`:", self.stage.magenta())?;
+        writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
         match &self.first_stage_action {
             FirstStageAction::AgentComplete { instructions } => {
                 if let Some(instr) = instructions {
@@ -123,7 +122,7 @@ impl fmt::Display for FlowNewOutput {
                 }
                 writeln!(
                     f,
-                    "    - Mark complete with: `awf flow done --flow={}`",
+                    "    - Proceed to the next stage with: `awf flow next-stage --flow={}`",
                     self.path.cyan()
                 )?;
             }
@@ -661,7 +660,7 @@ pub fn next(flow_flag: Option<&str>) -> color_eyre::Result<()> {
                 };
             FlowNextOutput {
                 prompt,
-                message: "Mark complete with: awf flow done".to_string(),
+                message: "Mark complete with: awf flow next-stage".to_string(),
             }
         }
         NextAction::ProduceArtifact(name) => FlowNextOutput {
@@ -752,46 +751,6 @@ pub fn run(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         status: status.to_string(),
         duration_ms: result.duration_ms,
     };
-    print_output(&output);
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// `awf flow done [--flow=<path>]`
-// ---------------------------------------------------------------------------
-
-/// Handles `awf flow done [--flow=<path>]`.
-///
-/// Marks the current agent stage as complete.
-///
-/// # Errors
-///
-/// Returns an error for unexpected I/O failures.
-pub fn done(flow_flag: Option<&str>) -> color_eyre::Result<()> {
-    let project_root = super::find_project_root_or_exit(&env::current_dir()?)?;
-    let config = crate::config::load(&project_root)?;
-    let flow_dir = resolve_or_exit(flow_flag, &config)?;
-    let entries =
-        crate::config::effective_workflow_entries(&project_root, &config);
-
-    let flow = load_flow_or_exit(&flow_dir)?;
-    let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
-
-    let stage = current_stage_or_exit(&workflow, &flow);
-
-    if matches!(stage.kind, StageKind::Command { .. }) {
-        eprint_error(format_args!(
-            "Stage {:?} is a command stage. Use `awf flow run` instead.",
-            stage.name
-        ));
-        process::exit(1);
-    }
-
-    let flow = record_stage_pass(flow, stage, None);
-
-    fs::save_flow(&flow_dir, &flow)?;
-
-    let output = FlowDoneOutput { stage: stage.name.clone() };
     print_output(&output);
     Ok(())
 }
@@ -905,6 +864,25 @@ pub fn advance(
     let flow = load_flow_or_exit(&flow_dir)?;
     let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
     super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
+
+    // For agent stages (and not --skip): auto-record completion before
+    // advancing. This replaces the former `complete-stage` command.
+    // The completion is saved to disk immediately so that if the advance
+    // fails (e.g. missing artifact) the stage is still recorded as done and
+    // `next-step` correctly reports ProduceArtifact on the next call.
+    let flow = if skip {
+        flow
+    } else {
+        maybe_complete_agent(&workflow, flow, &flow_dir)?
+    };
+
+    // Final agent stage: completion was recorded above; nothing left to
+    // advance to, so report success and return.
+    if !skip && force.is_none() && is_final_agent_stage(&workflow, &flow) {
+        let output = FlowDoneOutput { stage: flow.current_stage };
+        print_output(&output);
+        return Ok(());
+    }
 
     let updated_flow = if skip {
         // --skip bypasses all gates (stage completion and artifacts).
@@ -1157,6 +1135,45 @@ fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
         }
     }
     names
+}
+
+/// Auto-completes an agent stage that has not yet been recorded as complete.
+///
+/// Saves the updated flow to disk immediately so that if the subsequent
+/// advance fails (e.g. missing artifact) the completion is preserved.
+/// Returns the (possibly updated) flow unchanged for non-agent stages or
+/// stages that are already complete.
+fn maybe_complete_agent(
+    workflow: &Workflow,
+    flow: FlowState,
+    flow_dir: &Path,
+) -> color_eyre::Result<FlowState> {
+    let stage = current_stage_or_exit(workflow, &flow);
+    if matches!(stage.kind, StageKind::Agent { .. })
+        && !stage_is_complete(&flow, &stage.name)
+    {
+        let completed = record_stage_pass(flow, stage, None);
+        fs::save_flow(flow_dir, &completed)?;
+        Ok(completed)
+    } else {
+        Ok(flow)
+    }
+}
+
+/// Returns `true` when the current stage is an agent stage that is the last
+/// stage in the workflow.
+fn is_final_agent_stage(workflow: &Workflow, flow: &FlowState) -> bool {
+    let stage = current_stage_or_exit(workflow, flow);
+    matches!(stage.kind, StageKind::Agent { .. })
+        && workflow.stages.last().is_some_and(|s| s.name == flow.current_stage)
+}
+
+/// Returns `true` if `stage_name` has a `Completed` entry in the flow history.
+fn stage_is_complete(flow: &FlowState, stage_name: &str) -> bool {
+    flow.stage_history.iter().rev().any(|e| {
+        e.stage == stage_name
+            && e.status == crate::model::flow::StageStatus::Completed
+    })
 }
 
 /// Finds the current stage in the workflow, exiting if not found.

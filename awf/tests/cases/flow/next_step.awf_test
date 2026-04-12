@@ -117,9 +117,10 @@ $ awf flow new $FLOWS_DIR/next-artifact --workflow=feature
 $ assert_stdout contains
 | next-artifact
 
-$ awf flow done --flow=$FLOWS_DIR/next-artifact
-$ assert_stdout contains
-| design
+$ awf flow next-stage --flow=$FLOWS_DIR/next-artifact
+$ assert_exit_code 1
+$ assert_stderr contains
+| design.md
 
 $ awf flow next-step --flow=$FLOWS_DIR/next-artifact
 $ assert_stdout contains
@@ -133,12 +134,13 @@ $ awf flow new $FLOWS_DIR/next-advance --workflow=feature
 $ assert_stdout contains
 | next-advance
 
+$ awf flow next-stage --flow=$FLOWS_DIR/next-advance
+$ assert_exit_code 1
+$ assert_stderr contains
+| design.md
+
 $ write_file flows/next-advance/artifacts/design.md
 | # My design
-
-$ awf flow done --flow=$FLOWS_DIR/next-advance
-$ assert_stdout contains
-| design
 
 $ awf flow next-step --flow=$FLOWS_DIR/next-advance
 $ assert_stdout contains

@@ -97,10 +97,6 @@ $ assert_stdout contains
 $ write_file flows/validate-ok/artifacts/design.md
 | # Design
 
-$ awf flow done --flow=$FLOWS_DIR/validate-ok
-$ assert_stdout contains
-| design
-
 $ awf flow next-stage --flow=$FLOWS_DIR/validate-ok
 $ assert_stdout contains
 | write-code
@@ -120,9 +116,6 @@ $ assert_stdout contains
 # Write the artifact, advance, then delete to create invalid state
 $ write_file flows/validate-missing/artifacts/draft.md
 | placeholder
-$ awf flow done --flow=$FLOWS_DIR/validate-missing
-$ assert_stdout contains
-| draft
 $ awf flow next-stage --flow=$FLOWS_DIR/validate-missing
 $ assert_stdout contains
 | polish

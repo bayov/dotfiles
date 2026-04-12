@@ -64,12 +64,7 @@ $ assert_stdout contains
 $ write_file flows/add-oauth/artifacts/design.md
 | # My design
 
-# Step 3: Mark agent stage done
-$ awf flow done --flow=$FLOWS_DIR/add-oauth
-$ assert_stdout contains
-| design
-
-# Step 4: Advance
+# Step 3: Advance (auto-completes agent stage)
 $ awf flow next-stage --flow=$FLOWS_DIR/add-oauth
 $ assert_stdout contains
 | write-code

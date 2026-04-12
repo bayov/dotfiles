@@ -70,20 +70,14 @@ $ awf flow new $FLOWS_DIR/fmt-history --workflow=feature
 $ assert_stdout contains
 | fmt-history
 
-# Complete design stage
-$ awf flow done --flow=$FLOWS_DIR/fmt-history
-$ assert_stdout contains
-| design
+# Complete design stage and advance
 $ write_file flows/fmt-history/artifacts/design.md
 | # Design doc
 $ awf flow next-stage --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | write-code
 
-# Complete write-code stage
-$ awf flow done --flow=$FLOWS_DIR/fmt-history
-$ assert_stdout contains
-| write-code
+# Complete write-code stage and advance
 $ awf flow next-stage --flow=$FLOWS_DIR/fmt-history
 $ assert_stdout contains
 | optional-check

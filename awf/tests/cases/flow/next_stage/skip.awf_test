@@ -48,13 +48,7 @@ $ awf flow new $FLOWS_DIR/skip-flow --workflow=with-skippable
 $ assert_stdout contains
 | skip-flow
 
-# Without --skip: fails because stage is incomplete
-$ awf flow next-stage --flow=$FLOWS_DIR/skip-flow
-$ assert_exit_code 1
-$ assert_stderr contains
-| not complete
-
-# With --skip: bypasses stage and artifact gates
+# --skip bypasses stage completion and artifact gates
 $ awf flow next-stage --skip --flow=$FLOWS_DIR/skip-flow
 $ assert_exit_code 0
 $ assert_stdout contains
