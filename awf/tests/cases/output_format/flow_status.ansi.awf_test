@@ -71,10 +71,10 @@ $ awf flow status --flow=$FLOWS_DIR/fmt-status
 $ assert_stdout equals
 |     Flow: [36m<...>/flows/fmt-status[39m
 | Workflow: [34msimple[39m
-|   Status: [32mactive[39m (stage: [35mstep-one[39m)
+|   Status: [34m[1mactive[0m[39m (stage: [35mstep-one[39m)
 | 
 | Workflow `[34msimple[39m` has 2 stages:
-| [36m▶ [39m1. [35mstep-one[39m (current)
+| [34m▶ [39m1. [35mstep-one[39m[34m (current)[39m
 |     - First step.
 |   2. [35mstep-two[39m
 |     - Second step.
@@ -114,13 +114,13 @@ $ awf flow status --flow=$FLOWS_DIR/multi-flow
 $ assert_stdout equals
 |     Flow: [36m<...>/flows/multi-flow[39m
 | Workflow: [34mmulti[39m
-|   Status: [32mactive[39m (stage: [35mcurrent-step[39m)
+|   Status: [34m[1mactive[0m[39m (stage: [35mcurrent-step[39m)
 | 
 | Workflow `[34mmulti[39m` has 5 stages:
-| [32m✓ [39m1. [35mdone-step[39m
-| [33m✓ [39m2. [35mforced-step[39m[90m (force-completed)[39m
-| [90m⏭ [39m3. [35mskipped-step[39m[90m (skipped)[39m
-| [36m▶ [39m4. [35mcurrent-step[39m (current)
+| [32m✓ [39m1. [35mdone-step[39m[32m (completed)[39m
+| [33m✓ [39m2. [35mforced-step[39m[33m (force-completed)[39m
+| [90m○ [39m3. [35mskipped-step[39m[90m (skipped)[39m
+| [34m▶ [39m4. [35mcurrent-step[39m[34m (current)[39m
 |     - Current step.
 |   5. [35mpending-step[39m (skippable)
 |     - Pending step.
@@ -149,11 +149,11 @@ $ awf flow status --flow=$FLOWS_DIR/done-flow
 $ assert_stdout equals
 |     Flow: [36m<...>/flows/done-flow[39m
 | Workflow: [34msimple[39m
-|   Status: [32mcompleted[39m
+|   Status: [32m[1mcompleted[0m[39m
 | 
 | Workflow `[34msimple[39m` has 2 stages:
-| [32m✓ [39m1. [35mstep-one[39m
-| [32m✓ [39m2. [35mstep-two[39m
+| [32m✓ [39m1. [35mstep-one[39m[32m (completed)[39m
+| [32m✓ [39m2. [35mstep-two[39m[32m (completed)[39m
 | 
 | Workflow complete. To archive this flow, run: `awf flow archive --flow=[36m<...>/flows/done-flow[39m`
 
@@ -169,10 +169,10 @@ $ awf flow status --flow=$FLOWS_DIR/done-flow
 $ assert_stdout equals
 |     Flow: [36m<...>/flows/done-flow[39m
 | Workflow: [34msimple[39m
-|   Status: [90marchived[39m (stage: [35mstep-two[39m)
+|   Status: [33m[1marchived[0m[39m (stage: [35mstep-two[39m)
 | 
 | Workflow `[34msimple[39m` has 2 stages:
-| [32m✓ [39m1. [35mstep-one[39m
-| [32m✓ [39m2. [35mstep-two[39m
+| [32m✓ [39m1. [35mstep-one[39m[32m (completed)[39m
+| [32m✓ [39m2. [35mstep-two[39m[32m (completed)[39m
 | 
 | This flow is [33m[1marchived[0m[39m and cannot be modified. To re-activate the flow, run: `awf flow unarchive --flow=[36m<...>/flows/done-flow[39m`
