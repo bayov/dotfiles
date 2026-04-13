@@ -198,10 +198,11 @@
                 // --- Traits (Interfaces) ---
                 "interface": "#9699d4",
                 "interface:rust": "#9699d4",
-                // --- Constants & Statics ---
+                // --- Constants & Literals & Statics ---
                 // Const (disable default italics)
                 "const": { "foreground": "#a482b7", "italic": false },
                 "const:rust": { "foreground": "#a482b7", "italic": false },
+                "number": "#a482b7",
                 "static": "#a482b7",
                 "static:rust": "#a482b7",
                 // --- Variables & Parameters ---
@@ -217,7 +218,10 @@
                 "typeParameter": "#20999d",
                 "typeParameter:rust": "#20999d",
                 "constParameter": "#20999d",
-                "constParameter:rust": "#20999d"
+                "constParameter:rust": "#20999d",
+                // --- Lifetime Annotations ---
+                "lifetime": "#70625b",
+                "lifetime:rust": "#70625b"
             }
         }
     },
