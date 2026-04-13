@@ -74,6 +74,9 @@ pub struct FlowNewOutput {
     pub first_stage_action: FirstStageAction,
 }
 
+#[allow(dead_code)]
+const fn foo(_x: &'static str) -> &'static str { "foo" }
+
 impl fmt::Display for FlowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
@@ -204,6 +207,17 @@ impl fmt::Display for FlowListOutput {
 // Output types — `awf flow status`
 // ---------------------------------------------------------------------------
 
+/// Flow-level status for `awf flow status`.
+#[derive(Debug, PartialEq, Eq)]
+pub enum FlowStatusLevel {
+    /// Flow is in progress.
+    Active,
+    /// All stages have been completed (or skipped).
+    Completed,
+    /// Flow has been archived.
+    Archived,
+}
+
 /// Annotation for a stage's state in the status display.
 #[derive(Debug)]
 pub enum FlowStatusStageState {
@@ -230,26 +244,33 @@ pub struct FlowStatusOutput {
     pub workflow: String,
     pub stages: Vec<FlowStatusStage>,
     pub current_stage: String,
-    pub archived: bool,
+    pub status: FlowStatusLevel,
     pub next_action: Option<FirstStageAction>,
 }
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Header
-        writeln!(
-            f,
-            "Flow: {}  (workflow: {}, stage: {})",
-            self.flow_path.cyan(),
-            self.workflow.blue(),
-            self.current_stage.magenta(),
-        )?;
-        let badge = if self.archived {
-            "[· archived]".bright_black().to_string()
-        } else {
-            "[● active]".green().to_string()
+        writeln!(f, "    Flow: {}", self.flow_path.cyan())?;
+        writeln!(f, "Workflow: {}", self.workflow.blue())?;
+        let status_str = match self.status {
+            FlowStatusLevel::Active => {
+                format!(
+                    "{} (stage: {})",
+                    "active".green(),
+                    self.current_stage.magenta()
+                )
+            }
+            FlowStatusLevel::Completed => "completed".green().to_string(),
+            FlowStatusLevel::Archived => {
+                format!(
+                    "{} (stage: {})",
+                    "archived".bright_black(),
+                    self.current_stage.magenta()
+                )
+            }
         };
-        writeln!(f, "Status: {badge}")?;
+        writeln!(f, "  Status: {status_str}")?;
         writeln!(f)?;
 
         // Stage list
@@ -302,44 +323,62 @@ impl fmt::Display for FlowStatusOutput {
             }
         }
 
-        // Next up section — omitted for archived flows.
-        if !self.archived {
-            if let Some(action) = &self.next_action {
+        match self.status {
+            FlowStatusLevel::Active => {
+                if let Some(action) = &self.next_action {
+                    writeln!(f)?;
+                    writeln!(
+                        f,
+                        "Next up (stage: {}):",
+                        self.current_stage.magenta()
+                    )?;
+                    match action {
+                        FirstStageAction::AgentComplete { prompt } => {
+                            match prompt {
+                                Some(AgentPrompt::Inline(text)) => {
+                                    writeln!(f, "    - Instructions: {text}")?;
+                                }
+                                Some(AgentPrompt::File(path)) => {
+                                    writeln!(
+                                        f,
+                                        "    - Follow the instructions at: {}",
+                                        path.display()
+                                    )?;
+                                }
+                                None => {}
+                            }
+                            writeln!(
+                                f,
+                                "    - When done, proceed to the next stage with: `awf flow next-stage --flow={}`",
+                                self.flow_path.cyan()
+                            )?;
+                        }
+                        FirstStageAction::RunCommand => {
+                            writeln!(
+                                f,
+                                "    - Run: `awf flow run --flow={}`",
+                                self.flow_path.cyan()
+                            )?;
+                        }
+                    }
+                }
+            }
+            FlowStatusLevel::Completed => {
                 writeln!(f)?;
                 writeln!(
                     f,
-                    "Next up (stage: {}):",
-                    self.current_stage.magenta()
+                    "Workflow complete. To archive this flow, run: `awf flow archive --flow={}`",
+                    self.flow_path.cyan()
                 )?;
-                match action {
-                    FirstStageAction::AgentComplete { prompt } => {
-                        match prompt {
-                            Some(AgentPrompt::Inline(text)) => {
-                                writeln!(f, "    - Instructions: {text}")?;
-                            }
-                            Some(AgentPrompt::File(path)) => {
-                                writeln!(
-                                    f,
-                                    "    - Follow the instructions at: {}",
-                                    path.display()
-                                )?;
-                            }
-                            None => {}
-                        }
-                        writeln!(
-                            f,
-                            "    - When done, proceed to the next stage with: `awf flow next-stage --flow={}`",
-                            self.flow_path.cyan()
-                        )?;
-                    }
-                    FirstStageAction::RunCommand => {
-                        writeln!(
-                            f,
-                            "    - Run: `awf flow run --flow={}`",
-                            self.flow_path.cyan()
-                        )?;
-                    }
-                }
+            }
+            FlowStatusLevel::Archived => {
+                writeln!(f)?;
+                writeln!(
+                    f,
+                    "This flow is {} and cannot be modified. To re-activate the flow, run: `awf flow unarchive --flow={}`",
+                    "archived".bold().yellow(),
+                    self.flow_path.cyan()
+                )?;
             }
         }
 
@@ -788,12 +827,26 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         .position(|s| s.name == flow.current_stage)
         .unwrap_or(0);
 
-    let stages = workflow
+    let artifacts = collect_artifacts(&flow_dir);
+    let flow_action = next_action(&workflow, &flow, &artifacts);
+
+    let status = if flow.archived {
+        FlowStatusLevel::Archived
+    } else if matches!(flow_action, NextAction::Done) {
+        FlowStatusLevel::Completed
+    } else {
+        FlowStatusLevel::Active
+    };
+
+    let stages: Vec<FlowStatusStage> = workflow
         .stages
         .iter()
         .enumerate()
         .map(|(i, s)| {
-            let state = if i < current_idx {
+            let state = if i <= current_idx {
+                // For past stages and the current stage, derive state from
+                // history. If the stage has a terminal history entry, use it;
+                // otherwise show it as current (in-progress).
                 let last =
                     flow.stage_history.iter().rfind(|e| e.stage == s.name);
                 match last.map(|e| e.status) {
@@ -803,10 +856,11 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
                     Some(crate::model::flow::StageStatus::ForceCompleted) => {
                         FlowStatusStageState::ForceCompleted
                     }
-                    _ => FlowStatusStageState::Completed,
+                    Some(crate::model::flow::StageStatus::Completed) => {
+                        FlowStatusStageState::Completed
+                    }
+                    _ => FlowStatusStageState::Current,
                 }
-            } else if i == current_idx {
-                FlowStatusStageState::Current
             } else {
                 FlowStatusStageState::Pending { skippable: s.skippable }
             };
@@ -819,21 +873,22 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         })
         .collect();
 
-    let next_action = if flow.archived {
-        None
-    } else {
-        workflow.stages.get(current_idx).map(|s| match &s.kind {
-            StageKind::Agent { prompt, prompt_file } => {
-                FirstStageAction::AgentComplete {
-                    prompt: build_agent_prompt_from_fields(
-                        prompt.as_deref(),
-                        prompt_file.as_deref(),
-                        &wf_dir,
-                    ),
+    let next_action_for_display = match status {
+        FlowStatusLevel::Active => {
+            workflow.stages.get(current_idx).map(|s| match &s.kind {
+                StageKind::Agent { prompt, prompt_file } => {
+                    FirstStageAction::AgentComplete {
+                        prompt: build_agent_prompt_from_fields(
+                            prompt.as_deref(),
+                            prompt_file.as_deref(),
+                            &wf_dir,
+                        ),
+                    }
                 }
-            }
-            StageKind::Command { .. } => FirstStageAction::RunCommand,
-        })
+                StageKind::Command { .. } => FirstStageAction::RunCommand,
+            })
+        }
+        _ => None,
     };
 
     let output = FlowStatusOutput {
@@ -841,8 +896,8 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         workflow: flow.workflow.clone(),
         stages,
         current_stage: flow.current_stage.clone(),
-        archived: flow.archived,
-        next_action,
+        status,
+        next_action: next_action_for_display,
     };
 
     print_output(&output);

@@ -38,7 +38,7 @@ $ awf flow run --flow=$FLOWS_DIR/retry-flow
 $ assert_stdout contains
 | PASS
 
-# Step 5: Check status reflects active
+# Step 5: Check status reflects completed
 $ awf flow status --flow=$FLOWS_DIR/retry-flow
 $ assert_stdout contains
-| active
+| completed

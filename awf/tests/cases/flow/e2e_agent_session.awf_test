@@ -85,8 +85,9 @@ $ assert_stdout equals
 
 $ awf flow status --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
-| Flow: <...>/add-feature  (workflow: feature, stage: research)
-| Status: [● active]
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: active (stage: research)
 |
 | Workflow `feature` has 5 stages:
 | ▶ 1. research (current)
@@ -138,8 +139,9 @@ $ assert_stdout equals
 
 $ awf flow status --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
-| Flow: <...>/add-feature  (workflow: feature, stage: design)
-| Status: [● active]
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: active (stage: design)
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research
