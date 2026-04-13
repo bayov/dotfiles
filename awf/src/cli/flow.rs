@@ -257,15 +257,17 @@ impl fmt::Display for FlowStatusOutput {
             FlowStatusLevel::Active => {
                 format!(
                     "{} (stage: {})",
-                    "active".green(),
+                    "active".bold().blue(),
                     self.current_stage.magenta()
                 )
             }
-            FlowStatusLevel::Completed => "completed".green().to_string(),
+            FlowStatusLevel::Completed => {
+                "completed".bold().green().to_string()
+            }
             FlowStatusLevel::Archived => {
                 format!(
                     "{} (stage: {})",
-                    "archived".bright_black(),
+                    "archived".bold().yellow(),
                     self.current_stage.magenta()
                 )
             }
@@ -282,19 +284,20 @@ impl fmt::Display for FlowStatusOutput {
         )?;
         for (i, stage) in self.stages.iter().enumerate() {
             let (prefix, suffix) = match &stage.state {
-                FlowStatusStageState::Completed => {
-                    ("✓ ".green().to_string(), String::new())
-                }
+                FlowStatusStageState::Completed => (
+                    "✓ ".green().to_string(),
+                    " (completed)".green().to_string(),
+                ),
                 FlowStatusStageState::ForceCompleted => (
                     "✓ ".yellow().to_string(),
-                    " (force-completed)".bright_black().to_string(),
+                    " (force-completed)".yellow().to_string(),
                 ),
                 FlowStatusStageState::Skipped => (
-                    "⏭ ".bright_black().to_string(),
+                    "○ ".bright_black().to_string(),
                     " (skipped)".bright_black().to_string(),
                 ),
                 FlowStatusStageState::Current => {
-                    ("▶ ".cyan().to_string(), " (current)".to_string())
+                    ("▶ ".blue().to_string(), " (current)".blue().to_string())
                 }
                 FlowStatusStageState::Pending { skippable } => (
                     "  ".to_string(),

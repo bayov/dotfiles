@@ -144,8 +144,8 @@ $ assert_stdout equals
 |   Status: active (stage: design)
 |
 | Workflow `feature` has 5 stages:
-| ✓ 1. research
-| ✓ 2. scope
+| ✓ 1. research (completed)
+| ✓ 2. scope (completed)
 | ▶ 3. design (current)
 |     - Produce a technical design.
 |   4. decompose (skippable)
