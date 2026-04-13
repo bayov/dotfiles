@@ -84,12 +84,6 @@ impl fmt::Display for FlowNewOutput {
         )?;
 
         writeln!(f)?;
-        writeln!(
-            f,
-            "From now on, \"active flow\" refers to `{}`.",
-            self.path.cyan()
-        )?;
-        writeln!(f)?;
 
         writeln!(
             f,
@@ -210,23 +204,146 @@ impl fmt::Display for FlowListOutput {
 // Output types — `awf flow status`
 // ---------------------------------------------------------------------------
 
+/// Annotation for a stage's state in the status display.
+#[derive(Debug)]
+pub enum FlowStatusStageState {
+    Completed,
+    ForceCompleted,
+    Skipped,
+    Current,
+    Pending { skippable: bool },
+}
+
+/// Per-stage data for the `awf flow status` output.
+#[derive(Debug)]
+pub struct FlowStatusStage {
+    pub name: String,
+    pub description: Option<String>,
+    pub produces: Vec<String>,
+    pub state: FlowStatusStageState,
+}
+
 /// The complete status payload for `awf flow status`.
 #[derive(Debug)]
 pub struct FlowStatusOutput {
-    pub flow: String,
-    pub stage: String,
-    pub status: String,
+    pub flow_path: String,
+    pub workflow: String,
+    pub stages: Vec<FlowStatusStage>,
+    pub current_stage: String,
+    pub archived: bool,
+    pub next_action: Option<FirstStageAction>,
 }
 
 impl fmt::Display for FlowStatusOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "  flow: {}", self.flow.cyan())?;
-        writeln!(f, " stage: {}", self.stage.magenta())?;
-        let badge = match self.status.as_str() {
-            "archived" => "[· archived]".bright_black().to_string(),
-            _ => "[● active]".green().to_string(),
+        // Header
+        writeln!(
+            f,
+            "Flow: {}  (workflow: {}, stage: {})",
+            self.flow_path.cyan(),
+            self.workflow.blue(),
+            self.current_stage.magenta(),
+        )?;
+        let badge = if self.archived {
+            "[· archived]".bright_black().to_string()
+        } else {
+            "[● active]".green().to_string()
         };
-        writeln!(f, "status: {badge}")
+        writeln!(f, "Status: {badge}")?;
+        writeln!(f)?;
+
+        // Stage list
+        writeln!(
+            f,
+            "Workflow `{}` has {} stages:",
+            self.workflow.blue(),
+            self.stages.len()
+        )?;
+        for (i, stage) in self.stages.iter().enumerate() {
+            let (prefix, suffix) = match &stage.state {
+                FlowStatusStageState::Completed => {
+                    ("✓ ".green().to_string(), String::new())
+                }
+                FlowStatusStageState::ForceCompleted => (
+                    "✓ ".yellow().to_string(),
+                    " (force-completed)".bright_black().to_string(),
+                ),
+                FlowStatusStageState::Skipped => (
+                    "⏭ ".bright_black().to_string(),
+                    " (skipped)".bright_black().to_string(),
+                ),
+                FlowStatusStageState::Current => {
+                    ("▶ ".cyan().to_string(), " (current)".to_string())
+                }
+                FlowStatusStageState::Pending { skippable } => (
+                    "  ".to_string(),
+                    if *skippable {
+                        " (skippable)".to_string()
+                    } else {
+                        String::new()
+                    },
+                ),
+            };
+            writeln!(f, "{prefix}{}. {}{suffix}", i + 1, stage.name.magenta())?;
+
+            // Show description and artifacts for current and future stages.
+            let show_details = matches!(
+                stage.state,
+                FlowStatusStageState::Current
+                    | FlowStatusStageState::Pending { .. }
+            );
+            if show_details {
+                if let Some(desc) = &stage.description {
+                    writeln!(f, "    - {desc}")?;
+                }
+                for artifact in &stage.produces {
+                    writeln!(f, "    - Produces: {artifact}")?;
+                }
+            }
+        }
+
+        // Next up section — omitted for archived flows.
+        if !self.archived {
+            if let Some(action) = &self.next_action {
+                writeln!(f)?;
+                writeln!(
+                    f,
+                    "Next up (stage: {}):",
+                    self.current_stage.magenta()
+                )?;
+                match action {
+                    FirstStageAction::AgentComplete { prompt } => {
+                        match prompt {
+                            Some(AgentPrompt::Inline(text)) => {
+                                writeln!(f, "    - Instructions: {text}")?;
+                            }
+                            Some(AgentPrompt::File(path)) => {
+                                writeln!(
+                                    f,
+                                    "    - Follow the instructions at: {}",
+                                    path.display()
+                                )?;
+                            }
+                            None => {}
+                        }
+                        writeln!(
+                            f,
+                            "    - When done, proceed to the next stage with: `awf flow next-stage --flow={}`",
+                            self.flow_path.cyan()
+                        )?;
+                    }
+                    FirstStageAction::RunCommand => {
+                        writeln!(
+                            f,
+                            "    - Run: `awf flow run --flow={}`",
+                            self.flow_path.cyan()
+                        )?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -658,13 +775,74 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let config = crate::config::load(&project_root)?;
     let flow_dir = resolve_or_exit(flow_flag, &config)?;
     let flow = load_flow_or_exit(&flow_dir)?;
+    let entries =
+        crate::config::effective_workflow_entries(&project_root, &config);
+    let workflow = super::load_workflow_or_exit(&entries, &flow.workflow)?;
+    super::validate_workflow_or_exit(&workflow, &entries, &config.commands);
+    let wf_dir =
+        fs::find_workflow_dir(&entries, &flow.workflow).unwrap_or_default();
 
-    let status_str = if flow.archived { "archived" } else { "active" };
+    let current_idx = workflow
+        .stages
+        .iter()
+        .position(|s| s.name == flow.current_stage)
+        .unwrap_or(0);
+
+    let stages = workflow
+        .stages
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let state = if i < current_idx {
+                let last =
+                    flow.stage_history.iter().rfind(|e| e.stage == s.name);
+                match last.map(|e| e.status) {
+                    Some(crate::model::flow::StageStatus::Skipped) => {
+                        FlowStatusStageState::Skipped
+                    }
+                    Some(crate::model::flow::StageStatus::ForceCompleted) => {
+                        FlowStatusStageState::ForceCompleted
+                    }
+                    _ => FlowStatusStageState::Completed,
+                }
+            } else if i == current_idx {
+                FlowStatusStageState::Current
+            } else {
+                FlowStatusStageState::Pending { skippable: s.skippable }
+            };
+            FlowStatusStage {
+                name: s.name.clone(),
+                description: s.description.clone(),
+                produces: s.produces.clone(),
+                state,
+            }
+        })
+        .collect();
+
+    let next_action = if flow.archived {
+        None
+    } else {
+        workflow.stages.get(current_idx).map(|s| match &s.kind {
+            StageKind::Agent { prompt, prompt_file } => {
+                FirstStageAction::AgentComplete {
+                    prompt: build_agent_prompt_from_fields(
+                        prompt.as_deref(),
+                        prompt_file.as_deref(),
+                        &wf_dir,
+                    ),
+                }
+            }
+            StageKind::Command { .. } => FirstStageAction::RunCommand,
+        })
+    };
 
     let output = FlowStatusOutput {
-        flow: flow.id.clone(),
-        stage: flow.current_stage,
-        status: status_str.to_string(),
+        flow_path: flow_dir.display().to_string(),
+        workflow: flow.workflow.clone(),
+        stages,
+        current_stage: flow.current_stage.clone(),
+        archived: flow.archived,
+        next_action,
     };
 
     print_output(&output);

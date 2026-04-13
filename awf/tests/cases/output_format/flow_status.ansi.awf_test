@@ -25,6 +25,13 @@ $ export FORCE_COLOR=1
 
 $ awf flow status --flow=$FLOWS_DIR/fmt-status
 $ assert_stdout equals
-|   flow: [36mfmt-status[39m
-|  stage: [35mdesign[39m
-| status: [32m[● active][39m
+| Flow: [36m<...>/fmt-status[39m  (workflow: [34mfeature[39m, stage: [35mdesign[39m)
+| Status: [32m[● active][39m
+|
+| Workflow `[34mfeature[39m` has 1 stages:
+| [36m▶ [39m1. [35mdesign[39m (current)
+|     - Produce a design doc.
+|
+| Next up (stage: [35mdesign[39m):
+|     - Follow the instructions at: <...>/.agents/workflows/feature/design.md
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=[36m<...>/fmt-status[39m`
