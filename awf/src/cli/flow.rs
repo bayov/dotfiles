@@ -44,19 +44,6 @@ pub enum AgentPrompt {
     File(PathBuf),
 }
 
-/// Per-stage data for the agent guidance section of `awf flow new`.
-#[derive(Debug)]
-pub struct FlowNewStage {
-    pub name: String,
-    pub description: Option<String>,
-    /// Inline agent prompt text (for stage-listing previews of non-current
-    /// stages). `None` for command stages or `prompt_file` stages.
-    pub prompt: Option<String>,
-    pub skippable: bool,
-    pub produces: Vec<String>,
-    pub is_current: bool,
-}
-
 /// What the agent should do next for the first stage.
 #[derive(Debug)]
 pub enum FirstStageAction {
@@ -70,12 +57,9 @@ pub struct FlowNewOutput {
     pub path: String,
     pub workflow: String,
     pub stage: String,
-    pub stages: Vec<FlowNewStage>,
+    pub stages: Vec<FlowStatusStage>,
     pub first_stage_action: FirstStageAction,
 }
-
-#[allow(dead_code)]
-const fn foo(_x: &'static str) -> &'static str { "foo" }
 
 impl fmt::Display for FlowNewOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -88,36 +72,7 @@ impl fmt::Display for FlowNewOutput {
 
         writeln!(f)?;
 
-        writeln!(
-            f,
-            "Workflow `{}` has {} stages:",
-            self.workflow.blue(),
-            self.stages.len()
-        )?;
-        for (i, stage) in self.stages.iter().enumerate() {
-            let suffix = if stage.is_current {
-                " (current)"
-            } else if stage.skippable {
-                " (skippable)"
-            } else {
-                ""
-            };
-            writeln!(f, "{}. {}{}", i + 1, stage.name.magenta(), suffix)?;
-            // Current stage: show description (prompt appears in "Next up"
-            // section). Other stages: show inline prompt as a preview, falling
-            // back to description.
-            let blurb = if stage.is_current {
-                stage.description.as_deref()
-            } else {
-                stage.prompt.as_deref().or(stage.description.as_deref())
-            };
-            if let Some(text) = blurb {
-                writeln!(f, "    - {text}")?;
-            }
-            for artifact in &stage.produces {
-                writeln!(f, "    - Produces: {artifact}")?;
-            }
-        }
+        fmt_stage_list(f, &self.workflow, &self.stages)?;
 
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
@@ -237,6 +192,59 @@ pub struct FlowStatusStage {
     pub state: FlowStatusStageState,
 }
 
+/// Renders the "Workflow `foo` has N stages: ..." stage-list block, shared by
+/// both `awf flow new` and `awf flow status`.
+fn fmt_stage_list(
+    f: &mut fmt::Formatter<'_>,
+    workflow: &str,
+    stages: &[FlowStatusStage],
+) -> fmt::Result {
+    writeln!(f, "Workflow `{}` has {} stages:", workflow.blue(), stages.len())?;
+    for (i, stage) in stages.iter().enumerate() {
+        let (prefix, suffix) = match &stage.state {
+            FlowStatusStageState::Completed => {
+                ("✓ ".green().to_string(), " (completed)".green().to_string())
+            }
+            FlowStatusStageState::ForceCompleted => (
+                "✓ ".yellow().to_string(),
+                " (force-completed)".yellow().to_string(),
+            ),
+            FlowStatusStageState::Skipped => (
+                "○ ".bright_black().to_string(),
+                " (skipped)".bright_black().to_string(),
+            ),
+            FlowStatusStageState::Current => {
+                ("▶ ".blue().to_string(), " (current)".blue().to_string())
+            }
+            FlowStatusStageState::Pending { skippable } => (
+                "  ".to_string(),
+                if *skippable {
+                    " (skippable)".to_string()
+                } else {
+                    String::new()
+                },
+            ),
+        };
+        writeln!(f, "{prefix}{}. {}{suffix}", i + 1, stage.name.magenta())?;
+
+        // Show description and artifacts for current and future stages.
+        let show_details = matches!(
+            stage.state,
+            FlowStatusStageState::Current
+                | FlowStatusStageState::Pending { .. }
+        );
+        if show_details {
+            if let Some(desc) = &stage.description {
+                writeln!(f, "    - {desc}")?;
+            }
+            for artifact in &stage.produces {
+                writeln!(f, "    - Produces: {artifact}")?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// The complete status payload for `awf flow status`.
 #[derive(Debug)]
 pub struct FlowStatusOutput {
@@ -275,56 +283,7 @@ impl fmt::Display for FlowStatusOutput {
         writeln!(f, "  Status: {status_str}")?;
         writeln!(f)?;
 
-        // Stage list
-        writeln!(
-            f,
-            "Workflow `{}` has {} stages:",
-            self.workflow.blue(),
-            self.stages.len()
-        )?;
-        for (i, stage) in self.stages.iter().enumerate() {
-            let (prefix, suffix) = match &stage.state {
-                FlowStatusStageState::Completed => (
-                    "✓ ".green().to_string(),
-                    " (completed)".green().to_string(),
-                ),
-                FlowStatusStageState::ForceCompleted => (
-                    "✓ ".yellow().to_string(),
-                    " (force-completed)".yellow().to_string(),
-                ),
-                FlowStatusStageState::Skipped => (
-                    "○ ".bright_black().to_string(),
-                    " (skipped)".bright_black().to_string(),
-                ),
-                FlowStatusStageState::Current => {
-                    ("▶ ".blue().to_string(), " (current)".blue().to_string())
-                }
-                FlowStatusStageState::Pending { skippable } => (
-                    "  ".to_string(),
-                    if *skippable {
-                        " (skippable)".to_string()
-                    } else {
-                        String::new()
-                    },
-                ),
-            };
-            writeln!(f, "{prefix}{}. {}{suffix}", i + 1, stage.name.magenta())?;
-
-            // Show description and artifacts for current and future stages.
-            let show_details = matches!(
-                stage.state,
-                FlowStatusStageState::Current
-                    | FlowStatusStageState::Pending { .. }
-            );
-            if show_details {
-                if let Some(desc) = &stage.description {
-                    writeln!(f, "    - {desc}")?;
-                }
-                for artifact in &stage.produces {
-                    writeln!(f, "    - Produces: {artifact}")?;
-                }
-            }
-        }
+        fmt_stage_list(f, &self.workflow, &self.stages)?;
 
         match self.status {
             FlowStatusLevel::Active => {
@@ -668,25 +627,19 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
 
     match fs::create_flow(&flow_dir, workflow, first_stage) {
         Ok(()) => {
-            let stages = wf
+            let stages: Vec<FlowStatusStage> = wf
                 .stages
                 .iter()
                 .enumerate()
-                .map(|(i, s)| {
-                    let prompt = match &s.kind {
-                        StageKind::Agent { prompt: Some(text), .. } => {
-                            Some(text.clone())
-                        }
-                        _ => None,
-                    };
-                    FlowNewStage {
-                        name: s.name.clone(),
-                        description: s.description.clone(),
-                        prompt,
-                        skippable: s.skippable,
-                        produces: s.produces.clone(),
-                        is_current: i == 0,
-                    }
+                .map(|(i, s)| FlowStatusStage {
+                    name: s.name.clone(),
+                    description: s.description.clone(),
+                    produces: s.produces.clone(),
+                    state: if i == 0 {
+                        FlowStatusStageState::Current
+                    } else {
+                        FlowStatusStageState::Pending { skippable: s.skippable }
+                    },
                 })
                 .collect();
             let first_stage_action = match wf.stages.first().map(|s| &s.kind) {

@@ -63,16 +63,16 @@ $ assert_stdout equals
 | Created `feature` flow: <...>/add-feature
 |
 | Workflow `feature` has 5 stages:
-| 1. research (current)
+| ▶ 1. research (current)
 |     - Research the problem space.
 |     - Produces: research.md
-| 2. scope
+|   2. scope
 |     - Define the scope of work.
-| 3. design (skippable)
-|     - Produce a technical design document.
-| 4. decompose (skippable)
+|   3. design (skippable)
+|     - Produce a technical design.
+|   4. decompose (skippable)
 |     - Break work into tasks.
-| 5. implement
+|   5. implement
 |     - Write the implementation.
 |
 | Next up (stage: research):

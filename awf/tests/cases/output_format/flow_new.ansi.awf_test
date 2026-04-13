@@ -28,7 +28,7 @@ $ assert_stdout equals
 | Created `[34mfeature[39m` flow: [36m<...>/fmt-new-h[39m
 |
 | Workflow `[34mfeature[39m` has 1 stages:
-| 1. [35mdesign[39m (current)
+| [34m▶ [39m1. [35mdesign[39m[34m (current)[39m
 |     - Produce a design doc.
 |
 | Next up (stage: [35mdesign[39m):
