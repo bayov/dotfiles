@@ -1,0 +1,219 @@
+//! Handlers for `awf flow` subcommands.
+
+pub mod archive;
+pub mod history;
+pub mod list;
+pub mod new;
+pub mod next_stage;
+pub mod next_step;
+pub mod run;
+pub mod status;
+pub mod validate;
+
+use std::collections::HashSet;
+use std::fmt;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process;
+
+pub use archive::archive;
+pub use history::history;
+pub use list::list;
+pub use new::new;
+pub use next_stage::advance;
+pub use next_step::next;
+use owo_colors::OwoColorize as _;
+pub use run::run;
+pub use status::status;
+pub use validate::validate;
+
+use crate::cli::output::eprint_error;
+use crate::model::flow::FlowState;
+use crate::model::workflow::Stage;
+use crate::model::workflow::Workflow;
+use crate::result::Error;
+use crate::store::fs;
+use crate::store::resolve::resolve_flow_path;
+
+// ---------------------------------------------------------------------------
+// Shared output types
+// ---------------------------------------------------------------------------
+
+/// The prompt payload for an agent stage.
+#[derive(Debug)]
+pub enum AgentPrompt {
+    /// Inline instruction string passed directly to the agent.
+    Inline(String),
+    /// Resolved absolute path to a prompt file.
+    File(PathBuf),
+}
+
+/// What the agent should do next for the first stage.
+#[derive(Debug)]
+pub enum FirstStageAction {
+    AgentComplete { prompt: Option<AgentPrompt> },
+    RunCommand,
+}
+
+/// Per-stage data for the stage-list display, shared by `awf flow new` and
+/// `awf flow status`.
+#[derive(Debug)]
+pub struct FlowStatusStage {
+    pub name: String,
+    pub description: Option<String>,
+    pub produces: Vec<String>,
+    pub state: FlowStatusStageState,
+}
+
+/// Annotation for a stage's state in the status display.
+#[derive(Debug)]
+pub enum FlowStatusStageState {
+    Completed,
+    ForceCompleted,
+    Skipped,
+    Current,
+    Pending { skippable: bool },
+}
+
+/// Renders the "Workflow `foo` has N stages: ..." stage-list block, shared by
+/// both `awf flow new` and `awf flow status`.
+fn fmt_stage_list(
+    f: &mut fmt::Formatter<'_>,
+    workflow: &str,
+    stages: &[FlowStatusStage],
+) -> fmt::Result {
+    writeln!(f, "Workflow `{}` has {} stages:", workflow.blue(), stages.len())?;
+    for (i, stage) in stages.iter().enumerate() {
+        let (prefix, suffix) = match &stage.state {
+            FlowStatusStageState::Completed => {
+                ("✓ ".green().to_string(), " (completed)".green().to_string())
+            }
+            FlowStatusStageState::ForceCompleted => (
+                "✓ ".yellow().to_string(),
+                " (force-completed)".yellow().to_string(),
+            ),
+            FlowStatusStageState::Skipped => (
+                "○ ".bright_black().to_string(),
+                " (skipped)".bright_black().to_string(),
+            ),
+            FlowStatusStageState::Current => {
+                ("▶ ".blue().to_string(), " (current)".blue().to_string())
+            }
+            FlowStatusStageState::Pending { skippable } => (
+                "  ".to_string(),
+                if *skippable {
+                    " (skippable)".to_string()
+                } else {
+                    String::new()
+                },
+            ),
+        };
+        writeln!(f, "{prefix}{}. {}{suffix}", i + 1, stage.name.magenta())?;
+
+        let show_details = matches!(
+            stage.state,
+            FlowStatusStageState::Current
+                | FlowStatusStageState::Pending { .. }
+        );
+        if show_details {
+            if let Some(desc) = &stage.description {
+                writeln!(f, "    - {desc}")?;
+            }
+            for artifact in &stage.produces {
+                writeln!(f, "    - Produces: {artifact}")?;
+            }
+        }
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+/// Resolves the flow path, printing a friendly error and exiting if none is
+/// available.
+fn resolve_or_exit(
+    flow_flag: Option<&str>,
+    config: &crate::config::Config,
+) -> color_eyre::Result<PathBuf> {
+    match resolve_flow_path(flow_flag, config) {
+        Ok(path) => Ok(path),
+        Err(Error::FlowPathRequired) => {
+            eprint_error(
+                "no flow specified; pass --flow=<path> or set AWF_ACTIVE_FLOW",
+            );
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Loads a flow state, printing a friendly error and exiting if not found.
+fn load_flow_or_exit(flow_dir: &Path) -> color_eyre::Result<FlowState> {
+    match fs::load_flow(flow_dir) {
+        Ok(flow) => Ok(flow),
+        Err(Error::FlowNotFound { .. }) => {
+            eprint_error(format_args!(
+                "flow not found at {}",
+                flow_dir.display()
+            ));
+            process::exit(1);
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Scans `<flow_dir>/artifacts/` and returns the set of filenames present.
+fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
+    let artifact_dir = flow_dir.join("artifacts");
+    let Ok(read_dir) = std::fs::read_dir(&artifact_dir) else {
+        return HashSet::new();
+    };
+    let mut names = HashSet::new();
+    for entry in read_dir.flatten() {
+        if let Some(name) = entry.file_name().to_str() {
+            names.insert(name.to_string());
+        }
+    }
+    names
+}
+
+/// Builds an [`AgentPrompt`] from raw `prompt`/`prompt_file` field values and
+/// the workflow directory.
+fn build_agent_prompt_from_fields(
+    prompt: Option<&str>,
+    prompt_file: Option<&str>,
+    wf_dir: &Path,
+) -> Option<AgentPrompt> {
+    if let Some(text) = prompt {
+        return Some(AgentPrompt::Inline(text.to_owned()));
+    }
+    if let Some(rel_or_abs) = prompt_file {
+        let path = if rel_or_abs.starts_with('/') {
+            PathBuf::from(rel_or_abs)
+        } else {
+            wf_dir.join(rel_or_abs)
+        };
+        return Some(AgentPrompt::File(path));
+    }
+    None
+}
+
+/// Finds the current stage in the workflow, exiting if not found.
+fn current_stage_or_exit<'a>(
+    workflow: &'a Workflow,
+    flow: &FlowState,
+) -> &'a Stage {
+    workflow
+        .stages
+        .iter()
+        .find(|s| s.name == flow.current_stage)
+        .unwrap_or_else(|| {
+            eprint_error(format_args!(
+                "current stage {:?} not found in workflow {:?}",
+                flow.current_stage, workflow.name
+            ));
+            process::exit(1);
+        })
+}
