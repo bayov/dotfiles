@@ -23,6 +23,8 @@ pub enum TemplateError {
     /// `{project_name}` was used but `project_name` is not set in the project
     /// config.
     ProjectNameNotConfigured,
+    /// `{project_root}` was used but no project root could be determined.
+    ProjectRootNotConfigured,
 }
 
 impl std::fmt::Display for TemplateError {
@@ -37,6 +39,12 @@ impl std::fmt::Display for TemplateError {
                 "`{{project_name}}` requires `project_name` to be set in \
                  `.config/awf.toml`"
             ),
+            Self::ProjectRootNotConfigured => write!(
+                f,
+                "`{{project_root}}` requires a project root \
+                 (`.config/awf.toml`, `.agents/`, `.jj/`, or `.git/` \
+                 directory)"
+            ),
         }
     }
 }
@@ -49,6 +57,7 @@ impl std::error::Error for TemplateError {}
 ///
 /// | Syntax              | Expands to                                      |
 /// |---------------------|-------------------------------------------------|
+/// | `{project_root}`    | Absolute path to the project root directory     |
 /// | `{project_name}`    | Value of `project_name` in `.config/awf.toml`  |
 /// | `{time:FORMAT}`     | Current local time formatted by `FORMAT`        |
 ///
@@ -64,6 +73,8 @@ impl std::error::Error for TemplateError {}
 ///
 /// # Errors
 ///
+/// - [`TemplateError::ProjectRootNotConfigured`] — `{project_root}` used but
+///   `project_root` is `None`.
 /// - [`TemplateError::ProjectNameNotConfigured`] — `{project_name}` used but
 ///   `project_name` is `None`.
 /// - [`TemplateError::UnknownVariable`] — unrecognised `{variable}`.
@@ -71,6 +82,7 @@ impl std::error::Error for TemplateError {}
 pub fn expand_template(
     path: &str,
     project_name: Option<&str>,
+    project_root: Option<&Path>,
 ) -> std::result::Result<String, TemplateError> {
     let mut result = String::with_capacity(path.len());
     let mut chars = path.chars().peekable();
@@ -107,6 +119,14 @@ pub fn expand_template(
                 }
             } else {
                 match var.as_str() {
+                    "project_root" => match project_root {
+                        Some(p) => result.push_str(&p.to_string_lossy()),
+                        None => {
+                            return Err(
+                                TemplateError::ProjectRootNotConfigured,
+                            );
+                        }
+                    },
                     "project_name" => match project_name {
                         Some(name) => result.push_str(name),
                         None => {
@@ -145,25 +165,34 @@ fn user_fmt_to_strftime(fmt: &str) -> String {
 // ---------------------------------------------------------------------------
 
 /// Walks up the directory tree from `start` to find the nearest directory
-/// that contains a `.agents/` subdirectory.
+/// that looks like a project root.
 ///
-/// Beginning at `start`, each directory is checked for a `.agents/`
-/// subdirectory. If found, the **parent** directory (i.e. the one that
-/// contains `.agents/`, not `.agents/` itself) is returned. If `start` is
-/// not a directory, the walk begins at its parent.
+/// At each level the following markers are checked in priority order:
+///
+/// 1. `.config/awf.toml` — explicit awf project config
+/// 2. `.agents/` directory — awf convention
+/// 3. `.jj/` directory — Jujutsu VCS root
+/// 4. `.git/` directory — Git VCS root
+///
+/// The first directory (starting from `start`, walking toward the filesystem
+/// root) that contains any of these markers is returned.  If `start` is not
+/// a directory the walk begins at its parent.
 ///
 /// # Errors
 ///
-/// Returns [`Error::ProjectRootNotFound`] when no `.agents/` directory
-/// exists in `start` or any of its ancestors.
+/// Returns [`Error::ProjectRootNotFound`] when no marker is found in `start`
+/// or any of its ancestors.
 #[instrument]
 pub fn find_project_root(start: &Path) -> Result<PathBuf> {
     assert_safe_path(start);
     let mut current = start;
 
     loop {
-        let candidate = current.join(".agents");
-        if candidate.is_dir() {
+        if current.join(".config/awf.toml").is_file()
+            || current.join(".agents").is_dir()
+            || current.join(".jj").is_dir()
+            || current.join(".git").is_dir()
+        {
             return Ok(current.to_path_buf());
         }
 

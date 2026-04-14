@@ -8,7 +8,6 @@ pub mod flow;
 pub mod output;
 pub mod workflow;
 
-use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process;
@@ -18,11 +17,13 @@ use clap::Subcommand;
 use owo_colors::OwoColorize as _;
 
 use crate::cli::output::eprint_error;
+use crate::config::Config;
 use crate::config::WorkflowSearchEntry;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::store::fs;
+use crate::store::resolve::expand_template;
 
 // ---------------------------------------------------------------------------
 // Top-level CLI
@@ -293,14 +294,10 @@ pub fn load_workflow_or_exit(
 
 /// Collects all validation errors for a workflow definition: structural
 /// invariants, command-key references, and prompt-file existence.
-///
-/// `config_commands` contains repo/user-level command aliases that are also
-/// valid targets for a stage's `command` key (in addition to
-/// `workflow.commands`).
 pub fn collect_workflow_errors(
     workflow: &Workflow,
     entries: &[WorkflowSearchEntry],
-    config_commands: &HashMap<String, String>,
+    config: &Config,
 ) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
@@ -313,7 +310,7 @@ pub fn collect_workflow_errors(
     for stage in &workflow.stages {
         if let StageKind::Command { command: Some(key), .. } = &stage.kind
             && !workflow.commands.contains_key(key.as_str())
-            && !config_commands.contains_key(key.as_str())
+            && !config.commands.contains_key(key.as_str())
         {
             errors.push(format!(
                 "stage {:?}: command key {key:?} is not defined in [commands]",
@@ -329,10 +326,17 @@ pub fn collect_workflow_errors(
             if let StageKind::Agent { prompt_file: Some(rel_or_abs), .. } =
                 &stage.kind
             {
-                let path = if rel_or_abs.starts_with('/') {
-                    std::path::PathBuf::from(rel_or_abs)
+                // Expand template variables before resolving the path.
+                let expanded = expand_template(
+                    rel_or_abs,
+                    config.project_name.as_deref(),
+                    Some(&config.project_root),
+                )
+                .unwrap_or_else(|_| rel_or_abs.clone());
+                let path = if expanded.starts_with('/') {
+                    std::path::PathBuf::from(&expanded)
                 } else {
-                    wf_dir.join(rel_or_abs)
+                    wf_dir.join(&expanded)
                 };
                 if !path.exists() {
                     errors.push(format!(
@@ -355,9 +359,9 @@ pub fn collect_workflow_errors(
 pub fn validate_workflow_or_exit(
     workflow: &Workflow,
     entries: &[WorkflowSearchEntry],
-    config_commands: &HashMap<String, String>,
+    config: &Config,
 ) {
-    let errors = collect_workflow_errors(workflow, entries, config_commands);
+    let errors = collect_workflow_errors(workflow, entries, config);
     if !errors.is_empty() {
         eprint_error(format_args!(
             "workflow {:?} failed validation",

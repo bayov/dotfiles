@@ -158,11 +158,7 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let entries =
         crate::config::effective_workflow_entries(&project_root, &config);
     let workflow = crate::cli::load_workflow_or_exit(&entries, &flow.workflow)?;
-    crate::cli::validate_workflow_or_exit(
-        &workflow,
-        &entries,
-        &config.commands,
-    );
+    crate::cli::validate_workflow_or_exit(&workflow, &entries, &config);
     let wf_dir =
         fs::find_workflow_dir(&entries, &flow.workflow).unwrap_or_default();
 
@@ -194,6 +190,7 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
                             prompt.as_deref(),
                             prompt_file.as_deref(),
                             &wf_dir,
+                            &config,
                         ),
                     }
                 }

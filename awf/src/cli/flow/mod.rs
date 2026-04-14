@@ -26,11 +26,13 @@ pub use status::status;
 pub use validate::validate;
 
 use crate::cli::output::eprint_error;
+use crate::config::Config;
 use crate::model::flow::FlowState;
 use crate::model::workflow::Stage;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
 use crate::store::fs;
+use crate::store::resolve::expand_template;
 use crate::store::resolve::resolve_flow_path;
 
 // ---------------------------------------------------------------------------
@@ -245,23 +247,43 @@ fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
 
 /// Builds an [`AgentPrompt`] from raw `prompt`/`prompt_file` field values and
 /// the workflow directory.
+///
+/// `{var}` placeholders in either field are expanded before use.
 fn build_agent_prompt_from_fields(
     prompt: Option<&str>,
     prompt_file: Option<&str>,
     wf_dir: &Path,
+    config: &Config,
 ) -> Option<AgentPrompt> {
     if let Some(text) = prompt {
-        return Some(AgentPrompt::Inline(text.to_owned()));
+        let expanded = expand_template_or_exit(text, config);
+        return Some(AgentPrompt::Inline(expanded));
     }
     if let Some(rel_or_abs) = prompt_file {
-        let path = if rel_or_abs.starts_with('/') {
-            PathBuf::from(rel_or_abs)
+        let expanded = expand_template_or_exit(rel_or_abs, config);
+        let path = if expanded.starts_with('/') {
+            PathBuf::from(expanded)
         } else {
-            wf_dir.join(rel_or_abs)
+            wf_dir.join(expanded)
         };
         return Some(AgentPrompt::File(path));
     }
     None
+}
+
+/// Expands template variables in `s` using `config`, exiting on error.
+fn expand_template_or_exit(s: &str, config: &Config) -> String {
+    match expand_template(
+        s,
+        config.project_name.as_deref(),
+        Some(&config.project_root),
+    ) {
+        Ok(expanded) => expanded,
+        Err(e) => {
+            eprint_error(format_args!("invalid template: {e}"));
+            process::exit(1);
+        }
+    }
 }
 
 /// Finds the current stage in the workflow, exiting if not found.

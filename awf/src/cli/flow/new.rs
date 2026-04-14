@@ -103,7 +103,7 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
         crate::config::effective_workflow_entries(&project_root, &config);
 
     let wf = crate::cli::load_workflow_or_exit(&entries, workflow)?;
-    crate::cli::validate_workflow_or_exit(&wf, &entries, &config.commands);
+    crate::cli::validate_workflow_or_exit(&wf, &entries, &config);
 
     let flow_dir = resolve_new_flow_dir(flow_arg, &wf, &project_root, &config);
 
@@ -148,6 +148,7 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
                             prompt.as_deref(),
                             prompt_file.as_deref(),
                             &wf_dir,
+                            &config,
                         ),
                     }
                 }
@@ -217,6 +218,7 @@ fn resolve_new_flow_dir(
     let expanded_dir = match crate::store::resolve::expand_template(
         default_dir,
         config.project_name.as_deref(),
+        Some(&config.project_root),
     ) {
         Ok(s) => s,
         Err(TemplateError::ProjectNameNotConfigured) => {

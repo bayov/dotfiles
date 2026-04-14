@@ -7,6 +7,7 @@ use std::process;
 use owo_colors::OwoColorize as _;
 
 use crate::cli::output::print_output;
+use crate::config::Config;
 use crate::config::WorkflowSearchEntry;
 use crate::store::fs;
 
@@ -65,7 +66,7 @@ pub fn validate(name: Option<&str>) -> color_eyre::Result<()> {
 
     let mut any_failed = false;
     for n in &names {
-        if validate_single(n, &entries, &config.commands)? {
+        if validate_single(n, &entries, &config)? {
             any_failed = true;
         }
     }
@@ -80,14 +81,11 @@ pub fn validate(name: Option<&str>) -> color_eyre::Result<()> {
 fn validate_single(
     name: &str,
     entries: &[WorkflowSearchEntry],
-    config_commands: &std::collections::HashMap<String, String>,
+    config: &Config,
 ) -> color_eyre::Result<bool> {
     let workflow = crate::cli::load_workflow_or_exit(entries, name)?;
-    let errors = crate::cli::collect_workflow_errors(
-        &workflow,
-        entries,
-        config_commands,
-    );
+    let errors =
+        crate::cli::collect_workflow_errors(&workflow, entries, config);
 
     if errors.is_empty() {
         let output = WorkflowValidateOutput { name: name.to_string() };

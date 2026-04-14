@@ -7,7 +7,6 @@ TODO
 Awf
 ---
 
-- Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
 - Add README.md's
 - Review functionality

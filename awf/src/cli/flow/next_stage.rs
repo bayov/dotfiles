@@ -140,11 +140,7 @@ pub fn advance(
 
     let flow = super::load_flow_or_exit(&flow_dir)?;
     let workflow = crate::cli::load_workflow_or_exit(&entries, &flow.workflow)?;
-    crate::cli::validate_workflow_or_exit(
-        &workflow,
-        &entries,
-        &config.commands,
-    );
+    crate::cli::validate_workflow_or_exit(&workflow, &entries, &config);
 
     // For agent stages (and not --skip): auto-record completion before
     // advancing. This replaces the former `complete-stage` command.
@@ -228,6 +224,7 @@ pub fn advance(
         artifacts,
         &flow_dir,
         &wf_dir,
+        &config,
     );
     print_output(&output);
     Ok(())
@@ -299,6 +296,7 @@ fn build_advance_output(
     artifacts: HashSet<String>,
     flow_dir: &Path,
     wf_dir: &Path,
+    config: &crate::config::Config,
 ) -> FlowAdvanceOutput {
     let new_stage = &updated_flow.current_stage;
     let is_final = workflow.stages.last().is_some_and(|s| s.name == *new_stage);
@@ -314,6 +312,7 @@ fn build_advance_output(
                         prompt.as_deref(),
                         prompt_file.as_deref(),
                         wf_dir,
+                        config,
                     ),
                 }
             }

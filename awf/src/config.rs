@@ -28,6 +28,10 @@ pub struct ScopeConfig {
 /// Resolved, merged configuration from all sources.
 #[derive(Debug, Default)]
 pub struct Config {
+    /// The project root directory (see
+    /// [`crate::store::resolve::find_project_root`]).
+    pub project_root: PathBuf,
+
     /// Active flow directory path (tilde-expanded), if set.
     pub active_flow: Option<PathBuf>,
 
@@ -152,7 +156,14 @@ pub fn load(project_root: &Path) -> Result<Config> {
     // name)
     let project_name = project_raw.project_name;
 
-    Ok(Config { active_flow, flow_search_dirs, project_name, scopes, commands })
+    Ok(Config {
+        project_root: project_root.to_path_buf(),
+        active_flow,
+        flow_search_dirs,
+        project_name,
+        scopes,
+        commands,
+    })
 }
 
 // ---------------------------------------------------------------------------
