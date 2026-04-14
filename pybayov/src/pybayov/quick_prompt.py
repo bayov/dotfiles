@@ -905,14 +905,13 @@ async def verify_models() -> None:
 # --- Entry Point ---
 
 
-def run(prompt: str) -> str:
+def run(prompt: str) -> tuple[str, str]:
     """
-    Run the model race and return the winning response text.
+    Run the model race and return (winning response text, winning model name).
 
     Raises RuntimeError on failure.
     """
-    text, _model = asyncio.run(race_models(prompt))
-    return text
+    return asyncio.run(race_models(prompt))
 
 
 def main() -> None:
@@ -982,7 +981,7 @@ def main() -> None:
         debug(f"Race failed: {e}")
         print(f"Race failed: {e}", file=sys.stderr)
         os._exit(1)
-    print(f"({winner_model})", file=sys.stderr)
+    print(f"\033[90m({winner_model})\033[0m", file=sys.stderr)
     print(result)
     sys.stdout.flush()
     sys.stderr.flush()

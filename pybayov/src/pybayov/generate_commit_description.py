@@ -72,7 +72,7 @@ def generate() -> dict[str, str]:
 
     # 4. Run quick-prompt
     try:
-        output_text = _qp.run(prompt)
+        output_text, model = _qp.run(prompt)
     except RuntimeError as e:
         raise GenerateError({"error": f"quick-prompt failed: {e}"}) from e
     if not output_text.strip():
@@ -91,6 +91,7 @@ def generate() -> dict[str, str]:
                 "error": (
                     "Failed to extract commit description from prompt output."
                 ),
+                "model": model,
                 "prompt_input_file": str(input_file),
                 "prompt_output_file": str(output_file),
                 "raw_output": output_text,
@@ -101,6 +102,7 @@ def generate() -> dict[str, str]:
     output_file.write_text(commit_description)
 
     return {
+        "model": model,
         "prompt_input_file": str(input_file),
         "prompt_output_file": str(output_file),
         "commit_description": commit_description,
@@ -157,13 +159,24 @@ def _interactive_main() -> None:
         if confirm_result.returncode != 0:
             sys.exit(confirm_result.returncode)
 
+    box = _spinner.BoxArgs(box_title="Commit Description")
+
+    def _generate() -> str:
+        result = generate()
+        model = result.get("model", "")
+        if model:
+            box.box_title = f"Commit Description ({model})"
+        return result["commit_description"]
+
     try:
         description = _spinner.run_with_spinner(
-            lambda: generate()["commit_description"],
+            _generate,
             title="generating commit description...",
-            box_args=_spinner.BoxArgs(box_title="Commit Description"),
+            box_args=box,
         )
     except GenerateError as e:
+        model = e.error_info.get("model", "")
+        model_suffix = f" ({model})" if model else ""
         sys.stderr.write(f"  {RED}\u2717{RESET} {RED}{e}{RESET}\n")
         if "prompt_input_file" in e.error_info:
             input_file = e.error_info["prompt_input_file"]
@@ -189,7 +202,7 @@ def _interactive_main() -> None:
                         margin_right=_eb.DEFAULT_MARGIN,
                         margin_bottom=0,
                         margin_left=_eb.DEFAULT_MARGIN,
-                        title="Raw Prompt Output",
+                        title=f"Raw Prompt Output{model_suffix}",
                         title_color=1,
                         title_bg=_eb.lighten(_eb.DEFAULT_BG),
                     ),
