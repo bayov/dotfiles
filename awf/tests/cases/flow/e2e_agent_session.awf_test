@@ -29,6 +29,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | [[stages]]
 | name = "design"
 | description = "Produce a technical design."
+| produces = ["design.md"]
 | kind = "agent"
 | args = { prompt = "Produce a technical design document." }
 | skippable = true
@@ -65,11 +66,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ▶ 1. research (current)
 |     - Research the problem space.
-|     - Produces: research.md
+|     - Produces: <...>/add-feature/artifacts/research.md
 |   2. scope
 |     - Define the scope of work.
 |   3. design (skippable)
 |     - Produce a technical design.
+|     - Produces: <...>/add-feature/artifacts/design.md
 |   4. decompose (skippable)
 |     - Break work into tasks.
 |   5. implement
@@ -92,11 +94,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ▶ 1. research (current)
 |     - Research the problem space.
-|     - Produces: research.md
+|     - Produces: <...>/add-feature/artifacts/research.md
 |   2. scope
 |     - Define the scope of work.
 |   3. design (skippable)
 |     - Produce a technical design.
+|     - Produces: <...>/add-feature/artifacts/design.md
 |   4. decompose (skippable)
 |     - Break work into tasks.
 |   5. implement
@@ -120,11 +123,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ▶ 2. scope (current)
 |     - Define the scope of work.
 |   3. design (skippable)
 |     - Produce a technical design.
+|     - Produces: <...>/add-feature/artifacts/design.md
 |   4. decompose (skippable)
 |     - Break work into tasks.
 |   5. implement
@@ -145,11 +149,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ✓ 2. scope (completed)
 |     - Define the scope of work.
 | ▶ 3. design (current)
 |     - Produce a technical design.
+|     - Produces: <...>/add-feature/artifacts/design.md
 |   4. decompose (skippable)
 |     - Break work into tasks.
 |   5. implement
@@ -172,11 +177,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ✓ 2. scope (completed)
 |     - Define the scope of work.
 | ▶ 3. design (current)
 |     - Produce a technical design.
+|     - Produces: <...>/add-feature/artifacts/design.md
 |   4. decompose (skippable)
 |     - Break work into tasks.
 |   5. implement
@@ -194,11 +200,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ✓ 2. scope (completed)
 |     - Define the scope of work.
 | ○ 3. design (skipped)
 |     - Produce a technical design.
+|     - Skipped artifact: <...>/add-feature/artifacts/design.md
 | ▶ 4. decompose (current)
 |     - Break work into tasks.
 |   5. implement
@@ -209,6 +216,34 @@ $ assert_stdout equals
 |     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 $ assert_stderr contains
 | Skipped stage "design"
+
+# Agent manually adds the design artifact after skipping
+$ write_file flows/add-feature/artifacts/design.md
+| # Design
+
+$ awf flow status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: active (stage: decompose)
+|
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: <...>/add-feature/artifacts/research.md
+| ✓ 2. scope (completed)
+|     - Define the scope of work.
+| ○ 3. design (skipped)
+|     - Produce a technical design.
+|     - Manually produced: <...>/add-feature/artifacts/design.md
+| ▶ 4. decompose (current)
+|     - Break work into tasks.
+|   5. implement
+|     - Write the implementation.
+|
+| Next up (stage: decompose):
+|     - Follow the instructions at: <...>/.agents/workflows/feature/decompose.md
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
 
 # =============================================================================
 # Stage: decompose — agent follows prompt file, advances
@@ -222,11 +257,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ✓ 2. scope (completed)
 |     - Define the scope of work.
 | ○ 3. design (skipped)
 |     - Produce a technical design.
+|     - Manually produced: <...>/add-feature/artifacts/design.md
 | ✓ 4. decompose (completed)
 |     - Break work into tasks.
 | ▶ 5. implement (current)
@@ -272,11 +308,12 @@ $ assert_stdout equals
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
 |     - Research the problem space.
-|     - Produced: research.md
+|     - Produced: <...>/add-feature/artifacts/research.md
 | ✓ 2. scope (completed)
 |     - Define the scope of work.
 | ○ 3. design (skipped)
 |     - Produce a technical design.
+|     - Manually produced: <...>/add-feature/artifacts/design.md
 | ✓ 4. decompose (completed)
 |     - Break work into tasks.
 | ✓ 5. implement (completed)

@@ -302,7 +302,7 @@ fn build_advance_output(
 ) -> FlowAdvanceOutput {
     let new_stage = &updated_flow.current_stage;
     let is_final = workflow.stages.last().is_some_and(|s| s.name == *new_stage);
-    let stages = super::build_stage_list(workflow, updated_flow);
+    let stages = super::build_stage_list(workflow, updated_flow, flow_dir);
     let next_action = workflow
         .stages
         .iter()

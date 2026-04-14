@@ -183,7 +183,7 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         FlowStatusLevel::Active
     };
 
-    let stages = super::build_stage_list(&workflow, &flow);
+    let stages = super::build_stage_list(&workflow, &flow, &flow_dir);
 
     let next_action_for_display = match status {
         FlowStatusLevel::Active => {

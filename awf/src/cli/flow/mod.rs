@@ -59,7 +59,8 @@ pub enum FirstStageAction {
 pub struct FlowStatusStage {
     pub name: String,
     pub description: Option<String>,
-    pub produces: Vec<String>,
+    /// Resolved absolute paths to each artifact this stage produces.
+    pub produces: Vec<PathBuf>,
     pub state: FlowStatusStageState,
 }
 
@@ -75,10 +76,15 @@ pub enum FlowStatusStageState {
 
 /// Builds the [`FlowStatusStage`] list for a workflow + flow state, shared by
 /// `awf flow status` and `awf flow next-stage`.
+///
+/// `flow_dir` is used to resolve artifact names to absolute paths
+/// (`<flow_dir>/artifacts/<name>`).
 pub fn build_stage_list(
     workflow: &Workflow,
     flow: &FlowState,
+    flow_dir: &Path,
 ) -> Vec<FlowStatusStage> {
+    let artifact_dir = flow_dir.join("artifacts");
     let current_idx = workflow
         .stages
         .iter()
@@ -110,7 +116,11 @@ pub fn build_stage_list(
             FlowStatusStage {
                 name: s.name.clone(),
                 description: s.description.clone(),
-                produces: s.produces.clone(),
+                produces: s
+                    .produces
+                    .iter()
+                    .map(|name| artifact_dir.join(name))
+                    .collect(),
                 state,
             }
         })
@@ -160,11 +170,13 @@ pub(super) fn fmt_stage_list(
             writeln!(f, "    - {desc}")?;
         }
         for artifact in &stage.produces {
+            let name =
+                artifact.file_name().and_then(|n| n.to_str()).unwrap_or("");
             let label = match &stage.state {
                 FlowStatusStageState::Completed
                 | FlowStatusStageState::ForceCompleted => "Produced:",
                 FlowStatusStageState::Skipped => {
-                    if artifacts.contains(artifact) {
+                    if artifacts.contains(name) {
                         "Manually produced:"
                     } else {
                         "Skipped artifact:"
@@ -173,7 +185,7 @@ pub(super) fn fmt_stage_list(
                 FlowStatusStageState::Current
                 | FlowStatusStageState::Pending { .. } => "Produces:",
             };
-            writeln!(f, "    - {label} {artifact}")?;
+            writeln!(f, "    - {label} {}", artifact.display())?;
         }
     }
     Ok(())

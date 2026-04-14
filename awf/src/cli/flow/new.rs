@@ -121,6 +121,7 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
 
     match fs::create_flow(&flow_dir, workflow, first_stage) {
         Ok(()) => {
+            let artifact_dir = flow_dir.join("artifacts");
             let stages: Vec<FlowStatusStage> = wf
                 .stages
                 .iter()
@@ -128,7 +129,11 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
                 .map(|(i, s)| FlowStatusStage {
                     name: s.name.clone(),
                     description: s.description.clone(),
-                    produces: s.produces.clone(),
+                    produces: s
+                        .produces
+                        .iter()
+                        .map(|name| artifact_dir.join(name))
+                        .collect(),
                     state: if i == 0 {
                         FlowStatusStageState::Current
                     } else {
