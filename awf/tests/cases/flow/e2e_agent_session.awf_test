@@ -119,6 +119,8 @@ $ assert_stdout equals
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
 | ▶ 2. scope (current)
 |     - Define the scope of work.
 |   3. design (skippable)
@@ -142,7 +144,10 @@ $ assert_stdout equals
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
 | ✓ 2. scope (completed)
+|     - Define the scope of work.
 | ▶ 3. design (current)
 |     - Produce a technical design.
 |   4. decompose (skippable)
@@ -166,7 +171,10 @@ $ assert_stdout equals
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
 | ✓ 2. scope (completed)
+|     - Define the scope of work.
 | ▶ 3. design (current)
 |     - Produce a technical design.
 |   4. decompose (skippable)
@@ -185,8 +193,12 @@ $ assert_stdout equals
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
 | ✓ 2. scope (completed)
+|     - Define the scope of work.
 | ○ 3. design (skipped)
+|     - Produce a technical design.
 | ▶ 4. decompose (current)
 |     - Break work into tasks.
 |   5. implement
@@ -209,9 +221,14 @@ $ assert_stdout equals
 |
 | Workflow `feature` has 5 stages:
 | ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
 | ✓ 2. scope (completed)
+|     - Define the scope of work.
 | ○ 3. design (skipped)
+|     - Produce a technical design.
 | ✓ 4. decompose (completed)
+|     - Break work into tasks.
 | ▶ 5. implement (current)
 |     - Write the implementation.
 |
@@ -238,6 +255,35 @@ $ assert_stdout equals
 | <...>/add-feature flow started at <...>
 |     ✓ research completed at <...>
 |     ✓ scope completed at <...>
-|     ⏭ design skipped at <...>
+|     ○ design skipped at <...>
 |     ✓ decompose completed at <...>
 |     ✓ implement completed at <...>
+
+# =============================================================================
+# Agent checks status, then archives the completed flow
+# =============================================================================
+
+$ awf flow status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: completed
+|
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+|     - Research the problem space.
+|     - Produced: research.md
+| ✓ 2. scope (completed)
+|     - Define the scope of work.
+| ○ 3. design (skipped)
+|     - Produce a technical design.
+| ✓ 4. decompose (completed)
+|     - Break work into tasks.
+| ✓ 5. implement (completed)
+|     - Write the implementation.
+|
+| Workflow complete. To archive this flow, run: `awf flow archive --flow=<...>/add-feature`
+
+$ awf flow archive --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| Archived flow: <...>/add-feature

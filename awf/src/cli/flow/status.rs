@@ -1,5 +1,6 @@
 //! Handler for `awf flow status`.
 
+use std::collections::HashSet;
 use std::env;
 use std::fmt;
 
@@ -35,6 +36,7 @@ pub struct FlowStatusOutput {
     pub flow_path: String,
     pub workflow: String,
     pub stages: Vec<FlowStatusStage>,
+    pub artifacts: HashSet<String>,
     pub current_stage: String,
     pub status: FlowStatusLevel,
     pub next_action: Option<FirstStageAction>,
@@ -67,7 +69,12 @@ impl fmt::Display for FlowStatusOutput {
         writeln!(f, "  Status: {status_str}")?;
         writeln!(f)?;
 
-        super::fmt_stage_list(f, &self.workflow, &self.stages)?;
+        super::fmt_stage_list(
+            f,
+            &self.workflow,
+            &self.stages,
+            &self.artifacts,
+        )?;
 
         match self.status {
             FlowStatusLevel::Active => {
@@ -200,6 +207,7 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         flow_path: flow_dir.display().to_string(),
         workflow: flow.workflow.clone(),
         stages,
+        artifacts,
         current_stage: flow.current_stage.clone(),
         status,
         next_action: next_action_for_display,

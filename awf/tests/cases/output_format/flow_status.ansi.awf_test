@@ -118,8 +118,11 @@ $ assert_stdout equals
 | 
 | Workflow `[34mmulti[39m` has 5 stages:
 | [32m✓ [39m1. [35mdone-step[39m[32m (completed)[39m
+|     - First step.
 | [33m✓ [39m2. [35mforced-step[39m[33m (force-completed)[39m
+|     - Forced step.
 | [90m○ [39m3. [35mskipped-step[39m[90m (skipped)[39m
+|     - Skippable step.
 | [34m▶ [39m4. [35mcurrent-step[39m[34m (current)[39m
 |     - Current step.
 |   5. [35mpending-step[39m (skippable)
@@ -153,7 +156,9 @@ $ assert_stdout equals
 | 
 | Workflow `[34msimple[39m` has 2 stages:
 | [32m✓ [39m1. [35mstep-one[39m[32m (completed)[39m
+|     - First step.
 | [32m✓ [39m2. [35mstep-two[39m[32m (completed)[39m
+|     - Second step.
 | 
 | Workflow complete. To archive this flow, run: `awf flow archive --flow=[36m<...>/flows/done-flow[39m`
 
@@ -173,6 +178,8 @@ $ assert_stdout equals
 | 
 | Workflow `[34msimple[39m` has 2 stages:
 | [32m✓ [39m1. [35mstep-one[39m[32m (completed)[39m
+|     - First step.
 | [32m✓ [39m2. [35mstep-two[39m[32m (completed)[39m
+|     - Second step.
 | 
 | This flow is [33m[1marchived[0m[39m and cannot be modified. To re-activate the flow, run: `awf flow unarchive --flow=[36m<...>/flows/done-flow[39m`

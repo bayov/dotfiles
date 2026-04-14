@@ -69,7 +69,7 @@ impl fmt::Display for FlowHistoryOutput {
                 "skipped" => writeln!(
                     f,
                     "    {} {} skipped at {}",
-                    "⏭".yellow(),
+                    "○".yellow(),
                     entry.stage.yellow(),
                     pretty_dt(&entry.time).bright_black(),
                 )?,

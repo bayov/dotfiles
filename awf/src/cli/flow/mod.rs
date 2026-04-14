@@ -119,10 +119,14 @@ pub fn build_stage_list(
 
 /// Renders the "Workflow `foo` has N stages: ..." stage-list block, shared by
 /// `awf flow new`, `awf flow status`, and `awf flow next-stage`.
+///
+/// `artifacts` is the set of artifact filenames present in the flow's
+/// artifacts directory; used to distinguish skipped-but-present artifacts.
 pub(super) fn fmt_stage_list(
     f: &mut fmt::Formatter<'_>,
     workflow: &str,
     stages: &[FlowStatusStage],
+    artifacts: &HashSet<String>,
 ) -> fmt::Result {
     writeln!(f, "Workflow `{}` has {} stages:", workflow.blue(), stages.len())?;
     for (i, stage) in stages.iter().enumerate() {
@@ -152,18 +156,24 @@ pub(super) fn fmt_stage_list(
         };
         writeln!(f, "{prefix}{}. {}{suffix}", i + 1, stage.name.magenta())?;
 
-        let show_details = matches!(
-            stage.state,
-            FlowStatusStageState::Current
-                | FlowStatusStageState::Pending { .. }
-        );
-        if show_details {
-            if let Some(desc) = &stage.description {
-                writeln!(f, "    - {desc}")?;
-            }
-            for artifact in &stage.produces {
-                writeln!(f, "    - Produces: {artifact}")?;
-            }
+        if let Some(desc) = &stage.description {
+            writeln!(f, "    - {desc}")?;
+        }
+        for artifact in &stage.produces {
+            let label = match &stage.state {
+                FlowStatusStageState::Completed
+                | FlowStatusStageState::ForceCompleted => "Produced:",
+                FlowStatusStageState::Skipped => {
+                    if artifacts.contains(artifact) {
+                        "Manually produced:"
+                    } else {
+                        "Skipped artifact:"
+                    }
+                }
+                FlowStatusStageState::Current
+                | FlowStatusStageState::Pending { .. } => "Produces:",
+            };
+            writeln!(f, "    - {label} {artifact}")?;
         }
     }
     Ok(())

@@ -114,7 +114,7 @@ $ assert_stdout equals
 | [36m<...>/fmt-history[39m flow started at [90m<...>[39m
 |     [32m✓[39m [32mdesign[39m completed at [90m<...>[39m
 |     [32m✓[39m [32mwrite-code[39m completed at [90m<...>[39m
-|     [33m⏭[39m [33moptional-check[39m skipped at [90m<...>[39m
+|     [33m○[39m [33moptional-check[39m skipped at [90m<...>[39m
 |     [31m✗[39m [31mlint[39m failed at [90m<...>[39m
 |     [33m⚠[39m [33mlint[39m force completed at [90m<...>[39m
 |         [90mforce moving to next stage despite lint failure[39m

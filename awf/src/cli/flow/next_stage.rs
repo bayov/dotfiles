@@ -60,6 +60,7 @@ pub struct FlowAdvanceOutput {
     pub flow_path: String,
     pub workflow: String,
     pub stages: Vec<FlowStatusStage>,
+    pub artifacts: HashSet<String>,
     pub next_action: FirstStageAction,
 }
 
@@ -70,7 +71,12 @@ impl fmt::Display for FlowAdvanceOutput {
             writeln!(f, "{}", "  This is the final stage.".bright_black())?;
         }
         writeln!(f)?;
-        super::fmt_stage_list(f, &self.workflow, &self.stages)?;
+        super::fmt_stage_list(
+            f,
+            &self.workflow,
+            &self.stages,
+            &self.artifacts,
+        )?;
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
         match &self.next_action {
@@ -213,10 +219,16 @@ pub fn advance(
 
     fs::save_flow(&flow_dir, &updated_flow)?;
 
+    let artifacts = super::collect_artifacts(&flow_dir);
     let wf_dir =
         fs::find_workflow_dir(&entries, &workflow.name).unwrap_or_default();
-    let output =
-        build_advance_output(&workflow, &updated_flow, &flow_dir, &wf_dir);
+    let output = build_advance_output(
+        &workflow,
+        &updated_flow,
+        artifacts,
+        &flow_dir,
+        &wf_dir,
+    );
     print_output(&output);
     Ok(())
 }
@@ -284,6 +296,7 @@ fn check_produces_or_exit(
 fn build_advance_output(
     workflow: &Workflow,
     updated_flow: &FlowState,
+    artifacts: HashSet<String>,
     flow_dir: &Path,
     wf_dir: &Path,
 ) -> FlowAdvanceOutput {
@@ -312,6 +325,7 @@ fn build_advance_output(
         flow_path: flow_dir.display().to_string(),
         workflow: workflow.name.clone(),
         stages,
+        artifacts,
         next_action,
     }
 }

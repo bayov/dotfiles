@@ -43,7 +43,12 @@ impl fmt::Display for FlowNewOutput {
 
         writeln!(f)?;
 
-        super::fmt_stage_list(f, &self.workflow, &self.stages)?;
+        super::fmt_stage_list(
+            f,
+            &self.workflow,
+            &self.stages,
+            &std::collections::HashSet::new(),
+        )?;
 
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
