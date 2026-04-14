@@ -22,6 +22,6 @@
         "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
         "excludedCommands": ["cargo:*", "sccache:*"]
     },
-    "skipDangerousModePermissionPrompt": true,
-    "advisorModel": "opus"
+    "advisorModel": "opus",
+    "skipDangerousModePermissionPrompt": true
 }

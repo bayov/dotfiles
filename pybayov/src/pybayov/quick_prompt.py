@@ -790,9 +790,10 @@ def _select_models() -> list[str]:
 async def _await_first_winner(
     worker_tasks: list[asyncio.Task[bytes]],
     worker_procs: list[asyncio.subprocess.Process],
-) -> str | None:
+) -> tuple[str | None, str | None]:
     """Wait for the first task to return non-empty output; clean up the rest."""
     winner = None
+    winner_model = None
     try:
         while worker_tasks:
             done, _ = await asyncio.wait(
@@ -804,6 +805,7 @@ async def _await_first_winner(
                 if res_text:
                     debug(f"Model {model} won the race.")
                     winner = res_text
+                    winner_model = model
                     break
                 else:
                     debug(f"Model {model} failed or returned no text.")
@@ -826,15 +828,16 @@ async def _await_first_winner(
             except Exception:
                 pass
         await asyncio.sleep(0)  # let close callbacks run before loop shuts down
-    return winner
+    return winner, winner_model
 
 
-async def race_models(prompt: str) -> str:
+async def race_models(prompt: str) -> tuple[str, str]:
     """
     Race multiple models in parallel using detached internal worker processes.
 
     The first one to return a successful response wins.
-    Returns the winning response text, or raises RuntimeError if all fail.
+    Returns (winning response text, winning model name), or raises RuntimeError
+    if all fail.
     """
     selected_models = _select_models()
     debug(f"Selected models for race: {selected_models}")
@@ -872,10 +875,10 @@ async def race_models(prompt: str) -> str:
     # while the event loop is still running. Without this, transports are
     # closed by GC after the loop shuts down, causing "Event loop is closed"
     # errors from BaseSubprocessTransport.__del__.
-    winner = await _await_first_winner(worker_tasks, worker_procs)
-    if winner is None:
+    winner, winner_model = await _await_first_winner(worker_tasks, worker_procs)
+    if winner is None or winner_model is None:
         raise RuntimeError("All models failed to produce a response.")
-    return winner
+    return winner, winner_model
 
 
 async def verify_models() -> None:
@@ -908,7 +911,8 @@ def run(prompt: str) -> str:
 
     Raises RuntimeError on failure.
     """
-    return asyncio.run(race_models(prompt))
+    text, _model = asyncio.run(race_models(prompt))
+    return text
 
 
 def main() -> None:
@@ -973,11 +977,12 @@ def main() -> None:
 
     debug("Script initialized, starting race...")
     try:
-        result = asyncio.run(race_models(user_prompt))
+        result, winner_model = asyncio.run(race_models(user_prompt))
     except Exception as e:
         debug(f"Race failed: {e}")
         print(f"Race failed: {e}", file=sys.stderr)
         os._exit(1)
+    print(f"({winner_model})", file=sys.stderr)
     print(result)
     sys.stdout.flush()
     sys.stderr.flush()
