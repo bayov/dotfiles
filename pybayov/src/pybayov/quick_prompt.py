@@ -558,12 +558,89 @@ def _parse_ndjson_output(stdout: bytes) -> tuple[str, str | None]:
     return res_text, error_msg
 
 
+async def _launch_proc(
+    cli: str, model_id: str, prompt: str
+) -> tuple[asyncio.subprocess.Process, bytes | None]:
+    """Launch the CLI subprocess and return (proc, stdin_input)."""
+    if cli == "claude":
+        proc = await asyncio.create_subprocess_exec(
+            "claude",
+            "-p",
+            prompt,
+            "--model",
+            model_id,
+            "--max-turns",
+            "1",
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        return proc, None
+    else:
+        env = os.environ.copy()
+        env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] = "true"
+        env["OPENCODE_DISABLE_CLAUDE_CODE"] = "true"
+        proc = await asyncio.create_subprocess_exec(
+            "opencode",
+            "run",
+            "--model",
+            model_id,
+            "--variant",
+            "low",
+            "--format",
+            "json",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+        )
+        return proc, prompt.encode()
+
+
+def _parse_output(cli: str, stdout: bytes) -> tuple[str, str | None]:
+    """Parse stdout into (res_text, error_msg) based on CLI type."""
+    if cli == "claude":
+        return stdout.decode().strip(), None
+    return _parse_ndjson_output(stdout)
+
+
+def _kill_proc(proc: asyncio.subprocess.Process) -> None:
+    if proc.returncode is None:
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+
+
+def _fail(
+    model: str,
+    error: str,
+    duration: float,
+    timestamps: tuple[str, str],
+    *,
+    code: int | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "error": error,
+        "model": model,
+        "success": False,
+        "duration": round(duration, 3),
+        "start_timestamp": timestamps[0],
+        "end_timestamp": timestamps[1],
+    }
+    if code is not None:
+        result["code"] = code
+    return result
+
+
+_REFUSAL = "I'm sorry, but I cannot assist with that request."
+
+
 async def run_model(model: str, prompt: str) -> dict[str, Any]:
     """
     Invoke the appropriate CLI for a specific model and return the result.
 
     Dispatches to opencode or claude CLI based on model config.
-    Parses NDJSON output for opencode; plain text for claude.
     """
     debug(f"Starting model: {model}")
     start_time = time.perf_counter()
@@ -573,45 +650,7 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
     cli: str = model_info["cli"]
     model_id: str = model_info["model_id"]
 
-    if cli == "claude":
-        cmd = [
-            "claude",
-            "-p",
-            prompt,
-            "--model",
-            model_id,
-            "--max-turns",
-            "1",
-        ]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-    else:
-        env = os.environ.copy()
-        env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] = "true"
-        env["OPENCODE_DISABLE_CLAUDE_CODE"] = "true"
-        cmd = [
-            "opencode",
-            "run",
-            "--model",
-            model_id,
-            "--variant",
-            "low",
-            "--format",
-            "json",
-        ]
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env,
-        )
-
-    communicate_input = None if cli == "claude" else prompt.encode()
+    proc, communicate_input = await _launch_proc(cli, model_id, prompt)
 
     try:
         stdout, stderr = await asyncio.wait_for(
@@ -624,46 +663,22 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
             f" with exit code {proc.returncode}"
         )
 
+        ts = (start_timestamp, end_timestamp)
+
         if proc.returncode != 0:
             err_msg = stderr.decode().strip()
             debug(f"Model {model} failed with stderr: {err_msg}")
-            return {
-                "error": err_msg,
-                "model": model,
-                "code": proc.returncode,
-                "success": False,
-                "duration": round(duration, 3),
-                "start_timestamp": start_timestamp,
-                "end_timestamp": end_timestamp,
-            }
+            return _fail(model, err_msg, duration, ts, code=proc.returncode)
 
-        if cli == "claude":
-            res_text = stdout.decode().strip()
-            error_msg = None
-        else:
-            res_text, error_msg = _parse_ndjson_output(stdout)
+        res_text, error_msg = _parse_output(cli, stdout)
 
         if error_msg and not res_text:
             debug(f"Model {model} returned logic error: {error_msg}")
-            return {
-                "error": error_msg,
-                "model": model,
-                "success": False,
-                "duration": round(duration, 3),
-                "start_timestamp": start_timestamp,
-                "end_timestamp": end_timestamp,
-            }
+            return _fail(model, error_msg, duration, ts)
 
-        if res_text == "I'm sorry, but I cannot assist with that request.":
+        if res_text == _REFUSAL:
             debug(f"Model {model} returned a refusal response")
-            return {
-                "error": "Refusal",
-                "model": model,
-                "success": False,
-                "duration": round(duration, 3),
-                "start_timestamp": start_timestamp,
-                "end_timestamp": end_timestamp,
-            }
+            return _fail(model, "Refusal", duration, ts)
 
         debug(f"Model {model} successfully produced {len(res_text)} chars")
         return {
@@ -678,35 +693,20 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
     except TimeoutError:
         end_timestamp = datetime.now().isoformat()
         debug(f"Model {model} timed out after {TIMEOUT_DURATION}s")
-        if proc.returncode is None:
-            try:
-                proc.kill()
-            except ProcessLookupError:
-                pass
-        return {
-            "error": "Timeout",
-            "model": model,
-            "success": False,
-            "duration": TIMEOUT_DURATION,
-            "start_timestamp": start_timestamp,
-            "end_timestamp": end_timestamp,
-        }
+        _kill_proc(proc)
+        return _fail(
+            model, "Timeout", TIMEOUT_DURATION, (start_timestamp, end_timestamp)
+        )
     except Exception as e:
         end_timestamp = datetime.now().isoformat()
         debug(f"Model {model} raised exception: {e}")
-        if proc.returncode is None:
-            try:
-                proc.kill()
-            except ProcessLookupError:
-                pass
-        return {
-            "error": str(e),
-            "model": model,
-            "success": False,
-            "duration": round(time.perf_counter() - start_time, 3),
-            "start_timestamp": start_timestamp,
-            "end_timestamp": end_timestamp,
-        }
+        _kill_proc(proc)
+        return _fail(
+            model,
+            str(e),
+            round(time.perf_counter() - start_time, 3),
+            (start_timestamp, end_timestamp),
+        )
 
 
 async def run_worker(model: str, prompt: str) -> None:
