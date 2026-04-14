@@ -143,8 +143,7 @@ pub fn advance(
     // For agent stages (and not --skip): auto-record completion before
     // advancing. This replaces the former `complete-stage` command.
     // The completion is saved to disk immediately so that if the advance
-    // fails (e.g. missing artifact) the stage is still recorded as done and
-    // `next-step` correctly reports ProduceArtifact on the next call.
+    // fails (e.g. missing artifact) the stage is still recorded as done.
     let flow = if skip {
         flow
     } else {

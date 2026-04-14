@@ -1,5 +1,4 @@
 # Test: advance blocked by failed stage, then unblocked after fix
-# Converts: advance_blocked_by_failed_step
 
 # --- Setup: run-test workflow ---
 
@@ -11,12 +10,12 @@ $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | version = 1
 |
 | [[stages]]
-| name = "pass-step"
+| name = "pass-stage"
 | kind = "command"
 | args = { run = "true" }
 |
 | [[stages]]
-| name = "fail-step"
+| name = "fail-stage"
 | kind = "command"
 | args = { run = "false" }
 
@@ -26,52 +25,52 @@ $ awf flow new $FLOWS_DIR/blocker-flow --workflow=run-test
 $ assert_stdout contains
 | blocker-flow
 
-# Run pass-step stage: succeeds
+# Run pass-stage stage: succeeds
 $ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
-# Advance to fail-step stage
+# Advance to fail-stage stage
 $ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
-| fail-step
+| fail-stage
 
-# Run fail-step stage: reports FAIL (exit 0 — failure is in the stage, not the CLI)
+# Run fail-stage stage: reports FAIL (exit 0 — failure is in the stage, not the CLI)
 $ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | FAIL
 
-# Advance should fail because fail-step failed
+# Advance should fail because fail-stage failed
 $ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
-| fail-step
+| fail-stage
 
-# Fix the workflow so fail-step now passes
+# Fix the workflow so fail-stage now passes
 $ write_file .agents/workflows/run-test/WORKFLOW.toml
 | name = "run-test"
 | version = 1
 |
 | [[stages]]
-| name = "pass-step"
+| name = "pass-stage"
 | kind = "command"
 | args = { run = "true" }
 |
 | [[stages]]
-| name = "fail-step"
+| name = "fail-stage"
 | kind = "command"
 | args = { run = "true" }
 
-# Re-run fail-step: now passes
+# Re-run fail-stage: now passes
 $ awf flow run --flow=$FLOWS_DIR/blocker-flow
 $ assert_stdout contains
 | PASS
 
-# Advance: no longer blocked by fail-step.
+# Advance: no longer blocked by fail-stage.
 # run-test has only two stages and we're on the last, so this errors with "last stage".
 $ awf flow next-stage --flow=$FLOWS_DIR/blocker-flow
 $ assert_exit_code 1
 $ assert_stderr contains
 | last stage
 $ assert_stderr not_contains
-| fail-step
+| fail-stage

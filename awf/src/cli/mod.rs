@@ -100,12 +100,6 @@ pub enum FlowCommands {
         #[arg(long)]
         flow: Option<String>,
     },
-    /// Show next required action
-    #[command(name = "next-step")]
-    NextStep {
-        #[arg(long)]
-        flow: Option<String>,
-    },
     /// Execute a command stage
     Run {
         #[arg(long)]
@@ -169,9 +163,6 @@ fn dispatch_flow(command: FlowCommands) -> color_eyre::Result<()> {
         FlowCommands::List { all } => flow::list(all),
         FlowCommands::Status { flow: flow_flag } => {
             flow::status(flow_flag.as_deref())
-        }
-        FlowCommands::NextStep { flow: flow_flag } => {
-            flow::next(flow_flag.as_deref())
         }
         FlowCommands::Run { flow: flow_flag } => {
             flow::run(flow_flag.as_deref())
