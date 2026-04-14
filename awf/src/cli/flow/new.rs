@@ -105,7 +105,7 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
     let wf = crate::cli::load_workflow_or_exit(&entries, workflow)?;
     crate::cli::validate_workflow_or_exit(&wf, &entries, &config.commands);
 
-    let flow_dir = resolve_new_flow_dir(flow_arg, &wf, &project_root);
+    let flow_dir = resolve_new_flow_dir(flow_arg, &wf, &project_root, &config);
 
     let first_stage = wf.stages.first().map_or_else(
         || {
@@ -188,7 +188,9 @@ fn resolve_new_flow_dir(
     flow_arg: &str,
     workflow: &crate::model::workflow::Workflow,
     project_root: &Path,
+    config: &crate::config::Config,
 ) -> PathBuf {
+    use crate::store::resolve::TemplateError;
     use crate::store::resolve::expand_tilde;
 
     // Absolute or tilde path → use directly.
@@ -212,7 +214,30 @@ fn resolve_new_flow_dir(
         process::exit(1);
     };
 
-    let base = expand_tilde(default_dir);
+    let expanded_dir = match crate::store::resolve::expand_template(
+        default_dir,
+        config.project_name.as_deref(),
+    ) {
+        Ok(s) => s,
+        Err(TemplateError::ProjectNameNotConfigured) => {
+            let config_path = project_root.join(".config/awf.toml");
+            eprint_error(format_args!(
+                "`{{project_name}}` requires `project_name` to be set in \
+                 {}.\n\n  \
+                 Add the following to that file:\n  \
+                 project_name = \"<your-project-name>\"",
+                config_path.display()
+            ));
+            process::exit(1);
+        }
+        Err(e) => {
+            eprint_error(format_args!(
+                "invalid default_flow_dir template: {e}"
+            ));
+            process::exit(1);
+        }
+    };
+    let base = expand_tilde(&expanded_dir);
     let base = if base.is_relative() { project_root.join(base) } else { base };
 
     base.join(flow_arg)

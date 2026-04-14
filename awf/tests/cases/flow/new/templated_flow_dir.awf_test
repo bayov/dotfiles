@@ -1,0 +1,97 @@
+# Test: default_flow_dir supports template variables
+# Verifies:
+#   1. {time:YYYY-MM-DD} is expanded when placing a new flow
+#   2. {project_name} reads from .config/awf.toml
+#   3. {project_name} without project_name in config prints an indicative error
+#   4. awf flow list finds the flow recursively under the search root
+
+$ write_file .config/awf.toml
+| project_name = "acme"
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/dated/WORKFLOW.toml
+| name = "dated"
+| version = 1
+| default_flow_dir = "$FLOWS_DIR/{time:YYYY-MM-DD}"
+|
+| [[stages]]
+| name = "work"
+| kind = "command"
+| args = { run = "true" }
+
+$ write_file .agents/workflows/named/WORKFLOW.toml
+| name = "named"
+| version = 1
+| default_flow_dir = "$FLOWS_DIR/{project_name}/{time:YYYY-MM-DD}"
+|
+| [[stages]]
+| name = "work"
+| kind = "command"
+| args = { run = "true" }
+
+$ write_file .agents/workflows/needs-name/WORKFLOW.toml
+| name = "needs-name"
+| version = 1
+| default_flow_dir = "$FLOWS_DIR/{project_name}"
+|
+| [[stages]]
+| name = "work"
+| kind = "command"
+| args = { run = "true" }
+
+# -------------------------------------------------------
+# Test 1: {time:YYYY-MM-DD} → flow in a date sub-directory
+# -------------------------------------------------------
+
+$ awf flow new my-flow --workflow=dated
+$ assert_stdout equals
+| Created `dated` flow: <...>/my-flow
+|
+| Workflow `dated` has 1 stages:
+| ▶ 1. work (current)
+|
+| Next up (stage: work):
+|     - Run: `awf flow run`
+
+# -------------------------------------------------------
+# Test 2: {project_name} reads from .config/awf.toml
+# -------------------------------------------------------
+
+$ awf flow new named-flow --workflow=named
+$ assert_stdout equals
+| Created `named` flow: <...>/acme/<...>/named-flow
+|
+| Workflow `named` has 1 stages:
+| ▶ 1. work (current)
+|
+| Next up (stage: work):
+|     - Run: `awf flow run`
+
+# -------------------------------------------------------
+# Test 3: {project_name} without project_name set → indicative error
+# -------------------------------------------------------
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ awf flow new x --workflow=needs-name
+$ assert_exit_code 1
+$ assert_stderr contains
+| project_name
+$ assert_stderr contains
+| .config/awf.toml
+
+# -------------------------------------------------------
+# Test 4: awf flow list finds flows recursively
+#   (flows nested as $FLOWS_DIR/<date>/my-flow and $FLOWS_DIR/acme/<date>/named-flow)
+# -------------------------------------------------------
+
+$ write_file .config/awf.toml
+| project_name = "acme"
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ awf flow list
+$ assert_stdout contains
+| my-flow
+$ assert_stdout contains
+| named-flow

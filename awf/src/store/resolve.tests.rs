@@ -1,6 +1,7 @@
 use assert_fs::TempDir;
 use assert_fs::prelude::*;
 
+use super::expand_template;
 use super::find_project_root;
 use super::resolve_flow_path;
 use crate::config::Config;
@@ -98,4 +99,87 @@ fn resolve_flow_path_returns_error_when_no_source_available() {
         matches!(result, Err(Error::FlowPathRequired)),
         "expected FlowPathRequired, got {result:?}",
     );
+}
+
+// ---------------------------------------------------------------------------
+// expand_template
+// ---------------------------------------------------------------------------
+
+#[test]
+fn expand_template_project_name() {
+    // When: template contains {project_name} and the name is provided
+    let result =
+        expand_template("flows/{project_name}/work", Some("my-project"))
+            .unwrap();
+
+    // Then: the name is substituted
+    assert_eq!(result, "flows/my-project/work");
+}
+
+#[test]
+fn expand_template_project_name_not_configured_returns_error() {
+    // When: {project_name} is used but no project_name is supplied
+    let err = expand_template("{project_name}", None).unwrap_err();
+
+    assert!(
+        matches!(err, super::TemplateError::ProjectNameNotConfigured),
+        "expected ProjectNameNotConfigured, got {err:?}",
+    );
+    assert!(
+        err.to_string().contains("project_name"),
+        "error message should mention project_name: {err}",
+    );
+}
+
+#[test]
+fn expand_template_time_yields_date_shaped_string() {
+    // When: template contains {time:YYYY-MM-DD}
+    let result = expand_template("flows/{time:YYYY-MM-DD}/work", None).unwrap();
+
+    // Then: the placeholder is replaced with something matching YYYY-MM-DD
+    let date_part = result
+        .strip_prefix("flows/")
+        .and_then(|s| s.strip_suffix("/work"))
+        .expect("unexpected result shape");
+    assert!(
+        date_part.len() == 10
+            && date_part.chars().nth(4) == Some('-')
+            && date_part.chars().nth(7) == Some('-'),
+        "date part {date_part:?} does not look like YYYY-MM-DD",
+    );
+}
+
+#[test]
+fn expand_template_unknown_variable_returns_error() {
+    let err = expand_template("{unknown_var}", None).unwrap_err();
+    assert!(
+        err.to_string().contains("unknown_var"),
+        "error message should mention the variable name: {err}",
+    );
+}
+
+#[test]
+fn expand_template_backslash_escapes_braces() {
+    // \{ and \} should produce literal braces without triggering expansion
+    let result = expand_template(r"flows/\{literal\}/work", None).unwrap();
+    assert_eq!(result, "flows/{literal}/work");
+}
+
+#[test]
+fn expand_template_unclosed_brace_returns_error() {
+    let err = expand_template("flows/{unclosed", None).unwrap_err();
+    assert!(
+        err.to_string().contains("unclosed"),
+        "error message should mention unclosed brace: {err}",
+    );
+}
+
+#[test]
+fn expand_template_tilde_left_intact_for_caller() {
+    // When: template starts with ~/ (tilde expansion is the caller's job)
+    let result =
+        expand_template("~/{project_name}/work", Some("proj")).unwrap();
+
+    // Then: ~ is preserved
+    assert_eq!(result, "~/proj/work");
 }

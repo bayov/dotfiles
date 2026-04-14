@@ -10,6 +10,137 @@ use crate::result::Error;
 use crate::result::Result;
 
 // ---------------------------------------------------------------------------
+// Template expansion
+// ---------------------------------------------------------------------------
+
+/// Error returned by [`expand_template`] when a template cannot be resolved.
+#[derive(Debug)]
+pub enum TemplateError {
+    /// A `{variable}` placeholder was not recognised.
+    UnknownVariable(String),
+    /// A `{` was opened but never closed.
+    UnclosedBrace,
+    /// `{project_name}` was used but `project_name` is not set in the project
+    /// config.
+    ProjectNameNotConfigured,
+}
+
+impl std::fmt::Display for TemplateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownVariable(name) => {
+                write!(f, "unknown template variable `{{{name}}}`")
+            }
+            Self::UnclosedBrace => write!(f, "unclosed `{{` in path template"),
+            Self::ProjectNameNotConfigured => write!(
+                f,
+                "`{{project_name}}` requires `project_name` to be set in \
+                 `.config/awf.toml`"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for TemplateError {}
+
+/// Expands template variables inside `path` and returns the result.
+///
+/// # Supported variables
+///
+/// | Syntax              | Expands to                                      |
+/// |---------------------|-------------------------------------------------|
+/// | `{project_name}`    | Value of `project_name` in `.config/awf.toml`  |
+/// | `{time:FORMAT}`     | Current local time formatted by `FORMAT`        |
+///
+/// ## Time format tokens
+///
+/// `YYYY` → year (4-digit), `MM` → month, `DD` → day,
+/// `HH` → hour (24 h), `mm` → minute, `ss` → second.
+///
+/// ## Escaping
+///
+/// `\{` and `\}` are replaced with literal `{` and `}` without triggering
+/// variable expansion.
+///
+/// # Errors
+///
+/// - [`TemplateError::ProjectNameNotConfigured`] — `{project_name}` used but
+///   `project_name` is `None`.
+/// - [`TemplateError::UnknownVariable`] — unrecognised `{variable}`.
+/// - [`TemplateError::UnclosedBrace`] — `{` with no matching `}`.
+pub fn expand_template(
+    path: &str,
+    project_name: Option<&str>,
+) -> std::result::Result<String, TemplateError> {
+    let mut result = String::with_capacity(path.len());
+    let mut chars = path.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.peek().copied() {
+                Some('{' | '}') => result.push(chars.next().expect("peeked")),
+                _ => result.push('\\'),
+            }
+        } else if c == '{' {
+            // Collect variable name (and optional format) up to the closing
+            // '}'.
+            let mut var = String::new();
+            let mut closed = false;
+            for inner in chars.by_ref() {
+                if inner == '}' {
+                    closed = true;
+                    break;
+                }
+                var.push(inner);
+            }
+            if !closed {
+                return Err(TemplateError::UnclosedBrace);
+            }
+            if let Some((name, fmt)) = var.split_once(':') {
+                match name {
+                    "time" => {
+                        let strftime = user_fmt_to_strftime(fmt);
+                        let now = chrono::Local::now();
+                        result.push_str(&now.format(&strftime).to_string());
+                    }
+                    _ => return Err(TemplateError::UnknownVariable(var)),
+                }
+            } else {
+                match var.as_str() {
+                    "project_name" => match project_name {
+                        Some(name) => result.push_str(name),
+                        None => {
+                            return Err(
+                                TemplateError::ProjectNameNotConfigured,
+                            );
+                        }
+                    },
+                    _ => return Err(TemplateError::UnknownVariable(var)),
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    Ok(result)
+}
+
+/// Converts the user-facing date/time `FORMAT` string to a chrono strftime
+/// format string.
+///
+/// Token mapping:
+/// `YYYY`→`%Y`, `MM`→`%m`, `DD`→`%d`, `HH`→`%H`, `mm`→`%M`, `ss`→`%S`.
+fn user_fmt_to_strftime(fmt: &str) -> String {
+    fmt.replace("YYYY", "%Y")
+        .replace("MM", "%m")
+        .replace("DD", "%d")
+        .replace("HH", "%H")
+        .replace("mm", "%M")
+        .replace("ss", "%S")
+}
+
+// ---------------------------------------------------------------------------
 // Project root
 // ---------------------------------------------------------------------------
 

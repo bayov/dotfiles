@@ -35,6 +35,11 @@ pub struct Config {
     /// (tilde-expanded).
     pub flow_search_dirs: Vec<PathBuf>,
 
+    /// Human-readable project name, used by the `{project_name}` template
+    /// variable in `default_flow_dir`. Sourced from `project_name` in the
+    /// project-level `.config/awf.toml`.
+    pub project_name: Option<String>,
+
     /// Named scope configurations (custom scopes, or overrides for `user`).
     pub scopes: HashMap<String, ScopeConfig>,
 
@@ -80,6 +85,7 @@ struct RawConfig {
     pub active_flow: Option<String>,
     #[serde(default)]
     pub flow_search_dirs: Vec<String>,
+    pub project_name: Option<String>,
     #[serde(default)]
     pub scopes: HashMap<String, ScopeConfig>,
     #[serde(default)]
@@ -142,7 +148,11 @@ pub fn load(project_root: &Path) -> Result<Config> {
         commands.insert(k, v);
     }
 
-    Ok(Config { active_flow, flow_search_dirs, scopes, commands })
+    // project_name: project-level only (user config cannot define a project
+    // name)
+    let project_name = project_raw.project_name;
+
+    Ok(Config { active_flow, flow_search_dirs, project_name, scopes, commands })
 }
 
 // ---------------------------------------------------------------------------
