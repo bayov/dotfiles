@@ -52,6 +52,14 @@ def get_model_config() -> list[dict[str, Any]]:
 def load_model_pool() -> list[str]:
     """Load the model pool from the configuration file."""
     config = get_model_config()
+    for m in config:
+        if "cli" not in m or "model_id" not in m:
+            print(
+                f"Error: Model '{m.get('model')}' is missing required fields"
+                " 'cli' and/or 'model_id'.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
     pool = [m["model"] for m in config if m.get("enabled", True)]
     if not pool:
         print(
@@ -67,6 +75,7 @@ def load_model_pool() -> list[str]:
 STATS_ROLLING_WINDOW_SIZE = 100
 
 _model_pool_cache: list[str] | None = None
+_model_config_map_cache: dict[str, dict[str, Any]] | None = None
 
 
 def _get_model_pool() -> list[str]:
@@ -74,6 +83,13 @@ def _get_model_pool() -> list[str]:
     if _model_pool_cache is None:
         _model_pool_cache = load_model_pool()
     return _model_pool_cache
+
+
+def _get_model_config_map() -> dict[str, dict[str, Any]]:
+    global _model_config_map_cache
+    if _model_config_map_cache is None:
+        _model_config_map_cache = {m["model"]: m for m in get_model_config()}
+    return _model_config_map_cache
 
 
 # How many samples of recent history to display in the stats table.
@@ -544,43 +560,62 @@ def _parse_ndjson_output(stdout: bytes) -> tuple[str, str | None]:
 
 async def run_model(model: str, prompt: str) -> dict[str, Any]:
     """
-    Invoke the opencode CLI for a specific model and return the result.
+    Invoke the appropriate CLI for a specific model and return the result.
 
-    Parses NDJSON output and handles errors/timeouts.
+    Dispatches to opencode or claude CLI based on model config.
+    Parses NDJSON output for opencode; plain text for claude.
     """
     debug(f"Starting model: {model}")
     start_time = time.perf_counter()
     start_timestamp = datetime.now().isoformat()
 
-    # Environment setup to minimize overhead and disable interactive features
-    env = os.environ.copy()
-    env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] = "true"
-    env["OPENCODE_DISABLE_CLAUDE_CODE"] = "true"
+    model_info = _get_model_config_map().get(model, {})
+    cli: str = model_info["cli"]
+    model_id: str = model_info["model_id"]
 
-    # opencode run --model <model> --variant low --format json
-    cmd = [
-        "opencode",
-        "run",
-        "--model",
-        model,
-        "--variant",
-        "low",
-        "--format",
-        "json",
-    ]
+    if cli == "claude":
+        cmd = [
+            "claude",
+            "-p",
+            prompt,
+            "--model",
+            model_id,
+            "--max-turns",
+            "1",
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    else:
+        env = os.environ.copy()
+        env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] = "true"
+        env["OPENCODE_DISABLE_CLAUDE_CODE"] = "true"
+        cmd = [
+            "opencode",
+            "run",
+            "--model",
+            model_id,
+            "--variant",
+            "low",
+            "--format",
+            "json",
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=env,
+        )
 
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env=env,
-    )
+    communicate_input = None if cli == "claude" else prompt.encode()
 
     try:
-        # Send prompt and wait for result with timeout
         stdout, stderr = await asyncio.wait_for(
-            proc.communicate(input=prompt.encode()), timeout=TIMEOUT_DURATION
+            proc.communicate(input=communicate_input), timeout=TIMEOUT_DURATION
         )
         duration = time.perf_counter() - start_time
         end_timestamp = datetime.now().isoformat()
@@ -602,8 +637,11 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
                 "end_timestamp": end_timestamp,
             }
 
-        # Parse NDJSON output (multiple JSON objects, one per line)
-        res_text, error_msg = _parse_ndjson_output(stdout)
+        if cli == "claude":
+            res_text = stdout.decode().strip()
+            error_msg = None
+        else:
+            res_text, error_msg = _parse_ndjson_output(stdout)
 
         if error_msg and not res_text:
             debug(f"Model {model} returned logic error: {error_msg}")
