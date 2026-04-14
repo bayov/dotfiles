@@ -34,5 +34,9 @@ $ assert_stdout equals
 | [32m▶ Entered stage:[39m [35mdone[39m
 | [90m  This is the final stage.[39m
 |
+| Workflow `[34mminimal[39m` has 2 stages:
+| [32m✓ [39m1. [35mwork[39m[32m (completed)[39m
+| [34m▶ [39m2. [35mdone[39m[34m (current)[39m
+|
 | Next up (stage: [35mdone[39m):
 |     - Run: `awf flow run --flow=[36m<...>/fmt-adv-h[39m`

@@ -9,6 +9,7 @@ use owo_colors::OwoColorize as _;
 
 use super::AgentPrompt;
 use super::FirstStageAction;
+use super::FlowStatusStage;
 use crate::cli::output::eprint_error;
 use crate::cli::output::eprint_warning;
 use crate::cli::output::print_output;
@@ -57,6 +58,8 @@ pub struct FlowAdvanceOutput {
     pub stage: String,
     pub is_final: bool,
     pub flow_path: String,
+    pub workflow: String,
+    pub stages: Vec<FlowStatusStage>,
     pub next_action: FirstStageAction,
 }
 
@@ -66,6 +69,8 @@ impl fmt::Display for FlowAdvanceOutput {
         if self.is_final {
             writeln!(f, "{}", "  This is the final stage.".bright_black())?;
         }
+        writeln!(f)?;
+        super::fmt_stage_list(f, &self.workflow, &self.stages)?;
         writeln!(f)?;
         writeln!(f, "Next up (stage: {}):", self.stage.magenta())?;
         match &self.next_action {
@@ -207,12 +212,12 @@ pub fn advance(
         }
     };
 
-    let new_stage = updated_flow.current_stage.clone();
     fs::save_flow(&flow_dir, &updated_flow)?;
 
     let wf_dir =
         fs::find_workflow_dir(&entries, &workflow.name).unwrap_or_default();
-    let output = build_advance_output(&workflow, new_stage, &flow_dir, &wf_dir);
+    let output =
+        build_advance_output(&workflow, &updated_flow, &flow_dir, &wf_dir);
     print_output(&output);
     Ok(())
 }
@@ -279,15 +284,17 @@ fn check_produces_or_exit(
 /// Builds the `FlowAdvanceOutput` for the newly entered stage.
 fn build_advance_output(
     workflow: &Workflow,
-    new_stage: String,
+    updated_flow: &FlowState,
     flow_dir: &Path,
     wf_dir: &Path,
 ) -> FlowAdvanceOutput {
-    let is_final = workflow.stages.last().is_some_and(|s| s.name == new_stage);
+    let new_stage = &updated_flow.current_stage;
+    let is_final = workflow.stages.last().is_some_and(|s| s.name == *new_stage);
+    let stages = super::build_stage_list(workflow, updated_flow);
     let next_action = workflow
         .stages
         .iter()
-        .find(|s| s.name == new_stage)
+        .find(|s| s.name == *new_stage)
         .map_or(FirstStageAction::RunCommand, |s| match &s.kind {
             StageKind::Agent { prompt, prompt_file } => {
                 FirstStageAction::AgentComplete {
@@ -301,9 +308,11 @@ fn build_advance_output(
             StageKind::Command { .. } => FirstStageAction::RunCommand,
         });
     FlowAdvanceOutput {
-        stage: new_stage,
+        stage: new_stage.clone(),
         is_final,
         flow_path: flow_dir.display().to_string(),
+        workflow: workflow.name.clone(),
+        stages,
         next_action,
     }
 }

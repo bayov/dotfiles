@@ -8,7 +8,6 @@ use owo_colors::OwoColorize as _;
 use super::AgentPrompt;
 use super::FirstStageAction;
 use super::FlowStatusStage;
-use super::FlowStatusStageState;
 use crate::cli::output::print_output;
 use crate::engine::actions::NextAction;
 use crate::engine::actions::next_action;
@@ -177,37 +176,7 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         FlowStatusLevel::Active
     };
 
-    let stages: Vec<FlowStatusStage> = workflow
-        .stages
-        .iter()
-        .enumerate()
-        .map(|(i, s)| {
-            let state = if i <= current_idx {
-                let last =
-                    flow.stage_history.iter().rfind(|e| e.stage == s.name);
-                match last.map(|e| e.status) {
-                    Some(crate::model::flow::StageStatus::Skipped) => {
-                        FlowStatusStageState::Skipped
-                    }
-                    Some(crate::model::flow::StageStatus::ForceCompleted) => {
-                        FlowStatusStageState::ForceCompleted
-                    }
-                    Some(crate::model::flow::StageStatus::Completed) => {
-                        FlowStatusStageState::Completed
-                    }
-                    _ => FlowStatusStageState::Current,
-                }
-            } else {
-                FlowStatusStageState::Pending { skippable: s.skippable }
-            };
-            FlowStatusStage {
-                name: s.name.clone(),
-                description: s.description.clone(),
-                produces: s.produces.clone(),
-                state,
-            }
-        })
-        .collect();
+    let stages = super::build_stage_list(&workflow, &flow);
 
     let next_action_for_display = match status {
         FlowStatusLevel::Active => {

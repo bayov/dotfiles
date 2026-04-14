@@ -117,6 +117,17 @@ $ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: scope
 |
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+| ▶ 2. scope (current)
+|     - Define the scope of work.
+|   3. design (skippable)
+|     - Produce a technical design.
+|   4. decompose (skippable)
+|     - Break work into tasks.
+|   5. implement
+|     - Write the implementation.
+|
 | Next up (stage: scope):
 |     - Follow the instructions at: <...>/.agents/workflows/feature/scope.md
 |     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
@@ -128,6 +139,16 @@ $ assert_stdout equals
 $ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: design
+|
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+| ✓ 2. scope (completed)
+| ▶ 3. design (current)
+|     - Produce a technical design.
+|   4. decompose (skippable)
+|     - Break work into tasks.
+|   5. implement
+|     - Write the implementation.
 |
 | Next up (stage: design):
 |     - Instructions: Produce a technical design document.
@@ -162,6 +183,15 @@ $ assert_exit_code 0
 $ assert_stdout equals
 | ▶ Entered stage: decompose
 |
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+| ✓ 2. scope (completed)
+| ○ 3. design (skipped)
+| ▶ 4. decompose (current)
+|     - Break work into tasks.
+|   5. implement
+|     - Write the implementation.
+|
 | Next up (stage: decompose):
 |     - Follow the instructions at: <...>/.agents/workflows/feature/decompose.md
 |     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
@@ -176,6 +206,14 @@ $ awf flow next-stage --flow=$FLOWS_DIR/add-feature
 $ assert_stdout equals
 | ▶ Entered stage: implement
 |   This is the final stage.
+|
+| Workflow `feature` has 5 stages:
+| ✓ 1. research (completed)
+| ✓ 2. scope (completed)
+| ○ 3. design (skipped)
+| ✓ 4. decompose (completed)
+| ▶ 5. implement (current)
+|     - Write the implementation.
 |
 | Next up (stage: implement):
 |     - Instructions: Write the implementation.

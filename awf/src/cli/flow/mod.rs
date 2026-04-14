@@ -75,9 +75,53 @@ pub enum FlowStatusStageState {
     Pending { skippable: bool },
 }
 
+/// Builds the [`FlowStatusStage`] list for a workflow + flow state, shared by
+/// `awf flow status` and `awf flow next-stage`.
+pub fn build_stage_list(
+    workflow: &Workflow,
+    flow: &FlowState,
+) -> Vec<FlowStatusStage> {
+    let current_idx = workflow
+        .stages
+        .iter()
+        .position(|s| s.name == flow.current_stage)
+        .unwrap_or(0);
+    workflow
+        .stages
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let state = if i <= current_idx {
+                let last =
+                    flow.stage_history.iter().rfind(|e| e.stage == s.name);
+                match last.map(|e| e.status) {
+                    Some(crate::model::flow::StageStatus::Skipped) => {
+                        FlowStatusStageState::Skipped
+                    }
+                    Some(crate::model::flow::StageStatus::ForceCompleted) => {
+                        FlowStatusStageState::ForceCompleted
+                    }
+                    Some(crate::model::flow::StageStatus::Completed) => {
+                        FlowStatusStageState::Completed
+                    }
+                    _ => FlowStatusStageState::Current,
+                }
+            } else {
+                FlowStatusStageState::Pending { skippable: s.skippable }
+            };
+            FlowStatusStage {
+                name: s.name.clone(),
+                description: s.description.clone(),
+                produces: s.produces.clone(),
+                state,
+            }
+        })
+        .collect()
+}
+
 /// Renders the "Workflow `foo` has N stages: ..." stage-list block, shared by
-/// both `awf flow new` and `awf flow status`.
-fn fmt_stage_list(
+/// `awf flow new`, `awf flow status`, and `awf flow next-stage`.
+pub(super) fn fmt_stage_list(
     f: &mut fmt::Formatter<'_>,
     workflow: &str,
     stages: &[FlowStatusStage],
