@@ -2,31 +2,31 @@
     {
         "model": "opencode/big-pickle",
         "cli": "opencode",
-        "model_id": "big-pickle",
+        "model_id": "opencode/big-pickle",
         "enabled": true
     },
     {
         "model": "opencode/gpt-5-nano",
         "cli": "opencode",
-        "model_id": "gpt-5-nano",
+        "model_id": "opencode/gpt-5-nano",
         "enabled": true
     },
     {
         "model": "opencode/minimax-m2.5-free",
         "cli": "opencode",
-        "model_id": "minimax-m2.5-free",
+        "model_id": "opencode/minimax-m2.5-free",
         "enabled": true
     },
     {
         "model": "opencode/mimo-v2-flash-free",
         "cli": "opencode",
-        "model_id": "mimo-v2-flash-free",
+        "model_id": "opencode/mimo-v2-flash-free",
         "enabled": false
     },
     {
         "model": "opencode/nemotron-3-super-free",
         "cli": "opencode",
-        "model_id": "nemotron-3-super-free",
+        "model_id": "opencode/nemotron-3-super-free",
         "enabled": false
     },
     {

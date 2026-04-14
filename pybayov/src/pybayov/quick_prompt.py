@@ -107,7 +107,7 @@ _G100 = (255, 210, 124)
 MODEL_WEIGHT_SAMPLE_COUNT = 10
 
 # How many models to race by default.
-DEFAULT_MODEL_COUNT = 3
+DEFAULT_MODEL_COUNT = 5
 
 # Timeout for detached model runs
 TIMEOUT_DURATION = 60
@@ -647,6 +647,17 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
             debug(f"Model {model} returned logic error: {error_msg}")
             return {
                 "error": error_msg,
+                "model": model,
+                "success": False,
+                "duration": round(duration, 3),
+                "start_timestamp": start_timestamp,
+                "end_timestamp": end_timestamp,
+            }
+
+        if res_text == "I'm sorry, but I cannot assist with that request.":
+            debug(f"Model {model} returned a refusal response")
+            return {
+                "error": "Refusal",
                 "model": model,
                 "success": False,
                 "duration": round(duration, 3),
