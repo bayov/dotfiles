@@ -11,6 +11,7 @@ $ write_file .agents/workflows/feature/WORKFLOW.toml
 | name = "feature"
 | version = 1
 | description = "Research, scope, design, decompose, and implement a feature."
+| default_flow_dir = "$FLOWS_DIR"
 |
 | [[stages]]
 | name = "research"
@@ -59,7 +60,7 @@ $ write_file .agents/workflows/feature/decompose.md
 # Agent creates the flow
 # =============================================================================
 
-$ awf flow new $FLOWS_DIR/add-feature --workflow=feature
+$ awf flow new add-feature --workflow=feature
 $ assert_stdout equals
 | Created `feature` flow: <...>/add-feature
 |

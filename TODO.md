@@ -7,10 +7,8 @@ TODO
 Awf
 ---
 
-- Break into modules
-- Review functionality
-- Improve human output format.
 - Support custom flow dir templates (e.g. {project}/{YYYY-MM-DD}).
+- Review functionality
 - Coverage for all output format as tests.
 - Add README.md's
 - Support out-of-workflow skills (e.g. in `.agents/skills`)
