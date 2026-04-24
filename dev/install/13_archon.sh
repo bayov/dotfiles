@@ -7,11 +7,13 @@ echo "  Archon"
 echo "================================================================================"
 echo -e "\033[0m"
 
-if [ ! -d "$HOME/archon" ]; then
-	git clone --depth 1 https://github.com/coleam00/Archon.git "$HOME/archon"
+ARCHON_DIR="$ARCHON_DIR"
+
+if [ ! -d "$ARCHON_DIR" ]; then
+	git clone --depth 1 https://github.com/coleam00/Archon.git "$ARCHON_DIR"
 else
-	(cd "$HOME/archon" && git pull)
+	(cd "$ARCHON_DIR" && git pull)
 fi
 
-(cd "$HOME/archon" && bun install)
-(cd "$HOME/archon/packages/cli" && bun link)
+(cd "$ARCHON_DIR" && bun install)
+(cd "$ARCHON_DIR/packages/cli" && bun link)
