@@ -87,7 +87,7 @@ if status is-interactive
     set -gx fzf_diff_highlighter delta --paging=never
     # Project locations for project search fzf (Alt+W)
     set -gx fzf_project_paths $DOTFILES_DIR
-    set -gx fzf_project_search_paths ~/projects ~/workspaces
+    set -gx fzf_project_search_paths ~/projects ~/projects-archon ~/workspaces
     # Options for directory search fzf (Alt+F)
     set -gx fzf_fd_opts --hidden --follow
     set -gx fzf_preview_dir_cmd "ls_with_default_args --color=always"
