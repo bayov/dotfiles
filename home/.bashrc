@@ -23,6 +23,7 @@ unset -f _prepend_path
 # ── Global Aliases ─────────────────────────────────────────────────────────────
 alias cat=batcat
 alias bat=batcat
+alias fd=fdfind
 
 # pybayov script aliases
 alias bayov-format="uv run python -m pybayov.format"

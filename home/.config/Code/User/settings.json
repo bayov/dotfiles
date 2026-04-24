@@ -297,5 +297,6 @@
     //  | that all newly added settings are collected under it, allowing me to
     //  | review and categorize each new setting.
     // --------------------------------------------------------------------------
-    "editor.columnSelection": false
+    "editor.columnSelection": false,
+    "excalidraw.theme": "dark"
 }

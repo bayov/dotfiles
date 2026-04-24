@@ -23,5 +23,6 @@
         "excludedCommands": ["cargo:*", "sccache:*"]
     },
     "advisorModel": "opus",
-    "skipDangerousModePermissionPrompt": true
+    "skipDangerousModePermissionPrompt": true,
+    "preferredNotifChannel": "notifications_disabled"
 }

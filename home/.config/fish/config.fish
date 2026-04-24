@@ -11,6 +11,7 @@ set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
+alias fd=fdfind
 
 # pybayov script aliases
 alias bayov-format="uv run python -m pybayov.format"
@@ -41,7 +42,6 @@ if status is-interactive
     abbr -a z zellij
     abbr -a zl zellij list-sessions
     abbr -a zka zellij kill-all-sessions
-    abbr -a fd fdfind
     abbr -a c docker-sandbox --no-rebuild -- claude --dangerously-skip-permissions
     abbr -a g docker-sandbox --no-rebuild -- gemini --yolo
     abbr -a oc opencode

@@ -20,6 +20,7 @@ pnpm add -g npx
 pnpm add -g @google/gemini-cli@preview
 pnpm add -g opencode-ai@latest
 pnpm add -g @fission-ai/openspec@latest
+pnpm add -g @mariozechner/pi-coding-agent
 
 pnpm approve-builds --global --all || true
 

@@ -15,6 +15,7 @@ globs = [
     "**/.bayov-personal-project",
     "**/py.typed",
     "**/Code/User/keybindings.json",
+    "**/config/generate-commit-description-template.md",
 ]
 
 [[formatter]]

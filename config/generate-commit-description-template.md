@@ -1,4 +1,4 @@
-Write a commit description for the following git diff:
+Generate a commit description for the following git diff:
 
 <git-diff>
 {{diff}}
@@ -8,11 +8,10 @@ Write a commit description for the following git diff:
 
 **IMPORTANT:** Wrap your response in <commit-description> tags. Example:
 
-```
-<commit-description>
-feat(lang): add Polish language
-</commit-description>
-```
+    <commit-description>
+    feat(lang): add Polish language
+    </commit-description>
+
 
 ---
 
