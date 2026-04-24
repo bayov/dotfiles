@@ -92,7 +92,7 @@
     "autosave": "on_focus_change",
     "colorize_brackets": false,
     "wrap_guides": [80],
-    "base_keymap": "VSCode",
+    "base_keymap": "None",
     "ui_font_size": 14.0,
     "buffer_font_size": 13.0,
     "semantic_tokens": "combined",

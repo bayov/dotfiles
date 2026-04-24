@@ -6,22 +6,23 @@ Summary
 
 Extend AWF to support dynamically-generated, structured task lists as
 first-class artifacts. A new `tasks/*.toml` artifact format replaces static
-stage steps for implementation-heavy workflows. A new `type = "task-runner"`
-stage dispatches these lists, supports inter-list dependency resolution, and
-optionally runs lists in parallel — all while keeping agents anchored to the AWF
-feedback loop.
+stage definitions for implementation-heavy workflows. A new
+`kind =
+"task-runner"` stage dispatches these lists, supports inter-list
+dependency resolution, and optionally runs lists in parallel — all while keeping
+agents anchored to the AWF feedback loop.
 
 ---
 
 Motivation
 ----------
 
-The current AWF model requires all steps to be statically defined in the
+The current AWF model requires all stages to be statically defined in the
 workflow TOML at authoring time. This breaks down for implementation stages
 where the work is only known after upstream stages (research → plan → design →
 task-breakdown) have run.
 
-The naive fallback — one large agent step that reads `tasks.md` and runs until
+The naive fallback — one large agent stage that reads `tasks.md` and runs until
 done — loses all AWF benefits: no gate checks, no per-task logging, no failure
 recovery, no parallelism. An agent running free over a large task list is
 unanchored and unobservable.
@@ -105,7 +106,7 @@ type = "agent"
 ```
 
 AWF will not dispatch `baz` until both `foo` and `bar` are marked `complete`.
-This uses the same artifact-gating logic already applied to `requires` on
+This uses the same artifact-gating logic already applied to `produces` on
 stages.
 
 ---
@@ -113,24 +114,22 @@ stages.
 New Stage Type: `task-runner`
 -----------------------------
 
-A new `type = "task-runner"` stage replaces the static `steps` array with a
+A new `kind = "task-runner"` stage replaces static per-stage definitions with a
 `task_lists` declaration. The stage declares which task list artifacts it will
 dispatch, and whether they may run in parallel.
 
 ```toml
 [[stages]]
 name = "implement"
-type = "task-runner"
-requires = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
-task_lists = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
-parallel = true # default: false
+kind = "task-runner"
+args = { task_lists = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"], parallel = true }
 ```
 
-| Field        | Type       | Default    | Description                                                                        |
-| ------------ | ---------- | ---------- | ---------------------------------------------------------------------------------- |
-| `type`       | string     | `"linear"` | Set to `"task-runner"` to enable this mode                                         |
-| `task_lists` | `[string]` | —          | Artifact paths to the task list TOML files                                         |
-| `parallel`   | bool       | `false`    | If `true`, lists whose `depends_on` are satisfied may be dispatched simultaneously |
+| Field        | Type       | Default | Description                                                                                    |
+| ------------ | ---------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `kind`       | string     | —       | `"task-runner"` (existing values: `"agent"`, `"command"`)                                      |
+| `task_lists` | `[string]` | —       | Artifact paths to the task list TOML files (in `args`)                                         |
+| `parallel`   | bool       | `false` | If `true`, lists whose `depends_on` are satisfied may be dispatched simultaneously (in `args`) |
 
 `parallel = false` dispatches lists one at a time in declaration order, still
 respecting `depends_on`. `parallel = true` allows simultaneous agents to work on
@@ -152,32 +151,31 @@ test = "cargo test"
 [[stages]]
 name = "research"
 produces = ["research.md"]
-steps = [{ name = "do-research", type = "agent", prompt = "research.md" }]
+kind = "agent"
+args = { prompt_file = "research.md" }
 
 [[stages]]
 name = "plan"
-requires = ["research.md"]
 produces = ["proposal.md"]
-steps = [{ name = "write-plan", type = "agent", prompt = "plan.md" }]
+kind = "agent"
+args = { prompt_file = "plan.md" }
 
 [[stages]]
 name = "design"
-requires = ["proposal.md"]
 produces = ["design.md"]
-steps = [{ name = "write-design", type = "agent", prompt = "design.md" }]
+kind = "agent"
+args = { prompt_file = "design.md" }
 
 [[stages]]
 name = "task-breakdown"
-requires = ["design.md"]
 produces = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
-steps = [{ name = "write-tasks", type = "agent", prompt = "breakdown.md" }]
+kind = "agent"
+args = { prompt_file = "breakdown.md" }
 
 [[stages]]
 name = "implement"
-type = "task-runner"
-requires = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
-task_lists = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
-parallel = true
+kind = "task-runner"
+args = { task_lists = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"], parallel = true }
 ```
 
 ---
@@ -185,50 +183,51 @@ parallel = true
 New CLI Commands
 ----------------
 
-`awf flow next` in a `task-runner` stage delegates automatically to
-`awf flow tasks next`, so existing agent loops need no changes at the top level.
+In a `task-runner` stage, `awf flow next-stage` blocks advancement until all
+task lists are `complete`. When tasks remain, it exits non-zero and prints the
+current task status plus the specific `awf flow tasks ...` commands needed to
+make progress — consistent with how `awf flow next-stage` reports blockers for
+other stage kinds.
 
-| Command                                                           | Purpose                                                                                                      |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `awf flow tasks status --flow <id>`                               | Show all task lists with status (`pending` / `in-progress` / `complete` / `blocked`) and blocking indicators |
-| `awf flow tasks next --flow <id> [--list <name>]`                 | Show the next actionable task across all unblocked lists, or within a specific list                          |
-| `awf flow tasks run <list> <task-id> --flow <id>`                 | Execute a command task and log the result                                                                    |
-| `awf flow tasks done <list> <task-id> --flow <id>`                | Mark an agent task complete                                                                                  |
-| `awf flow tasks skip <list> <task-id> --reason "..." --flow <id>` | Skip a task with a reason; counts as `pass` for gate purposes                                                |
-| `awf flow tasks advance <list> --flow <id>`                       | Mark a task list as complete; unblocks any lists depending on it                                             |
+| Command                                                             | Purpose                                                                                                                                                          |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `awf flow tasks status --flow <path> [--task-list <name>]`          | Show task list status (`pending` / `in-progress` / `complete` / `blocked`), blocking indicators, and the next actionable task(s) — optionally scoped to one list |
+| `awf flow tasks run <list> <task-id> --flow <path>`                 | Execute a command task and log the result                                                                                                                        |
+| `awf flow tasks complete <list> <task-id> --flow <path>`            | Mark an agent task complete                                                                                                                                      |
+| `awf flow tasks skip <list> <task-id> --reason "..." --flow <path>` | Skip a task with a reason; counts as `pass` for gate purposes                                                                                                    |
 
 ---
 
 State Representation
 --------------------
 
-### `steplog` entries
+### `stage_history` entries
 
-Task execution is appended to the existing `steplog` structure using
-`<list>/<task-id>` as the step name. No new top-level state keys are required.
+Task execution is appended to the existing `stage_history` array in the flow
+state file (`.awf/flows/<flow-id>.toml`) using `<list>/<task-id>` as the `step`
+field. The `stage` field holds the task-runner stage name as usual. A new
+optional `step` field is added to `StageHistoryEntry`; existing entries without
+it remain valid.
 
 ```toml
-[[steplog]]
-step = "foo/1.3"
+[[stage_history]]
 stage = "implement"
-type = "command"
-status = "pass"
-exit_code = 0
-started_at = "2026-04-05T10:31:00Z"
+step = "foo/1.3"
+time = "2026-04-05T10:31:00Z"
+status = "completed"
 duration_ms = 320
 
-[[steplog]]
-step = "bar/2.1"
+[[stage_history]]
 stage = "implement"
-type = "agent"
-status = "pass"
-completed_at = "2026-04-05T10:45:00Z"
+step = "bar/2.1"
+time = "2026-04-05T10:45:00Z"
+status = "completed"
 ```
 
 ### `task_runner_state` block
 
-A new top-level block in `state.toml` tracks list-level completion for fast
-`depends_on` resolution:
+A new top-level block in the flow state file (`.awf/flows/<flow-id>.toml`)
+tracks list-level completion for fast `depends_on` resolution:
 
 ```toml
 [task_runner_state]
@@ -244,19 +243,18 @@ Valid values: `"pending"` / `"in-progress"` / `"complete"` / `"blocked"`.
 Gate and Advancement Logic
 --------------------------
 
-The `task-runner` stage plugs into the existing `can_exit_stage?` rules. The
-task-level gates mirror the step-level gates already in place.
+The `task-runner` stage plugs into the existing `can_advance` rules. The
+task-level gates mirror the stage-level gates already in place.
 
-| Condition                           | `awf flow next` / `awf flow tasks next` output                 |
-| ----------------------------------- | -------------------------------------------------------------- |
-| A list is `blocked` by `depends_on` | Shows list as blocked; names which dependencies are incomplete |
-| A command task fails                | Blocks; instructs `awf flow tasks run <list> <id>` to retry    |
-| An agent task is pending            | Prints description; requests `awf flow tasks done <list> <id>` |
-| All tasks in a list pass            | Suggests `awf flow tasks advance <list>`                       |
-| All lists are `complete`            | Suggests `awf flow advance` to exit the stage                  |
+| Condition                           | `awf flow next-stage` / `awf flow tasks status` output             |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| A list is `blocked` by `depends_on` | Shows list as blocked; names which dependencies are incomplete     |
+| A command task fails                | Blocks; instructs `awf flow tasks run <list> <id>` to retry        |
+| An agent task is pending            | Prints description; requests `awf flow tasks complete <list> <id>` |
+| All lists are `complete`            | Suggests `awf flow next-stage` to exit the stage                   |
 
-`--force` on `awf flow advance` bypasses list-level gates as it does today for
-step-level gates, and is logged as a forced transition.
+`--force` on `awf flow next-stage` bypasses list-level gates as it does today
+for stage-level gates, and is logged as a forced transition.
 
 ---
 
@@ -268,25 +266,23 @@ either picks up `baz` once both are complete:
 
 ```bash
 # Agent A — assigned to foo
-awf flow tasks next --list foo    # → "foo/1.1: Scaffold auth module (agent)"
+awf flow tasks status --task-list foo    # → "foo/1.1: Scaffold auth module (agent)"
 # ... does the work ...
-awf flow tasks done foo 1.1
-awf flow tasks run  foo 1.3       # PASS: cargo fmt --check 320ms
-awf flow tasks run  foo 1.4       # PASS: cargo test 4.1s
-awf flow tasks advance foo        # foo → complete
+awf flow tasks complete foo 1.1
+awf flow tasks run  foo 1.3              # PASS: cargo fmt --check 320ms
+awf flow tasks run  foo 1.4             # PASS: cargo test 4.1s  → foo → complete
 
 # Agent B — working on bar simultaneously
-awf flow tasks next --list bar    # → "bar/2.1: ..."
+awf flow tasks status --task-list bar   # → "bar/2.1: ..."
 # ...
-awf flow tasks advance bar        # bar → complete
+                                        # bar → complete (auto, last task done)
 
 # baz unblocks automatically (depends_on: [foo, bar] both complete)
 # Either agent picks it up
-awf flow tasks next               # → "baz/3.1: Wire foo and bar together (agent)"
-awf flow tasks done baz 3.1
-awf flow tasks advance baz        # baz → complete
+awf flow tasks status                   # → "baz/3.1: Wire foo and bar together (agent)"
+awf flow tasks complete baz 3.1         # baz → complete (auto, last task done)
 
-awf flow advance                  # all lists complete → exit implement
+awf flow next-stage                     # all lists complete → exit implement
 ```
 
 ---
@@ -296,12 +292,89 @@ Impact on Existing Workflows
 
 This change is fully additive. All existing workflow TOML files are unaffected:
 
-- The default stage type remains `"linear"` (the current behaviour, implicit
-  today, made explicit)
+- The existing stage kinds (`"agent"` and `"command"`) are unmodified
 - No existing CLI commands are modified
-- The `steplog` format is extended, not changed — existing entries remain valid
-- `task_runner_state` only appears in state files for flows that use a
+- The `stage_history` format is extended — a new optional `step` field is added
+  to entries; existing entries without `step` remain valid
+- `task_runner_state` only appears in flow state files for flows that use a
   `task-runner` stage
+
+---
+
+Test Coverage
+-------------
+
+### Unit tests
+
+New `.awf_test` cases under `tests/cases/flow/tasks/`:
+
+- **`status_pending`** — task-runner stage just entered; `awf flow tasks status`
+  shows all lists as `pending` with the first task of the first unblocked list
+- **`status_blocked`** — a list with unsatisfied `depends_on`; status shows it
+  as `blocked` and names the incomplete dependencies
+- **`complete_agent_task`** — `awf flow tasks complete <list> <id>` records a
+  `completed` entry in `stage_history` with the correct `step` field
+- **`run_command_task_pass`** — `awf flow tasks run <list> <id>` executes the
+  command, records `completed` + `duration_ms`
+- **`run_command_task_fail`** — non-zero exit records `failed`; subsequent
+  `status` shows the list as blocked on that task
+- **`skip_task`** — `awf flow tasks skip <list> <id> --reason "..."` records
+  `skipped`
+- **`auto_complete_list`** — completing the last task in a list automatically
+  sets `task_runner_state["tasks/foo.toml"] = "complete"` and unblocks any
+  dependent lists
+- **`next_stage_blocked`** — `awf flow next-stage` in a task-runner stage with
+  incomplete tasks exits non-zero and prints actionable task status
+- **`next_stage_advances`** — `awf flow next-stage` succeeds and advances the
+  flow once all lists are `complete`
+
+### End-to-end test update: `e2e_agent_session.awf_test`
+
+The existing e2e test ends with `decompose` (agent, skippable) → `implement`
+(agent). Update it so `decompose` produces task list artifacts and `implement`
+is a `task-runner`.
+
+**Workflow changes:**
+
+```toml
+[[stages]]
+name = "decompose"
+description = "Break work into tasks."
+produces = ["tasks/auth.toml", "tasks/ui.toml"]
+kind = "agent"
+args = { prompt_file = "decompose.md" }
+skippable = true
+
+[[stages]]
+name = "implement"
+description = "Execute the task lists."
+kind = "task-runner"
+args = { task_lists = ["tasks/auth.toml", "tasks/ui.toml"] }
+```
+
+**New e2e steps after decompose completes:**
+
+```
+# Agent writes task list artifacts produced by decompose
+write_file flows/add-feature/artifacts/tasks/auth.toml  → two agent tasks + one command task
+write_file flows/add-feature/artifacts/tasks/ui.toml    → one agent task
+
+awf flow next-stage   → enters implement (task-runner); shows task status
+
+# Agent works through tasks
+awf flow tasks status                    → shows auth/1.1 as next
+awf flow tasks complete auth 1.1
+awf flow tasks complete auth 1.2
+awf flow tasks run auth 1.3              → PASS; auth → complete (auto)
+
+awf flow tasks status                    → shows ui/2.1 as next
+awf flow tasks complete ui 2.1           → ui → complete (auto)
+
+awf flow next-stage                      → all lists complete; workflow done
+```
+
+The final `awf flow history` and `awf flow status` assertions must be updated to
+reflect the new stage list and the task entries in `stage_history`.
 
 ---
 
