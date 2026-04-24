@@ -7,8 +7,6 @@ TODO
 Awf
 ---
 
-- Support out-of-workflow skills (e.g. in `.agents/skills`)
-- Add README.md's
 - Review functionality
 - Implement `dynamic_task_lists_plan.md`
 - Define `research -> scope -> design -> decompose -> implement` workflow
