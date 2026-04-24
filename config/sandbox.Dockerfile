@@ -50,11 +50,14 @@ RUN bash dev/install/08_nodejs.sh
 COPY --chown=sandbox:sandbox dev/install/09_npm_packages.sh dev/install/
 RUN bash dev/install/09_npm_packages.sh
 
-COPY --chown=sandbox:sandbox dev/install/10_gum.sh dev/install/
-RUN bash dev/install/10_gum.sh
+COPY --chown=sandbox:sandbox dev/install/10_bun.sh dev/install/
+RUN bash dev/install/10_bun.sh
 
-COPY --chown=sandbox:sandbox dev/install/11_claude_code.sh dev/install/
-RUN bash dev/install/11_claude_code.sh
+COPY --chown=sandbox:sandbox dev/install/11_gum.sh dev/install/
+RUN bash dev/install/11_gum.sh
+
+COPY --chown=sandbox:sandbox dev/install/12_claude_code.sh dev/install/
+RUN bash dev/install/12_claude_code.sh
 
 # Default command is fish.
 ENV SHELL="/usr/bin/fish"

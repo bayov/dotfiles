@@ -7,6 +7,7 @@ set -gx SCCACHE_DIR "$HOME/.cache/sccache"
 set -gx SCCACHE_CACHE_SIZE 25GB
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
+set -gx BUN_INSTALL "$HOME/.bun"
 
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
@@ -32,6 +33,7 @@ fish_add_path /snap/bin
 fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/pnpm
 fish_add_path ~/.opencode/bin
+fish_add_path $BUN_INSTALL/bin
 
 # Configuration that applies only for interactive shell sessions
 if status is-interactive
