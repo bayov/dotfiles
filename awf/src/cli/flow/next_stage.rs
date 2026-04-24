@@ -18,7 +18,9 @@ use crate::engine::actions::can_advance;
 use crate::engine::state::advance_stage;
 use crate::engine::state::record_stage_pass;
 use crate::engine::state::skip_stage;
+use crate::engine::task_runner;
 use crate::model::flow::FlowState;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
@@ -107,6 +109,18 @@ impl fmt::Display for FlowAdvanceOutput {
                     self.flow_path.cyan()
                 )?;
             }
+            FirstStageAction::RunTasks => {
+                writeln!(
+                    f,
+                    "    - Use `awf flow tasks status --flow={}` to see task progress.",
+                    self.flow_path.cyan()
+                )?;
+                writeln!(
+                    f,
+                    "    - Use `awf flow tasks next --flow={}` to find the next task.",
+                    self.flow_path.cyan()
+                )?;
+            }
         }
         Ok(())
     }
@@ -142,25 +156,42 @@ pub fn advance(
     let workflow = crate::cli::load_workflow_or_exit(&entries, &flow.workflow)?;
     crate::cli::validate_workflow_or_exit(&workflow, &entries, &config);
 
-    // For agent stages (and not --skip): auto-record completion before
-    // advancing. This replaces the former `complete-stage` command.
-    // The completion is saved to disk immediately so that if the advance
-    // fails (e.g. missing artifact) the stage is still recorded as done.
+    // For agent/task-runner stages (and not --skip): auto-record completion
+    // before advancing. Saved to disk immediately so that if the advance
+    // fails (e.g. missing artifact) the completion is preserved.
     let flow = if skip {
         flow
     } else {
-        maybe_complete_agent(&workflow, flow, &flow_dir)?
+        let flow = maybe_complete_agent(&workflow, flow, &flow_dir)?;
+        maybe_complete_task_runner(&workflow, flow, &flow_dir)?
     };
 
-    // Final agent stage: completion was recorded above; nothing left to
-    // advance to, so report success and return.
-    if !skip && force.is_none() && is_final_agent_stage(&workflow, &flow) {
+    // Final agent or task-runner stage: completion was recorded above;
+    // nothing left to advance to, so report success and return.
+    if !skip
+        && force.is_none()
+        && (is_final_agent_stage(&workflow, &flow)
+            || is_final_complete_task_runner(&workflow, &flow))
+    {
         let output = FlowDoneOutput {
             stage: flow.current_stage,
             flow_path: flow_dir.display().to_string(),
         };
         print_output(&output);
         return Ok(());
+    }
+
+    // Task-runner stage not yet complete: give a targeted hint.
+    if !skip && force.is_none() && is_incomplete_task_runner(&workflow, &flow) {
+        eprint_error(format_args!(
+            "task-runner stage {:?} is not yet complete. \
+             Use `awf flow tasks status --flow={}` to see progress \
+             or `awf flow tasks next --flow={}` for the next task.",
+            flow.current_stage,
+            flow_dir.display(),
+            flow_dir.display(),
+        ));
+        std::process::exit(1);
     }
 
     let updated_flow = if skip {
@@ -213,6 +244,8 @@ pub fn advance(
         }
     };
 
+    let updated_flow =
+        maybe_init_task_runner_state(&workflow, updated_flow, &flow_dir)?;
     fs::save_flow(&flow_dir, &updated_flow)?;
 
     let artifacts = super::collect_artifacts(&flow_dir);
@@ -306,7 +339,7 @@ fn build_advance_output(
         .iter()
         .find(|s| s.name == *new_stage)
         .map_or(FirstStageAction::RunCommand, |s| match &s.kind {
-            StageKind::Agent { prompt, prompt_file } => {
+            StageKind::Linear(LinearKind::Agent { prompt, prompt_file }) => {
                 FirstStageAction::AgentComplete {
                     prompt: super::build_agent_prompt_from_fields(
                         prompt.as_deref(),
@@ -316,7 +349,10 @@ fn build_advance_output(
                     ),
                 }
             }
-            StageKind::Command { .. } => FirstStageAction::RunCommand,
+            StageKind::Linear(LinearKind::Command { .. }) => {
+                FirstStageAction::RunCommand
+            }
+            StageKind::TaskRunner { .. } => FirstStageAction::RunTasks,
         });
     FlowAdvanceOutput {
         stage: new_stage.clone(),
@@ -341,7 +377,7 @@ fn maybe_complete_agent(
     flow_dir: &Path,
 ) -> color_eyre::Result<FlowState> {
     let stage = super::current_stage_or_exit(workflow, &flow);
-    if matches!(stage.kind, StageKind::Agent { .. })
+    if matches!(stage.kind, StageKind::Linear(LinearKind::Agent { .. }))
         && !stage_is_complete(&flow, &stage.name)
     {
         let completed = record_stage_pass(flow, stage, None);
@@ -356,8 +392,86 @@ fn maybe_complete_agent(
 /// stage in the workflow.
 fn is_final_agent_stage(workflow: &Workflow, flow: &FlowState) -> bool {
     let stage = super::current_stage_or_exit(workflow, flow);
-    matches!(stage.kind, StageKind::Agent { .. })
+    matches!(stage.kind, StageKind::Linear(LinearKind::Agent { .. }))
         && workflow.stages.last().is_some_and(|s| s.name == flow.current_stage)
+}
+
+/// Auto-completes a task-runner stage when all its task lists are marked
+/// complete in `task_runner_state`.
+///
+/// Saves immediately so that if the subsequent advance fails the completion is
+/// preserved. Returns the flow unchanged for non-task-runner stages or stages
+/// that are not yet fully complete.
+fn maybe_complete_task_runner(
+    workflow: &Workflow,
+    flow: FlowState,
+    flow_dir: &Path,
+) -> color_eyre::Result<FlowState> {
+    let stage = super::current_stage_or_exit(workflow, &flow);
+    if matches!(stage.kind, StageKind::TaskRunner { .. })
+        && !stage_is_complete(&flow, &stage.name)
+        && task_runner::all_lists_complete(&flow)
+    {
+        let completed = record_stage_pass(flow, stage, None);
+        fs::save_flow(flow_dir, &completed)?;
+        Ok(completed)
+    } else {
+        Ok(flow)
+    }
+}
+
+/// Returns `true` when the current stage is a task-runner stage that has not
+/// yet been marked complete (i.e. not all task lists are done).
+fn is_incomplete_task_runner(workflow: &Workflow, flow: &FlowState) -> bool {
+    let stage = super::current_stage_or_exit(workflow, flow);
+    matches!(stage.kind, StageKind::TaskRunner { .. })
+        && !stage_is_complete(flow, &stage.name)
+}
+
+/// Returns `true` when the current stage is a task-runner that is both
+/// complete and the last stage in the workflow.
+fn is_final_complete_task_runner(
+    workflow: &Workflow,
+    flow: &FlowState,
+) -> bool {
+    let stage = super::current_stage_or_exit(workflow, flow);
+    matches!(stage.kind, StageKind::TaskRunner { .. })
+        && stage_is_complete(flow, &stage.name)
+        && workflow.stages.last().is_some_and(|s| s.name == flow.current_stage)
+}
+
+/// Initialises `task_runner_state` when the flow has just entered a
+/// task-runner stage. No-op for non-task-runner stages.
+///
+/// Task list files are loaded to read their `depends_on` declarations. Missing
+/// files are treated as having no dependencies (status: `Pending`) so that
+/// `--skip` advances don't hard-fail on absent artifacts.
+fn maybe_init_task_runner_state(
+    workflow: &Workflow,
+    mut flow: FlowState,
+    flow_dir: &Path,
+) -> color_eyre::Result<FlowState> {
+    let stage = workflow.stages.iter().find(|s| s.name == flow.current_stage);
+    let Some(stage) = stage else { return Ok(flow) };
+    let StageKind::TaskRunner { task_lists, .. } = &stage.kind else {
+        return Ok(flow);
+    };
+    let mut loaded = std::collections::HashMap::new();
+    for path in task_lists {
+        match fs::load_task_list(flow_dir, path) {
+            Ok(tl) => {
+                loaded.insert(path.clone(), tl);
+            }
+            Err(Error::TaskListNotFound { .. }) => {
+                // Missing after --skip: default to Pending (no deps known).
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
+    flow.task_runner_state =
+        task_runner::init_task_runner_state(task_lists, &loaded);
+    flow.updated_at = chrono::Utc::now();
+    Ok(flow)
 }
 
 /// Returns `true` if `stage_name` has a `Completed` entry in the flow history.

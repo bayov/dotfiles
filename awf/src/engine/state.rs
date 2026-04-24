@@ -17,6 +17,7 @@ use tracing::instrument;
 use crate::model::flow::FlowState;
 use crate::model::flow::StageHistoryEntry;
 use crate::model::flow::StageStatus;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -174,7 +175,10 @@ pub fn record_stage_pass(
         time: Utc::now(),
         status: StageStatus::Completed,
         force_reason: None,
-        duration_ms: if matches!(stage.kind, StageKind::Command { .. }) {
+        duration_ms: if matches!(
+            stage.kind,
+            StageKind::Linear(LinearKind::Command { .. })
+        ) {
             duration_ms
         } else {
             None
@@ -201,7 +205,10 @@ pub fn record_stage_fail(
         time: Utc::now(),
         status: StageStatus::Failed,
         force_reason: None,
-        duration_ms: if matches!(stage.kind, StageKind::Command { .. }) {
+        duration_ms: if matches!(
+            stage.kind,
+            StageKind::Linear(LinearKind::Command { .. })
+        ) {
             duration_ms
         } else {
             None

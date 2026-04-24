@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::LinearKind;
 use super::Stage;
 use super::StageKind;
 use super::Workflow;
@@ -9,7 +10,6 @@ use crate::result::Error;
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Deserialize a TOML string into a [`Workflow`], panicking on parse failure.
 fn parse(toml: &str) -> Workflow {
     toml::from_str(toml).expect("TOML should parse without error")
 }
@@ -20,7 +20,6 @@ fn parse(toml: &str) -> Workflow {
 
 #[test]
 fn full_workflow_round_trip() {
-    // Given: a TOML string representing the canonical feature workflow
     let toml_input = r#"
         name = "feature"
         version = 1
@@ -60,11 +59,9 @@ fn full_workflow_round_trip() {
         args = { prompt_file = "review.md" }
     "#;
 
-    // When: we parse the TOML and validate
     let workflow = parse(toml_input);
     workflow.validate().expect("full workflow should be valid");
 
-    // Then: top-level fields match
     assert_eq!(workflow.name, "feature");
     assert_eq!(workflow.version, 1);
     assert_eq!(
@@ -72,7 +69,6 @@ fn full_workflow_round_trip() {
         Some("Ship a new feature from design through merge.")
     );
 
-    // Then: commands table is populated
     let mut expected_commands = HashMap::new();
     expected_commands
         .insert("format".to_owned(), "cargo fmt --check".to_owned());
@@ -80,40 +76,101 @@ fn full_workflow_round_trip() {
         .insert("lint".to_owned(), "cargo clippy -- -D warnings".to_owned());
     assert_eq!(workflow.commands, expected_commands);
 
-    // Then: stage count
     assert_eq!(workflow.stages.len(), 5);
 
-    // Then: "design" stage
     let design = &workflow.stages[0];
     assert_eq!(design.name, "design");
     assert_eq!(design.description.as_deref(), Some("Produce a design doc."));
     assert_eq!(design.produces, vec!["design.md"]);
-    assert_eq!(design.kind, StageKind::Agent {
-        prompt_file: Some("design.md".to_owned()),
-        prompt: None,
-    });
+    assert_eq!(
+        design.kind,
+        StageKind::Linear(LinearKind::Agent {
+            prompt_file: Some("design.md".to_owned()),
+            prompt: None,
+        })
+    );
 
-    // Then: "implement" stage
     let implement = &workflow.stages[1];
     assert_eq!(implement.name, "implement");
     assert!(implement.produces.is_empty());
-    assert_eq!(implement.kind, StageKind::Agent {
-        prompt_file: Some("implement.md".to_owned()),
-        prompt: None,
-    });
+    assert_eq!(
+        implement.kind,
+        StageKind::Linear(LinearKind::Agent {
+            prompt_file: Some("implement.md".to_owned()),
+            prompt: None,
+        })
+    );
 
-    // Then: "format" stage
     let format_stage = &workflow.stages[2];
     assert_eq!(format_stage.name, "format");
-    assert_eq!(format_stage.kind, StageKind::Command {
-        command: Some("format".to_owned()),
-        run: None,
-    });
+    assert_eq!(
+        format_stage.kind,
+        StageKind::Linear(LinearKind::Command {
+            command: Some("format".to_owned()),
+            run: None,
+        })
+    );
 
-    // Then: "review" stage
     let review = &workflow.stages[4];
     assert_eq!(review.name, "review");
     assert_eq!(review.produces, vec!["changelog-entry.md"]);
+}
+
+// ---------------------------------------------------------------------------
+// Task-runner stage parses correctly
+// ---------------------------------------------------------------------------
+
+#[test]
+fn task_runner_stage_parses_correctly() {
+    let toml_input = r#"
+        name = "impl-wf"
+        version = 1
+
+        [[stages]]
+        name = "task-breakdown"
+        produces = ["tasks/foo.toml", "tasks/bar.toml"]
+        kind = "agent"
+        args = { prompt = "Break work into tasks." }
+
+        [[stages]]
+        name = "implement"
+        type = "task-runner"
+        task_lists = ["tasks/foo.toml", "tasks/bar.toml"]
+        parallel = true
+    "#;
+
+    let workflow = parse(toml_input);
+    workflow.validate().expect("task-runner workflow should be valid");
+
+    assert_eq!(workflow.stages.len(), 2);
+
+    let impl_stage = &workflow.stages[1];
+    assert_eq!(impl_stage.name, "implement");
+    assert_eq!(impl_stage.kind, StageKind::TaskRunner {
+        task_lists: vec![
+            "tasks/foo.toml".to_owned(),
+            "tasks/bar.toml".to_owned(),
+        ],
+        parallel: true,
+    });
+}
+
+#[test]
+fn task_runner_stage_parallel_defaults_to_false() {
+    let toml_input = r#"
+        name = "wf"
+        version = 1
+
+        [[stages]]
+        name = "implement"
+        task_lists = ["tasks/foo.toml"]
+    "#;
+
+    let workflow = parse(toml_input);
+    assert_eq!(workflow.stages[0].kind, StageKind::TaskRunner {
+        task_lists: vec!["tasks/foo.toml".to_owned()],
+        parallel: false,
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -122,8 +179,6 @@ fn full_workflow_round_trip() {
 
 #[test]
 fn defaults_for_optional_fields() {
-    // Given: a minimal workflow with a single stage that omits all optional
-    // fields
     let toml_input = r#"
         name = "minimal"
         version = 1
@@ -134,14 +189,11 @@ fn defaults_for_optional_fields() {
         args = { run = "cargo build" }
     "#;
 
-    // When: we parse the TOML
     let workflow = parse(toml_input);
 
-    // Then: top-level optional fields are absent / defaulted
     assert!(workflow.description.is_none());
     assert!(workflow.commands.is_empty());
 
-    // Then: stage optional fields are defaulted
     let stage = &workflow.stages[0];
     assert!(stage.description.is_none());
     assert!(stage.produces.is_empty(), "produces should default to []");
@@ -153,7 +205,6 @@ fn defaults_for_optional_fields() {
 
 #[test]
 fn inline_run_command_stage_parses_correctly() {
-    // Given: a stage using the inline `run` field instead of a `command` alias
     let toml_input = r#"
         name = "ci"
         version = 1
@@ -164,15 +215,16 @@ fn inline_run_command_stage_parses_correctly() {
         args = { run = "cargo test --workspace" }
     "#;
 
-    // When: we parse and validate
     let workflow = parse(toml_input);
     workflow.validate().expect("inline run stage should be valid");
 
-    // Then: the stage carries the inline run string
-    assert_eq!(workflow.stages[0].kind, StageKind::Command {
-        command: None,
-        run: Some("cargo test --workspace".to_owned()),
-    });
+    assert_eq!(
+        workflow.stages[0].kind,
+        StageKind::Linear(LinearKind::Command {
+            command: None,
+            run: Some("cargo test --workspace".to_owned()),
+        })
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -181,7 +233,6 @@ fn inline_run_command_stage_parses_correctly() {
 
 #[test]
 fn inline_prompt_agent_stage_parses_correctly() {
-    // Given: a stage using the inline `prompt` field (instruction text)
     let toml_input = r#"
         name = "hotfix"
         version = 1
@@ -192,15 +243,16 @@ fn inline_prompt_agent_stage_parses_correctly() {
         args = { prompt = "Fix the null-pointer crash in auth.rs." }
     "#;
 
-    // When: we parse and validate
     let workflow = parse(toml_input);
     workflow.validate().expect("inline prompt stage should be valid");
 
-    // Then: the stage carries the inline prompt string
-    assert_eq!(workflow.stages[0].kind, StageKind::Agent {
-        prompt: Some("Fix the null-pointer crash in auth.rs.".to_owned()),
-        prompt_file: None,
-    });
+    assert_eq!(
+        workflow.stages[0].kind,
+        StageKind::Linear(LinearKind::Agent {
+            prompt: Some("Fix the null-pointer crash in auth.rs.".to_owned()),
+            prompt_file: None,
+        })
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +261,6 @@ fn inline_prompt_agent_stage_parses_correctly() {
 
 #[test]
 fn serialize_then_deserialize_is_identity() {
-    // Given: a workflow built in memory
     let original = Workflow {
         name: "release".to_owned(),
         version: 2,
@@ -225,32 +276,30 @@ fn serialize_then_deserialize_is_identity() {
                 description: None,
                 skippable: false,
                 produces: vec!["CHANGELOG.md".to_owned()],
-                kind: StageKind::Agent {
+                kind: StageKind::Linear(LinearKind::Agent {
                     prompt_file: Some("changelog.md".to_owned()),
                     prompt: None,
-                },
+                }),
             },
             Stage {
                 name: "push-tag".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Command {
+                kind: StageKind::Linear(LinearKind::Command {
                     command: Some("tag".to_owned()),
                     run: None,
-                },
+                }),
             },
         ],
         default_flow_dir: None,
     };
 
-    // When: we serialize to TOML and deserialize back
     let serialized =
         toml::to_string(&original).expect("serialization should succeed");
     let roundtripped: Workflow =
         toml::from_str(&serialized).expect("deserialization should succeed");
 
-    // Then: the roundtripped value matches the original
     assert_eq!(original, roundtripped);
 }
 
@@ -260,7 +309,6 @@ fn serialize_then_deserialize_is_identity() {
 
 #[test]
 fn command_stage_with_both_command_and_run_fails_validation() {
-    // Given: a workflow with a command stage that sets both `command` and `run`
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -271,18 +319,16 @@ fn command_stage_with_both_command_and_run_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            kind: StageKind::Command {
+            kind: StageKind::Linear(LinearKind::Command {
                 command: Some("lint".to_owned()),
                 run: Some("cargo clippy".to_owned()),
-            },
+            }),
         }],
         default_flow_dir: None,
     };
 
-    // When: we validate the workflow
     let result = workflow.validate();
 
-    // Then: validation fails with a WorkflowValidation error
     assert!(
         matches!(result, Err(Error::WorkflowValidation { .. })),
         "expected WorkflowValidation error, got: {result:?}"
@@ -291,7 +337,6 @@ fn command_stage_with_both_command_and_run_fails_validation() {
 
 #[test]
 fn command_stage_with_neither_command_nor_run_fails_validation() {
-    // Given: a command stage with both fields absent
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -302,12 +347,14 @@ fn command_stage_with_neither_command_nor_run_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            kind: StageKind::Command { command: None, run: None },
+            kind: StageKind::Linear(LinearKind::Command {
+                command: None,
+                run: None,
+            }),
         }],
         default_flow_dir: None,
     };
 
-    // When / Then
     assert!(matches!(
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })
@@ -316,7 +363,6 @@ fn command_stage_with_neither_command_nor_run_fails_validation() {
 
 #[test]
 fn agent_stage_with_both_prompt_and_prompt_file_fails_validation() {
-    // Given: an agent stage that sets both `prompt` and `prompt_file`
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -327,15 +373,14 @@ fn agent_stage_with_both_prompt_and_prompt_file_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            kind: StageKind::Agent {
+            kind: StageKind::Linear(LinearKind::Agent {
                 prompt: Some("Write a design doc.".to_owned()),
                 prompt_file: Some("design.md".to_owned()),
-            },
+            }),
         }],
         default_flow_dir: None,
     };
 
-    // When / Then
     assert!(matches!(
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })
@@ -344,7 +389,6 @@ fn agent_stage_with_both_prompt_and_prompt_file_fails_validation() {
 
 #[test]
 fn agent_stage_with_neither_prompt_nor_prompt_file_fails_validation() {
-    // Given: an agent stage with both fields absent
     let workflow = Workflow {
         name: "bad".to_owned(),
         version: 1,
@@ -355,12 +399,37 @@ fn agent_stage_with_neither_prompt_nor_prompt_file_fails_validation() {
             description: None,
             skippable: false,
             produces: vec![],
-            kind: StageKind::Agent { prompt: None, prompt_file: None },
+            kind: StageKind::Linear(LinearKind::Agent {
+                prompt: None,
+                prompt_file: None,
+            }),
         }],
         default_flow_dir: None,
     };
 
-    // When / Then
+    assert!(matches!(
+        workflow.validate(),
+        Err(Error::WorkflowValidation { .. })
+    ));
+}
+
+#[test]
+fn task_runner_stage_with_empty_task_lists_fails_validation() {
+    let workflow = Workflow {
+        name: "bad".to_owned(),
+        version: 1,
+        description: None,
+        commands: HashMap::new(),
+        stages: vec![Stage {
+            name: "implement".to_owned(),
+            description: None,
+            skippable: false,
+            produces: vec![],
+            kind: StageKind::TaskRunner { task_lists: vec![], parallel: false },
+        }],
+        default_flow_dir: None,
+    };
+
     assert!(matches!(
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })
@@ -373,7 +442,6 @@ fn agent_stage_with_neither_prompt_nor_prompt_file_fails_validation() {
 
 #[test]
 fn duplicate_stage_names_fail_validation() {
-    // Given: a workflow with two stages that share the name "build"
     let workflow = Workflow {
         name: "dup-stages".to_owned(),
         version: 1,
@@ -385,26 +453,25 @@ fn duplicate_stage_names_fail_validation() {
                 description: None,
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Command {
+                kind: StageKind::Linear(LinearKind::Command {
                     command: None,
                     run: Some("cargo build".to_owned()),
-                },
+                }),
             },
             Stage {
                 name: "build".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Command {
+                kind: StageKind::Linear(LinearKind::Command {
                     command: None,
                     run: Some("cargo test".to_owned()),
-                },
+                }),
             },
         ],
         default_flow_dir: None,
     };
 
-    // When / Then
     assert!(matches!(
         workflow.validate(),
         Err(Error::WorkflowValidation { .. })

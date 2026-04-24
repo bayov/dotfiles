@@ -12,6 +12,7 @@ use super::FlowStatusStage;
 use crate::cli::output::print_output;
 use crate::engine::actions::NextAction;
 use crate::engine::actions::next_action;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::StageKind;
 use crate::store::fs;
 
@@ -113,6 +114,18 @@ impl fmt::Display for FlowStatusOutput {
                                 self.flow_path.cyan()
                             )?;
                         }
+                        FirstStageAction::RunTasks => {
+                            writeln!(
+                                f,
+                                "    - Use `awf flow tasks status --flow={}` to see task progress.",
+                                self.flow_path.cyan()
+                            )?;
+                            writeln!(
+                                f,
+                                "    - Use `awf flow tasks next --flow={}` to find the next task.",
+                                self.flow_path.cyan()
+                            )?;
+                        }
                     }
                 }
             }
@@ -184,17 +197,21 @@ pub fn status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
     let next_action_for_display = match status {
         FlowStatusLevel::Active => {
             workflow.stages.get(current_idx).map(|s| match &s.kind {
-                StageKind::Agent { prompt, prompt_file } => {
-                    FirstStageAction::AgentComplete {
-                        prompt: super::build_agent_prompt_from_fields(
-                            prompt.as_deref(),
-                            prompt_file.as_deref(),
-                            &wf_dir,
-                            &config,
-                        ),
-                    }
+                StageKind::Linear(LinearKind::Agent {
+                    prompt,
+                    prompt_file,
+                }) => FirstStageAction::AgentComplete {
+                    prompt: super::build_agent_prompt_from_fields(
+                        prompt.as_deref(),
+                        prompt_file.as_deref(),
+                        &wf_dir,
+                        &config,
+                    ),
+                },
+                StageKind::Linear(LinearKind::Command { .. }) => {
+                    FirstStageAction::RunCommand
                 }
-                StageKind::Command { .. } => FirstStageAction::RunCommand,
+                StageKind::TaskRunner { .. } => FirstStageAction::RunTasks,
             })
         }
         _ => None,

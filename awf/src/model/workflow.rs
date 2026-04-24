@@ -1,13 +1,11 @@
 //! Workflow definition types: [`Workflow`] and [`Stage`].
 //!
-//! A workflow is a named sequence of stages. Each stage is a single action —
-//! either a shell command or an agent invocation — identified by a `kind` field
-//! with kind-specific arguments in an `args` table. Workflow files are stored
-//! as TOML on disk and deserialized via serde.
+//! A workflow is a named sequence of stages. Each stage is a single action
+//! (command, agent, or task-runner) identified by its [`StageKind`]. Stage
+//! definitions are stored as TOML on disk and deserialized via serde.
 //!
 //! After deserialisation, call [`Workflow::validate`] to enforce invariants
-//! that cannot be expressed in the type system alone (e.g. mutual exclusivity
-//! of `command`/`run` and `prompt`/`prompt_file`).
+//! that cannot be expressed in the type system alone.
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -19,7 +17,7 @@ use tracing::instrument;
 use crate::result::Error;
 use crate::result::Result;
 
-/// A complete workflow definition, typically loaded from a `.awf/workflows/`
+/// A complete workflow definition, typically loaded from a `.agents/workflows/`
 /// TOML file.
 ///
 /// After deserializing, always call [`Workflow::validate`] to check structural
@@ -36,11 +34,8 @@ pub struct Workflow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    /// Named shell commands that can be referenced by [`StageKind::Command`]
-    /// stages via the `command` key.
-    ///
-    /// Keys are short aliases (e.g. `"lint"`); values are the shell strings
-    /// (e.g. `"cargo clippy -- -D warnings"`).
+    /// Named shell commands that can be referenced by command stages and
+    /// command tasks via the `command` key.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub commands: HashMap<String, String>,
 
@@ -49,17 +44,11 @@ pub struct Workflow {
     pub stages: Vec<Stage>,
 
     /// Suggested path prefix for new flows created from this workflow.
-    ///
-    /// When set, tooling may use this as the default parent directory when
-    /// constructing a flow path. Users are free to override it via `--flow`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_flow_dir: Option<String>,
 }
 
 /// A single stage within a [`Workflow`].
-///
-/// Each stage is a single action identified by its [`StageKind`]. The `kind`
-/// field selects the action type and `args` carries the kind-specific payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Stage {
     /// Unique name for this stage within its workflow (e.g. `"implement"`).
@@ -74,17 +63,61 @@ pub struct Stage {
     pub skippable: bool,
 
     /// Artifact paths this stage produces and makes available to later stages.
-    ///
-    /// Defaults to an empty list.
     #[serde(default)]
     pub produces: Vec<String>,
 
     /// The kind-specific payload for this stage.
+    ///
+    /// Uses an untagged serde representation so that task-runner stages (with
+    /// a flat `task_lists` field) and linear stages (with `kind`/`args`
+    /// fields) can share the same TOML-level struct.
     #[serde(flatten)]
     pub kind: StageKind,
 }
 
-/// The kind-specific payload of a [`Stage`].
+/// The kind of a [`Stage`].
+///
+/// Uses `#[serde(untagged)]` so that task-runner stages can use a flat TOML
+/// layout while linear stages keep the existing `kind`/`args` format.
+///
+/// **Task-runner stage** (flat format):
+/// ```toml
+/// [[stages]]
+/// name = "implement"
+/// type = "task-runner"   # conventional; parsed but not required by serde
+/// task_lists = ["tasks/foo.toml", "tasks/bar.toml"]
+/// parallel = true
+/// ```
+///
+/// **Linear stage** (`kind`/`args` format, unchanged):
+/// ```toml
+/// [[stages]]
+/// name = "lint"
+/// kind = "command"
+/// args = { command = "lint" }
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StageKind {
+    /// A task-runner stage that dispatches structured task lists.
+    ///
+    /// Discriminated by the presence of the `task_lists` field.
+    TaskRunner {
+        /// Artifact paths (relative to `<flow_dir>/artifacts/`) of the task
+        /// list TOML files to dispatch.
+        task_lists: Vec<String>,
+
+        /// When `true`, task lists whose `depends_on` are satisfied may be
+        /// dispatched simultaneously. Defaults to `false`.
+        #[serde(default)]
+        parallel: bool,
+    },
+
+    /// A linear stage: either a shell command or an agent invocation.
+    Linear(LinearKind),
+}
+
+/// The kind-specific payload of a linear (non-task-runner) [`Stage`].
 ///
 /// Serializes with an adjacently-tagged representation: `kind` selects the
 /// variant and `args` carries the payload:
@@ -100,42 +133,27 @@ pub struct Stage {
 /// kind = "agent"
 /// args = { prompt = "design.md" }
 /// ```
-///
-/// After deserialisation, validate mutual exclusivity with
-/// [`Workflow::validate`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "args", rename_all = "lowercase")]
-pub enum StageKind {
+pub enum LinearKind {
     /// A shell command stage.
     ///
-    /// Exactly one of `command` (an alias into [`Workflow::commands`]) or
-    /// `run` (an inline shell string) must be set. [`Workflow::validate`]
-    /// enforces this constraint.
+    /// Exactly one of `command` (alias into [`Workflow::commands`]) or `run`
+    /// (inline shell string) must be set.
     Command {
-        /// Key into [`Workflow::commands`] that resolves to the shell string
-        /// to run.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         command: Option<String>,
-
-        /// Inline shell string to execute directly (alternative to `command`).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         run: Option<String>,
     },
 
     /// An agent invocation stage.
     ///
-    /// Exactly one of `prompt` (an inline instruction string) or `prompt_file`
-    /// (a path to a prompt file, absolute or relative to the workflow
-    /// directory) must be set. [`Workflow::validate`] enforces this
-    /// constraint.
+    /// Exactly one of `prompt` (inline instruction string) or `prompt_file`
+    /// (path to a prompt file) must be set.
     Agent {
-        /// Inline instruction string passed directly to the agent.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prompt: Option<String>,
-
-        /// Path to a prompt file that provides the agent's task description.
-        /// An absolute path is used as-is; a relative path is resolved from
-        /// the workflow directory.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         prompt_file: Option<String>,
     },
@@ -147,15 +165,11 @@ impl Workflow {
     /// Checks performed:
     ///
     /// - Stage names are unique within the workflow.
-    /// - Every [`StageKind::Command`] stage has exactly one of `command` or
-    ///   `run` set (not both, not neither).
-    /// - Every [`StageKind::Agent`] stage has exactly one of `prompt` or
-    ///   `prompt_file` set (not both, not neither).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::WorkflowValidation`] with a descriptive message when
-    /// any invariant is violated.
+    /// - Every `command` linear stage has exactly one of `command` or `run`
+    ///   set.
+    /// - Every `agent` linear stage has exactly one of `prompt` or
+    ///   `prompt_file` set.
+    /// - Every `task-runner` stage has a non-empty `task_lists` array.
     #[instrument(skip(self), fields(workflow.name = %self.name))]
     pub fn validate(&self) -> Result<()> {
         self.validate_stage_names_unique()?;
@@ -167,7 +181,6 @@ impl Workflow {
         Ok(())
     }
 
-    /// Checks that all stage names within this workflow are distinct.
     fn validate_stage_names_unique(&self) -> Result<()> {
         let mut seen = HashSet::new();
 
@@ -186,18 +199,27 @@ impl Workflow {
     }
 }
 
-/// Validates the mutual-exclusivity constraints on a single [`Stage`]'s kind.
-///
-/// - [`StageKind::Command`]: exactly one of `command` or `run` must be `Some`.
-/// - [`StageKind::Agent`]: exactly one of `prompt` or `prompt_file` must be
-///   `Some`.
-///
-/// # Errors
-///
-/// Returns [`Error::WorkflowValidation`] when the constraint is violated.
 fn validate_stage_kind(stage: &Stage) -> Result<()> {
     match &stage.kind {
-        StageKind::Command { command, run } => match (command, run) {
+        StageKind::TaskRunner { task_lists, .. } => {
+            if task_lists.is_empty() {
+                return Err(Error::WorkflowValidation {
+                    message: format!(
+                        "stage {:?}: task-runner stage must have at least one \
+                         entry in `task_lists`",
+                        stage.name
+                    ),
+                });
+            }
+            Ok(())
+        }
+        StageKind::Linear(linear) => validate_linear_kind(stage, linear),
+    }
+}
+
+fn validate_linear_kind(stage: &Stage, kind: &LinearKind) -> Result<()> {
+    match kind {
+        LinearKind::Command { command, run } => match (command, run) {
             (Some(_), None) | (None, Some(_)) => Ok(()),
             (Some(_), Some(_)) => Err(Error::WorkflowValidation {
                 message: format!(
@@ -214,7 +236,7 @@ fn validate_stage_kind(stage: &Stage) -> Result<()> {
                 ),
             }),
         },
-        StageKind::Agent { prompt, prompt_file } => {
+        LinearKind::Agent { prompt, prompt_file } => {
             match (prompt, prompt_file) {
                 (Some(_), None) | (None, Some(_)) => Ok(()),
                 (Some(_), Some(_)) => Err(Error::WorkflowValidation {

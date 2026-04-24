@@ -1,0 +1,329 @@
+# Test: Full e2e agent session through a workflow with a task-runner stage
+#
+# Workflow: plan (agent) → implement (task-runner) → review (agent, final)
+# Task lists: auth.toml (no deps), db.toml (no deps), api.toml (depends_on: [auth, db])
+#
+# Simulates the complete agent interaction from flow creation to archive,
+# verifying exact output at each step.
+
+# ---------------------------------------------------------------------------
+# Setup: workflow + config
+# ---------------------------------------------------------------------------
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+| description = "Plan, implement (with tasks), and review a feature."
+| default_flow_dir = "$FLOWS_DIR"
+|
+| [commands]
+| test = "true"
+|
+| [[stages]]
+| name = "plan"
+| description = "Produce a technical plan."
+| kind = "agent"
+| args = { prompt = "Write a technical plan." }
+| produces = ["tasks/auth.toml", "tasks/db.toml", "tasks/api.toml"]
+|
+| [[stages]]
+| name = "implement"
+| description = "Implement the plan via structured task lists."
+| type = "task-runner"
+| task_lists = ["tasks/auth.toml", "tasks/db.toml", "tasks/api.toml"]
+| parallel = true
+|
+| [[stages]]
+| name = "review"
+| description = "Review and finalise the implementation."
+| kind = "agent"
+| args = { prompt = "Review the implementation." }
+
+# =============================================================================
+# Agent creates the flow
+# =============================================================================
+
+$ awf flow new add-feature --workflow=feature
+$ assert_stdout equals
+| Created `feature` flow: <...>/add-feature
+|
+| Workflow `feature` has 3 stages:
+| ▶ 1. plan (current)
+|     - Produce a technical plan.
+|     - Produces: <...>/add-feature/artifacts/tasks/auth.toml
+|     - Produces: <...>/add-feature/artifacts/tasks/db.toml
+|     - Produces: <...>/add-feature/artifacts/tasks/api.toml
+|   2. implement
+|     - Implement the plan via structured task lists.
+|   3. review
+|     - Review and finalise the implementation.
+|
+| Next up (stage: plan):
+|     - Instructions: Write a technical plan.
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+
+# =============================================================================
+# Agent checks status
+# =============================================================================
+
+$ awf flow status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: active (stage: plan)
+|
+| Workflow `feature` has 3 stages:
+| ▶ 1. plan (current)
+|     - Produce a technical plan.
+|     - Produces: <...>/add-feature/artifacts/tasks/auth.toml
+|     - Produces: <...>/add-feature/artifacts/tasks/db.toml
+|     - Produces: <...>/add-feature/artifacts/tasks/api.toml
+|   2. implement
+|     - Implement the plan via structured task lists.
+|   3. review
+|     - Review and finalise the implementation.
+|
+| Next up (stage: plan):
+|     - Instructions: Write a technical plan.
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+
+# =============================================================================
+# Stage: plan — agent produces task list artifacts
+# =============================================================================
+
+$ write_file flows/add-feature/artifacts/tasks/auth.toml
+| name = "auth"
+| description = "Implement authentication module"
+| depends_on = []
+|
+| [[tasks]]
+| id = "1.1"
+| description = "Scaffold auth module"
+| type = "agent"
+|
+| [[tasks]]
+| id = "1.2"
+| description = "Write auth tests"
+| type = "agent"
+|
+| [[tasks]]
+| id = "1.3"
+| description = "Run tests"
+| type = "command"
+| command = "test"
+
+$ write_file flows/add-feature/artifacts/tasks/db.toml
+| name = "db"
+| description = "Implement database layer"
+| depends_on = []
+|
+| [[tasks]]
+| id = "2.1"
+| description = "Scaffold DB models"
+| type = "agent"
+|
+| [[tasks]]
+| id = "2.2"
+| description = "Run tests"
+| type = "command"
+| command = "test"
+
+$ write_file flows/add-feature/artifacts/tasks/api.toml
+| name = "api"
+| description = "Implement API layer — requires auth and db"
+| depends_on = ["auth", "db"]
+|
+| [[tasks]]
+| id = "3.1"
+| description = "Scaffold API endpoints"
+| type = "agent"
+|
+| [[tasks]]
+| id = "3.2"
+| description = "Run tests"
+| type = "command"
+| command = "test"
+
+# plan stage done — advance to implement
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ▶ Entered stage: implement
+|
+| Workflow `feature` has 3 stages:
+| ✓ 1. plan (completed)
+|     - Produce a technical plan.
+|     - Produced: <...>/add-feature/artifacts/tasks/auth.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/db.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/api.toml
+| ▶ 2. implement (current)
+|     - Implement the plan via structured task lists.
+|   3. review
+|     - Review and finalise the implementation.
+|
+| Next up (stage: implement):
+|     - Use `awf flow tasks status --flow=<...>/add-feature` to see task progress.
+|     - Use `awf flow tasks next --flow=<...>/add-feature` to find the next task.
+
+# =============================================================================
+# Stage: implement — task-runner, parallel mode
+# =============================================================================
+
+# Check task status at entry: auth=pending, db=pending, api=blocked
+$ awf flow tasks status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| Task-runner stage: implement
+|
+|   auth [pending]
+|     ▶ 1.1 — Scaffold auth module [agent]
+|       1.2 — Write auth tests [agent]
+|       1.3 — Run tests [command]
+|   db [pending]
+|     ▶ 2.1 — Scaffold DB models [agent]
+|       2.2 — Run tests [command]
+|   api [blocked]
+|     Waiting on: auth, db
+|     ▶ 3.1 — Scaffold API endpoints [agent]
+|       3.2 — Run tests [command]
+
+# next — auth is first (declaration order)
+$ awf flow tasks next --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ▶ auth/1.1: Scaffold auth module
+|
+| When done, mark it complete with:
+|   awf flow tasks done auth 1.1 --flow=<...>/add-feature
+
+# --- Work on auth ---
+
+$ awf flow tasks done auth 1.1 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ Marked auth/1.1 as done.
+
+$ awf flow tasks done auth 1.2 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ Marked auth/1.2 as done.
+
+$ awf flow tasks run auth 1.3 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout contains
+| PASS
+$ assert_stdout contains
+| auth/1.3
+
+# All auth tasks done — advance auth then continue to db
+$ awf flow tasks advance auth --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ List "auth" marked complete.
+
+# --- Work on db (auth complete, api still blocked by db) ---
+
+$ awf flow tasks done db 2.1 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ Marked db/2.1 as done.
+
+$ awf flow tasks run db 2.2 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout contains
+| PASS
+
+$ awf flow tasks advance db --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ List "db" marked complete.
+
+# Both auth and db complete — api should now be unblocked
+$ awf flow tasks status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout contains
+| api
+$ assert_stdout not_contains
+| blocked
+
+# --- Work on api ---
+
+$ awf flow tasks done api 3.1 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ Marked api/3.1 as done.
+
+$ awf flow tasks run api 3.2 --flow=$FLOWS_DIR/add-feature
+$ assert_stdout contains
+| PASS
+
+$ awf flow tasks advance api --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ List "api" marked complete. All lists done — run `awf flow next-stage --flow=<...>/add-feature` to advance.
+
+# =============================================================================
+# Stage: implement complete — advance to review
+# =============================================================================
+
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ▶ Entered stage: review
+|   This is the final stage.
+|
+| Workflow `feature` has 3 stages:
+| ✓ 1. plan (completed)
+|     - Produce a technical plan.
+|     - Produced: <...>/add-feature/artifacts/tasks/auth.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/db.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/api.toml
+| ✓ 2. implement (completed)
+|     - Implement the plan via structured task lists.
+| ▶ 3. review (current)
+|     - Review and finalise the implementation.
+|
+| Next up (stage: review):
+|     - Instructions: Review the implementation.
+|     - When done, proceed to the next stage with: `awf flow next-stage --flow=<...>/add-feature`
+
+# =============================================================================
+# Stage: review (final agent stage) — advance to done
+# =============================================================================
+
+$ awf flow next-stage --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| ✓ Stage review marked complete.
+|
+| Workflow complete. Use `awf flow archive --flow=<...>/add-feature` to archive it.
+
+# =============================================================================
+# Verify full history
+# =============================================================================
+
+$ awf flow history --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| <...>/add-feature flow started at <...>
+|     ✓ plan completed at <...>
+|     ✓ implement completed at <...>
+|     ✓ review completed at <...>
+
+# =============================================================================
+# Verify status shows completed
+# =============================================================================
+
+$ awf flow status --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+|     Flow: <...>/add-feature
+| Workflow: feature
+|   Status: completed
+|
+| Workflow `feature` has 3 stages:
+| ✓ 1. plan (completed)
+|     - Produce a technical plan.
+|     - Produced: <...>/add-feature/artifacts/tasks/auth.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/db.toml
+|     - Produced: <...>/add-feature/artifacts/tasks/api.toml
+| ✓ 2. implement (completed)
+|     - Implement the plan via structured task lists.
+| ✓ 3. review (completed)
+|     - Review and finalise the implementation.
+|
+| Workflow complete. To archive this flow, run: `awf flow archive --flow=<...>/add-feature`
+
+# =============================================================================
+# Archive
+# =============================================================================
+
+$ awf flow archive --flow=$FLOWS_DIR/add-feature
+$ assert_stdout equals
+| Archived flow: <...>/add-feature

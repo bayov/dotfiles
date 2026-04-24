@@ -7,6 +7,7 @@ pub mod new;
 pub mod next_stage;
 pub mod run;
 pub mod status;
+pub mod tasks;
 pub mod validate;
 
 use std::collections::HashSet;
@@ -51,8 +52,12 @@ pub enum AgentPrompt {
 /// What the agent should do next for the first stage.
 #[derive(Debug)]
 pub enum FirstStageAction {
-    AgentComplete { prompt: Option<AgentPrompt> },
+    AgentComplete {
+        prompt: Option<AgentPrompt>,
+    },
     RunCommand,
+    /// Task-runner stage: use `awf flow tasks` subcommands.
+    RunTasks,
 }
 
 /// Per-stage data for the stage-list display, shared by `awf flow new` and
@@ -172,13 +177,22 @@ pub(super) fn fmt_stage_list(
             writeln!(f, "    - {desc}")?;
         }
         for artifact in &stage.produces {
-            let name =
+            // Check presence using both the relative path (e.g.
+            // "tasks/impl.toml") and the bare filename ("impl.toml") since
+            // `collect_artifacts` returns relative paths relative to the
+            // artifacts directory.
+            let filename =
                 artifact.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            let artifact_present = artifacts.iter().any(|a| {
+                a == filename
+                    || Path::new(a).file_name().and_then(|n| n.to_str())
+                        == Some(filename)
+            });
             let label = match &stage.state {
                 FlowStatusStageState::Completed
                 | FlowStatusStageState::ForceCompleted => "Produced:",
                 FlowStatusStageState::Skipped => {
-                    if artifacts.contains(name) {
+                    if artifact_present {
                         "Manually produced:"
                     } else {
                         "Skipped artifact:"
@@ -230,19 +244,31 @@ fn load_flow_or_exit(flow_dir: &Path) -> color_eyre::Result<FlowState> {
     }
 }
 
-/// Scans `<flow_dir>/artifacts/` and returns the set of filenames present.
+/// Scans `<flow_dir>/artifacts/` recursively and returns paths relative to
+/// that directory (e.g. `"design.md"`, `"tasks/impl.toml"`).
 fn collect_artifacts(flow_dir: &Path) -> HashSet<String> {
     let artifact_dir = flow_dir.join("artifacts");
-    let Ok(read_dir) = std::fs::read_dir(&artifact_dir) else {
-        return HashSet::new();
-    };
     let mut names = HashSet::new();
+    collect_artifacts_recursive(&artifact_dir, &artifact_dir, &mut names);
+    names
+}
+
+fn collect_artifacts_recursive(
+    base: &Path,
+    dir: &Path,
+    names: &mut HashSet<String>,
+) {
+    let Ok(read_dir) = std::fs::read_dir(dir) else { return };
     for entry in read_dir.flatten() {
-        if let Some(name) = entry.file_name().to_str() {
-            names.insert(name.to_string());
+        let path = entry.path();
+        if path.is_dir() {
+            collect_artifacts_recursive(base, &path, names);
+        } else if let Ok(rel) = path.strip_prefix(base) {
+            if let Some(s) = rel.to_str() {
+                names.insert(s.to_string());
+            }
         }
     }
-    names
 }
 
 /// Builds an [`AgentPrompt`] from raw `prompt`/`prompt_file` field values and

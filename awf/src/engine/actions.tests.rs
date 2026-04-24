@@ -16,6 +16,7 @@ use super::next_action;
 use crate::model::flow::FlowState;
 use crate::model::flow::StageHistoryEntry;
 use crate::model::flow::StageStatus;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -55,50 +56,50 @@ fn feature_workflow() -> Workflow {
                 description: Some("Produce a design doc.".to_owned()),
                 skippable: false,
                 produces: vec!["design.md".to_owned()],
-                kind: StageKind::Agent {
+                kind: StageKind::Linear(LinearKind::Agent {
                     prompt_file: Some("design.md".to_owned()),
                     prompt: None,
-                },
+                }),
             },
             Stage {
                 name: "implement".to_owned(),
                 description: Some("Write the code.".to_owned()),
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Agent {
+                kind: StageKind::Linear(LinearKind::Agent {
                     prompt_file: Some("implement.md".to_owned()),
                     prompt: None,
-                },
+                }),
             },
             Stage {
                 name: "format".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Command {
+                kind: StageKind::Linear(LinearKind::Command {
                     command: Some("format".to_owned()),
                     run: None,
-                },
+                }),
             },
             Stage {
                 name: "lint".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec![],
-                kind: StageKind::Command {
+                kind: StageKind::Linear(LinearKind::Command {
                     command: Some("lint".to_owned()),
                     run: None,
-                },
+                }),
             },
             Stage {
                 name: "review".to_owned(),
                 description: None,
                 skippable: false,
                 produces: vec!["changelog-entry.md".to_owned()],
-                kind: StageKind::Agent {
+                kind: StageKind::Linear(LinearKind::Agent {
                     prompt_file: Some("review.md".to_owned()),
                     prompt: None,
-                },
+                }),
             },
         ],
         default_flow_dir: None,
@@ -118,6 +119,8 @@ fn flow_at(stage: &str, stage_history: Vec<StageHistoryEntry>) -> FlowState {
         updated_at: ts("2026-04-04T10:00:00Z"),
         archived: false,
         stage_history,
+        task_runner_state: HashMap::new(),
+        task_log: vec![],
     }
 }
 

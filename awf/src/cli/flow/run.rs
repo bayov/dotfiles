@@ -11,6 +11,7 @@ use crate::cli::output::print_output;
 use crate::engine::command::run_command;
 use crate::engine::state::record_stage_fail;
 use crate::engine::state::record_stage_pass;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -76,9 +77,9 @@ pub fn run(flow_flag: Option<&str>) -> color_eyre::Result<()> {
 
     let stage = super::current_stage_or_exit(&workflow, &flow);
 
-    if matches!(stage.kind, StageKind::Agent { .. }) {
+    if !matches!(stage.kind, StageKind::Linear(LinearKind::Command { .. })) {
         eprint_error(format_args!(
-            "Stage {:?} is an agent stage. Use `awf flow next-stage` instead.",
+            "Stage {:?} is not a command stage. Use `awf flow next-stage` instead.",
             stage.name
         ));
         std::process::exit(1);
@@ -129,14 +130,18 @@ fn resolve_shell_command(
     repo_commands: &HashMap<String, String>,
 ) -> Option<String> {
     match &stage.kind {
-        StageKind::Command { command: Some(alias), run: None } => workflow
+        StageKind::Linear(LinearKind::Command {
+            command: Some(alias),
+            run: None,
+        }) => workflow
             .commands
             .get(alias.as_str())
             .or_else(|| repo_commands.get(alias.as_str()))
             .cloned(),
-        StageKind::Command { run: Some(inline), command: None } => {
-            Some(inline.clone())
-        }
+        StageKind::Linear(LinearKind::Command {
+            run: Some(inline),
+            command: None,
+        }) => Some(inline.clone()),
         _ => None,
     }
 }

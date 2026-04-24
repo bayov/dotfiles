@@ -355,6 +355,8 @@ fn save_flow_round_trips_through_load_flow() {
             .to_utc(),
         archived: false,
         stage_history: vec![],
+        task_runner_state: std::collections::HashMap::new(),
+        task_log: vec![],
     };
 
     // When: save then load

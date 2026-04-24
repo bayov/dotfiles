@@ -14,6 +14,7 @@ use super::FlowStatusStage;
 use super::FlowStatusStageState;
 use crate::cli::output::eprint_error;
 use crate::cli::output::print_output;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::StageKind;
 use crate::result::Error;
 use crate::store::fs;
@@ -75,6 +76,18 @@ impl fmt::Display for FlowNewOutput {
             }
             FirstStageAction::RunCommand => {
                 writeln!(f, "    - Run: `awf flow run`")?;
+            }
+            FirstStageAction::RunTasks => {
+                writeln!(
+                    f,
+                    "    - Use `awf flow tasks status --flow={}` to see task progress.",
+                    self.path.cyan()
+                )?;
+                writeln!(
+                    f,
+                    "    - Use `awf flow tasks next --flow={}` to find the next task.",
+                    self.path.cyan()
+                )?;
             }
         }
 
@@ -142,17 +155,23 @@ pub fn new(flow_arg: &str, workflow: &str) -> color_eyre::Result<()> {
                 })
                 .collect();
             let first_stage_action = match wf.stages.first().map(|s| &s.kind) {
-                Some(StageKind::Agent { prompt, prompt_file }) => {
-                    FirstStageAction::AgentComplete {
-                        prompt: super::build_agent_prompt_from_fields(
-                            prompt.as_deref(),
-                            prompt_file.as_deref(),
-                            &wf_dir,
-                            &config,
-                        ),
-                    }
+                Some(StageKind::Linear(LinearKind::Agent {
+                    prompt,
+                    prompt_file,
+                })) => FirstStageAction::AgentComplete {
+                    prompt: super::build_agent_prompt_from_fields(
+                        prompt.as_deref(),
+                        prompt_file.as_deref(),
+                        &wf_dir,
+                        &config,
+                    ),
+                },
+                Some(StageKind::Linear(LinearKind::Command { .. })) | None => {
+                    FirstStageAction::RunCommand
                 }
-                _ => FirstStageAction::RunCommand,
+                Some(StageKind::TaskRunner { .. }) => {
+                    FirstStageAction::RunTasks
+                }
             };
             let output = FlowNewOutput {
                 path: flow_dir.display().to_string(),

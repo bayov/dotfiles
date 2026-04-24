@@ -19,6 +19,7 @@ use owo_colors::OwoColorize as _;
 use crate::cli::output::eprint_error;
 use crate::config::Config;
 use crate::config::WorkflowSearchEntry;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
 use crate::result::Error;
@@ -132,6 +133,70 @@ pub enum FlowCommands {
         #[arg(long)]
         flow: Option<String>,
     },
+    /// Manage tasks within a task-runner stage
+    Tasks {
+        #[command(subcommand)]
+        command: TasksCommands,
+    },
+}
+
+// ---------------------------------------------------------------------------
+// Tasks subcommands
+// ---------------------------------------------------------------------------
+
+/// Subcommands for `awf flow tasks`.
+#[derive(Subcommand)]
+pub enum TasksCommands {
+    /// Show status of all task lists
+    Status {
+        #[arg(long)]
+        flow: Option<String>,
+    },
+    /// Show the next actionable task
+    Next {
+        #[arg(long)]
+        flow: Option<String>,
+        /// Limit to a specific task list (by name)
+        #[arg(long)]
+        list: Option<String>,
+    },
+    /// Execute a command task and log the result
+    Run {
+        /// Task list name
+        list: String,
+        /// Task ID within the list
+        task_id: String,
+        #[arg(long)]
+        flow: Option<String>,
+    },
+    /// Mark an agent task as complete
+    Done {
+        /// Task list name
+        list: String,
+        /// Task ID within the list
+        task_id: String,
+        #[arg(long)]
+        flow: Option<String>,
+    },
+    /// Skip a task with a reason
+    Skip {
+        /// Task list name
+        list: String,
+        /// Task ID within the list
+        task_id: String,
+        /// Human-readable reason for skipping
+        #[arg(long)]
+        reason: String,
+        #[arg(long)]
+        flow: Option<String>,
+    },
+    /// Mark a task list as complete and unblock dependents
+    Advance {
+        /// Task list name
+        list: String,
+        #[arg(long)]
+        flow: Option<String>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +244,32 @@ fn dispatch_flow(command: FlowCommands) -> color_eyre::Result<()> {
         }
         FlowCommands::Archive { flow: flow_flag } => {
             flow::archive(flow_flag.as_deref())
+        }
+        FlowCommands::Tasks { command } => dispatch_tasks(command),
+    }
+}
+
+/// Dispatches `awf flow tasks` subcommands.
+fn dispatch_tasks(command: TasksCommands) -> color_eyre::Result<()> {
+    use flow::tasks;
+    match command {
+        TasksCommands::Status { flow: flow_flag } => {
+            tasks::tasks_status(flow_flag.as_deref())
+        }
+        TasksCommands::Next { flow: flow_flag, list } => {
+            tasks::tasks_next(flow_flag.as_deref(), list.as_deref())
+        }
+        TasksCommands::Run { list, task_id, flow: flow_flag } => {
+            tasks::tasks_run(flow_flag.as_deref(), &list, &task_id)
+        }
+        TasksCommands::Done { list, task_id, flow: flow_flag } => {
+            tasks::tasks_done(flow_flag.as_deref(), &list, &task_id)
+        }
+        TasksCommands::Skip { list, task_id, reason, flow: flow_flag } => {
+            tasks::tasks_skip(flow_flag.as_deref(), &list, &task_id, &reason)
+        }
+        TasksCommands::Advance { list, flow: flow_flag } => {
+            tasks::tasks_advance(flow_flag.as_deref(), &list)
         }
     }
 }
@@ -308,7 +399,9 @@ pub fn collect_workflow_errors(
 
     // Every `command` key must exist in workflow.commands or config commands.
     for stage in &workflow.stages {
-        if let StageKind::Command { command: Some(key), .. } = &stage.kind
+        if let StageKind::Linear(LinearKind::Command {
+            command: Some(key), ..
+        }) = &stage.kind
             && !workflow.commands.contains_key(key.as_str())
             && !config.commands.contains_key(key.as_str())
         {
@@ -323,8 +416,10 @@ pub fn collect_workflow_errors(
     let wf_dir = fs::find_workflow_dir(entries, &workflow.name);
     if let Some(wf_dir) = wf_dir {
         for stage in &workflow.stages {
-            if let StageKind::Agent { prompt_file: Some(rel_or_abs), .. } =
-                &stage.kind
+            if let StageKind::Linear(LinearKind::Agent {
+                prompt_file: Some(rel_or_abs),
+                ..
+            }) = &stage.kind
             {
                 // Expand template variables before resolving the path.
                 let expanded = expand_template(
@@ -332,7 +427,7 @@ pub fn collect_workflow_errors(
                     config.project_name.as_deref(),
                     Some(&config.project_root),
                 )
-                .unwrap_or_else(|_| rel_or_abs.clone());
+                .unwrap_or_else(|_| rel_or_abs.to_string());
                 let path = if expanded.starts_with('/') {
                     std::path::PathBuf::from(&expanded)
                 } else {

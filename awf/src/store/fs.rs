@@ -275,6 +275,8 @@ pub fn create_flow(
         updated_at: now,
         archived: false,
         stage_history: vec![],
+        task_runner_state: std::collections::HashMap::new(),
+        task_log: vec![],
     };
 
     save_flow(flow_dir, &state)
@@ -376,6 +378,40 @@ pub fn scan_flows(search_dirs: &[PathBuf]) -> Result<Vec<FlowSummary>> {
     }
     summaries.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(summaries)
+}
+
+// ---------------------------------------------------------------------------
+// Task list functions
+// ---------------------------------------------------------------------------
+
+/// Loads a task list TOML file from `<flow_dir>/artifacts/<task_list_path>`.
+///
+/// `task_list_path` is a relative path such as `"tasks/foo.toml"`.
+///
+/// # Errors
+///
+/// - [`Error::TaskListNotFound`] — file does not exist.
+/// - [`Error::TaskListParseFailed`] — file cannot be parsed.
+/// - [`Error::Io`] — unexpected I/O failure.
+#[instrument(fields(flow_dir = ?flow_dir, task_list_path = task_list_path))]
+pub fn load_task_list(
+    flow_dir: &Path,
+    task_list_path: &str,
+) -> Result<crate::model::task_list::TaskList> {
+    assert_safe_path(flow_dir);
+
+    let path = flow_dir.join("artifacts").join(task_list_path);
+
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(Error::TaskListNotFound { path: path.clone() });
+        }
+        Err(e) => return Err(Error::Io(e)),
+    };
+
+    toml::from_str(&contents)
+        .map_err(|source| Error::TaskListParseFailed { path, source })
 }
 
 // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ use tracing::instrument;
 
 use crate::model::flow::FlowState;
 use crate::model::flow::StageStatus;
+use crate::model::workflow::LinearKind;
 use crate::model::workflow::Stage;
 use crate::model::workflow::StageKind;
 use crate::model::workflow::Workflow;
@@ -27,46 +28,21 @@ use crate::model::workflow::Workflow;
 // ---------------------------------------------------------------------------
 
 /// The highest-priority action to take next in the current flow.
-///
-/// Variants are listed in priority order — [`RunCommand`] for a failing
-/// command stage has the highest urgency, while [`Done`] signals that the
-/// entire workflow is complete.
-///
-/// [`RunCommand`]: NextAction::RunCommand
-/// [`Done`]: NextAction::Done
 #[derive(Debug, PartialEq, Eq)]
 pub enum NextAction<'a> {
     /// Run (or re-run) this command stage.
-    ///
-    /// Returned when the current stage is a command kind and its most recent
-    /// log entry is `fail` or it has not yet been run at all.
     RunCommand(&'a Stage),
 
     /// Complete this agent stage.
-    ///
-    /// Returned when the current stage is an agent kind and has not yet
-    /// received a `pass` log entry.
     CompleteAgent(&'a Stage),
 
     /// Register the named artifact before advancing.
-    ///
-    /// Returned when the current stage has passed but one of its declared
-    /// `produces` artifacts is absent from the artifact set.
     ProduceArtifact(String),
 
     /// The stage is complete and all required artifacts are present — advance.
-    ///
-    /// Returned when the current stage has a `pass` log entry, every
-    /// `produces` artifact is in the artifact set, and the flow is **not** on
-    /// the last stage.
     CanAdvance,
 
     /// The workflow is fully complete — nothing more to do.
-    ///
-    /// Returned when the same conditions as [`CanAdvance`] hold but the flow
-    /// is already on the last stage of the workflow.
-    ///
-    /// [`CanAdvance`]: NextAction::CanAdvance
     Done,
 }
 
@@ -75,25 +51,10 @@ pub enum NextAction<'a> {
 // ---------------------------------------------------------------------------
 
 /// The reason the current stage cannot be advanced past yet.
-///
-/// Returned by [`can_advance`] as the `Err` payload when something prevents
-/// the flow from moving to the next stage.
 #[derive(Debug, PartialEq, Eq)]
 pub enum AdvanceBlocker {
-    /// The current stage's most-recent log entry is `fail`.
-    ///
-    /// The inner `String` is the stage name.
     StageFailed(String),
-
-    /// The current stage has no `pass` log entry at all.
-    ///
-    /// The inner `String` is the stage name.
     StageIncomplete(String),
-
-    /// A `produces` artifact declared by the current stage is missing from the
-    /// artifact set.
-    ///
-    /// The inner `String` is the artifact path/name.
     MissingArtifact(String),
 }
 
@@ -103,18 +64,9 @@ pub enum AdvanceBlocker {
 
 /// Returns the highest-priority action to take next for the current stage.
 ///
-/// The priority order is:
-///
-/// 1. **Failed command stage** — the current stage is a command kind and its
-///    most-recent log entry is `fail`.
-/// 2. **Incomplete stage** — the current stage has no `pass` entry: command
-///    stages yield [`NextAction::RunCommand`], agent stages yield
-///    [`NextAction::CompleteAgent`].
-/// 3. **Missing artifact** — stage passed but a `produces` artifact is not yet
-///    in `artifacts`. Returns [`NextAction::ProduceArtifact`].
-/// 4. **Done / can advance** — stage passed and all artifacts are present.
-///    Returns [`NextAction::Done`] on the last stage,
-///    [`NextAction::CanAdvance`] otherwise.
+/// For task-runner stages, returns [`NextAction::CanAdvance`] or
+/// [`NextAction::Done`] if all task lists are complete; otherwise callers
+/// should delegate to the task-runner subcommands for detailed status.
 ///
 /// # Panics
 ///
@@ -132,19 +84,39 @@ pub fn next_action<'a>(
     let stage = current_stage(workflow, flow);
     let last_status = stage_last_status(flow, stage);
 
-    // Priority 1: failed command stage.
-    if matches!(stage.kind, StageKind::Command { .. })
-        && last_status == Some(StageStatus::Failed)
-    {
-        return NextAction::RunCommand(stage);
-    }
+    match &stage.kind {
+        StageKind::TaskRunner { .. } => {
+            // For task-runner stages, the completion criterion is that all task
+            // lists are marked complete in task_runner_state. If any are not,
+            // callers should use `awf flow tasks next` for details.
+            if stage_is_complete_by_history(flow, stage) {
+                if is_last_stage(workflow, flow) {
+                    return NextAction::Done;
+                }
+                return NextAction::CanAdvance;
+            }
+            // No pass entry yet — signal that task-runner work is pending.
+            // The CLI handles this specially via the tasks subcommand.
+            return NextAction::CompleteAgent(stage);
+        }
+        StageKind::Linear(linear) => {
+            // Priority 1: failed command stage.
+            if matches!(linear, LinearKind::Command { .. })
+                && last_status == Some(StageStatus::Failed)
+            {
+                return NextAction::RunCommand(stage);
+            }
 
-    // Priority 2: incomplete stage (no pass entry yet).
-    if last_status != Some(StageStatus::Completed) {
-        return match &stage.kind {
-            StageKind::Command { .. } => NextAction::RunCommand(stage),
-            StageKind::Agent { .. } => NextAction::CompleteAgent(stage),
-        };
+            // Priority 2: incomplete stage (no pass entry yet).
+            if last_status != Some(StageStatus::Completed) {
+                return match linear {
+                    LinearKind::Command { .. } => NextAction::RunCommand(stage),
+                    LinearKind::Agent { .. } => {
+                        NextAction::CompleteAgent(stage)
+                    }
+                };
+            }
+        }
     }
 
     // Priority 3: all passed; check for missing artifacts.
@@ -163,17 +135,6 @@ pub fn next_action<'a>(
 }
 
 /// Checks whether the current stage is complete and the flow may advance.
-///
-/// Returns `Ok(())` when the current stage has a `pass` log entry and every
-/// `produces` artifact is present in `artifacts`.
-///
-/// Returns `Err(blocker)` with the first [`AdvanceBlocker`] found, checked in
-/// this order:
-///
-/// 1. [`AdvanceBlocker::StageFailed`] — the stage's most-recent entry is
-///    `fail`.
-/// 2. [`AdvanceBlocker::StageIncomplete`] — the stage has no `pass` entry.
-/// 3. [`AdvanceBlocker::MissingArtifact`] — a `produces` artifact is absent.
 ///
 /// # Panics
 ///
@@ -217,11 +178,6 @@ pub fn can_advance(
 // Private helpers
 // ---------------------------------------------------------------------------
 
-/// Finds the [`Stage`] in `workflow` whose name matches `flow.current_stage`.
-///
-/// # Panics
-///
-/// Panics if no stage with that name exists.
 fn current_stage<'a>(workflow: &'a Workflow, flow: &FlowState) -> &'a Stage {
     workflow
         .stages
@@ -235,9 +191,6 @@ fn current_stage<'a>(workflow: &'a Workflow, flow: &FlowState) -> &'a Stage {
         })
 }
 
-/// Returns the status of the most-recent run entry for `stage` (i.e. the last
-/// [`StageStatus::Completed`] or [`StageStatus::Failed`] entry), or `None` if
-/// the stage has never been run.
 fn stage_last_status(flow: &FlowState, stage: &Stage) -> Option<StageStatus> {
     flow.stage_history
         .iter()
@@ -251,9 +204,14 @@ fn stage_last_status(flow: &FlowState, stage: &Stage) -> Option<StageStatus> {
         .map(|e| e.status)
 }
 
-/// Returns `true` if `flow` is currently on the last stage of `workflow`.
 fn is_last_stage(workflow: &Workflow, flow: &FlowState) -> bool {
     workflow.stages.last().is_some_and(|s| s.name == flow.current_stage)
+}
+
+fn stage_is_complete_by_history(flow: &FlowState, stage: &Stage) -> bool {
+    flow.stage_history
+        .iter()
+        .any(|e| e.stage == stage.name && e.status == StageStatus::Completed)
 }
 
 // ---------------------------------------------------------------------------

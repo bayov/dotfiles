@@ -74,6 +74,18 @@ pub enum Error {
     #[error("workflow validation failed: {message}")]
     WorkflowValidation { message: String },
 
+    /// A task list TOML file was not found at the given path.
+    #[error("task list not found at {path:?}")]
+    TaskListNotFound { path: std::path::PathBuf },
+
+    /// A task list TOML file could not be parsed.
+    #[error("failed to parse task list at {path:?}: {source}")]
+    TaskListParseFailed {
+        path: std::path::PathBuf,
+        #[source]
+        source: toml::de::Error,
+    },
+
     /// A generic I/O error wrapping `std::io::Error`.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

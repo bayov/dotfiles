@@ -1,0 +1,163 @@
+# Test: task-runner with depends_on — baz is blocked until foo and bar complete
+#
+# Workflow: task-breakdown → implement (task-runner, parallel=true)
+# Task lists: foo (no deps), bar (no deps), baz (depends_on: [foo, bar])
+# Verifies that baz is blocked initially, unblocks after foo and bar advance.
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+
+$ write_file .config/awf.toml
+| flow_search_dirs = ["$FLOWS_DIR"]
+
+$ write_file .agents/workflows/feature/WORKFLOW.toml
+| name = "feature"
+| version = 1
+|
+| [[stages]]
+| name = "task-breakdown"
+| kind = "agent"
+| args = { prompt = "Produce task lists." }
+| produces = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
+|
+| [[stages]]
+| name = "implement"
+| type = "task-runner"
+| task_lists = ["tasks/foo.toml", "tasks/bar.toml", "tasks/baz.toml"]
+| parallel = true
+
+$ write_file flows/impl-flow/artifacts/tasks/foo.toml
+| name = "foo"
+| description = "Implement module foo"
+| depends_on = []
+|
+| [[tasks]]
+| id = "1.1"
+| description = "Scaffold foo"
+| type = "agent"
+
+$ write_file flows/impl-flow/artifacts/tasks/bar.toml
+| name = "bar"
+| description = "Implement module bar"
+| depends_on = []
+|
+| [[tasks]]
+| id = "2.1"
+| description = "Scaffold bar"
+| type = "agent"
+
+$ write_file flows/impl-flow/artifacts/tasks/baz.toml
+| name = "baz"
+| description = "Integration layer — requires foo and bar"
+| depends_on = ["foo", "bar"]
+|
+| [[tasks]]
+| id = "3.1"
+| description = "Wire foo and bar together"
+| type = "agent"
+
+# ---------------------------------------------------------------------------
+# Create flow and advance to task-breakdown
+# ---------------------------------------------------------------------------
+
+$ awf flow new $FLOWS_DIR/impl-flow --workflow=feature
+$ assert_stdout contains
+| task-breakdown
+
+# Advance from task-breakdown → implement
+$ awf flow next-stage --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| implement
+
+# ---------------------------------------------------------------------------
+# tasks status: foo=pending, bar=pending, baz=blocked
+# ---------------------------------------------------------------------------
+
+$ awf flow tasks status --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| foo
+$ assert_stdout contains
+| pending
+$ assert_stdout contains
+| bar
+$ assert_stdout contains
+| baz
+$ assert_stdout contains
+| blocked
+
+# baz should not be actionable — blocked by deps
+$ awf flow tasks next --flow=$FLOWS_DIR/impl-flow --list=baz
+$ assert_exit_code 1
+$ assert_stderr contains
+| blocked by unmet dependencies
+
+# foo is actionable
+$ awf flow tasks next --flow=$FLOWS_DIR/impl-flow --list=foo
+$ assert_stdout contains
+| foo/1.1
+
+# ---------------------------------------------------------------------------
+# Complete foo
+# ---------------------------------------------------------------------------
+
+$ awf flow tasks done foo 1.1 --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| foo/1.1
+
+$ awf flow tasks advance foo --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| complete
+
+# baz still blocked — bar not done
+$ awf flow tasks status --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| baz
+$ assert_stdout contains
+| blocked
+
+# ---------------------------------------------------------------------------
+# Complete bar
+# ---------------------------------------------------------------------------
+
+$ awf flow tasks done bar 2.1 --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| bar/2.1
+
+$ awf flow tasks advance bar --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| complete
+
+# ---------------------------------------------------------------------------
+# tasks status: baz now unblocked (pending)
+# ---------------------------------------------------------------------------
+
+$ awf flow tasks status --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| baz
+$ assert_stdout not_contains
+| blocked
+
+# baz is now actionable
+$ awf flow tasks next --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| baz/3.1
+$ assert_stdout contains
+| Wire foo and bar together
+
+# ---------------------------------------------------------------------------
+# Complete baz → all lists complete → advance stage
+# ---------------------------------------------------------------------------
+
+$ awf flow tasks done baz 3.1 --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| baz/3.1
+
+$ awf flow tasks advance baz --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| next-stage
+
+# All lists complete — next-stage should succeed
+$ awf flow next-stage --flow=$FLOWS_DIR/impl-flow
+$ assert_stdout contains
+| implement marked complete

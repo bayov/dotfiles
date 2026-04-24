@@ -34,6 +34,8 @@ fn full_flow_state_round_trip() {
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T14:32:00Z"),
         archived: false,
+        task_runner_state: std::collections::HashMap::new(),
+        task_log: vec![],
         stage_history: vec![
             StageHistoryEntry {
                 stage: "design".to_owned(),
@@ -157,6 +159,8 @@ fn stage_status_serializes_as_snake_case() {
             created_at: ts("2026-04-04T10:00:00Z"),
             updated_at: ts("2026-04-04T10:00:00Z"),
             archived: false,
+            task_runner_state: std::collections::HashMap::new(),
+            task_log: vec![],
             stage_history: vec![StageHistoryEntry {
                 stage: "s".to_owned(),
                 time: ts("2026-04-04T10:00:00Z"),
@@ -200,6 +204,8 @@ fn optional_fields_omitted_when_none() {
         created_at: ts("2026-04-04T10:00:00Z"),
         updated_at: ts("2026-04-04T12:00:00Z"),
         archived: false,
+        task_runner_state: std::collections::HashMap::new(),
+        task_log: vec![],
         stage_history: vec![entry],
     };
     let serialized =

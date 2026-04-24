@@ -1,12 +1,6 @@
 //! Flow state types: [`FlowState`] and [`StageHistoryEntry`].
-//!
-//! A flow is a running instance of a workflow. Its state is persisted as a
-//! TOML file in `.awf/flows/` and tracks which stage the flow is currently
-//! in and the history of completed stage events.
-//!
-//! Flow state files are loaded and written verbatim — there is no validation
-//! step analogous to [`super::workflow::Workflow::validate`] because the
-//! runtime is responsible for maintaining invariants during mutations.
+
+use std::collections::HashMap;
 
 use chrono::DateTime;
 use chrono::Utc;
@@ -17,93 +11,119 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StageStatus {
-    /// The stage finished successfully.
     Completed,
-
-    /// The stage finished with a failure (non-zero exit code for commands;
-    /// agent returned an error for agent stages).
     Failed,
-
-    /// The stage was force-advanced past gate checks despite a failure.
     ForceCompleted,
-
-    /// The stage was skipped entirely via `next-stage --skip`.
     Skipped,
 }
 
 /// A record of a single completed stage event within a flow.
-///
-/// Appended to [`FlowState::stage_history`] whenever a stage run finishes
-/// (pass or fail) or whenever the flow transitions out of a stage via force or
-/// skip. Multiple entries for the same stage name are possible when a stage
-/// is run, fails, and is then force-advanced.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StageHistoryEntry {
-    /// The name of the stage (e.g. `"design"`).
     pub stage: String,
-
-    /// The UTC instant at which this event occurred.
     pub time: DateTime<Utc>,
-
-    /// The outcome of this event.
     pub status: StageStatus,
-
-    /// Human-readable reason provided when the stage was force-advanced.
-    /// Only present when `status` is [`StageStatus::ForceCompleted`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_reason: Option<String>,
-
-    /// Wall-clock duration of the command execution in milliseconds.
-    /// Only present for command stages.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub duration_ms: Option<u64>,
 }
 
-/// The persisted state of a single flow — a running instance of a workflow.
+// ---------------------------------------------------------------------------
+// Task runner types
+// ---------------------------------------------------------------------------
+
+/// The lifecycle status of a task list within a task-runner stage.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TaskListStatus {
+    /// Not yet started; all `depends_on` lists are complete (or there are
+    /// none).
+    Pending,
+    /// At least one task has been started but the list is not yet complete.
+    InProgress,
+    /// All tasks have passed or been skipped; the list was advanced.
+    Complete,
+    /// One or more `depends_on` lists are not yet complete.
+    Blocked,
+}
+
+/// The type of a task for logging purposes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskLogKind {
+    Agent,
+    Command,
+}
+
+/// The outcome of a single task execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskLogStatus {
+    Pass,
+    Fail,
+    Skipped,
+}
+
+/// A log entry recording the outcome of a single task execution.
 ///
-/// Stored as a TOML file at `.awf/flows/<id>.toml`. The file is the source of
-/// truth for all flow progress and is updated in place by the runner.
+/// Appended to [`FlowState::task_log`] by the task CLI commands.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TaskLogEntry {
+    /// Name of the task list this task belongs to (e.g. `"foo"`).
+    pub list: String,
+    /// Task ID within the list (e.g. `"1.1"`).
+    pub task_id: String,
+    /// Name of the task-runner stage this task belongs to.
+    pub stage: String,
+    /// Whether this was an agent or command task.
+    pub kind: TaskLogKind,
+    /// Outcome of the task execution.
+    pub status: TaskLogStatus,
+    /// When the task was completed (agent tasks) or started (command tasks).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<DateTime<Utc>>,
+    /// Wall-clock duration for command tasks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+    /// Exit code for command tasks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    /// Human-readable reason for skipped tasks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_reason: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// FlowState
+// ---------------------------------------------------------------------------
+
+/// The persisted state of a single flow — a running instance of a workflow.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FlowState {
-    /// The unique identifier of this flow (e.g. `"add-oauth"`).
     pub id: String,
-
-    /// The name of the workflow this flow is an instance of (e.g.
-    /// `"feature"`).
     pub workflow: String,
-
-    /// The version of the workflow definition that was used when this flow was
-    /// created. Stored so that a later schema change can be detected.
     pub workflow_version: u32,
-
-    /// The name of the stage the flow is currently executing (e.g.
-    /// `"implement"`).
     pub current_stage: String,
-
-    /// The UTC instant at which the flow entered its current stage.
-    ///
-    /// Recorded when the flow is created (for the initial stage) and updated
-    /// each time a stage transition moves the flow forward. Used to populate
-    /// [`StageHistoryEntry::time`] when a run or transition is recorded.
     pub stage_started_at: DateTime<Utc>,
-
-    /// The UTC instant at which this flow was first created.
     pub created_at: DateTime<Utc>,
-
-    /// The UTC instant of the most recent mutation to this flow's state.
     pub updated_at: DateTime<Utc>,
-
-    /// When `true`, this flow has been archived and will not appear in the
-    /// default active flow listing.
     pub archived: bool,
 
-    /// Ordered log of every completed stage event in this flow.
-    ///
-    /// Entries are appended when a stage run finishes (pass or fail) or when
-    /// the flow transitions out of a stage via force or skip. The current
-    /// stage is never represented here until it produces an event.
+    /// Ordered log of completed stage events (pass, fail, force, skip).
     #[serde(default)]
     pub stage_history: Vec<StageHistoryEntry>,
+
+    /// Per-task-list status for the current task-runner stage (if any).
+    ///
+    /// Maps task list path (e.g. `"tasks/foo.toml"`) → [`TaskListStatus`].
+    /// Only populated for flows that have entered a task-runner stage.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub task_runner_state: HashMap<String, TaskListStatus>,
+
+    /// Log of individual task completions within task-runner stages.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub task_log: Vec<TaskLogEntry>,
 }
 
 #[cfg(test)]
