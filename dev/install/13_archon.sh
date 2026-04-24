@@ -12,3 +12,6 @@ if [ ! -d "$HOME/archon" ]; then
 else
 	(cd "$HOME/archon" && git pull)
 fi
+
+(cd "$HOME/archon" && bun install)
+(cd "$HOME/archon/packages/cli" && bun link)
