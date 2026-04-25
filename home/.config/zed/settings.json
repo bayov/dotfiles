@@ -7,9 +7,17 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-    "agent_servers": { "claude-acp": { "type": "registry" } },
-    "outline_panel": { "dock": "right" },
-    "collaboration_panel": { "dock": "right" },
+    "agent_servers": {
+        "claude-acp": {
+            "type": "registry"
+        }
+    },
+    "outline_panel": {
+        "dock": "right"
+    },
+    "collaboration_panel": {
+        "dock": "right"
+    },
     "agent": {
         "dock": "left",
         "show_turn_stats": true,
@@ -19,11 +27,21 @@
         "model_parameters": []
     },
     "agent_buffer_font_size": 13.0,
-    "active_pane_modifiers": { "border_size": 0.0, "inactive_opacity": 1.0 },
-    "centered_layout": { "left_padding": 0.2 },
+    "active_pane_modifiers": {
+        "border_size": 0.0,
+        "inactive_opacity": 1.0
+    },
+    "centered_layout": {
+        "left_padding": 0.2
+    },
     "bottom_dock_layout": "contained",
-    "preview_tabs": { "enabled": false },
-    "tabs": { "file_icons": false, "git_status": true },
+    "preview_tabs": {
+        "enabled": false
+    },
+    "tabs": {
+        "file_icons": false,
+        "git_status": true
+    },
     "title_bar": {
         "show_branch_status_icon": true,
         "show_branch_name": true,
@@ -34,7 +52,9 @@
         "show_sign_in": true,
         "show_menus": false
     },
-    "buffer_line_height": { "custom": 1.4 },
+    "buffer_line_height": {
+        "custom": 1.4
+    },
     "buffer_font_weight": 400.0,
     "agent_ui_font_size": 15.0,
     "buffer_font_family": "JetBrains Mono NL",
@@ -42,7 +62,11 @@
         {
             "distro_name": "Ubuntu",
             "user": null,
-            "projects": [{ "paths": ["/home/bayov/projects/accounting"] }]
+            "projects": [
+                {
+                    "paths": ["/home/bayov/projects/accounting"]
+                }
+            ]
         }
     ],
     "icon_theme": "Zed (Default)",
@@ -57,8 +81,13 @@
         "active_language_button": true,
         "experimental.show": true
     },
-    "git_panel": { "dock": "right", "button": true },
-    "minimap": { "show": "never" },
+    "git_panel": {
+        "dock": "right",
+        "button": true
+    },
+    "minimap": {
+        "show": "never"
+    },
     "autosave": "on_focus_change",
     "colorize_brackets": false,
     "wrap_guides": [80],

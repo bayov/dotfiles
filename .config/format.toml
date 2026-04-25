@@ -15,6 +15,8 @@ globs = [
     "**/.bayov-personal-project",
     "**/py.typed",
     "**/Code/User/keybindings.json",
+    "**/zed/settings.json",
+    "**/zed/keymap.json",
     "**/config/generate-commit-description-template.md",
 ]
 
