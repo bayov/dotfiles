@@ -14,7 +14,7 @@
     {
         "context": "Workspace",
         "bindings": {
-            "alt-e": "command_palette::Toggle",
+            "alt-a": "command_palette::Toggle",
             "shift shift": "command_palette::Toggle",
             "alt-f": "file_finder::Toggle",
             "alt-t": "project_symbols::Toggle",
