@@ -43,10 +43,7 @@ function _fzf_search_projects --description "Search projects in defined director
         end | string replace --regex "^$HOME" "~" | sort -u | fzf --prompt="Project ❯ " --ansi --preview-window=70% --preview="$fzf_preview_dir_cmd (string replace --regex '^~' $HOME {})")
 
     if test $status -eq 0 && test -n "$project_selected"
-        # Expand ~ back to $HOME before cd
-        set -f project_path (string replace --regex '^~' "$HOME" "$project_selected")
-        echo (set_color blue)cd "$project_path"(set_color normal)
-        cd "$project_path"
+        commandline --replace -- $project_selected
     end
 
     commandline --function repaint
