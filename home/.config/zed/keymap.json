@@ -1,0 +1,145 @@
+[
+    {
+        // Global keybinds
+        "context": "Workspace || Pane || Editor || Dock",
+        "bindings": {
+            "shift-alt-right": "workspace::ActivatePaneRight",
+            "shift-alt-left": "workspace::ActivatePaneLeft",
+            "shift-alt-up": "workspace::ActivatePaneUp",
+            "shift-alt-down": "workspace::ActivatePaneDown",
+            "ctrl-alt-left": "pane::GoBack",
+            "ctrl-alt-right": "pane::GoForward"
+        }
+    },
+    {
+        "context": "Workspace",
+        "bindings": {
+            "alt-e": "command_palette::Toggle",
+            "shift shift": "command_palette::Toggle",
+            "alt-f": "file_finder::Toggle",
+            "alt-t": "project_symbols::Toggle",
+            "alt-w": "projects::OpenRecent",
+            "alt-'": "zed::OpenSettings",
+            "shift-alt-'": "zed::OpenSettingsFile",
+            "shift-alt-;": "zed::OpenKeymapFile",
+            "alt-;": "zed::OpenKeymap",
+            "alt-5": "debug_panel::ToggleFocus",
+            "shift-ctrl-f": "pane::DeploySearch",
+            "shift-ctrl-r": ["pane::DeploySearch", { "replace_enabled": true }],
+            "shift-escape": "workspace::ToggleLeftDock",
+            "shift-alt-e": "workspace::ToggleAllDocks", // Closes all side panels/panels
+            "ctrl-0": "zed::ResetBufferFontSize"
+        }
+    },
+    {
+        "context": "Editor",
+        "bindings": {
+            // Basic Editing
+            "alt-d": "editor::Format",
+            "f2": "editor::Rename",
+            "ctrl-y": "editor::DeleteLine",
+            "ctrl-alt-d": "editor::DuplicateLineDown",
+            "ctrl-alt-x": "editor::JoinLines",
+            "ctrl-alt-o": "editor::OrganizeImports",
+            "ctrl-alt-v": "editor::SelectAllMatches",
+            "alt-v": ["editor::SelectNext", { "replace_newest": false }],
+            "ctrl-q": "editor::Hover",
+            "alt-enter": "editor::ToggleCodeActions",
+            // Navigation & Symbols
+            "alt-g": "editor::GoToDefinition",
+            "shift-alt-g": "editor::GoToImplementation",
+            "alt-h": "editor::FindAllReferences",
+            "ctrl-g": "go_to_line::Toggle",
+            "ctrl-f12": "outline::Toggle",
+            "shift-ctrl-alt-n": "project_symbols::Toggle",
+            "ctrl-e": "editor::Hover", // Best Zed equivalent for Preview Declaration
+            // Folding
+            "shift-ctrl-numpad_subtract": "editor::FoldAll",
+            "ctrl-numpad_subtract": "editor::Fold",
+            "ctrl-alt-numpad_subtract": "editor::FoldRecursive",
+            "shift-ctrl-numpad_add": "editor::UnfoldAll",
+            "ctrl-numpad_add": "editor::UnfoldLines",
+            "ctrl-alt-numpad_add": "editor::UnfoldRecursive",
+            // Selection
+            "ctrl-w": "editor::SelectLargerSyntaxNode",
+            "shift-ctrl-w": "editor::SelectSmallerSyntaxNode",
+            // Multi-Cursor
+            "alt-down": "editor::AddSelectionBelow",
+            "alt-up": "editor::AddSelectionAbove",
+            // Diagnostics (Errors/Warnings)
+            "ctrl-.": ["editor::GoToDiagnostic", { "severity": "hint" }],
+            "ctrl-,": [
+                "editor::GoToPreviousDiagnostic",
+                { "severity": "hint" }
+            ],
+            "ctrl-alt-.": "editor::GoToDiagnostic",
+            "ctrl-alt-,": "editor::GoToPreviousDiagnostic",
+            // Git
+            "ctrl-alt-up": "editor::GoToPreviousChange",
+            "ctrl-alt-down": "editor::GoToNextChange",
+            "ctrl-alt-z": "git::Restore"
+        }
+    },
+    {
+        "context": "Pane",
+        "bindings": {
+            "alt-x": "pane::CloseActiveItem",
+            "alt-shift-x": "pane::ReopenClosedItem",
+            "alt-right": "pane::ActivateNextItem",
+            "alt-left": "pane::ActivatePreviousItem",
+            "shift-alt-1": "pane::RevealInProjectPanel",
+            "alt-p": "pane::TogglePinTab",
+            "alt-s x": "workspace::CloseAllItemsAndPanes",
+            "alt-s d": "pane::CloseOtherItems",
+            "alt-[": "pane::SwapItemLeft",
+            "alt-]": "pane::SwapItemRight",
+            "shift-alt-[": [
+                "workspace::MoveItemToPaneInDirection",
+                { "direction": "left" }
+            ],
+            "shift-alt-]": [
+                "workspace::MoveItemToPaneInDirection",
+                { "direction": "right" }
+            ],
+            // Disable defaults
+            "ctrl-w": null
+        }
+    },
+    {
+        "context": "BufferSearchBar",
+        "bindings": {
+            "enter": "search::SelectNextMatch",
+            "shift-enter": "search::SelectPreviousMatch",
+            "alt-i": "search::ToggleCaseSensitive",
+            "alt-u": "search::ToggleWholeWord",
+            "shift-alt-8": "search::ToggleRegex"
+        }
+    },
+    { "bindings": { "alt-\\": "zed::ToggleFullScreen" } },
+    { "bindings": { "f11": null } },
+    { "bindings": { "alt-1": "project_panel::Toggle" } },
+    {
+        "context": "GitPicker",
+        "bindings": { "alt-1": "project_panel::Toggle" }
+    },
+    { "context": "RunModal", "bindings": { "alt-1": "project_panel::Toggle" } },
+    { "context": "Pane", "bindings": { "alt-1": "project_panel::Toggle" } },
+    {
+        "context": "Workspace",
+        "bindings": { "alt-1": "project_panel::Toggle" }
+    },
+    {
+        "context": "(Editor && !edit_prediction)",
+        "bindings": { "alt-\\": "zed::ToggleFullScreen" }
+    },
+    {
+        "context": "(ProjectPanel && not_editing)",
+        "bindings": { "enter": "project_panel::Open" }
+    },
+    { "bindings": { "alt-j": "agent::Toggle" } },
+    { "context": "(Editor && edit_prediction)", "bindings": { "alt-j": null } },
+    {
+        "context": "(Editor && edit_prediction_conflict)",
+        "bindings": { "alt-j": null }
+    }
+]

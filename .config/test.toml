@@ -17,3 +17,7 @@ command = "cargo clippy --workspace --all-targets -- -D warnings"
 [[test_suite]]
 name = "clippy_all_features"
 command = "cargo clippy --workspace --all-features --all-targets -- -D warnings"
+
+[[test_suite]]
+name = "link_dry_run"
+command = "python dev/link.py --dry-run"

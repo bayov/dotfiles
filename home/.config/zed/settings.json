@@ -1,0 +1,69 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+    "outline_panel": { "dock": "right" },
+    "collaboration_panel": { "dock": "right" },
+    "agent": {
+        "dock": "left",
+        "show_turn_stats": true,
+        "play_sound_when_agent_done": "always",
+        "favorite_models": [],
+        "single_file_review": true,
+        "model_parameters": []
+    },
+    "agent_buffer_font_size": 13.0,
+    "active_pane_modifiers": { "border_size": 0.0, "inactive_opacity": 1.0 },
+    "centered_layout": { "left_padding": 0.2 },
+    "bottom_dock_layout": "contained",
+    "preview_tabs": { "enabled": false },
+    "tabs": { "file_icons": false, "git_status": true },
+    "title_bar": {
+        "show_branch_status_icon": true,
+        "show_branch_name": true,
+        "show_project_items": true,
+        "show_onboarding_banner": true,
+        "show_user_picture": true,
+        "show_user_menu": true,
+        "show_sign_in": true,
+        "show_menus": false
+    },
+    "buffer_line_height": { "custom": 1.4 },
+    "buffer_font_weight": 400.0,
+    "agent_ui_font_size": 15.0,
+    "buffer_font_family": "JetBrains Mono NL",
+    "wsl_connections": [
+        {
+            "distro_name": "Ubuntu",
+            "user": null,
+            "projects": [{ "paths": ["/home/bayov/projects/accounting"] }]
+        }
+    ],
+    "icon_theme": "Zed (Default)",
+    "project_panel": {
+        "dock": "right",
+        "button": true,
+        "hide_gitignore": true,
+        "auto_reveal_entries": false
+    },
+    "status_bar": {
+        "cursor_position_button": true,
+        "active_language_button": true,
+        "experimental.show": true
+    },
+    "git_panel": { "dock": "right", "button": true },
+    "minimap": { "show": "never" },
+    "autosave": "on_focus_change",
+    "colorize_brackets": false,
+    "wrap_guides": [80],
+    "base_keymap": "VSCode",
+    "ui_font_size": 14.0,
+    "buffer_font_size": 13.0,
+    "semantic_tokens": "combined",
+    "theme": "One Dark"
+}

@@ -282,6 +282,10 @@ class Context:
     had_conflict: bool = False
     active_tags: frozenset[str] = field(default_factory=frozenset)
     _visited_link_tomls: set[Path] = field(default_factory=set)
+    adopt_copies: bool = False  # override source with destination on conflict
+    override_copies: bool = (
+        False  # override destination with source on conflict
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -629,9 +633,18 @@ class CopyLinker(Linker):
         if dst.exists():
             if filecmp.cmp(src, dst, shallow=False):
                 return LinkerSuccess(changed=False)
+            if ctx.adopt_copies:
+                if not ctx.dry_run:
+                    shutil.copy2(dst, src)
+                return LinkerSuccess()
+            if ctx.override_copies:
+                if not ctx.dry_run:
+                    shutil.copy2(src, dst)
+                return LinkerSuccess()
             return LinkerError(
                 f"{RED}{ctx.logger.fmt_path(dst)}{RESET}: exists with different content"
-                f"\n{GRAY}{INDENT}you must solve this manually{RESET}"
+                f"\n{GRAY}{INDENT}(use --adopt-copies to keep destination, "
+                f"or --override-copies to overwrite with source){RESET}"
             )
         if not ctx.dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -1107,7 +1120,20 @@ def main() -> None:
             "Useful with --dry-run to simulate a specific environment."
         ),
     )
+    p.add_argument(
+        "--adopt-copies",
+        action="store_true",
+        help="On copy-linker conflicts, overwrite source with destination (adopt into repo).",
+    )
+    p.add_argument(
+        "--override-copies",
+        action="store_true",
+        help="On copy-linker conflicts, overwrite destination with source.",
+    )
     args = p.parse_args()
+
+    if args.adopt_copies and args.override_copies:
+        p.error("--adopt-copies and --override-copies are mutually exclusive")
 
     tags_toml = PROJECT_ROOT / "dev" / TAGS_TOML
     active_tags = (
@@ -1131,6 +1157,8 @@ def main() -> None:
         state=state,
         repo_root=PROJECT_ROOT,
         active_tags=active_tags,
+        adopt_copies=args.adopt_copies,
+        override_copies=args.override_copies,
     )
 
     all_link_tomls = set(config_dir.rglob(LINK_TOML))

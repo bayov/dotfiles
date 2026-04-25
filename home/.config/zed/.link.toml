@@ -1,0 +1,9 @@
+[[link]]
+linker = "symlink"
+
+# In Windows WSL, Zed Editor seems to break whenever the config files are
+# symlinks (or windows-symlinks). We copy for now.
+[[link]]
+tags = ["wsl"]
+linker = "copy"
+dst = "/mnt/c/Users/hesos/AppData/Roaming/Zed"
