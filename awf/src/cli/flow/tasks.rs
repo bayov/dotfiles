@@ -56,7 +56,6 @@ pub struct TasksStatusOutput {
 #[derive(Debug)]
 pub struct ListStatusDisplay {
     pub name: String,
-    pub path: String,
     pub status: TaskListStatus,
     pub blocked_by: Vec<String>,
     pub tasks: Vec<TaskDisplay>,
@@ -100,7 +99,7 @@ impl fmt::Display for TasksStatusOutput {
                         task.description.blue().to_string(),
                     ),
                     TaskDisplayStatus::Pending => {
-                        (" ".to_string(), task.description.to_string())
+                        (" ".to_string(), task.description.clone())
                     }
                 };
                 writeln!(
@@ -123,7 +122,6 @@ pub struct TasksNextOutput {
     pub task_id: String,
     pub description: String,
     pub kind: &'static str,
-    pub command_key: Option<String>,
 }
 
 impl fmt::Display for TasksNextOutput {
@@ -241,7 +239,6 @@ pub fn tasks_status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         let Some(tl) = loaded.get(path) else {
             lists.push(ListStatusDisplay {
                 name: path.clone(),
-                path: path.clone(),
                 status,
                 blocked_by: vec![],
                 tasks: vec![],
@@ -278,7 +275,6 @@ pub fn tasks_status(flow_flag: Option<&str>) -> color_eyre::Result<()> {
         let tasks = build_task_displays(tl, &flow.current_stage, &flow);
         lists.push(ListStatusDisplay {
             name: tl.name.clone(),
-            path: path.clone(),
             status,
             blocked_by,
             tasks,
@@ -309,49 +305,7 @@ pub fn tasks_next(
 
     // If a specific list is requested, search only there.
     if let Some(name) = list_name {
-        let (path, tl) =
-            find_list_by_name_or_exit(name, task_lists, &loaded, &flow_dir);
-
-        // Reject blocked lists immediately.
-        let list_status = flow
-            .task_runner_state
-            .get(path)
-            .copied()
-            .unwrap_or(TaskListStatus::Pending);
-        if list_status == TaskListStatus::Blocked {
-            eprint_error(format_args!(
-                "list {:?} is blocked by unmet dependencies. \
-                 Use `awf flow tasks status` to see which lists must complete first.",
-                name
-            ));
-            std::process::exit(1);
-        }
-
-        let Some(task) =
-            task_runner::next_task_in_list(tl, &flow.current_stage, &flow)
-        else {
-            eprint_error(format_args!(
-                "no pending tasks in list {:?}. \
-                 Run `awf flow tasks advance {name}` if all tasks are done.",
-                name
-            ));
-            std::process::exit(1);
-        };
-        let kind_str = task_kind_str(&task.kind);
-        let command_key = match &task.kind {
-            TaskKind::Command { command } => Some(command.clone()),
-            TaskKind::Agent => None,
-        };
-        let output = TasksNextOutput {
-            flow_path: flow_dir.display().to_string(),
-            list_name: tl.name.clone(),
-            task_id: task.id.clone(),
-            description: task.description.clone(),
-            kind: kind_str,
-            command_key,
-        };
-        print_output(&output);
-        let _ = path;
+        tasks_next_named(&flow, &flow_dir, task_lists, &loaded, name);
         return Ok(());
     }
 
@@ -387,23 +341,70 @@ pub fn tasks_next(
         else {
             continue;
         };
-        let kind_str = task_kind_str(&task.kind);
-        let command_key = match &task.kind {
-            TaskKind::Command { command } => Some(command.clone()),
-            TaskKind::Agent => None,
-        };
         let output = TasksNextOutput {
             flow_path: flow_dir.display().to_string(),
             list_name: tl.name.clone(),
             task_id: task.id.clone(),
             description: task.description.clone(),
-            kind: kind_str,
-            command_key,
+            kind: task_kind_str(&task.kind),
         };
         print_output(&output);
         return Ok(());
     }
 
+    handle_no_pending_tasks(&flow, task_lists, &loaded, &flow_dir);
+    Ok(())
+}
+
+fn tasks_next_named(
+    flow: &crate::model::flow::FlowState,
+    flow_dir: &std::path::Path,
+    task_lists: &[String],
+    loaded: &HashMap<String, TaskList>,
+    name: &str,
+) {
+    let (path, tl) =
+        find_list_by_name_or_exit(name, task_lists, loaded, flow_dir);
+
+    let list_status = flow
+        .task_runner_state
+        .get(path)
+        .copied()
+        .unwrap_or(TaskListStatus::Pending);
+    if list_status == TaskListStatus::Blocked {
+        eprint_error(format_args!(
+            "list {name:?} is blocked by unmet dependencies. \
+             Use `awf flow tasks status` to see which lists must complete first.",
+        ));
+        std::process::exit(1);
+    }
+
+    let Some(task) =
+        task_runner::next_task_in_list(tl, &flow.current_stage, flow)
+    else {
+        eprint_error(format_args!(
+            "no pending tasks in list {name:?}. \
+             Run `awf flow tasks advance {name}` if all tasks are done.",
+        ));
+        std::process::exit(1);
+    };
+    let output = TasksNextOutput {
+        flow_path: flow_dir.display().to_string(),
+        list_name: tl.name.clone(),
+        task_id: task.id.clone(),
+        description: task.description.clone(),
+        kind: task_kind_str(&task.kind),
+    };
+    print_output(&output);
+    let _ = path;
+}
+
+fn handle_no_pending_tasks(
+    flow: &crate::model::flow::FlowState,
+    task_lists: &[String],
+    loaded: &HashMap<String, TaskList>,
+    flow_dir: &std::path::Path,
+) {
     // Check if any unadvanced list has all tasks done → suggest advance.
     let ready_to_advance: Vec<&str> = task_lists
         .iter()
@@ -417,7 +418,7 @@ pub fn tasks_next(
                 return None;
             }
             let tl = loaded.get(p.as_str())?;
-            if task_runner::all_tasks_done(tl, &flow.current_stage, &flow) {
+            if task_runner::all_tasks_done(tl, &flow.current_stage, flow) {
                 Some(tl.name.as_str())
             } else {
                 None
@@ -437,7 +438,7 @@ pub fn tasks_next(
                 .cyan()
             );
         }
-        return Ok(());
+        return;
     }
 
     // All unblocked lists are either done or blocked by a failing task.
@@ -462,8 +463,6 @@ pub fn tasks_next(
         );
         std::process::exit(1);
     }
-
-    Ok(())
 }
 
 /// `awf flow tasks run <list> <task-id> [--flow=<path>]`
@@ -487,16 +486,14 @@ pub fn tasks_run(
 
     let task = tl.tasks.iter().find(|t| t.id == task_id).unwrap_or_else(|| {
         eprint_error(format_args!(
-            "task {:?} not found in list {:?}",
-            task_id, list_name
+            "task {task_id:?} not found in list {list_name:?}",
         ));
         std::process::exit(1);
     });
 
     let TaskKind::Command { command: ref key } = task.kind else {
         eprint_error(format_args!(
-            "task {:?}/{:?} is an agent task; use `awf flow tasks done` instead",
-            list_name, task_id
+            "task {list_name:?}/{task_id:?} is an agent task; use `awf flow tasks done` instead",
         ));
         std::process::exit(1);
     };
@@ -508,8 +505,7 @@ pub fn tasks_run(
         .cloned()
         .unwrap_or_else(|| {
             eprint_error(format_args!(
-                "command key {:?} not found in workflow [commands]",
-                key
+                "command key {key:?} not found in workflow [commands]",
             ));
             std::process::exit(1);
         });
@@ -524,7 +520,7 @@ pub fn tasks_run(
     flow.task_log.push(TaskLogEntry {
         list: tl.name.clone(),
         task_id: task_id.to_string(),
-        stage: stage_name.clone(),
+        stage: stage_name,
         kind: TaskLogKind::Command,
         status: log_status,
         completed_at: Some(Utc::now()),
@@ -580,16 +576,14 @@ pub fn tasks_done(
 
     let task = tl.tasks.iter().find(|t| t.id == task_id).unwrap_or_else(|| {
         eprint_error(format_args!(
-            "task {:?} not found in list {:?}",
-            task_id, list_name
+            "task {task_id:?} not found in list {list_name:?}",
         ));
         std::process::exit(1);
     });
 
     if !matches!(task.kind, TaskKind::Agent) {
         eprint_error(format_args!(
-            "task {:?}/{:?} is a command task; use `awf flow tasks run` instead",
-            list_name, task_id
+            "task {list_name:?}/{task_id:?} is a command task; use `awf flow tasks run` instead",
         ));
         std::process::exit(1);
     }
@@ -644,8 +638,7 @@ pub fn tasks_skip(
     // Validate task exists.
     if !tl.tasks.iter().any(|t| t.id == task_id) {
         eprint_error(format_args!(
-            "task {:?} not found in list {:?}",
-            task_id, list_name
+            "task {task_id:?} not found in list {list_name:?}",
         ));
         std::process::exit(1);
     }
@@ -698,8 +691,7 @@ pub fn tasks_advance(
     // Gate: all tasks must be done.
     if !task_runner::all_tasks_done(tl, &flow.current_stage, &flow) {
         eprint_error(format_args!(
-            "list {:?} still has incomplete tasks. Complete all tasks before advancing the list.",
-            list_name
+            "list {list_name:?} still has incomplete tasks. Complete all tasks before advancing the list.",
         ));
         std::process::exit(1);
     }
@@ -711,14 +703,13 @@ pub fn tasks_advance(
     fs::save_flow(&flow_dir, &flow)?;
 
     let all_done = task_runner::all_lists_complete(&flow);
+    let flow_display = flow_dir.display();
     let message = if all_done {
         format!(
-            "List {:?} marked complete. All lists done — run `awf flow next-stage --flow={}` to advance.",
-            list_name,
-            flow_dir.display()
+            "List {list_name:?} marked complete. All lists done — run `awf flow next-stage --flow={flow_display}` to advance.",
         )
     } else {
-        format!("List {:?} marked complete.", list_name)
+        format!("List {list_name:?} marked complete.")
     };
     let output = TasksConfirmOutput { message };
     print_output(&output);
@@ -814,13 +805,13 @@ fn find_list_by_name_or_exit<'a>(
     flow_dir: &std::path::Path,
 ) -> (&'a str, &'a TaskList) {
     for path in task_list_paths {
-        if let Some(tl) = loaded.get(path) {
-            if tl.name == list_name {
-                // Return the key from the map rather than the arg to avoid
-                // lifetime issues with the temporary `path` variable.
-                let (key, val) = loaded.get_key_value(path).unwrap();
-                return (key.as_str(), val);
-            }
+        if let Some(tl) = loaded.get(path)
+            && tl.name == list_name
+        {
+            // Return the key from the map rather than the arg to avoid
+            // lifetime issues with the temporary `path` variable.
+            let (key, val) = loaded.get_key_value(path).unwrap();
+            return (key.as_str(), val);
         }
     }
     eprint_error(format_args!(
@@ -849,11 +840,11 @@ fn build_task_displays(
                 Some(TaskLogStatus::Fail) => TaskDisplayStatus::Failed,
                 Some(TaskLogStatus::Skipped) => TaskDisplayStatus::Skipped,
                 None => {
-                    if !found_next {
+                    if found_next {
+                        TaskDisplayStatus::Pending
+                    } else {
                         found_next = true;
                         TaskDisplayStatus::Next
-                    } else {
-                        TaskDisplayStatus::Pending
                     }
                 }
             };
@@ -867,14 +858,14 @@ fn build_task_displays(
         .collect()
 }
 
-fn task_kind_str(kind: &TaskKind) -> &'static str {
+const fn task_kind_str(kind: &TaskKind) -> &'static str {
     match kind {
         TaskKind::Agent => "agent",
         TaskKind::Command { .. } => "command",
     }
 }
 
-/// Transitions a list from Pending → InProgress using the path key in
+/// Transitions a list from Pending → `InProgress` using the path key in
 /// `task_runner_state`.
 fn update_list_to_in_progress(
     flow: &mut crate::model::flow::FlowState,

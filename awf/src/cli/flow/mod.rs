@@ -263,10 +263,10 @@ fn collect_artifacts_recursive(
         let path = entry.path();
         if path.is_dir() {
             collect_artifacts_recursive(base, &path, names);
-        } else if let Ok(rel) = path.strip_prefix(base) {
-            if let Some(s) = rel.to_str() {
-                names.insert(s.to_string());
-            }
+        } else if let Ok(rel) = path.strip_prefix(base)
+            && let Some(s) = rel.to_str()
+        {
+            names.insert(s.to_string());
         }
     }
 }

@@ -405,7 +405,7 @@ pub fn load_task_list(
     let contents = match std::fs::read_to_string(&path) {
         Ok(s) => s,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            return Err(Error::TaskListNotFound { path: path.clone() });
+            return Err(Error::TaskListNotFound { path });
         }
         Err(e) => return Err(Error::Io(e)),
     };

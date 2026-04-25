@@ -194,56 +194,8 @@ pub fn advance(
         std::process::exit(1);
     }
 
-    let updated_flow = if skip {
-        // --skip bypasses all gates (stage completion and artifacts).
-        let skipped_stage = flow.current_stage.clone();
-        match skip_stage(&workflow, flow) {
-            Ok(f) => {
-                eprint_warning(format_args!("Skipped stage {skipped_stage:?}"));
-                f
-            }
-            Err(Error::StageNotSkippable { stage }) => {
-                eprint_error(format_args!(
-                    "stage `{stage}` is not marked as skippable in the workflow"
-                ));
-                std::process::exit(1);
-            }
-            Err(Error::AlreadyOnLastStage) => {
-                eprint_error(
-                    "already on the last stage; nothing to advance to",
-                );
-                std::process::exit(1);
-            }
-            Err(e) => return Err(e.into()),
-        }
-    } else {
-        let artifacts = super::collect_artifacts(&flow_dir);
-
-        // --force bypasses stage gates but never artifact gates.
-        #[allow(clippy::single_match_else, clippy::option_if_let_else)]
-        let force_reason = match force {
-            Some(reason) => {
-                check_produces_or_exit(&workflow, &flow, &artifacts);
-                Some(reason)
-            }
-            None => {
-                check_can_advance_or_exit(&workflow, &flow, &artifacts);
-                None
-            }
-        };
-
-        match advance_stage(&workflow, flow, force_reason) {
-            Ok(f) => f,
-            Err(Error::AlreadyOnLastStage) => {
-                eprint_error(
-                    "already on the last stage; nothing to advance to",
-                );
-                std::process::exit(1);
-            }
-            Err(e) => return Err(e.into()),
-        }
-    };
-
+    let updated_flow =
+        apply_skip_or_advance(&workflow, flow, force, skip, &flow_dir)?;
     let updated_flow =
         maybe_init_task_runner_state(&workflow, updated_flow, &flow_dir)?;
     fs::save_flow(&flow_dir, &updated_flow)?;
@@ -261,6 +213,61 @@ pub fn advance(
     );
     print_output(&output);
     Ok(())
+}
+
+fn apply_skip_or_advance(
+    workflow: &Workflow,
+    flow: FlowState,
+    force: Option<String>,
+    skip: bool,
+    flow_dir: &Path,
+) -> color_eyre::Result<FlowState> {
+    if skip {
+        let skipped_stage = flow.current_stage.clone();
+        match skip_stage(workflow, flow) {
+            Ok(f) => {
+                eprint_warning(format_args!("Skipped stage {skipped_stage:?}"));
+                Ok(f)
+            }
+            Err(Error::StageNotSkippable { stage }) => {
+                eprint_error(format_args!(
+                    "stage `{stage}` is not marked as skippable in the workflow"
+                ));
+                std::process::exit(1);
+            }
+            Err(Error::AlreadyOnLastStage) => {
+                eprint_error(
+                    "already on the last stage; nothing to advance to",
+                );
+                std::process::exit(1);
+            }
+            Err(e) => Err(e.into()),
+        }
+    } else {
+        let artifacts = super::collect_artifacts(flow_dir);
+        // --force bypasses stage gates but never artifact gates.
+        #[allow(clippy::single_match_else, clippy::option_if_let_else)]
+        let force_reason = match force {
+            Some(reason) => {
+                check_produces_or_exit(workflow, &flow, &artifacts);
+                Some(reason)
+            }
+            None => {
+                check_can_advance_or_exit(workflow, &flow, &artifacts);
+                None
+            }
+        };
+        match advance_stage(workflow, flow, force_reason) {
+            Ok(f) => Ok(f),
+            Err(Error::AlreadyOnLastStage) => {
+                eprint_error(
+                    "already on the last stage; nothing to advance to",
+                );
+                std::process::exit(1);
+            }
+            Err(e) => Err(e.into()),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

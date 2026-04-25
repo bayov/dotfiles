@@ -32,8 +32,7 @@ pub fn init_task_runner_state(
         .iter()
         .map(|path| {
             let status =
-                if loaded.get(path).map_or(true, |tl| tl.depends_on.is_empty())
-                {
+                if loaded.get(path).is_none_or(|tl| tl.depends_on.is_empty()) {
                     TaskListStatus::Pending
                 } else {
                     TaskListStatus::Blocked
@@ -76,18 +75,6 @@ pub fn task_is_done(
     )
 }
 
-/// Returns `true` if the task's last log entry has status
-/// [`TaskLogStatus::Fail`].
-pub fn task_is_failed(
-    list_name: &str,
-    task_id: &str,
-    stage: &str,
-    flow: &FlowState,
-) -> bool {
-    task_last_status(list_name, task_id, stage, flow)
-        == Some(TaskLogStatus::Fail)
-}
-
 /// Returns `true` if every task in `list` has a pass or skipped entry.
 pub fn all_tasks_done(list: &TaskList, stage: &str, flow: &FlowState) -> bool {
     list.tasks.iter().all(|t| task_is_done(&list.name, &t.id, stage, flow))
@@ -118,28 +105,6 @@ pub fn next_task_in_list<'a>(
     None
 }
 
-/// Returns `true` if any undone task is immediately blocked by a failed
-/// predecessor. Used to display blocking state in `tasks status`.
-pub fn list_has_failed_task(
-    list: &TaskList,
-    stage: &str,
-    flow: &FlowState,
-) -> bool {
-    let mut seen_fail = false;
-    for task in &list.tasks {
-        if task_is_done(&list.name, &task.id, stage, flow) {
-            seen_fail = false;
-            continue;
-        }
-        if task_is_failed(&list.name, &task.id, stage, flow) {
-            seen_fail = true;
-        } else if seen_fail {
-            return true;
-        }
-    }
-    false
-}
-
 // ---------------------------------------------------------------------------
 // List-level state updates
 // ---------------------------------------------------------------------------
@@ -159,7 +124,7 @@ pub fn recompute_blocked(
         .filter_map(|(path, _)| all_lists.get(path).map(|tl| tl.name.as_str()))
         .collect();
 
-    for (path, status) in flow.task_runner_state.iter_mut() {
+    for (path, status) in &mut flow.task_runner_state {
         if *status != TaskListStatus::Blocked {
             continue;
         }

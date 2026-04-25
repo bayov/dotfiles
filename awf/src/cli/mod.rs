@@ -427,7 +427,7 @@ pub fn collect_workflow_errors(
                     config.project_name.as_deref(),
                     Some(&config.project_root),
                 )
-                .unwrap_or_else(|_| rel_or_abs.to_string());
+                .unwrap_or_else(|_| rel_or_abs.clone());
                 let path = if expanded.starts_with('/') {
                     std::path::PathBuf::from(&expanded)
                 } else {
