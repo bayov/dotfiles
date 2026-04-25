@@ -71,6 +71,7 @@
     ],
     "icon_theme": "Zed (Default)",
     "project_panel": {
+        "entry_spacing": "comfortable",
         "dock": "right",
         "button": true,
         "hide_gitignore": true,
