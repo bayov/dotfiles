@@ -8,11 +8,11 @@ function _fzf_search_projects --description "Search projects in defined director
     set -f fd_cmd (command -v fdfind || command -v fd || echo "fd")
 
     # Filter out non-existent directories to avoid fd errors
-    set -l valid_direct
+    set -l valid_directories
     for dir in $direct_paths
         set -l expanded_dir (eval echo -- $dir)
         if test -d "$expanded_dir"
-            set -a valid_direct "$expanded_dir"
+            set -a valid_directories "$expanded_dir"
         end
     end
 
@@ -24,23 +24,24 @@ function _fzf_search_projects --description "Search projects in defined director
         end
     end
 
-    if test -z "$valid_direct"; and test -z "$valid_search"
+    if test -z "$valid_directories"; and test -z "$valid_search"
         echo "None of the project or search directories exist." >&2
         return 1
     end
 
     # Search for directories:
-    # 1. Directly in valid_direct (use printf to list them)
+    # 1. Directly in valid_directories (use printf to list them)
     # 2. Children of valid_search (min-depth 1, max-depth 1)
     set -f project_selected (
         begin
-            if test -n "$valid_direct"
-                printf "%s\n" $valid_direct
+            if test -n "$valid_directories"
+                printf "%s\n" $valid_directories
             end
             if test -n "$valid_search"
                 $fd_cmd --max-depth 1 --min-depth 1 --type d . $valid_search
             end
-        end | string replace --regex "^$HOME" "~" | sort -u | fzf --prompt="Project ❯ " --ansi --preview-window=70% --preview="$fzf_preview_dir_cmd (string replace --regex '^~' $HOME {})")
+        end | string replace --regex "^$HOME" "~" | sort -u | fzf --prompt="Project ❯ " --query=(commandline) --ansi --preview-window=70% --preview="$fzf_preview_dir_cmd (string replace --regex '^~' $HOME {})"
+    )
 
     if test $status -eq 0 && test -n "$project_selected"
         commandline --replace -- $project_selected
