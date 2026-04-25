@@ -35,7 +35,6 @@
             "ctrl--": ["zed::DecreaseBufferFontSize", { "persist": false }],
             "ctrl-0": ["zed::ResetBufferFontSize", { "persist": false }],
             "ctrl-alt-,": "zed::OpenSettingsFile",
-            "ctrl-q": "zed::Quit",
             "f4": "debugger::Start",
             "shift-f5": "debugger::Stop",
             "ctrl-shift-f5": "debugger::RerunSession",
@@ -43,7 +42,8 @@
             "f7": "debugger::StepOver",
             "ctrl-f11": "debugger::StepInto",
             "shift-f11": "debugger::StepOut",
-            "f11": "zed::ToggleFullScreen",
+            "alt-\\": "zed::ToggleFullScreen",
+            "alt-j": "agent::Toggle",
             "ctrl-alt-z": "edit_prediction::RatePredictions",
             "ctrl-alt-shift-i": "edit_prediction::ToggleMenu",
             "ctrl-alt-l": "lsp_tool::ToggleMenu",
@@ -89,7 +89,7 @@
             "undo": "editor::Undo",
             "ctrl-z": "editor::Undo",
             "redo": "editor::Redo",
-            "ctrl-y": "editor::Redo",
+            "ctrl-y": "editor::DeleteLine",
             "ctrl-shift-z": "editor::Redo",
             "up": "editor::MoveUp",
             "ctrl-up": "editor::LineUp",
@@ -158,16 +158,9 @@
         }
     },
     {
-        "context": "Editor && mode == full && edit_prediction",
-        "bindings": {
-            "alt-]": "editor::NextEditPrediction",
-            "alt-[": "editor::PreviousEditPrediction"
-        }
-    },
-    {
         "context": "Editor && !edit_prediction",
         "bindings": {
-            "alt-\\": "editor::ShowEditPrediction"
+            "alt-\\": "zed::ToggleFullScreen"
         }
     },
     {
@@ -409,7 +402,10 @@
             "find": "search::FocusSearch",
             "ctrl-f": "search::FocusSearch",
             "ctrl-h": "search::ToggleReplace",
-            "ctrl-l": "search::ToggleSelection"
+            "ctrl-l": "search::ToggleSelection",
+            "alt-i": "search::ToggleCaseSensitive",
+            "alt-u": "search::ToggleWholeWord",
+            "alt-y": "search::ToggleRegex"
         }
     },
     {
@@ -443,7 +439,14 @@
             "ctrl-shift-f": "search::FocusSearch",
             "ctrl-shift-h": "search::ToggleReplace",
             "alt-ctrl-g": "search::ToggleRegex",
-            "alt-ctrl-x": "search::ToggleRegex"
+            "alt-ctrl-x": "search::ToggleRegex",
+            "alt-y": "search::ToggleRegex"
+        }
+    },
+    {
+        "context": "ProjectSearchBar",
+        "unbind": {
+            "alt-r": "search::ToggleRegex"
         }
     },
     {
@@ -472,17 +475,24 @@
             "escape": "project_search::ToggleFocus",
             "ctrl-shift-h": "search::ToggleReplace",
             "alt-ctrl-g": "search::ToggleRegex",
-            "alt-ctrl-x": "search::ToggleRegex"
+            "alt-ctrl-x": "search::ToggleRegex",
+            "alt-y": "search::ToggleRegex"
+        }
+    },
+    {
+        "context": "ProjectSearchView",
+        "unbind": {
+            "alt-r": "search::ToggleRegex"
         }
     },
     {
         "context": "Pane",
         "bindings": {
-            "alt-1": ["pane::ActivateItem", 0],
-            "alt-2": ["pane::ActivateItem", 1],
+            "alt-1": "project_panel::Toggle",
+            "alt-2": "git_panel::ToggleFocus",
             "alt-3": ["pane::ActivateItem", 2],
             "alt-4": ["pane::ActivateItem", 3],
-            "alt-5": ["pane::ActivateItem", 4],
+            "alt-5": "debug_panel::ToggleFocus",
             "alt-6": ["pane::ActivateItem", 5],
             "alt-7": ["pane::ActivateItem", 6],
             "alt-8": ["pane::ActivateItem", 7],
@@ -493,7 +503,6 @@
             "ctrl-shift-pageup": "pane::SwapItemLeft",
             "ctrl-shift-pagedown": "pane::SwapItemRight",
             "ctrl-f4": ["pane::CloseActiveItem", { "close_pinned": false }],
-            "ctrl-w": ["pane::CloseActiveItem", { "close_pinned": false }],
             "alt-ctrl-t": ["pane::CloseOtherItems", { "close_pinned": false }],
             "alt-ctrl-shift-w": "workspace::CloseInactiveTabsAndPanes",
             "ctrl-k e": ["pane::CloseItemsToTheLeft", { "close_pinned": false }],
@@ -521,8 +530,21 @@
             "ctrl-shift-enter": "project_search::ToggleAllSearchResults",
             "ctrl-alt-shift-r": "search::ToggleRegex",
             "ctrl-alt-shift-x": "search::ToggleRegex",
-            "alt-r": "search::ToggleRegex",
-            "ctrl-k shift-enter": "pane::TogglePinTab"
+            "ctrl-k shift-enter": "pane::TogglePinTab",
+            "alt-x": "pane::CloseActiveItem",
+            "alt-shift-x": "pane::ReopenClosedItem",
+            "alt-right": "pane::ActivateNextItem",
+            "alt-left": "pane::ActivatePreviousItem",
+            "shift-alt-1": "pane::RevealInProjectPanel",
+            "alt-p": "pane::TogglePinTab",
+            "alt-s x": "workspace::CloseAllItemsAndPanes",
+            "alt-s d": "pane::CloseOtherItems",
+            "alt-[": "pane::SwapItemLeft",
+            "alt-]": "pane::SwapItemRight",
+            "shift-alt-[": ["workspace::MoveItemToPaneInDirection", { "direction": "left" }],
+            "shift-alt-]": ["workspace::MoveItemToPaneInDirection", { "direction": "right" }],
+            "ctrl-tab": "tab_switcher::Toggle",
+            "alt-y": "search::ToggleRegex"
         }
     },
     {
@@ -530,20 +552,18 @@
         "bindings": {
             "ctrl-[": "editor::Outdent",
             "ctrl-]": "editor::Indent",
-            "shift-alt-up": ["editor::AddSelectionAbove", { "skip_soft_wrap": true }],
-            "shift-alt-down": ["editor::AddSelectionBelow", { "skip_soft_wrap": true }],
+            "shift-alt-up": "workspace::ActivatePaneUp",
+            "shift-alt-down": "workspace::ActivatePaneDown",
             "ctrl-shift-k": "editor::DeleteLine",
-            "alt-up": "editor::MoveLineUp",
-            "alt-down": "editor::MoveLineDown",
             "ctrl-alt-shift-up": "editor::DuplicateLineUp",
             "ctrl-alt-shift-down": "editor::DuplicateLineDown",
-            "alt-shift-right": "editor::SelectLargerSyntaxNode",
-            "alt-shift-left": "editor::SelectSmallerSyntaxNode",
+            "alt-shift-right": "workspace::ActivatePaneRight",
+            "alt-shift-left": "workspace::ActivatePaneLeft",
             "ctrl-shift-l": "editor::SelectAllMatches",
             "ctrl-f2": "editor::SelectAllMatches",
             "ctrl-d": ["editor::SelectNext", { "replace_newest": false }],
-            "ctrl-shift-down": ["editor::SelectNext", { "replace_newest": false }],
-            "ctrl-shift-up": ["editor::SelectPrevious", { "replace_newest": false }],
+            "ctrl-shift-down": "editor::MoveLineDown",
+            "ctrl-shift-up": "editor::MoveLineUp",
             "ctrl-k ctrl-d": ["editor::SelectNext", { "replace_newest": true }],
             "ctrl-k ctrl-shift-d": ["editor::SelectPrevious", { "replace_newest": true }],
             "ctrl-k ctrl-i": "editor::Hover",
@@ -558,7 +578,7 @@
             "f12": "editor::GoToDefinition",
             "alt-f12": "editor::GoToDefinitionSplit",
             "ctrl-shift-f10": "editor::GoToDefinitionSplit",
-            "ctrl-f12": "editor::GoToTypeDefinition",
+            "ctrl-f12": "outline::Toggle",
             "shift-f12": "editor::GoToImplementation",
             "alt-ctrl-f12": "editor::GoToTypeDefinitionSplit",
             "alt-shift-f12": "editor::FindAllReferences",
@@ -582,13 +602,51 @@
             "ctrl-k ctrl-j": "editor::UnfoldAll",
             "ctrl-space": "editor::ShowCompletions",
             "ctrl-shift-space": "editor::ShowWordCompletions",
-            "ctrl-.": "editor::ToggleCodeActions",
+            "ctrl-.": ["editor::GoToDiagnostic", { "severity": "hint" }],
             "ctrl-k r": "editor::RevealInFileManager",
             "ctrl-k p": "editor::CopyPath",
             "ctrl-\\": "pane::SplitRight",
             "ctrl-alt-shift-c": "editor::DisplayCursorNames",
             "alt-.": "editor::GoToHunk",
-            "alt-,": "editor::GoToPreviousHunk"
+            "alt-,": "editor::GoToPreviousHunk",
+            "ctrl-q": "editor::Hover",
+            "ctrl-e": "editor::Hover",
+            "ctrl-p": "editor::ShowSignatureHelp",
+            "alt-d": "editor::Format",
+            "ctrl-alt-d": "editor::DuplicateLineDown",
+            "ctrl-alt-x": "editor::JoinLines",
+            "ctrl-alt-o": "editor::OrganizeImports",
+            "ctrl-alt-r": "editor::ReverseLines",
+            "ctrl-alt-t": "editor::SortLinesCaseSensitive",
+            "alt-enter": "editor::ToggleCodeActions",
+            "ctrl-j": "assistant::InlineAssist",
+            "alt-g": "editor::GoToDefinition",
+            "shift-alt-g": "editor::GoToImplementation",
+            "alt-h": "editor::FindAllReferences",
+            "ctrl-g": "go_to_line::Toggle",
+            "shift-ctrl-alt-n": "project_symbols::Toggle",
+            "ctrl-b": "editor::MoveToEnclosingBracket",
+            "shift-ctrl-numpad_subtract": "editor::FoldAll",
+            "ctrl-numpad_subtract": "editor::Fold",
+            "ctrl-alt-numpad_subtract": "editor::FoldRecursive",
+            "shift-ctrl-numpad_add": "editor::UnfoldAll",
+            "ctrl-numpad_add": "editor::UnfoldLines",
+            "ctrl-alt-numpad_add": "editor::UnfoldRecursive",
+            "ctrl-w": "editor::SelectLargerSyntaxNode",
+            "shift-ctrl-w": "editor::SelectSmallerSyntaxNode",
+            "ctrl-alt-up": "editor::AddSelectionAbove",
+            "ctrl-alt-down": "editor::AddSelectionBelow",
+            "alt-shift-pagedown": ["editor::SelectNext", { "replace_newest": false }],
+            "alt-shift-pageup": "editor::UndoSelection",
+            "alt-shift-end": "editor::SelectAllMatches",
+            "ctrl-alt-left": "pane::GoBack",
+            "ctrl-alt-right": "pane::GoForward",
+            "ctrl-,": ["editor::GoToPreviousDiagnostic", { "severity": "hint" }],
+            "shift-ctrl-.": "editor::GoToDiagnostic",
+            "shift-ctrl-,": "editor::GoToPreviousDiagnostic",
+            "alt-shift-.": "editor::GoToNextChange",
+            "alt-shift-,": "editor::GoToPreviousChange",
+            "ctrl-alt-z": "git::Restore"
         }
     },
     {
@@ -637,11 +695,11 @@
             "ctrl-shift-n": "workspace::NewWindow",
             "ctrl-`": "terminal_panel::Toggle",
             "f10": ["app_menu::OpenApplicationMenu", "Zed"],
-            "alt-1": ["workspace::ActivatePane", 0],
-            "alt-2": ["workspace::ActivatePane", 1],
+            "alt-1": "project_panel::Toggle",
+            "alt-2": "git_panel::ToggleFocus",
             "alt-3": ["workspace::ActivatePane", 2],
             "alt-4": ["workspace::ActivatePane", 3],
-            "alt-5": ["workspace::ActivatePane", 4],
+            "alt-5": "debug_panel::ToggleFocus",
             "alt-6": ["workspace::ActivatePane", 5],
             "alt-7": ["workspace::ActivatePane", 6],
             "alt-8": ["workspace::ActivatePane", 7],
@@ -694,14 +752,52 @@
             "ctrl-k shift-up": "workspace::SwapPaneUp",
             "ctrl-k shift-down": "workspace::SwapPaneDown",
             "ctrl-shift-x": "zed::Extensions",
-            "ctrl-shift-r": ["task::Rerun", { "reevaluate_context": false }],
+            "ctrl-shift-r": ["pane::DeploySearch", { "replace_enabled": true }],
             "ctrl-alt-r": "task::Rerun",
-            "alt-t": "task::Rerun",
+            "alt-t": "project_symbols::Toggle",
             "alt-shift-t": "task::Spawn",
             "alt-shift-r": ["task::Spawn", { "reveal_target": "center" }],
             "f5": "debugger::Rerun",
             "ctrl-f4": "workspace::CloseActiveDock",
-            "ctrl-w": "workspace::CloseActiveDock"
+            "ctrl-w": "workspace::CloseActiveDock",
+            "shift-escape": "workspace::ToggleLeftDock",
+            "ctrl-0": "zed::ResetBufferFontSize",
+            "alt-a": "command_palette::Toggle",
+            "shift shift": "command_palette::Toggle",
+            "alt-f": "file_finder::Toggle",
+            "alt-w": "projects::OpenRecent",
+            "alt-/": "zed::Extensions",
+            "alt-'": "zed::OpenSettings",
+            "shift-alt-'": "zed::OpenSettingsFile",
+            "shift-alt-;": "zed::OpenKeymapFile",
+            "alt-;": "zed::OpenKeymap",
+            "shift-ctrl-f": "pane::DeploySearch",
+            "shift-alt-e": "workspace::ToggleAllDocks",
+            "alt-r r": "task::Rerun",
+            "alt-r shift-r": "task::Spawn",
+            "alt-r d": "debugger::Start",
+            "alt-c a": "git_panel::ToggleFocus",
+            "alt-c b": "git::Blame",
+            "alt-c c": "git::Commit",
+            "alt-c p": "git::Pull",
+            "alt-c d": "git::Diff",
+            "alt-c u": "git::Push",
+            "alt-c f": "git::Fetch",
+            "alt-c z": "git::Restore",
+            "alt-s f": "workspace::ToggleZoom",
+            "alt-s alt-right": "pane::SplitRight",
+            "alt-s alt-down": "pane::SplitDown"
+        }
+    },
+    {
+        "context": "Workspace || Pane || Editor || Dock",
+        "bindings": {
+            "shift-alt-right": "workspace::ActivatePaneRight",
+            "shift-alt-left": "workspace::ActivatePaneLeft",
+            "shift-alt-up": "workspace::ActivatePaneUp",
+            "shift-alt-down": "workspace::ActivatePaneDown",
+            "ctrl-alt-left": "pane::GoBack",
+            "ctrl-alt-right": "pane::GoForward"
         }
     },
     {
@@ -735,12 +831,6 @@
         }
     },
     {
-        "context": "Workspace && debugger_running",
-        "bindings": {
-            "f5": null
-        }
-    },
-    {
         "context": "Workspace && debugger_stopped",
         "bindings": {
             "f5": "debugger::Continue"
@@ -763,9 +853,9 @@
             "ctrl-alt-backspace": "editor::DeleteToPreviousSubwordStart",
             "ctrl-alt-h": "editor::DeleteToPreviousSubwordStart",
             "ctrl-alt-delete": "editor::DeleteToNextSubwordEnd",
-            "ctrl-alt-d": "editor::DeleteToNextSubwordEnd",
-            "ctrl-alt-left": "editor::MoveToPreviousSubwordStart",
-            "ctrl-alt-right": "editor::MoveToNextSubwordEnd",
+            "ctrl-alt-d": "editor::DuplicateLineDown",
+            "ctrl-alt-left": "pane::GoBack",
+            "ctrl-alt-right": "pane::GoForward",
             "ctrl-alt-shift-left": "editor::SelectToPreviousSubwordStart",
             "ctrl-alt-shift-b": "editor::SelectToPreviousSubwordStart",
             "ctrl-alt-shift-right": "editor::SelectToNextSubwordEnd",
@@ -814,8 +904,7 @@
         "bindings": {
             "alt-tab": "editor::AcceptEditPrediction",
             "alt-l": "editor::AcceptEditPrediction",
-            "alt-k": "editor::AcceptNextWordEditPrediction",
-            "alt-j": "editor::AcceptNextLineEditPrediction"
+            "alt-k": "editor::AcceptNextWordEditPrediction"
         }
     },
     {
@@ -863,10 +952,10 @@
     {
         "context": "!AcpThread > Editor && mode == full",
         "bindings": {
-            "alt-enter": "editor::OpenExcerpts",
+            "alt-enter": "editor::ToggleCodeActions",
             "shift-enter": "editor::ExpandExcerpts",
             "ctrl-alt-enter": "editor::OpenExcerptsSplit",
-            "ctrl-shift-e": "pane::RevealInProjectPanel",
+            "ctrl-shift-e": "editor::GoToTypeDefinition",
             "ctrl-f8": "editor::GoToHunk",
             "ctrl-shift-f8": "editor::GoToPreviousHunk",
             "ctrl-enter": "assistant::InlineAssist",
@@ -961,7 +1050,8 @@
     {
         "context": "ProjectPanel && not_editing",
         "bindings": {
-            "space": "project_panel::Open"
+            "space": "project_panel::Open",
+            "enter": "project_panel::Open"
         }
     },
     {
@@ -1488,7 +1578,7 @@
     {
         "context": "RunModal",
         "bindings": {
-            "alt-1": "new_process_modal::ActivateTaskTab",
+            "alt-1": "project_panel::Toggle",
             "alt-2": "new_process_modal::ActivateDebugTab",
             "alt-3": "new_process_modal::ActivateAttachTab",
             "alt-4": "new_process_modal::ActivateLaunchTab"
@@ -1497,7 +1587,7 @@
     {
         "context": "GitPicker",
         "bindings": {
-            "alt-1": "git_picker::ActivateBranchesTab",
+            "alt-1": "project_panel::Toggle",
             "alt-2": "git_picker::ActivateStashTab"
         }
     },
@@ -1507,281 +1597,6 @@
         "bindings": {
             "ctrl-shift-backspace": "worktree_picker::DeleteWorktree"
         }
-    },
+    }
 
-    // ============================================================
-    // USER OVERRIDES
-    // (appended after defaults; equal-specificity → last-in-file wins)
-    // ============================================================
-
-    // --- Global: null ctrl-q (default: zed::Quit) and f11 ---
-    // ctrl-q is rebound to editor::Hover in the Editor block below
-    // alt-\ is used for fullscreen instead of f11
-    {
-        "bindings": {
-            "ctrl-q": null,
-            "f11": null,
-            "alt-\\": "zed::ToggleFullScreen"
-        }
-    },
-
-    // --- Null edit prediction alt-[ / alt-] to allow pane tab swap ---
-    {
-        "context": "Editor && mode == full && edit_prediction",
-        "bindings": {
-            "alt-[": null,
-            "alt-]": null
-        }
-    },
-
-    // --- Override !AcpThread > Editor && mode == full (more specific than Editor) ---
-    {
-        "context": "!AcpThread > Editor && mode == full",
-        "bindings": {
-            "alt-enter": "editor::ToggleCodeActions",
-            "ctrl-shift-e": "editor::GoToTypeDefinition"
-        }
-    },
-
-    // --- Cross-pane navigation (all relevant top-level contexts) ---
-    {
-        "context": "Workspace || Pane || Editor || Dock",
-        "bindings": {
-            "shift-alt-right": "workspace::ActivatePaneRight",
-            "shift-alt-left": "workspace::ActivatePaneLeft",
-            "shift-alt-up": "workspace::ActivatePaneUp",
-            "shift-alt-down": "workspace::ActivatePaneDown",
-            "ctrl-alt-left": "pane::GoBack",
-            "ctrl-alt-right": "pane::GoForward"
-        }
-    },
-
-    // --- Workspace overrides ---
-    {
-        "context": "Workspace",
-        "bindings": {
-            // Command palette
-            "alt-a": "command_palette::Toggle",
-            "shift shift": "command_palette::Toggle",
-            // File finder
-            "alt-f": "file_finder::Toggle",
-            // Project symbols (default alt-t = task::Rerun)
-            "alt-t": "project_symbols::Toggle",
-            // Recent projects
-            "alt-w": "projects::OpenRecent",
-            // Extensions
-            "alt-/": "zed::Extensions",
-            // Settings
-            "alt-'": "zed::OpenSettings",
-            "shift-alt-'": "zed::OpenSettingsFile",
-            "shift-alt-;": "zed::OpenKeymapFile",
-            "alt-;": "zed::OpenKeymap",
-            // Panel toggles (override default pane-index ActivatePane bindings)
-            "alt-1": "project_panel::Toggle",
-            "alt-2": "git_panel::ToggleFocus",
-            "alt-5": "debug_panel::ToggleFocus",
-            // Search (shift-ctrl-r default = task::Rerun)
-            "shift-ctrl-f": "pane::DeploySearch",
-            "shift-ctrl-r": ["pane::DeploySearch", { "replace_enabled": true }],
-            // Dock toggles (shift-escape default = workspace::ToggleZoom)
-            "shift-escape": "workspace::ToggleLeftDock",
-            "shift-alt-e": "workspace::ToggleAllDocks", // Closes all side panels
-            // Font size
-            "ctrl-0": "zed::ResetBufferFontSize",
-            // Tasks
-            "alt-r r": "task::Rerun",
-            "alt-r shift-r": "task::Spawn",
-            "alt-r d": "debugger::Start",
-            // Git operations
-            "alt-c a": "git_panel::ToggleFocus",
-            "alt-c b": "git::Blame",
-            "alt-c c": "git::Commit",
-            "alt-c p": "git::Pull",
-            "alt-c d": "git::Diff",
-            "alt-c u": "git::Push",
-            "alt-c f": "git::Fetch",
-            "alt-c z": "git::Restore",
-            // Window/pane management
-            "alt-s f": "workspace::ToggleZoom",
-            "alt-s alt-right": "pane::SplitRight",
-            "alt-s alt-down": "pane::SplitDown"
-        }
-    },
-
-    // --- Pane overrides (placed BEFORE Editor so Editor block wins over Pane) ---
-    {
-        "context": "Pane",
-        "bindings": {
-            // Close/reopen
-            "alt-x": "pane::CloseActiveItem",
-            "alt-shift-x": "pane::ReopenClosedItem",
-            // Tab navigation
-            "alt-right": "pane::ActivateNextItem",
-            "alt-left": "pane::ActivatePreviousItem",
-            // Reveal in project panel
-            "shift-alt-1": "pane::RevealInProjectPanel",
-            // Pin tab
-            "alt-p": "pane::TogglePinTab",
-            // Close operations
-            "alt-s x": "workspace::CloseAllItemsAndPanes",
-            "alt-s d": "pane::CloseOtherItems",
-            // Tab reordering
-            "alt-[": "pane::SwapItemLeft",
-            "alt-]": "pane::SwapItemRight",
-            "shift-alt-[": ["workspace::MoveItemToPaneInDirection", { "direction": "left" }],
-            "shift-alt-]": ["workspace::MoveItemToPaneInDirection", { "direction": "right" }],
-            // Tab switcher
-            "ctrl-tab": "tab_switcher::Toggle",
-            // Null ctrl-w in Pane (default: CloseActiveItem); Editor block below wins in Editor
-            "ctrl-w": null,
-            // Override pane item index bindings
-            "alt-1": "project_panel::Toggle",
-            "alt-2": "git_panel::ToggleFocus",
-            "alt-5": "debug_panel::ToggleFocus",
-            // Rebind regex toggle from alt-r to alt-y; null alt-r to allow chord in Workspace
-            "alt-y": "search::ToggleRegex",
-            "alt-r": null
-        }
-    },
-
-    // --- Editor overrides (after Pane block, so Editor wins over Pane for same-specificity keys) ---
-    {
-        "context": "Editor",
-        "bindings": {
-            // Hover (ctrl-q rebound after global null; ctrl-e mirrors Hover)
-            "ctrl-q": "editor::Hover",
-            "ctrl-e": "editor::Hover",
-            // Signature help (ctrl-p, default in Editor = menu::SelectPrevious globally)
-            "ctrl-p": "editor::ShowSignatureHelp",
-            // Format
-            "alt-d": "editor::Format",
-            // Delete line (default ctrl-y = Redo)
-            "ctrl-y": "editor::DeleteLine",
-            // Duplicate line down (default ctrl-alt-d = DeleteToNextSubwordEnd)
-            "ctrl-alt-d": "editor::DuplicateLineDown",
-            // Join lines
-            "ctrl-alt-x": "editor::JoinLines",
-            // Organize imports
-            "ctrl-alt-o": "editor::OrganizeImports",
-            // Reverse lines
-            "ctrl-alt-r": "editor::ReverseLines",
-            // Sort lines
-            "ctrl-alt-t": "editor::SortLinesCaseSensitive",
-            // Move lines (default ctrl-shift-up/down = SelectPrevious/SelectNext)
-            "ctrl-shift-up": "editor::MoveLineUp",
-            "ctrl-shift-down": "editor::MoveLineDown",
-            // Code actions (less-specific fallback; !AcpThread > Editor && mode == full is overridden above)
-            "alt-enter": "editor::ToggleCodeActions",
-            // Inline assist
-            "ctrl-j": "assistant::InlineAssist",
-            // Navigation
-            "alt-g": "editor::GoToDefinition",
-            "shift-alt-g": "editor::GoToImplementation",
-            "alt-h": "editor::FindAllReferences",
-            "ctrl-g": "go_to_line::Toggle",
-            // Outline toggle (default ctrl-f12 = GoToTypeDefinition)
-            "ctrl-f12": "outline::Toggle",
-            // All project symbols
-            "shift-ctrl-alt-n": "project_symbols::Toggle",
-            // Enclosing bracket
-            "ctrl-b": "editor::MoveToEnclosingBracket",
-            // Numpad folding
-            "shift-ctrl-numpad_subtract": "editor::FoldAll",
-            "ctrl-numpad_subtract": "editor::Fold",
-            "ctrl-alt-numpad_subtract": "editor::FoldRecursive",
-            "shift-ctrl-numpad_add": "editor::UnfoldAll",
-            "ctrl-numpad_add": "editor::UnfoldLines",
-            "ctrl-alt-numpad_add": "editor::UnfoldRecursive",
-            // Syntax node selection (ctrl-w in Pane = null; here in Editor it's select)
-            "ctrl-w": "editor::SelectLargerSyntaxNode",
-            "shift-ctrl-w": "editor::SelectSmallerSyntaxNode",
-            // Multi-cursor
-            "ctrl-alt-up": "editor::AddSelectionAbove",
-            "ctrl-alt-down": "editor::AddSelectionBelow",
-            // Selection
-            "alt-shift-pagedown": ["editor::SelectNext", { "replace_newest": false }],
-            "alt-shift-pageup": "editor::UndoSelection",
-            "alt-shift-end": "editor::SelectAllMatches",
-            // Pane navigation (override subword movement; same as cross-pane block but explicit for Editor)
-            "ctrl-alt-left": "pane::GoBack",
-            "ctrl-alt-right": "pane::GoForward",
-            // Pane navigation (override default Editor AddSelection bindings for shift-alt-*)
-            "shift-alt-up": "workspace::ActivatePaneUp",
-            "shift-alt-down": "workspace::ActivatePaneDown",
-            "shift-alt-right": "workspace::ActivatePaneRight",
-            "shift-alt-left": "workspace::ActivatePaneLeft",
-            // Disable alt-up/alt-down (use ctrl-shift-up/down for line movement instead)
-            "alt-down": null,
-            "alt-up": null,
-            // Diagnostics (ctrl-. default = ToggleCodeActions)
-            "ctrl-.": ["editor::GoToDiagnostic", { "severity": "hint" }],
-            "ctrl-,": ["editor::GoToPreviousDiagnostic", { "severity": "hint" }],
-            "shift-ctrl-.": "editor::GoToDiagnostic",
-            "shift-ctrl-,": "editor::GoToPreviousDiagnostic",
-            // Git changes
-            "alt-shift-.": "editor::GoToNextChange",
-            "alt-shift-,": "editor::GoToPreviousChange",
-            // Git restore (overrides global default edit_prediction::RatePredictions)
-            "ctrl-alt-z": "git::Restore"
-        }
-    },
-
-    // --- BufferSearchBar overrides ---
-    {
-        "context": "BufferSearchBar",
-        "bindings": {
-            "enter": "search::SelectNextMatch",
-            "shift-enter": "search::SelectPreviousMatch",
-            "alt-i": "search::ToggleCaseSensitive",
-            "alt-u": "search::ToggleWholeWord",
-            "alt-y": "search::ToggleRegex"
-        }
-    },
-
-    // --- ProjectSearch regex rebind (alt-r → alt-y) ---
-    {
-        "context": "ProjectSearchView",
-        "bindings": {
-            "alt-y": "search::ToggleRegex"
-        }
-    },
-    {
-        "context": "ProjectSearchView",
-        "unbind": {
-            "alt-r": "search::ToggleRegex"
-        }
-    },
-    {
-        "context": "ProjectSearchBar",
-        "bindings": {
-            "alt-y": "search::ToggleRegex"
-        }
-    },
-    {
-        "context": "ProjectSearchBar",
-        "unbind": {
-            "alt-r": "search::ToggleRegex"
-        }
-    },
-
-    // --- Modal alt-1 overrides ---
-    { "context": "GitPicker", "bindings": { "alt-1": "project_panel::Toggle" } },
-    { "context": "RunModal", "bindings": { "alt-1": "project_panel::Toggle" } },
-
-    // --- Editor fullscreen: override ShowEditPrediction with ToggleFullScreen ---
-    {
-        "context": "(Editor && !edit_prediction)",
-        "bindings": { "alt-\\": "zed::ToggleFullScreen" }
-    },
-
-    // --- Project panel: open on Enter ---
-    {
-        "context": "(ProjectPanel && not_editing)",
-        "bindings": { "enter": "project_panel::Open" }
-    },
-
-    // --- Agent toggle globally; null in edit prediction to avoid conflict ---
-    { "bindings": { "alt-j": "agent::Toggle" } },
-    { "context": "(Editor && edit_prediction)", "bindings": { "alt-j": null } },
-    { "context": "(Editor && edit_prediction_conflict)", "bindings": { "alt-j": null } }
 ]
