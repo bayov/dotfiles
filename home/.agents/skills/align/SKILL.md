@@ -1,6 +1,6 @@
 ---
 name: align
-description: Align with user's intent and goals.
+description: Align with user's intent and goals
 disable-model-invocation: true
 ---
 
