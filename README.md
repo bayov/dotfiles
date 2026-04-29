@@ -27,7 +27,6 @@ Structure
 | `pybayov/` | Python utility package used by shell aliases and scripts               |
 | `ahk/`     | AutoHotkey 2.0 scripts for Windows automation                          |
 | `config/`  | Misc config files (commit template, AI model list, sandbox Dockerfile) |
-| `notes/`   | Personal notes                                                         |
 
 Development
 -----------

@@ -4,7 +4,7 @@ function fzf_configure_bindings --description "Installs the default key bindings
     # no need to install bindings if not in interactive mode or running tests
     status is-interactive || test "$CI" = true; or return
 
-    set -f options_spec h/help 'directory=?' 'jj_log=?' 'jj_status=?' 'history=?' 'processes=?' 'variables=?' 'projects=?' 'zellij_paths=?' 'zellij_urls=?' 'notes=?'
+    set -f options_spec h/help 'directory=?' 'jj_log=?' 'jj_status=?' 'history=?' 'processes=?' 'variables=?' 'projects=?' 'zellij_paths=?' 'zellij_urls=?'
     argparse --max-args=0 --ignore-unknown $options_spec -- $argv 2>/dev/null
     if test $status -ne 0
         echo "Invalid option or a positional argument was provided." >&2
@@ -15,7 +15,7 @@ function fzf_configure_bindings --description "Installs the default key bindings
         return
     else
         # Initialize with default key sequences and then override or disable them based on flags
-        # index 1 = directory, 2 = jj_log, 3 = jj_status, 4 = history, 5 = processes, 6 = variables, 7 = projects, 8 = zellij_paths, 9 = zellij_urls, 10 = notes
+        # index 1 = directory, 2 = jj_log, 3 = jj_status, 4 = history, 5 = processes, 6 = variables, 7 = projects, 8 = zellij_paths, 9 = zellij_urls
         set -f key_sequences \ef \e2 \ed \cr \e\cp \e\ce \ew \eF \eu \en # \c = control, \e = alt
         set --query _flag_directory && set key_sequences[1] "$_flag_directory"
         set --query _flag_jj_log && set key_sequences[2] "$_flag_jj_log"
@@ -26,7 +26,6 @@ function fzf_configure_bindings --description "Installs the default key bindings
         set --query _flag_projects && set key_sequences[7] "$_flag_projects"
         set --query _flag_zellij_paths && set key_sequences[8] "$_flag_zellij_paths"
         set --query _flag_zellij_urls && set key_sequences[9] "$_flag_zellij_urls"
-        set --query _flag_notes && set key_sequences[10] "$_flag_notes"
 
         # If fzf bindings already exists, uninstall it first for a clean slate
         if functions --query _fzf_uninstall_bindings
@@ -43,7 +42,6 @@ function fzf_configure_bindings --description "Installs the default key bindings
             test -n "$key_sequences[7]" && bind --mode $mode $key_sequences[7] _fzf_search_projects
             test -n "$key_sequences[8]" && bind --mode $mode $key_sequences[8] _fzf_search_zellij_paths
             test -n "$key_sequences[9]" && bind --mode $mode $key_sequences[9] _fzf_search_zellij_urls
-            test -n "$key_sequences[10]" && bind --mode $mode $key_sequences[10] _fzf_search_notes
         end
 
         function _fzf_uninstall_bindings --inherit-variable key_sequences
