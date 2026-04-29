@@ -10,6 +10,7 @@ exts = [
 ]
 globs = [
     "**/.gitignore",
+    "**/.gitattributes",
     "**/.python-version",
     "**/.gitconfig",
     "**/.bayov-personal-project",
