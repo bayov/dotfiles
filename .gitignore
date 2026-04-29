@@ -1,9 +1,6 @@
 # Jujutsu VCS
 .jj
 
-# Dotter cache
-.dotter
-
 # Vim
 *~
 *.swp
@@ -13,11 +10,6 @@
 *.bk
 *.bak
 *.old
-
-# dotter
-.dotter/local.toml
-.dotter/cache.toml
-.dotter/cache
 
 # link.py state (machine-local)
 .links.toml
