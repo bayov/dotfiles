@@ -1281,31 +1281,120 @@ Phase 3 — integration deferred to Phase 5+ skills and Phase 7 chat adapters)\
 Phase 4: Integrations (Gmail → Google Calendar → Discord)
 ---------------------------------------------------------
 
-**What to build:** Python modules for each platform using the unified registry +
-CLI pattern. Claude never sees API tokens — Python handles auth and passes only
-data.
+**What to build:** Python modules for each platform exposed via a unified
+`query.py` CLI. Claude never sees API tokens — Python handles auth and passes
+only typed data. Heartbeat ingestion is **not** part of Phase 4 (Phase 6) and
+the real `sanitize_external_text` is **not** part of Phase 4 (Phase 8 — Phase 4
+ships a no-op stub).
 
 **File structure:**
 
 ```
 .agents/scripts/integrations/
-├── registry.py           # Which integrations are enabled
-├── query.py              # Unified CLI: query.py gmail list
-├── shared_auth.py        # Shared Google OAuth2 token (Gmail + Calendar)
+├── registry.py              # Reads [integrations] enabled from config.toml
+├── query.py                 # Unified CLI: query.py gmail list [--format=text|json]
+├── shared_auth.py           # Google OAuth2 (Gmail + Calendar) + retry helper
+├── secrets.py               # Loads ~/.local/share/second-brain/<instance>/secrets.toml
+├── errors.py                # IntegrationAuthError, IntegrationTransientError, MessageTooLong
+├── sanitize.py              # Phase 4 no-op stub; Phase 8 fills in
 ├── gmail.py
 ├── calendar.py
-├── discord_client.py
+├── discord_client.py        # REST-only via httpx (no discord.py in Phase 4)
 └── integration_template.py
 ```
 
-**`.env` (never commit this):**
+**Dependencies added to `~/dotfiles/second-brain/pyproject.toml`:**
 
 ```
-GOOGLE_CREDENTIALS_PATH=~/.config/second-brain/credentials.json
-GOOGLE_TOKEN_PATH=~/.config/second-brain/token.json
-DISCORD_BOT_TOKEN=...
-DISCORD_USER_ID=...
+google-auth
+google-auth-oauthlib
+google-api-python-client
+httpx
+tenacity
+# tomllib is stdlib (Python 3.11+) — no dependency needed.
 ```
+
+`discord.py` is **not** added in Phase 4; it enters in Phase 7 when an inbound
+gateway connection is needed.
+
+---
+
+### Configuration
+
+**Repo-level (checked in):** `~/dotfiles/second-brain/config.toml` gains:
+
+```toml
+[integrations]
+# User opts in explicitly. Missing creds for an enabled integration → fail-fast.
+enabled = ["gmail", "calendar", "discord"]
+
+[integrations.gmail]
+# Default filter combines Gmail's own importance signal + the user's stars,
+# narrowed to the Primary inbox to drop Promotions/Social/Updates/Forums.
+filter = "(is:important OR is:starred) category:primary is:unread"
+max_results = 20
+
+[integrations.calendar]
+# "all" expands to calendarList().list() minus declined calendars.
+calendar_ids = ["all"]
+days_ahead = 7
+# Per-user vocabulary — Hebrew speakers may want "מועד אחרון", etc.
+deadline_keywords = ["deadline", "due", "review", "launch", "release"]
+```
+
+**Machine-local (never in VCS):**
+`~/.local/share/second-brain/<instance>/secrets.toml`. TOML, not env. Loaded via
+stdlib `tomllib` at entrypoints (`query.py`, `shared_auth.py` standalone, the
+Phase 6 heartbeat). Library modules read from a process-level `Secrets`
+dataclass — no side-effecting imports. The repo ships `secrets.example.toml`.
+
+```toml
+[google]
+credentials_path = "~/.local/share/second-brain/<instance>/credentials.json"
+token_path = "~/.local/share/second-brain/<instance>/token.json"
+
+[discord]
+bot_token = "..."
+user_id = "..."
+```
+
+Phase 9's systemd unit invokes the Python entrypoint directly; the entrypoint
+reads `secrets.toml` itself. No `EnvironmentFile=`, no env-format duplication.
+
+---
+
+### Error model — `errors.py`
+
+```python
+class IntegrationError(Exception): ...
+
+
+class IntegrationAuthError(IntegrationError):
+    """Permanent auth failure: RefreshError, 401, 403. Surface to user."""
+
+
+class IntegrationTransientError(IntegrationError):
+    """Retryable failure that exhausted retries: 429, 5xx, network."""
+
+
+class MessageTooLong(IntegrationError):
+    def __init__(self, length: int, limit: int):
+        self.length, self.limit = length, limit
+        super().__init__(f"message length {length} exceeds {limit}-char cap")
+```
+
+`shared_auth.py` exposes a `_retry` helper (used by every integration call):
+`tenacity` with 3 tries, exponential backoff (1s/2s/4s), retrying only on
+`HttpError` 429/5xx and `httpx.TransportError`. On final failure raises
+`IntegrationTransientError`. Auth-class failures
+(`google.auth.exceptions.
+RefreshError`, `HttpError` 401/403, Discord 401) are
+mapped to `IntegrationAuthError` — distinct so the heartbeat (Phase 6) can route
+them differently: auth failures → Discord notification to the user; transient
+failures → silent skip + `warn!` log.
+
+Errors are isolated **per integration**: one broken integration does not crash
+the heartbeat — it returns an empty list for that cycle.
 
 ---
 
@@ -1313,55 +1402,107 @@ DISCORD_USER_ID=...
 
 **Auth setup:**
 
-1. Google Cloud Console → Create project → Enable Gmail API
-2. OAuth consent screen → Add your Gmail address as test user (keep in "Testing"
-   mode)
-3. Create OAuth 2.0 credentials → Desktop app → Download `credentials.json`
-4. On first run:
-   `uv run --project ~/dotfiles/second-brain python shared_auth.py` opens
-   browser → authenticate → saves `token.json`
+1. Google Cloud Console → Create project → Enable Gmail API.
+2. OAuth consent screen → Add your Gmail address as test user.
+3. **Move the consent screen to "In production"** as soon as the app verifies
+   itself — in "Testing" mode Google expires refresh tokens after 7 days, which
+   will silently break the heartbeat every week. (If you keep it in Testing,
+   accept the weekly re-auth.)
+4. Create OAuth 2.0 credentials → Desktop app → set the authorized redirect URI
+   to **exactly** `http://localhost:8765/` → download `credentials.json` to
+   `~/.local/share/second-brain/<instance>/credentials.json`.
+5. On first run:
+   `uv run --project ~/dotfiles/second-brain python shared_auth.py` opens a
+   browser via `InstalledAppFlow.run_local_server(port=8765)` → authenticate →
+   `token.json` is saved next to `credentials.json`.
+
+   **WSL2 note:** Win11 + WSLg forwards `localhost` automatically. On older
+   Windows builds, run once:
+   `netsh interface portproxy add v4tov4 listenport=8765 listenaddress=127.0.0.1 connectport=8765 connectaddress=$(wsl hostname -I)`.
+   Mac/Linux: works as-is.
 
 **Required scopes:**
 
 - `https://www.googleapis.com/auth/gmail.readonly`
-- `https://www.googleapis.com/auth/gmail.compose` (only if you want agent to
+- `https://www.googleapis.com/auth/gmail.compose` (only if the agent should
   create Gmail drafts)
 
-**`gmail.py` — key functions:**
+**`gmail.py` — unit is the thread, not the message:**
 
 ```python
+from dataclasses import dataclass
+from datetime import datetime
 from googleapiclient.discovery import build
-from shared_auth import get_google_credentials
+
+from shared_auth import get_google_credentials, retry
+from sanitize import sanitize_external_text
 
 
-def list_important_unread(max_results=20) -> list[EmailSummary]:
+@dataclass
+class EmailSummary:
+    """One thread, identified by (thread_id, latest_message_id) for idempotency."""
+
+    thread_id: str
+    latest_message_id: str
+    source_id: str  # f"{thread_id}:{latest_message_id}" — stable + version-bumps when thread grows
+    subject: str
+    sender: str
+    snippet: str
+    received_at: datetime
+
+
+@dataclass
+class ThreadContext:
+    thread_id: str
+    messages: list["EmailSummary"]
+    full_bodies: list[str]  # already sanitized
+
+
+def list_important_unread(
+    filter_query: str, max_results: int = 20
+) -> list[EmailSummary]:
+    """Returns one EmailSummary per matching thread.
+
+    `filter_query` comes from config.toml [integrations.gmail].filter. Default:
+    "(is:important OR is:starred) category:primary is:unread".
+    """
     service = build("gmail", "v1", credentials=get_google_credentials())
-    result = (
-        service.users()
-        .messages()
-        .list(
-            userId="me",
-            q="is:unread in:inbox -from:noreply -from:no-reply",
-            maxResults=max_results,
+    threads = retry(
+        lambda: (
+            service.users()
+            .threads()
+            .list(
+                userId="me",
+                q=filter_query,
+                maxResults=max_results,
+            )
+            .execute()
         )
-        .execute()
-    )
+    ).get("threads", [])
+    # ... fetch latest message per thread, build EmailSummary list
     ...
 
 
 def get_thread(thread_id: str) -> ThreadContext:
-    # Returns full thread for action generation context
+    """Full thread for action-generation context."""
     ...
 ```
 
-**Rate limits:** Gmail API: 250 quota units/second, 1 billion/day. At 20
-messages/heartbeat every 30 min: ~200 units/hour — well within limits.
+**Why per-thread, versioned `source_id`:** a thread is the right cognitive unit
+("one back-and-forth to act on"). Combining `thread_id` with `latest_message_id`
+keeps the event log idempotent on repeat ingestion _and_ re-surfaces the thread
+when it grows. Cheap — `threads().list()` returns the current `historyId` and
+last-message id without an extra round-trip.
 
-**`query.py` subcommand:**
+**Rate limits:** Gmail API: 250 quota units/second, 1 billion/day. At 20
+threads/heartbeat every 30 min: ~200 units/hour — well within limits.
+
+**`query.py` subcommands:**
 
 ```bash
-python query.py gmail list              # Unread important emails
-python query.py gmail thread <id>       # Full thread for context
+python query.py gmail list                         # Unread important threads
+python query.py gmail thread <thread_id>           # Full thread for context
+python query.py gmail list --format=json           # For programmatic use / tests
 ```
 
 ---
@@ -1375,87 +1516,137 @@ python query.py gmail thread <id>       # Full thread for context
 **`calendar.py` — key functions:**
 
 ```python
-from googleapiclient.discovery import build
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from googleapiclient.discovery import build
+
+from shared_auth import get_google_credentials, retry
 
 
-def list_upcoming_events(days_ahead=7, max_results=20) -> list[Event]:
-    service = build("calendar", "v3", credentials=get_google_credentials())
-    now = datetime.now(timezone.utc)
-    result = (
-        service.events()
-        .list(
-            calendarId="primary",
-            timeMin=now.isoformat(),
-            timeMax=(now + timedelta(days=days_ahead)).isoformat(),
-            maxResults=max_results,
-            singleEvents=True,
-            orderBy="startTime",
-        )
-        .execute()
-    )
-    return result.get("items", [])
+@dataclass
+class Event:
+    id: str
+    calendar_id: str
+    summary: str
+    start: datetime  # UTC
+    end: datetime  # UTC
+    location: str | None
+    attendees: list[str]
+    url: str
 
 
-def list_events_with_deadlines() -> list[Event]:
-    # Filter events whose summary contains: deadline, due, review, launch, release
+def list_upcoming_events(
+    calendar_ids: list[str], days_ahead: int, max_results: int = 20
+) -> list[Event]:
+    """If calendar_ids == ["all"], expands to calendarList().list() minus declined."""
+    ...
+
+
+def list_events_with_deadlines(
+    calendar_ids: list[str], deadline_keywords: list[str]
+) -> list[Event]:
+    """Events whose summary contains any keyword (case-insensitive)."""
     ...
 ```
 
 **Israel timezone note:** Always store and compare times in UTC. Display in
 `Asia/Jerusalem` using `zoneinfo` (Python 3.9+).
 
-**`query.py` subcommand:**
+**`query.py` subcommands:**
 
 ```bash
-python query.py calendar upcoming       # Next 7 days
-python query.py calendar deadlines      # Events with deadline keywords
+python query.py calendar upcoming        # Next [days_ahead] days, all enabled calendars
+python query.py calendar deadlines       # Events matching deadline_keywords
 ```
 
 ---
 
-### Integration 3: Discord
+### Integration 3: Discord (outbound only — Phase 7 owns inbound)
 
 **Auth setup:**
 
-1. Discord Developer Portal → New Application → Bot → Enable bot
-2. Bot permissions: Read Messages, Send Messages (DMs only)
-3. Copy Bot Token → add to `.env` as `DISCORD_BOT_TOKEN`
-4. Enable "Message Content Intent" in Portal → Bot → Privileged Gateway Intents
-5. Find your Discord user ID: Settings → Advanced → Developer Mode → right-click
-   name → Copy ID
+1. Discord Developer Portal → New Application → Bot → Enable bot.
+2. Permissions: Send Messages (DMs only). Phase 4 is outbound-only — **no
+   "Message Content Intent" needed**, no privileged intents at all.
+3. Copy Bot Token → `secrets.toml [discord] bot_token`.
+4. Find your Discord user ID: Settings → Advanced → Developer Mode → right-click
+   your name → Copy ID → `secrets.toml [discord] user_id`.
 
-**Library:** add `discord.py` to `~/dotfiles/second-brain/pyproject.toml` and
-`uv sync`.
-
-**`discord_client.py` — notification only (Advisor mode):**
+**No `discord.py` dependency.** Outbound DMs are two REST calls:
 
 ```python
-import discord, asyncio, os
+# discord_client.py — REST-only via httpx
+import httpx
+
+from errors import IntegrationAuthError, MessageTooLong
+from secrets import load_secrets
+from shared_auth import retry
 
 
-async def send_dm_notification(message: str):
-    intents = discord.Intents.default()
-    client = discord.Client(intents=intents)
-
-    @client.event
-    async def on_ready():
-        user = await client.fetch_user(int(os.environ["DISCORD_USER_ID"]))
-        await user.send(message)
-        await client.close()
-
-    await client.start(os.environ["DISCORD_BOT_TOKEN"])
+DM_LIMIT = 2000  # Discord hard cap
 
 
-def notify(message: str):
-    asyncio.run(send_dm_notification(message))
+def notify(message: str) -> None:
+    """Send `message` as a DM. Single-message primitive — no chunking.
+
+    Raises:
+        MessageTooLong: if len(message) > 2000. Caller (agent or orchestrator)
+            decides how to split.
+        IntegrationAuthError: 401 from Discord (bad/revoked bot token).
+        IntegrationTransientError: retries exhausted on 429/5xx.
+    """
+    if len(message) > DM_LIMIT:
+        raise MessageTooLong(len(message), DM_LIMIT)
+
+    s = load_secrets()
+    headers = {"Authorization": f"Bot {s.discord.bot_token}"}
+
+    # 1. Open (or fetch existing) DM channel
+    channel = retry(
+        lambda: httpx.post(
+            "https://discord.com/api/v10/users/@me/channels",
+            headers=headers,
+            json={"recipient_id": s.discord.user_id},
+        )
+    )
+    channel_id = channel.json()["id"]
+
+    # 2. Send the message
+    retry(
+        lambda: httpx.post(
+            f"https://discord.com/api/v10/channels/{channel_id}/messages",
+            headers=headers,
+            json={"content": message},
+        )
+    )
 ```
+
+**Why REST-only:** outbound DMs do not need the gateway / WebSocket. The
+`discord.py` library forces an `asyncio.Client` lifecycle plus intents config
+that are pure overhead for a fire-and-forget DM. Phase 7 introduces the gateway
+client when inbound chat lands.
 
 **`query.py` subcommand:**
 
 ```bash
 python query.py discord notify "Action ready: reply to Alice re: Q3 launch"
+# Exit code 2 + stderr "Discord DMs cap at 2000 chars; got <n>. Split and retry."
+# on MessageTooLong, so a calling agent has what it needs to recover.
 ```
+
+---
+
+### `query.py` — output format
+
+Two formatters, one shared per output shape:
+
+- **`--format=text`** (default): one block per item with stable field labels
+  (`id:`, `from:`, `subject:`, `snippet:`). Skimmable for humans and parseable
+  by Claude when invoked from a skill via Bash.
+- **`--format=json`**: emits `[asdict(item), ...]`. For tests and any
+  programmatic caller.
+
+Tests assert against `--json`; manual debugging uses `text`.
 
 ---
 
@@ -1463,26 +1654,30 @@ python query.py discord notify "Action ready: reply to Alice re: Q3 launch"
 
 Copy this file when wiring up a new platform (Linear, Jira, Slack, Notion,
 etc.). It encodes the contract every integration must satisfy: auth stays in
-Python, Claude only ever sees typed data, and external text is sanitized at the
-boundary.
+Python, Claude only ever sees typed data, external text is sanitized at the
+boundary, and errors are mapped to the shared taxonomy.
 
 ```python
 # integration_template.py — copy and rename when adding a new integration.
 """
 Pattern every integration follows:
-  1. Auth via shared module or .env-loaded token. Claude never sees credentials.
-  2. Return typed values (dataclasses) — not raw SDK responses — so payloads are stable.
-  3. Sanitize any free-text field reaching Claude (see Phase 8 sanitize_external_text).
+  1. Auth via shared module or secrets.toml. Claude never sees credentials.
+  2. Return typed values (dataclasses defined inline) — not raw SDK responses.
+  3. Sanitize any free-text field reaching Claude (Phase 4 stub; Phase 8 real).
   4. One bounded list_*() call per heartbeat — keeps API + token budgets predictable.
-  5. Register in registry.py and add a query.py subcommand.
+  5. Map errors to errors.IntegrationAuthError / IntegrationTransientError.
+  6. Register in registry.py and add a query.py subcommand.
 """
 
-import os
 from dataclasses import dataclass
 from datetime import datetime
 
-# Phase 8 helper — applied to any field that originated outside the agent.
-from sanitize import sanitize_external_text
+from errors import IntegrationAuthError
+from sanitize import (
+    sanitize_external_text,
+)  # Phase 4: no-op stub. Phase 8: real.
+from secrets import load_secrets
+from shared_auth import retry
 
 
 @dataclass
@@ -1495,15 +1690,15 @@ class FooItem:
 
 
 def _client():
-    # Build the authenticated client here. Read tokens from os.environ; never
-    # accept them as arguments and never log them.
-    token = os.environ["FOO_TOKEN"]
-    return build_foo_client(token)
+    # Build the authenticated client here. Read credentials from load_secrets();
+    # never accept them as arguments and never log them.
+    s = load_secrets()
+    return build_foo_client(s.foo.token)
 
 
 def list_recent(max_results: int = 20) -> list[FooItem]:
     """Bounded listing for the heartbeat. Read-only."""
-    raw = _client().items.list(limit=max_results)
+    raw = retry(lambda: _client().items.list(limit=max_results))
     return [
         FooItem(
             id=r["id"],
@@ -1518,25 +1713,36 @@ def list_recent(max_results: int = 20) -> list[FooItem]:
 
 def get_detail(item_id: str) -> FooItem:
     """Full single-item fetch for action-generation context."""
-    r = _client().items.get(item_id)
-    return FooItem(
-        id=r["id"],
-        title=sanitize_external_text(r["title"], source="foo"),
-        body=sanitize_external_text(r["body"], source="foo"),
-        occurred_at=datetime.fromisoformat(r["occurred_at"]),
-        url=r["url"],
-    )
+    ...
 ```
 
-**Register in `registry.py`:**
+**Register in `registry.py`** — the registry reads
+`config.toml
+[integrations].enabled` and resolves each name to a module path.
+Missing credentials for an enabled integration → fail-fast with a clear error.
 
 ```python
-ENABLED = {
+# registry.py
+import tomllib
+from importlib import import_module
+from pathlib import Path
+
+_MODULES = {
     "gmail": "integrations.gmail",
     "calendar": "integrations.calendar",
     "discord": "integrations.discord_client",
     # "foo":    "integrations.foo",
 }
+
+
+def enabled_modules() -> dict[str, object]:
+    cfg = tomllib.loads(
+        Path("~/dotfiles/second-brain/config.toml").expanduser().read_text()
+    )
+    return {
+        name: import_module(_MODULES[name])
+        for name in cfg["integrations"]["enabled"]
+    }
 ```
 
 **Add a `query.py` subcommand:**
@@ -1546,7 +1752,7 @@ python query.py foo list           # → calls foo.list_recent()
 python query.py foo detail <id>    # → calls foo.get_detail(id)
 ```
 
-**Heartbeat ingestion (Phase 6 pattern):**
+**Heartbeat ingestion (Phase 6 pattern — not built in Phase 4):**
 
 ```python
 for item in foo.list_recent():
@@ -1567,10 +1773,55 @@ template, not the integration.
 
 ---
 
-**Dependencies:** Phase 1 (USER.md for auth config), Phase 2 (heartbeat calls
-integrations)\
+### Tests
+
+CLAUDE.md mandates "no network" in the default suite. Phase 4 tests mock at the
+SDK boundary:
+
+- `gmail.tests.py` — patch `googleapiclient.discovery.build`; assert
+  `EmailSummary` shape, `source_id` versioning, error mapping.
+- `calendar.tests.py` — patch `build`; assert `Event` shape, "all"-calendar
+  expansion, deadline keyword filter.
+- `discord_client.tests.py` — patch `httpx.post`; assert two-call flow,
+  `MessageTooLong` raised at 2001 chars, `IntegrationAuthError` on 401.
+- `query.tests.py` — assert text and JSON formatters on golden inputs.
+- `shared_auth.tests.py` — assert `retry` retries on 429/5xx and propagates on
+  other errors; `IntegrationAuthError` mapping for `RefreshError` / 401.
+
+Live tests are **not** in the default suite. A separate
+`tests/integration_live/` directory holds opt-in tests that hit real APIs when
+credentials are present (skip otherwise) — run manually, never in CI.
+
+---
+
+### Phase 4 acceptance — what's "done"
+
+- `~/dotfiles/second-brain/.agents/scripts/integrations/` has every file in the
+  structure above, including `sanitize.py` (no-op stub) and `errors.py`.
+- `secrets.example.toml` checked in at the repo root.
+- `config.toml` gains `[integrations]`, `[integrations.gmail]`, and
+  `[integrations.calendar]` sections with the documented defaults.
+- `pyproject.toml` adds `google-auth`, `google-auth-oauthlib`,
+  `google-api-python-client`, `httpx`, `tenacity`. **Not** `discord.py`.
+- Bootstrap docs cover: Google Cloud Console steps, OAuth "In production"
+  warning (7-day refresh expiry footgun), Discord bot setup with no privileged
+  intents, fixed-port `8765` redirect URI, WSL2 portproxy fallback.
+- Default test suite (`uv run dev/test.py`) passes with all integration tests
+  SDK-mocked; no network access.
+- Manual smoke (one-time, off CI): `python query.py gmail list`,
+  `... calendar upcoming`, `... discord notify "hello"` succeed against real
+  accounts.
+
+**Phase 4 explicitly does not include:** heartbeat ingestion (Phase 6), the real
+`sanitize_external_text` (Phase 8), or Discord inbound / gateway client (Phase
+7).
+
+---
+
+**Dependencies:** Phase 1 (config.toml, secrets layout under
+`~/.local/share/second-brain/<instance>/`).\
 **Estimated complexity:** Medium per integration (Gmail + Calendar share OAuth
-setup)
+setup; Discord is a few REST calls).
 
 ---
 
