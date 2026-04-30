@@ -94,6 +94,21 @@ required):
 └── .gitignore                       # COPIED
 ```
 
+> **⚠️ Open inconsistency — needs a dedicated /align pass on Phase 1.** Phase 4
+> was aligned on machine-local config at
+> `~/.local/share/second-brain/<instance>/secrets.toml` (TOML, loaded via
+> `tomllib`), with `~/.config` reserved for VCS-trackable data. This Phase 1
+> section still describes a per-instance `.env` at
+> `~/second-brain/<instance>/.env`, populated by bootstrap prompts (lines
+> 128–181) — the same role, a different file, in a different location, in a
+> different format. Phase 4.5 (GitLab section, lines ~1651, 1699, 1817) shares
+> the same convention.
+>
+> Resolution should be a single `/align` pass on Phase 1 + 4.5 to migrate the
+> whole bootstrap/secrets surface to `secrets.toml` at the
+> `~/.local/share/second-brain/<instance>/` path. Until then, treat Phase 4 as
+> the canonical decision and these older references as stale.
+
 **Code/content split — rationale:**
 
 - **Single source of truth for code.** All Python scripts, Claude-Code hooks,
