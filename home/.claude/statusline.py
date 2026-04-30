@@ -60,7 +60,9 @@ def get_status_line():
 
     # Join model and effort with single space, rest with double space
     model_effort = f"{model_part} {effort_part}" if effort_part else model_part
-    parts = [cwd_part, model_effort, f"{bar_part} {GREY}|{RESET} {tokens_part}"]
+    parts = [cwd_part, model_effort]
+    if total_tokens > 0:
+        parts.append(f"{bar_part} {GREY}|{RESET} {tokens_part}")
 
     return "  ".join(parts)
 

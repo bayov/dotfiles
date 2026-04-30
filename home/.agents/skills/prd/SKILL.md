@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 
 Produce a PRD (Product Requirements Document) based on the current conversation
-and codebase understanding.
+context and codebase understanding.
 
 Steps
 -----

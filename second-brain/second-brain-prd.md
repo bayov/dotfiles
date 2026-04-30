@@ -115,8 +115,8 @@ required):
 **Bootstrap:**
 
 ```bash
-python3 ~/dotfiles/second-brain/bootstrap.py work       # creates ~/second-brain/work/
-python3 ~/dotfiles/second-brain/bootstrap.py personal   # later, same template
+uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstrap.py work       # creates ~/second-brain/work/
+uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstrap.py personal   # later, same template
 ```
 
 `bootstrap.py` does, idempotently:
@@ -128,7 +128,13 @@ python3 ~/dotfiles/second-brain/bootstrap.py personal   # later, same template
 4. **Interactively prompt for required + optional fields**, then render `.env`,
    `USER.md`, and `config.toml` from their starter templates. See "Bootstrap
    prompts" below.
-5. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"` so the audit
+5. Run `db.py --init` (cloud DB schema; primes the local SQLite file in fallback
+   mode; idempotent) and `rag_db.py --init` (local RAG DB schema; no-op stub
+   until Phase 3). Bootstrap invokes both as Python subprocesses using
+   `sys.executable` — since bootstrap itself runs under
+   `uv run --project ~/dotfiles/second-brain`, the venv is already resolved and
+   the subprocesses inherit it.
+6. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"` so the audit
    trail starts from a known baseline.
 
 #### Bootstrap prompts
@@ -178,7 +184,9 @@ The starter templates use `{{var_name}}` markers; bootstrap substitutes them
 verbatim. Adding a new field = add a marker to the relevant starter file plus
 one row to the prompt table inside `bootstrap.py`.
 
-A `python3 bootstrap.py --check <instance>` mode validates that no `# TODO`
+A `bootstrap.py --check <instance>` mode (run via
+`uv run --project
+~/dotfiles/second-brain ...`) validates that no `# TODO`
 markers remain in `.env` / `USER.md` and exits non-zero otherwise — useful as a
 pre-flight before enabling the systemd service or cron jobs.
 
@@ -466,6 +474,15 @@ max_team_context = 20
 
 [heartbeat]
 interval_minutes = 30
+
+[hooks]
+# Bound on session_summary.payload size written by pre-compact / session-end
+# hooks. Role-aware truncation: full user prompts, head+tail truncation for
+# long assistant text, tool-use args truncated, tool_results dropped.
+transcript_tail_max_bytes = 50000
+assistant_text_head_bytes = 2048
+assistant_text_tail_bytes = 4096
+tool_args_summary_bytes = 256
 ```
 
 ### Context size tests
@@ -703,18 +720,26 @@ Phase 2: Hooks (Context Persistence)
 
 **What to build:** Three Python hook scripts that inject memory into every
 Claude conversation and write session events to the event log on compaction or
-exit.
+session end.
 
 **Key files to create:**
 
 ```
-.claude/
-├── settings.json
-└── hooks/
-    ├── session-start-context.py
-    ├── pre-compact-flush.py
-    └── session-end-flush.py
+~/dotfiles/second-brain/claude/hooks/
+├── _setup.py                    # shared helper: paths, stdin parse, soft-fail wrapper
+├── session-start-context.py
+├── pre-compact-flush.py
+└── session-end-flush.py
+
+~/dotfiles/second-brain/starter/
+└── claude-settings.json         # COPIED to <instance>/.claude/settings.json
 ```
+
+**Hook lifecycle mapping.** `SessionStart` for inject; `PreCompact` and
+`SessionEnd` for the two flush moments. **Not** `Stop` — `Stop` fires after
+every assistant turn, which would write a `session_summary` event per response.
+`SubagentStop` is also skipped: subagent transcripts are local to one task and
+not session-level memory worth flushing.
 
 **Hook configuration in `.claude/settings.json`:**
 
@@ -724,65 +749,206 @@ exit.
         "SessionStart": [
             {
                 "type": "command",
-                "command": "python3 .claude/hooks/session-start-context.py"
+                "command": "uv run --project $HOME/dotfiles/second-brain python .claude/hooks/session-start-context.py"
             }
         ],
         "PreCompact": [
             {
                 "type": "command",
-                "command": "python3 .claude/hooks/pre-compact-flush.py"
+                "command": "uv run --project $HOME/dotfiles/second-brain python .claude/hooks/pre-compact-flush.py"
             }
         ],
-        "Stop": [
+        "SessionEnd": [
             {
                 "type": "command",
-                "command": "python3 .claude/hooks/session-end-flush.py"
+                "command": "uv run --project $HOME/dotfiles/second-brain python .claude/hooks/session-end-flush.py"
             }
         ]
     }
 }
 ```
 
-**`session-start-context.py` — what to inject:**
+`uv run --project ~/dotfiles/second-brain` resolves the project pyproject.toml
+and managed venv (`~/dotfiles/second-brain/.venv`) without requiring activation.
+The cwd at hook fire time is the instance dir (Claude Code's launch dir), so
+relative paths inside the hook resolve against the instance.
 
-1. Full content of `SOUL.md`
-2. Full content of `USER.md`
-3. Full content of `MEMORY.md`
+**Stdin contract.** Every hook receives a JSON payload on stdin with at least:
 
-Output format: print a single JSON block to stdout with key `"context"`. Claude
-Code injects this automatically.
+```json
+{
+    "session_id": "abc-123-...",
+    "transcript_path": "/home/bayov/.claude/projects/.../<session>.jsonl",
+    "cwd": "/home/bayov/second-brain/work",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+}
+```
 
-All three files are size-enforced by `check_context_size.py` — safe to inject
-every session.
+`_setup.py` parses this once at import time and exposes `SESSION_ID`,
+`TRANSCRIPT` (Path or None), `CWD`, `HOOK_EVENT` as module attributes. Hooks
+import what they need.
 
-**`pre-compact-flush.py` — write a session event before compaction:**
+**Path resolution in `_setup.py`.** Two paths must resolve correctly: dotfiles
+for code, instance for content. Symlinks complicate this — use unresolved
+`__file__` for the instance side, resolved for the dotfiles side.
 
-- Read the JSONL transcript from `$CLAUDE_TRANSCRIPT_PATH`
-- Call `write_event(...)` with a `session_summary` event:
-  ```python
-  write_event(
-      Event(
-          source="session_compact",
-          type="session_summary",
-          occurred_at=now_utc(),
-          payload={"transcript_tail": "<last N messages>"},
-          metadata={"session_id": "...", "trigger": "compact"},
-      )
-  )
-  ```
-- The write goes to the local libSQL replica file, which syncs to the cloud
-  primary in the background — durable locally even if the network is down. The
-  heartbeat reads this event later and updates MEMORY.md if warranted.
+```python
+# ~/dotfiles/second-brain/claude/hooks/_setup.py
+import json, pathlib, sys, tomllib
 
-**`session-end-flush.py` — write a session event on exit:**
+# Instance dir: derive from UNRESOLVED __file__ — keeps the symlink path,
+# so .parent.parent.parent gives ~/second-brain/<instance>/.
+INSTANCE_DIR = pathlib.Path(__file__).parent.parent.parent
 
-- Same as pre-compact, with `"trigger": "stop"` in metadata.
+# Scripts dir: RESOLVE __file__ to follow the symlink into dotfiles.
+SCRIPTS_DIR = (
+    pathlib.Path(__file__).resolve().parent.parent.parent / "agents" / "scripts"
+)
+sys.path.insert(0, str(SCRIPTS_DIR))
 
-**Key implementation note:** Hooks receive session info as JSON via stdin. The
-`SessionStart` hook also fires on `/resume` — use `source: "resume"` to detect
-this and refresh context after long gaps.
+# stdin parse (gated for unit tests where stdin isn't a Claude Code payload)
+_PAYLOAD = json.load(sys.stdin) if not sys.stdin.isatty() else {}
+SESSION_ID = _PAYLOAD.get("session_id", "unknown")
+TRANSCRIPT = (
+    pathlib.Path(_PAYLOAD["transcript_path"])
+    if "transcript_path" in _PAYLOAD
+    else None
+)
+CWD = _PAYLOAD.get("cwd", str(pathlib.Path.cwd()))
+HOOK_EVENT = _PAYLOAD.get("hook_event_name", "unknown")
 
-**Dependencies:** Phase 1 (vault + cloud DB must exist)\
+with (INSTANCE_DIR / "config.toml").open("rb") as f:
+    config = tomllib.load(f)
+
+from db import write_event, Event  # noqa: E402  — sys.path set above
+```
+
+`_setup.py` also wraps each hook's `main()` in soft-fail boilerplate (catch all
+exceptions, write traceback to `~/.local/log/second-brain/<instance>/hooks.log`,
+print a one-liner to stderr, exit 0 — never block Claude).
+
+### `session-start-context.py` — inject memory
+
+Reads `config.toml [context] max_bytes.*` and injects each listed file into the
+system prompt, wrapped in XML-like tags. The inject list is config-driven (not
+hardcoded) so the same `max_bytes` table that drives `check_context_size.py`
+also drives what gets injected — single source of truth, no drift.
+
+For Phase 2, the entries are `SOUL`, `USER`, `MEMORY`. Phase 4.5 adds `MAP`
+(`human-vault-map.md`) by adding one config line; the hook picks it up
+automatically.
+
+Output format: a JSON object printed to stdout (Claude Code merges
+`additionalContext` into the system prompt):
+
+```json
+{
+    "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "<soul>\n{SOUL.md content}\n</soul>\n\n<user>\n{USER.md content}\n</user>\n\n<memory>\n{MEMORY.md content}\n</memory>"
+    }
+}
+```
+
+Tag name = filename stem, lowercase, kebab-case (so `human-vault-map.md` →
+`<human-vault-map>`). Files are concatenated in `config.toml` declaration order.
+
+`SessionStart` fires on `startup`, `resume`, `clear`, and `compact`. Behavior is
+identical for all four — the hook re-reads the files from disk every time, so
+resumed sessions automatically pick up MEMORY.md updates that landed during the
+gap (e.g., from heartbeat or reflection). The hook does not branch on `source`.
+
+### `pre-compact-flush.py` — flush before compaction
+
+Reads `TRANSCRIPT` (the JSONL transcript from stdin's `transcript_path`),
+distills it via the role-aware helper below, and writes one `session_summary`
+event:
+
+```python
+write_event(
+    Event(
+        source="session_compact",
+        type="session_summary",
+        source_id=None,  # session events have no external dedupe key
+        occurred_at=now_utc(),
+        payload=distill_transcript(TRANSCRIPT, config["hooks"]),
+        metadata={
+            "session_id": SESSION_ID,
+            "harness": "claude-code",
+            "model": _PAYLOAD.get(
+                "model"
+            ),  # populated when Claude Code sends it
+            "cwd": CWD,
+        },
+    )
+)
+```
+
+The write goes to the local libSQL replica file, which syncs to the cloud
+primary in the background — durable locally even if the network is down.
+Heartbeat (Phase 6) reads these events later and updates MEMORY.md when
+warranted.
+
+### `session-end-flush.py` — flush at session end
+
+Identical to `pre-compact-flush.py` except `source="session_end"`.
+
+### Transcript distillation (`distill_transcript`)
+
+Lives in `_setup.py` (or a helper module imported by it). Bounded role-aware
+truncation — keeps signal, drops noise:
+
+| Entry type         | Treatment                                                                                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User text          | Full content. No truncation. (Short and signal-dense.)                                                                                                            |
+| Assistant text     | If > head+tail bytes: keep first `assistant_text_head_bytes` (2048) + last `assistant_text_tail_bytes` (4096) joined by `[... N chars truncated ...]`. Else full. |
+| Assistant tool_use | `{tool_name, args_summary}` where args is JSON-stringified and truncated to `tool_args_summary_bytes` (256).                                                      |
+| User tool_result   | **Dropped.** The next assistant turn already distills what mattered; the raw JSONL on disk preserves it for forensics.                                            |
+
+Walk the JSONL from the end backwards, accumulating entries until the serialized
+payload approaches `transcript_tail_max_bytes` (50000), then stop. This means
+tool-heavy sessions naturally get fewer turns; conversation-heavy sessions get
+more — total payload size stays bounded regardless.
+
+Payload shape:
+
+```json
+{
+  "messages": [{"role": "user|assistant", "content": "...", "timestamp": "..."}, ...],
+  "stats": {"message_count": 47, "first_message_at": "...", "last_message_at": "..."}
+}
+```
+
+### Tests (`~/dotfiles/second-brain/tests/hooks/`)
+
+```
+conftest.py             # fixtures: temp DB (DATABASE_URL=file:///tmp/...),
+                        # fake instance dir with SOUL/USER/MEMORY,
+                        # sample transcript JSONL with mixed turns
+test_distill.py         # role-aware truncation: long tool result truncated,
+                        # payload ≤ 50KB, user prompts never truncated,
+                        # head+tail shape correct
+test_session_start.py   # stdin payload → captured stdout has hookSpecificOutput.additionalContext
+                        # with <soul>/<user>/<memory> tags + full file contents
+test_pre_compact.py     # stdin → exactly one row in events table,
+                        # source=session_compact, source_id=NULL,
+                        # payload + metadata shape correct
+test_session_end.py     # same as pre_compact with source=session_end
+```
+
+Wired into `.config/test.toml`:
+
+```toml
+[[test_suite]]
+name = "second_brain_hooks"
+command = "uv run --project ~/dotfiles/second-brain pytest second-brain/tests/hooks/"
+```
+
+`pytest` lives in `pyproject.toml` `[dependency-groups] dev`.
+
+**Dependencies:** Phase 1 (vault + cloud DB must exist; `db.py` exposes
+`write_event` / `Event`)\
 **Estimated complexity:** Medium
 
 ---
@@ -807,13 +973,10 @@ rebuildable anytime by re-running `memory_index.py`.
 └── memory_search.py   # Hybrid search (0.7 vector + 0.3 keyword) — reads from rag.db
 ```
 
-**Library setup:**
-
-```bash
-pip install fastembed          # ONNX runtime included
-pip install sqlite-vec         # Vector similarity for SQLite
-# FTS5 is built into Python's sqlite3 — no install needed
-```
+**Library setup:** add `fastembed` (brings ONNX runtime) and `sqlite-vec`
+(vector similarity for SQLite) to `~/dotfiles/second-brain/pyproject.toml`, then
+`uv sync --project ~/dotfiles/second-brain`. FTS5 is built into Python's stdlib
+`sqlite3` — no install needed.
 
 **`embeddings.py` — model setup:**
 
@@ -882,7 +1045,7 @@ python memory_index.py --source human-vault     # One vault only (used by heartb
 **Run the indexer on a schedule** (Linux cron, every 15 minutes):
 
 ```cron
-*/15 * * * * python3 ~/second-brain/work/.agents/scripts/memory_index.py
+*/15 * * * * uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_index.py
 ```
 
 **Dependencies:** Phase 1 (vault), Phase 2 (hooks can call `memory_search.py` to
@@ -930,8 +1093,9 @@ DISCORD_USER_ID=...
 2. OAuth consent screen → Add your Gmail address as test user (keep in "Testing"
    mode)
 3. Create OAuth 2.0 credentials → Desktop app → Download `credentials.json`
-4. On first run: `python3 shared_auth.py` opens browser → authenticate → saves
-   `token.json`
+4. On first run:
+   `uv run --project ~/dotfiles/second-brain python shared_auth.py` opens
+   browser → authenticate → saves `token.json`
 
 **Required scopes:**
 
@@ -1037,7 +1201,8 @@ python query.py calendar deadlines      # Events with deadline keywords
 5. Find your Discord user ID: Settings → Advanced → Developer Mode → right-click
    name → Copy ID
 
-**Library:** `pip install discord.py`
+**Library:** add `discord.py` to `~/dotfiles/second-brain/pyproject.toml` and
+`uv sync`.
 
 **`discord_client.py` — notification only (Advisor mode):**
 
@@ -1640,7 +1805,7 @@ via Discord DM. The heartbeat is the sole writer of MEMORY.md.
 
 ```cron
 # Active hours: 08:00–19:00 Israel time (UTC+3 summer, Sun–Thu)
-*/30 5-16 * * 0-4  python3 ~/second-brain/work/.agents/scripts/heartbeat.py
+*/30 5-16 * * 0-4  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/heartbeat.py
 ```
 
 **`heartbeat.py` — data gathering phase:**
@@ -1657,7 +1822,7 @@ def gather_context() -> dict:
         # Cheap: mtime-incremental + delete reconciliation only on changed files.
         subprocess.run(
             [
-                "python3",
+                sys.executable,  # heartbeat itself runs under uv-managed venv
                 ".agents/scripts/memory_index.py",
                 "--source",
                 "human-vault",
@@ -1903,7 +2068,7 @@ def notify_linux(title: str, body: str):
 **`memory_reflect.py` — daily at 08:00 Israel time:**
 
 ```cron
-0 5 * * *  python3 ~/second-brain/work/.agents/scripts/memory_reflect.py
+0 5 * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_reflect.py
 ```
 
 Process:
@@ -2150,7 +2315,7 @@ contract is wrong — fix the contract, not the platform.
 # ~/.config/systemd/user/second-brain-chat.service
 [Service]
 WorkingDirectory=%h/second-brain/work
-ExecStart=python3 %h/second-brain/work/.agents/chat/run.py
+ExecStart=uv run --project %h/dotfiles/second-brain python %h/second-brain/work/.agents/chat/run.py
 EnvironmentFile=%h/second-brain/work/.env
 Restart=always
 ```
@@ -2250,7 +2415,7 @@ def check_command(command: str) -> tuple[bool, str]:
         "PreToolUse": [
             {
                 "type": "command",
-                "command": "python3 .agents/hooks/guardrail-check.py",
+                "command": "uv run --project $HOME/dotfiles/second-brain python .agents/hooks/guardrail-check.py",
                 "matcher": { "tool_name": "Bash" }
             }
         ]
@@ -2273,15 +2438,20 @@ bot as a systemd user service, and verify end-to-end flow.
 (`~/second-brain/work/.agents/...`) so symlinks resolve into
 `~/dotfiles/second-brain/`. Logs are per-instance.
 
+All scheduled scripts run via
+`uv run --project ~/dotfiles/second-brain python ...` (same invocation pattern
+as Phase 2 hooks). uv resolves the project venv without requiring activation,
+which cron does not inherit.
+
 ```cron
 # Memory indexer — every 15 minutes
-*/15 * * * *  python3 ~/second-brain/work/.agents/scripts/memory_index.py >> ~/.local/log/second-brain/work/index.log 2>&1
+*/15 * * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_index.py >> ~/.local/log/second-brain/work/index.log 2>&1
 
 # Heartbeat — every 30 min, Israeli working hours (Sun–Thu, 08:00–19:00 local = 05:00–16:00 UTC summer)
-*/30 5-16 * * 0-4  python3 ~/second-brain/work/.agents/scripts/heartbeat.py >> ~/.local/log/second-brain/work/heartbeat.log 2>&1
+*/30 5-16 * * 0-4  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/heartbeat.py >> ~/.local/log/second-brain/work/heartbeat.log 2>&1
 
 # Daily reflection — 08:00 Israel time (05:00 UTC summer)
-0 5 * * *  python3 ~/second-brain/work/.agents/scripts/memory_reflect.py >> ~/.local/log/second-brain/work/reflect.log 2>&1
+0 5 * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_reflect.py >> ~/.local/log/second-brain/work/reflect.log 2>&1
 ```
 
 **Note on Israel work week:** Sunday–Thursday. Cron day-of-week `0-4` (Sun=0,
@@ -2289,27 +2459,30 @@ Thu=4).
 
 **DB initialization:**
 
+Bootstrap runs both automatically (Phase 1 step 5). The commands here are for
+manual re-init or recovery:
+
 ```bash
 # Cloud DB schema — creates tables in Turso (or local SQLite, depending on DATABASE_URL).
 # Idempotent (CREATE TABLE IF NOT EXISTS); also primes the embedded replica file.
-python3 .agents/scripts/db.py --init
+uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --init
 
 # Local RAG DB schema (separate file, local-only)
-python3 .agents/scripts/rag_db.py --init
+uv run --project ~/dotfiles/second-brain python .agents/scripts/rag_db.py --init
 ```
 
 **Operational commands:**
 
 ```bash
 # Snapshot the cloud DB to a portable file (.sql text or .db file)
-python3 .agents/scripts/db.py --dump > ~/backups/cloud-$(date +%F).sql
+uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --dump > ~/backups/cloud-$(date +%F).sql
 
 # Wipe and rebuild projections from events (after schema change or new agent)
-python3 .agents/scripts/db.py --rebuild
+uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --rebuild
 
 # Show current state: event count, projection cursor positions, agents registered,
 # plus a sync-health panel (see below).
-python3 .agents/scripts/db.py --status
+uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --status
 ```
 
 **`--status` sync-health panel.** When something feels stale ("did the agent see
@@ -2328,6 +2501,11 @@ my note from this morning?"), one CLI answers it. Output sections:
   reads, but stale-replica age is what tells you.
 - **Projections**: `projection_cursors.last_event_id` vs `MAX(events.id)` —
   drift means the projector died mid-replay.
+- **Session hooks**: most recent `session_summary` event timestamp (split by
+  `source = 'session_compact' | 'session_end'`). Soft-fail in the hooks means a
+  broken DB write surfaces only as silently-missing events; this panel is the
+  tripwire. If no `session_summary` for several days despite active Claude
+  sessions, check `~/.local/log/second-brain/<instance>/hooks.log`.
 
 Implementation is plain SQL queries plus one `os.stat` on the replica file; no
 new state to maintain.
@@ -2336,7 +2514,7 @@ new state to maintain.
 
 ```bash
 # 1. Capture a final snapshot
-python3 .agents/scripts/db.py --dump > ~/backups/cloud-final.sql
+uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --dump > ~/backups/cloud-final.sql
 
 # 2. Promote the embedded replica to be the source of truth
 cp ~/.local/share/second-brain/work/cloud-replica.db \
@@ -2357,17 +2535,24 @@ systemctl --user status second-brain-chat
 
 **Python environment setup:**
 
+The project lives at `~/dotfiles/second-brain/` with its own `pyproject.toml`
+and uv-managed venv at `~/dotfiles/second-brain/.venv`. All runtime invocations
+(hooks, cron, systemd) use `uv run --project
+~/dotfiles/second-brain ...` so no
+activation is needed.
+
 ```bash
-python3 -m venv ~/.venv/second-brain
-source ~/.venv/second-brain/bin/activate
-pip install anthropic fastembed sqlite-vec libsql-client discord.py google-api-python-client \
-    google-auth-oauthlib python-dotenv zoneinfo
+# One-time: sync the venv from pyproject.toml. uv creates ~/dotfiles/second-brain/.venv.
+uv sync --project ~/dotfiles/second-brain
 ```
+
+Add `.venv/` to `~/dotfiles/second-brain/.gitignore`. Adding a new dep is a
+one-line edit to `pyproject.toml` followed by `uv sync`.
 
 **OAuth first-run flow:**
 
 ```bash
-python3 .agents/scripts/integrations/shared_auth.py
+uv run --project ~/dotfiles/second-brain python .agents/scripts/integrations/shared_auth.py
 # Token saved to GOOGLE_TOKEN_PATH — auto-refreshes after that
 ```
 
@@ -2438,16 +2623,17 @@ across instances), content lives in per-instance repos at
 `~/second-brain/<instance>/` (today: `work`; planned: `personal`) which contain
 AI-vault data + relative symlinks back into dotfiles; per-instance state under
 `~/.local/share/second-brain/<instance>/` to avoid replica/RAG collisions;
-bootstrap is `python3 ~/dotfiles/second-brain/bootstrap.py <instance>`. (2)
-**GitLab migration** — human-vault remote moved from GitHub to GitLab (Hagai's
-employer hosts GitLab; `GITLAB_HOST` configurable, `glab` CLI replaces `gh`,
-`GITLAB_TOKEN` replaces `GITHUB_HUMAN_VAULT_TOKEN`, MR replaces PR throughout).
-Earlier dual-vault alignment review preserved. Key architectural decisions:
-event sourcing with a cloud SQL DB (Turso/libSQL) as single source of truth,
-accessed via embedded replica for local-disk read latency; **rich AI Obsidian
-vault** at `~/second-brain/work/ai-vault/` (briefings, dossiers, drafts,
-analysis, logs, questions — AI is sole writer with editorial freedom) sitting
-alongside the **read-only mirror of the human vault** at
+bootstrap is
+`uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstrap.py <instance>`.
+(2) **GitLab migration** — human-vault remote moved from GitHub to GitLab
+(Hagai's employer hosts GitLab; `GITLAB_HOST` configurable, `glab` CLI replaces
+`gh`, `GITLAB_TOKEN` replaces `GITHUB_HUMAN_VAULT_TOKEN`, MR replaces PR
+throughout). Earlier dual-vault alignment review preserved. Key architectural
+decisions: event sourcing with a cloud SQL DB (Turso/libSQL) as single source of
+truth, accessed via embedded replica for local-disk read latency; **rich AI
+Obsidian vault** at `~/second-brain/work/ai-vault/` (briefings, dossiers,
+drafts, analysis, logs, questions — AI is sole writer with editorial freedom)
+sitting alongside the **read-only mirror of the human vault** at
 `~/second-brain/work/human-vault/` (git submodule of the AI's fork of
 `~/notes/work`); promotion AI → human only via MR with mandatory search +
 reformulation + dedup discipline; separate local RAG DB regenerable from vault
