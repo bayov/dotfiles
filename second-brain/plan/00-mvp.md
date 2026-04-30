@@ -32,8 +32,8 @@ rebuildable by replaying the event log. The DB is accessed via libSQL embedded
 replica — reads come from a local SQLite file (sub-ms), writes go to the cloud
 primary and sync back; every machine running the agent gets a continuous cold
 backup as a side effect. The substrate is swappable: plain SQL only, one `db.py`
-access layer, `DATABASE_URL` in `.env`. The system stays reprocessable with
-better agents as they are released.
+access layer, `[db]` block in `secrets.toml`. The system stays reprocessable
+with better agents as they are released.
 
 ---
 
@@ -42,7 +42,8 @@ Phase 1: Foundation (Memory Layer + Cloud DB)
 
 **What to build:** The `bootstrap.py` scaffolder, AI-vault skeleton, core memory
 files (SOUL/USER/MEMORY), cloud DB (Turso/libSQL with embedded replica), and
-configuration (`config.toml`, `.env`). Every subsequent phase depends on these.
+configuration (`config.toml`, `secrets.toml`). Every subsequent phase depends on
+these.
 
 ### Project layout
 
@@ -62,7 +63,8 @@ dotfiles repo):
 │                                    #    sb-event, sb-context-check, sb-guardrail)
 ├── src/sb/                          # ordinary importable Python package
 │   ├── instance.py                  #   find_instance() — marker-file ascent
-│   ├── scripts/                     #   db.py, memory_index.py, event_cli.py, ...
+│   ├── scripts/                     #   db.py, memory_index.py, event_cli.py,
+│   │                                #   git_io.py (commit_ai_vault_if_dirty), ...
 │   └── hooks/                       #   guardrail_check.py
 ├── claude/
 │   ├── hooks/                       # → <instance>/.claude/hooks/
@@ -75,7 +77,7 @@ dotfiles repo):
     │   └── .obsidian/
     ├── config.toml                  # → <instance>/config.toml
     ├── claude-settings.json         # → <instance>/.claude/settings.json
-    ├── env.example                  # → <instance>/.env
+    ├── secrets.example.toml         # → <instance>/secrets.toml (gitignored)
     └── gitignore                    # → <instance>/.gitignore
 ```
 
@@ -87,14 +89,14 @@ dotfiles repo):
 │   ├── SOUL.md, USER.md, MEMORY.md, human-vault-map.md
 │   ├── .obsidian/
 │   └── briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/
-├── config.toml                      # COPIED; also serves as instance marker
+├── config.toml                      # COPIED; also serves as instance marker; committed
+├── secrets.toml                     # COPIED + edited; gitignored
 ├── human-vault/                     # git submodule → AI's GitLab clone (Phase 4.5)
 ├── .claude/
 │   ├── hooks           → ~/dotfiles/second-brain/claude/hooks/
 │   ├── skills          → ~/dotfiles/second-brain/claude/skills/
 │   └── settings.json                # COPIED (per-instance permissions)
 ├── schema.sql          → ~/dotfiles/second-brain/schema/0001_init.sql
-├── .env                             # COPIED, edited
 └── .gitignore                       # COPIED
 ```
 
@@ -136,6 +138,19 @@ def find_instance(start: Path | None = None) -> Path:
 Claude Code hooks receive `cwd` in their JSON payload and pass it to
 `find_instance`; ad-hoc CLI invocations rely on cwd-ascent.
 
+**Resolution outside an instance dir.** When Claude is launched from a path that
+isn't under an instance (e.g. Hagai opens it in `~/notes/work/` to edit a note),
+cwd-ascent fails and the hooks soft-fail to a vanilla session with no memory
+injection. To get memory injection from anywhere, set `SECOND_BRAIN_INSTANCE` in
+the shell rc — e.g. for fish:
+
+```fish
+# ~/.config/fish/config.fish
+set -gx SECOND_BRAIN_INSTANCE $HOME/second-brain/work
+```
+
+Bootstrap does **not** modify shell rc; this is a one-time manual step.
+
 **Code/content split — rationale:**
 
 - **Single source of truth for code.** Edit once and
@@ -159,9 +174,9 @@ uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstra
 1. `git init ~/second-brain/<instance>/` if absent.
 2. Copy `starter/` into the instance.
 3. Create relative symlinks (`.claude/hooks`, `.claude/skills`, `schema.sql`).
-4. **Interactively prompt for required + optional fields**, then render `.env`,
-   `USER.md`, and `config.toml` from their starter templates. See "Bootstrap
-   prompts" below.
+4. **Interactively prompt for required + optional fields**, then render
+   `secrets.toml`, `USER.md`, and `config.toml` from their starter templates.
+   See "Bootstrap prompts" below.
 5. Run `sb-db --init` (cloud DB schema; idempotent) and `sb-rag-db --init`
    (local RAG DB schema). Bootstrap invokes both as Python subprocesses with
    `cwd=<instance>` and `SECOND_BRAIN_INSTANCE=<instance>` so `find_instance()`
@@ -177,27 +192,29 @@ one, and writes the rendered file to the instance.
   prompts accept empty input and leave a `# TODO` marker.
 - **Defaults.** Where a sensible default exists (timezone, paths), the prompt
   shows it in `[brackets]` and accepts Enter to keep it.
-- **Re-runnable.** If the instance exists, `bootstrap.py` parses existing `.env`
-  / `USER.md` / `config.toml`, pre-fills prompts, and re-prompts only for unset
-  / `# TODO` entries. `--reconfigure` forces re-prompting.
+- **Re-runnable.** If the instance exists, `bootstrap.py` parses existing
+  `secrets.toml` / `USER.md` / `config.toml`, pre-fills prompts, and re-prompts
+  only for unset / `# TODO` entries. `--reconfigure` forces re-prompting.
 - **Phase-gated sections.** GitLab (4.5) prompts can be skipped — the script
   asks `Configure GitLab integration now? [y/N]` and writes only the relevant
   block if yes.
-- **Secrets stay out of git.** `.env` is gitignored.
+- **Secrets stay out of git.** `secrets.toml` is gitignored. `config.toml` is
+  committed (initial commit by bootstrap; subsequent edits committed by Hagai).
 
-| Group        | Prompt                                                         | Required           | Target                                 |
-| ------------ | -------------------------------------------------------------- | ------------------ | -------------------------------------- |
-| Profile      | Full name                                                      | required           | `USER.md`                              |
-| Profile      | Role (default: `Staff Software Engineer / Software Architect`) | required (default) | `USER.md`                              |
-| Profile      | Timezone (default: `Asia/Jerusalem`)                           | required (default) | `USER.md`                              |
-| Profile      | Working hours (default: `09:00–18:00 local`)                   | required (default) | `USER.md`                              |
-| DB           | `DATABASE_URL` mode: `turso` or `local-sqlite`                 | required           | `.env`                                 |
-| DB (turso)   | Turso DB URL (e.g. `libsql://my-db.turso.io`)                  | required if turso  | `.env`                                 |
-| DB (turso)   | Turso auth token                                               | required if turso  | `.env`                                 |
-| GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                      | optional           | gates the next three                   |
-| GitLab       | `gitlab_host` (default: `gitlab.com`)                          | required if y      | `config.toml [human_vault]`            |
-| GitLab       | Repo (e.g. `donbayov/work-notes`)                              | required if y      | `config.toml [human_vault]`, `USER.md` |
-| GitLab       | Personal access token                                          | required if y      | `secrets.toml [gitlab]`                |
+| Group        | Prompt                                                                        | Required           | Target                                 |
+| ------------ | ----------------------------------------------------------------------------- | ------------------ | -------------------------------------- |
+| Profile      | Full name                                                                     | required           | `USER.md`                              |
+| Profile      | Role (default: `Staff Software Engineer / Software Architect`)                | required (default) | `USER.md`                              |
+| Profile      | Timezone (default: `Asia/Jerusalem`)                                          | required (default) | `USER.md`                              |
+| Profile      | Working hours (default: `09:00–18:00 local`)                                  | required (default) | `USER.md`                              |
+| DB           | DB mode: `turso` (embedded replica) or `local-sqlite`                         | required           | `secrets.toml [db]`                    |
+| DB           | Replica path (default: `~/.local/share/second-brain/<inst>/cloud-replica.db`) | required (default) | `secrets.toml [db] replica_path`       |
+| DB (turso)   | Sync URL (e.g. `libsql://my-db.turso.io`)                                     | required if turso  | `secrets.toml [db] sync_url`           |
+| DB (turso)   | Auth token                                                                    | required if turso  | `secrets.toml [db] auth_token`         |
+| GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                                     | optional           | gates the next three                   |
+| GitLab       | `gitlab_host` (default: `gitlab.com`)                                         | required if y      | `config.toml [human_vault]`            |
+| GitLab       | Repo (e.g. `donbayov/work-notes`)                                             | required if y      | `config.toml [human_vault]`, `USER.md` |
+| GitLab       | Personal access token                                                         | required if y      | `secrets.toml [gitlab] token`          |
 
 A `bootstrap.py --check <instance>` mode validates that no `# TODO` markers
 remain and exits non-zero otherwise.
@@ -275,9 +292,49 @@ See the `promote-to-human-vault` skill in Phase 4.5.
 
 ### Audit trail
 
-The `ai-vault/` git history is the audit trail for SOUL/USER/MEMORY edits and
-AI-vault writes. Raw event data (manual entries, future integrations, session
-summaries) lives in the cloud DB — not in git.
+The instance repo's git history (scoped to `ai-vault/`) is the audit trail for
+SOUL/USER/MEMORY edits and AI-vault writes. Raw event data (manual entries,
+future integrations, session summaries) lives in the cloud DB — not in git.
+
+**Commit policy — invariant.** Every bounded unit of agent work that may write
+to `ai-vault/` MUST end by calling `commit_ai_vault_if_dirty(reason)`. In the
+MVP that's the two flush hooks (`pre-compact-flush.py` and
+`session-end-flush.py`) plus on-demand tools like `update_vault_map.py`. Future
+PRDs (heartbeat, event processor, chat) inherit the same obligation. The helper
+lives at `src/sb/scripts/git_io.py`:
+
+```python
+def commit_ai_vault_if_dirty(reason: str) -> str | None:
+    """Stage ai-vault/ paths in the instance repo and commit if dirty.
+
+    Other paths (config.toml, secrets.toml, .claude/, schema.sql, the
+    human-vault submodule pointer) are NOT staged — those are setup state, not
+    agent output. Returns the new commit sha, or None if the tree was clean.
+    """
+    instance = find_instance()
+    subprocess.run(["git", "-C", str(instance), "add", "ai-vault/"], check=True)
+    diff = subprocess.run(
+        ["git", "-C", str(instance), "diff", "--cached", "--quiet"], check=False
+    )
+    if diff.returncode == 0:
+        return None
+    subprocess.run(
+        ["git", "-C", str(instance), "commit", "-m", reason], check=True
+    )
+    return subprocess.check_output(
+        ["git", "-C", str(instance), "rev-parse", "HEAD"], text=True
+    ).strip()
+```
+
+**Load-bearing detail.** The bootstrap step
+`git config submodule.human-vault.ignore all` is what makes this safe: without
+it, every `git add ai-vault/` followed by a commit would also pick up changes to
+the `human-vault` submodule pointer whenever `sync_human_vault()` had
+fast-forwarded it, accidentally pinning revisions in the parent repo.
+
+**Setup files** (`config.toml`, `.claude/settings.json`, `schema.sql` symlink)
+are committed only by `bootstrap.py`. If Hagai edits them by hand he commits
+them by hand. The agent never stages anything outside `ai-vault/`.
 
 ### SOUL.md starter content
 
@@ -325,10 +382,13 @@ Promote only when one of these triggers fires (closed enum, must match the
 1. **decision-crystallized** — a meaningful decision was made and reasoned
    about.
 2. **risk-tracked** — a project risk worth recording surfaced.
-3. **pattern-recurred** — same theme appeared in 3+ distinct sessions/days.
-4. **incident-lesson-learned** — surprising failure or near-miss worth
+3. **incident-lesson-learned** — surprising failure or near-miss worth
    remembering.
-5. **user-request** — Hagai explicitly said "save this."
+4. **user-request** — Hagai explicitly said "save this."
+
+(`pattern-recurred` is deferred — it requires a cross-session "themes"
+projection that the MVP doesn't have. Reintroduced in
+`04-heartbeat-and-reflection.md`.)
 
 Never promote: speculative analysis, draft reasoning, transient briefings,
 operational logs.
@@ -464,14 +524,32 @@ The system uses two SQLite-compatible databases:
   projections. Accessed via libSQL embedded replica: a local SQLite file at
   `~/.local/share/second-brain/<instance>/cloud-replica.db` mirrors the cloud
   primary. Reads hit the local file (sub-ms); writes go to the primary and sync
-  back. Connection in the instance's `.env`:
+  back. Configured in the instance's `secrets.toml`:
 
+  ```toml
+  # Turso (embedded replica) — production
+  [db]
+  replica_path = "/home/bayov/.local/share/second-brain/work/cloud-replica.db"
+  sync_url = "libsql://my-db.turso.io"
+  auth_token = "..."
+
+  # Local-only fallback — omit sync_url and auth_token
+  [db]
+  replica_path = "/home/bayov/.local/share/second-brain/work/cloud.db"
   ```
-  # Turso (production)
-  DATABASE_URL=libsql://<your-db>.turso.io?authToken=<token>&sync_url=file:///home/bayov/.local/share/second-brain/work/cloud-replica.db
 
-  # Or fallback (local-only SQLite)
-  DATABASE_URL=file:///home/bayov/.local/share/second-brain/work/cloud.db
+  `db.py` connects via the libSQL Python client roughly as:
+
+  ```python
+  cfg = secrets["db"]
+  if "sync_url" in cfg:
+      conn = libsql.connect(
+          cfg["replica_path"],
+          sync_url=cfg["sync_url"],
+          auth_token=cfg["auth_token"],
+      )
+  else:
+      conn = sqlite3.connect(cfg["replica_path"])
   ```
 
   Plain SQL only — no Turso-specific extensions, so a swap requires no code
@@ -662,30 +740,46 @@ identical for all four — files are re-read every time.
 
 ### `pre-compact-flush.py` — flush before compaction
 
-Reads `TRANSCRIPT`, distills it via the role-aware helper below, and writes one
-`session_summary` event:
+Reads `TRANSCRIPT`, distills it via the role-aware helper below, writes one
+`session_summary` event, then commits any AI-vault changes accumulated during
+the session-so-far:
 
 ```python
+distilled, byte_range = distill_transcript(TRANSCRIPT, config["hooks"])
 write_event(
     Event(
         source="session_compact",
         type="session_summary",
         source_id=None,
         occurred_at=now_utc(),
-        payload=distill_transcript(TRANSCRIPT, config["hooks"]),
+        payload=distilled,
         metadata={
             "session_id": SESSION_ID,
             "harness": "claude-code",
             "model": _PAYLOAD.get("model"),
             "cwd": CWD,
+            "window": "pre-compact",
+            "transcript_byte_range": byte_range,  # [start, end] in TRANSCRIPT
         },
     )
 )
+commit_ai_vault_if_dirty(f"session {SESSION_ID} [pre-compact]")
 ```
 
 ### `session-end-flush.py`
 
-Identical to `pre-compact-flush.py` except `source="session_end"`.
+Identical to `pre-compact-flush.py` except `source="session_end"`,
+`metadata.window = "session-end"`, and the commit reason is
+`f"session {SESSION_ID} [session-end]"`.
+
+**On the two events being complementary.** A long session that compacts mid-way
+will produce two `session_summary` events: one at PreCompact (capturing "what
+was about to be forgotten") and one at SessionEnd (capturing "what was active at
+exit"). The transcript JSONL keeps growing across compaction, so the SessionEnd
+distill re-walks content that overlaps the PreCompact event. This is by design —
+the 50KB tail cap means a long session's earlier turns survive only in the
+PreCompact event. The `metadata.window` and `metadata.transcript_byte_range`
+fields let downstream consumers stitch the two windows without guessing.
 
 ### Transcript distillation (`distill_transcript`)
 
@@ -699,7 +793,10 @@ Bounded role-aware truncation:
 | User tool_result   | **Dropped.** The next assistant turn already distills what mattered.                       |
 
 Walk JSONL from the end backwards, accumulating until serialized payload
-approaches 50KB.
+approaches 50KB. Return `(payload, byte_range)` where `byte_range` is
+`[first_included_byte_offset, file_size]` in `TRANSCRIPT` — written into
+`metadata.transcript_byte_range` so consumers can dedupe overlap between the
+PreCompact and SessionEnd events.
 
 Payload shape:
 
@@ -1117,7 +1214,7 @@ repo = "donbayov/work-notes"
 ```
 
 ```toml
-# ~/.local/share/second-brain/<instance>/secrets.toml
+# ~/second-brain/<instance>/secrets.toml  (gitignored)
 [gitlab]
 token = "glpat-..." # PAT, scopes: api, read_repository, write_repository
 ```
@@ -1297,7 +1394,6 @@ GITLAB_TOKEN = secrets["gitlab"]["token"]
 PromotionTrigger = Literal[
     "decision-crystallized",
     "risk-tracked",
-    "pattern-recurred",
     "incident-lesson-learned",
     "user-request",
 ]
@@ -1384,7 +1480,7 @@ def promote(
 ```yaml
 ---
 name: promote-to-human-vault
-description: Promote durable AI-vault content to Hagai's human vault via GitLab MR. Reformulates to match human-vault voice, searches for related notes to avoid duplication, and decides extend-vs-new placement. Use for crystallized decisions, tracked risks, recurring patterns, or explicit "save this" requests.
+description: Promote durable AI-vault content to Hagai's human vault via GitLab MR. Reformulates to match human-vault voice, searches for related notes to avoid duplication, and decides extend-vs-new placement. Use for crystallized decisions, tracked risks, incident lessons, or explicit "save this" requests.
 ---
 ```
 
@@ -1435,7 +1531,7 @@ claude/skills/
 ```yaml
 ---
 name: vault-structure
-description: Reference for Hagai's dual-vault layout — AI vault (~/second-brain/work/ai-vault/) and human vault (~/notes/work/, mirrored at ~/second-brain/work/human-vault/). Covers folder taxonomy (briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/), Workflow A vs B for meeting notes, and what triggers promotion vs. stays in AI vault.
+description: Reference for Hagai's dual-vault layout — AI vault (~/second-brain/work/ai-vault/) and human vault (~/notes/work/, mirrored at ~/second-brain/work/human-vault/). Covers folder taxonomy (briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/), Workflow A vs B for meeting notes, and what triggers promotion (decision-crystallized, risk-tracked, incident-lesson-learned, user-request) vs. stays in AI vault.
 ---
 ```
 
@@ -1559,7 +1655,8 @@ sb-db --status                                   # event count, sync health
 sb-db --dump > ~/backups/cloud-final.sql
 cp ~/.local/share/second-brain/work/cloud-replica.db \
    ~/.local/share/second-brain/work/cloud.db
-# Then update DATABASE_URL in .env from libsql://... to file:///...
+# Then in secrets.toml [db]: drop sync_url + auth_token, point replica_path
+# at the copy above (or just rename the replica file in place).
 ```
 
 **Logs:** soft-fail hook errors go to
