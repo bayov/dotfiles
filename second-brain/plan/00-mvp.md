@@ -18,10 +18,17 @@ follow-up PRDs in this directory.
 - Phase 4.5 — Human Vault Integration (the one real integration: GitLab MR)
 - Phase 5 (slim) — **Two skills only**: `vault-structure` + the
   `promote-to-human-vault` skill (the latter lives with 4.5)
-- Phase 8 (slim) — **One guardrail**: block `git push origin main` from agent
-  context inside `human-vault/`. Required by 4.5; full hardening deferred.
-- Phase 9 (slim) — Manual deployment: `uv sync`, bootstrap, manual one-off
-  invocations. systemd / cron is deferred along with the things that need it.
+- Phase 9 (slim) — `sb-scheduler` daemon + manual operational surface.
+
+**Deferred guardrail.** The original plan included a slim Phase 8 with one
+PreToolUse hook that regex-blocked `git push origin main` from inside
+`human-vault/`. PreToolUse is dropped from the MVP entirely (it sits on the hot
+path of every tool call, and the MVP has no other consumer that would amortize
+the `uv run` startup cost). The "don't push to main" restriction is held by the
+soft guardrail in SOUL.md plus GitLab branch-protection on `main` — both of
+which are sufficient when the only push surface is `glab` invoked from
+`promote.py`. Hard PreToolUse-level enforcement returns in
+`07-security-hardening.md`.
 
 **Architecture principle:** A cloud SQL DB (Turso/libSQL) is the single source
 of truth, with an append-only `events` table at its core. The MVP ships **only**
@@ -60,12 +67,12 @@ dotfiles repo):
 ├── bootstrap.py                     # scaffolds a new ~/second-brain/<instance>/
 ├── pyproject.toml                   # declares the `sb` package + console scripts
 │                                    #   (sb-index, sb-search, sb-db, sb-rag-db,
-│                                    #    sb-event, sb-context-check, sb-guardrail)
+│                                    #    sb-event, sb-context-check, sb-scheduler)
 ├── src/sb/                          # ordinary importable Python package
 │   ├── instance.py                  #   find_instance() — marker-file ascent
-│   ├── scripts/                     #   db.py, memory_index.py, event_cli.py,
-│   │                                #   git_io.py (commit_ai_vault_if_dirty), ...
-│   └── hooks/                       #   guardrail_check.py
+│   └── scripts/                     #   db.py, memory_index.py, event_cli.py,
+│                                    #   git_io.py (commit_ai_vault_if_dirty),
+│                                    #   scheduler.py, ...
 ├── claude/
 │   ├── hooks/                       # → <instance>/.claude/hooks/
 │   └── skills/                      # → <instance>/.claude/skills/
@@ -73,7 +80,7 @@ dotfiles repo):
 │   └── 0001_init.sql                # → <instance>/schema.sql
 └── starter/                         # COPIED at bootstrap; diverges per instance
     ├── ai-vault/
-    │   ├── SOUL.md, USER.md, MEMORY.md, human-vault-map.md
+    │   ├── SOUL.md, USER.md, MEMORY.md
     │   └── .obsidian/
     ├── config.toml                  # → <instance>/config.toml
     ├── claude-settings.json         # → <instance>/.claude/settings.json
@@ -86,7 +93,7 @@ dotfiles repo):
 ```
 ~/second-brain/work/
 ├── ai-vault/                        # COPIED from starter/ai-vault/
-│   ├── SOUL.md, USER.md, MEMORY.md, human-vault-map.md
+│   ├── SOUL.md, USER.md, MEMORY.md
 │   ├── .obsidian/
 │   └── briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/
 ├── config.toml                      # COPIED; also serves as instance marker; committed
@@ -181,7 +188,9 @@ uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstra
    (local RAG DB schema). Bootstrap invokes both as Python subprocesses with
    `cwd=<instance>` and `SECOND_BRAIN_INSTANCE=<instance>` so `find_instance()`
    resolves correctly.
-6. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"`.
+6. Install + enable the `sb-scheduler@<instance>` systemd-user unit (idempotent;
+   see Phase 9).
+7. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"`.
 
 #### Bootstrap prompts
 
@@ -211,6 +220,7 @@ one, and writes the rendered file to the instance.
 | DB           | Replica path (default: `~/.local/share/second-brain/<inst>/cloud-replica.db`) | required (default) | `secrets.toml [db] replica_path`       |
 | DB (turso)   | Sync URL (e.g. `libsql://my-db.turso.io`)                                     | required if turso  | `secrets.toml [db] sync_url`           |
 | DB (turso)   | Auth token                                                                    | required if turso  | `secrets.toml [db] auth_token`         |
+| Anthropic    | API key (used by `sb-index` for non-English translation)                      | required           | `secrets.toml [anthropic] api_key`     |
 | GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                                     | optional           | gates the next three                   |
 | GitLab       | `gitlab_host` (default: `gitlab.com`)                                         | required if y      | `config.toml [human_vault]`            |
 | GitLab       | Repo (e.g. `donbayov/work-notes`)                                             | required if y      | `config.toml [human_vault]`, `USER.md` |
@@ -232,7 +242,6 @@ a git submodule pointing to the GitLab repo backing `~/notes/work` (see Phase
 ├── SOUL.md                   # Agent persona, hard rules, promotion discipline
 ├── USER.md                   # Hagai's profile, account IDs, team map
 ├── MEMORY.md                 # Live index: projects, risks, decisions
-├── human-vault-map.md        # AI's mental model of human-vault structure (Phase 4.5)
 ├── briefings/
 │   ├── meetings/             # one .md per upcoming meeting
 │   └── daily/                # rolling daily snapshots (used by future heartbeat PRD)
@@ -251,7 +260,11 @@ what the agent is doing. Internal `[[wikilinks]]` between dossiers, meetings,
 and analysis form a navigable graph. Hagai is a read-only observer; the AI is
 sole writer.
 
-`human-vault-map.md` is created empty in Phase 1 and populated in Phase 4.5.
+**No vault map file.** The agent discovers human-vault structure on demand by
+listing directories and reading files via the indexer/search. A precomputed
+`human-vault-map.md` was considered and dropped — it would either need to be
+hand-maintained (friction) or auto-generated by a heuristic (drift). On-demand
+discovery is cheap enough at MVP scale.
 
 ### Editorial model
 
@@ -282,7 +295,7 @@ Durable AI-vault content is promoted to a MR against the human vault.
 **Reformulation is mandatory.** Before opening a MR the agent MUST:
 
 1. Search the human vault: `memory_search.py --source human-vault "<topic>"`
-2. Consult `human-vault-map.md` to decide placement
+2. Read top-level `human-vault/` directory listing to decide placement
 3. Reformulate to match human-vault voice, density, naming conventions
 4. If overlap with an existing note, propose a merge edit — not a new file
 5. Include in MR description: trigger, AI-vault source path, placement
@@ -299,9 +312,8 @@ future integrations, session summaries) lives in the cloud DB — not in git.
 **Commit policy — invariant.** Every bounded unit of agent work that may write
 to `ai-vault/` MUST end by calling `commit_ai_vault_if_dirty(reason)`. In the
 MVP that's the two flush hooks (`pre-compact-flush.py` and
-`session-end-flush.py`) plus on-demand tools like `update_vault_map.py`. Future
-PRDs (heartbeat, event processor, chat) inherit the same obligation. The helper
-lives at `src/sb/scripts/git_io.py`:
+`session-end-flush.py`). Future PRDs (heartbeat, event processor, chat) inherit
+the same obligation. The helper lives at `src/sb/scripts/git_io.py`:
 
 ```python
 def commit_ai_vault_if_dirty(reason: str) -> str | None:
@@ -338,6 +350,11 @@ them by hand. The agent never stages anything outside `ai-vault/`.
 
 ### SOUL.md starter content
 
+The block below is **illustrative**, not load-bearing. `bootstrap.py` copies it
+verbatim, but every instance is expected to edit it to match its own scope. Hard
+rules in particular should reflect the actual surfaces this brain touches —
+don't carry rules about systems that aren't in scope.
+
 ```markdown
 Agent Soul
 ==========
@@ -354,7 +371,6 @@ Hard Rules (Advisor Mode)
 
 - NEVER send emails, post messages, or act on behalf of Hagai without explicit
   approval.
-- NEVER access financial data or make purchases.
 - NEVER post to social media.
 - I propose actions. Present for review. Wait.
 
@@ -402,7 +418,7 @@ Before opening an MR, I MUST:
 2. Read the **top-3 results**. If any covers the same fact → propose a merge
    edit on the existing file. If related but distinct → extend the relevant
    section. Otherwise → new file.
-3. Read `ai-vault/human-vault-map.md` to choose folder placement.
+3. List `human-vault/` top-level directories to choose folder placement.
 4. Reformulate to match human-vault voice, density, naming conventions, and link
    style.
 5. Include in the MR description: trigger, AI-vault source path, placement
@@ -569,8 +585,13 @@ The system uses two SQLite-compatible databases:
 -- writer — see `04-heartbeat-and-reflection.md` and `05-chat-interface.md`.
 CREATE TABLE events (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    source          TEXT NOT NULL,         -- 'manual', 'session_compact', 'human-vault', 'heartbeat' (later)
-    type            TEXT NOT NULL,         -- 'note', 'session_summary', 'human_vault_commit', ...
+    source          TEXT NOT NULL,         -- 'manual', 'session_compact', 'session_end', 'human-vault'
+    type            TEXT NOT NULL CHECK (type IN (
+                        'note',                 -- escape hatch for ad-hoc manual entry
+                        'session_summary',
+                        'human_vault_commit',
+                        'human_vault_synced'
+                    )),
     source_id       TEXT,                  -- external dedupe key — nullable
     occurred_at     TIMESTAMP NOT NULL,
     ingested_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -586,15 +607,23 @@ CREATE INDEX events_type_occurred ON events(type, occurred_at);
 
 #### Event types (MVP)
 
+`events.type` is a closed enum (DB-enforced via `CHECK`). MVP values:
+
 | Event type           | Source                        | When written                                        |
 | -------------------- | ----------------------------- | --------------------------------------------------- |
-| `note`               | manual                        | `sb-event add` CLI (this MVP's only event producer) |
-| `session_summary`    | session_compact / session_end | Hook on compact/stop                                |
+| `note`               | manual                        | `sb-event add` CLI — escape hatch for ad-hoc entry  |
+| `session_summary`    | session_compact / session_end | Hook on compact / session end                       |
 | `human_vault_synced` | human-vault                   | After `sync_human_vault()` runs                     |
 | `human_vault_commit` | human-vault                   | One per new commit observed by `sync_human_vault()` |
 
-Future PRDs add: `email_thread`, `calendar_event`, `action_proposed`,
-`action_responded`, `event_processed`, `notification_sent`, `chat_message`.
+`note` is the deliberate escape hatch: anything Hagai wants to capture without
+shipping a migration goes there with discriminating `payload.tags`. When a
+`note` shape recurs enough to deserve its own type, it's promoted to a real enum
+value with a migration.
+
+Future PRDs extend the CHECK list with: `email_thread`, `calendar_event`,
+`action_proposed`, `action_responded`, `event_processed`, `notification_sent`,
+`chat_message`.
 
 #### Writing events
 
@@ -721,8 +750,7 @@ exit 0 — never block Claude).
 Reads `config.toml [context] max_bytes.*` and injects each listed file into the
 system prompt, wrapped in XML-like tags. Inject list is config-driven.
 
-For MVP, entries are `SOUL`, `USER`, `MEMORY`. Phase 4.5 adds `MAP`
-(`human-vault-map.md`) by adding one config line.
+For MVP, entries are `SOUL`, `USER`, `MEMORY`.
 
 Output format:
 
@@ -839,8 +867,12 @@ a **separate, local-only SQLite file**
 **Scope of this phase:** ship the indexer + search library + CLI. **No edits to
 the Phase 2 hooks.** `memory_search.py` is importable Python _and_ a CLI.
 
-**Language scope:** English-only (`BAAI/bge-small-en-v1.5`). FTS5's `unicode61`
-tokenizer indexes non-Latin script for keyword search.
+**Language scope:** Multilingual via `BAAI/bge-m3` (1024-dim, ~560MB, 100+
+languages incl. Hebrew). To bias toward English representations and keep
+cross-language search tight, non-English chunk text is translated to English
+before embedding (see "Translation pipeline" below); the original text is
+preserved on the chunk row for audit and FTS. FTS5's `unicode61` tokenizer
+covers non-Latin script for keyword search natively.
 
 **Key files:**
 
@@ -862,23 +894,33 @@ The RAG DB is a pure cache, so schema bumps **drop and rebuild**.
 
 ```sql
 CREATE TABLE chunks (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_path  TEXT NOT NULL,
-    source_tag   TEXT NOT NULL,        -- 'ai-vault' | 'human-vault'
-    chunk_index  INTEGER NOT NULL,
-    char_start   INTEGER NOT NULL,
-    char_end     INTEGER NOT NULL,
-    text         TEXT NOT NULL,
-    mtime_ns     INTEGER NOT NULL,
-    file_hash    TEXT NOT NULL,
-    embed_model  TEXT NOT NULL,
-    indexed_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_path     TEXT NOT NULL,
+    source_tag      TEXT NOT NULL,        -- 'ai-vault' | 'human-vault'
+    chunk_index     INTEGER NOT NULL,
+    char_start      INTEGER NOT NULL,
+    char_end        INTEGER NOT NULL,
+    text            TEXT NOT NULL,        -- original-language text (audit fidelity)
+    lang            TEXT NOT NULL,        -- ISO 639-1, e.g. 'en', 'he' (from langdetect)
+    translated_text TEXT,                 -- English translation; NULL when lang='en'
+    mtime_ns        INTEGER NOT NULL,
+    file_hash       TEXT NOT NULL,
+    embed_model     TEXT NOT NULL,
+    indexed_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX chunks_path_idx ON chunks(source_path, chunk_index);
 CREATE INDEX chunks_tag_idx ON chunks(source_tag);
 
-CREATE VIRTUAL TABLE vec_chunks USING vec0(embedding float[384]);
-CREATE VIRTUAL TABLE fts_chunks USING fts5(text, content='', tokenize='unicode61');
+-- bge-m3 is 1024-dim. Embeddings are computed on `translated_text` when
+-- present, else `text` — the vector space stays English-biased.
+CREATE VIRTUAL TABLE vec_chunks USING vec0(embedding float[1024]);
+
+-- FTS indexes BOTH the original `text` and the `translated_text` so keyword
+-- search hits queries phrased in either language. unicode61 handles non-Latin
+-- script for the original-language column.
+CREATE VIRTUAL TABLE fts_chunks USING fts5(
+    text, translated_text, content='', tokenize='unicode61'
+);
 
 CREATE TABLE indexed_files (
     source_path  TEXT PRIMARY KEY,
@@ -895,16 +937,70 @@ CREATE TABLE indexed_files (
 ```python
 from fastembed import TextEmbedding
 
-model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")  # 384 dims, ~80MB
+# bge-m3 is multilingual; 1024 dims; ~560MB on disk. Slower than bge-small
+# (~3-4×) but irrelevant for hook-time / scheduled indexing of personal notes.
+model = TextEmbedding(model_name="BAAI/bge-m3")
 
 
 def embed_batch(texts: list[str]) -> list[list[float]]:
-    return [v.tolist() for v in model.embed(texts, batch_size=64)]
+    return [v.tolist() for v in model.embed(texts, batch_size=32)]
 
 
 def embed_query(query: str) -> list[float]:
     return next(model.query_embed(query)).tolist()
 ```
+
+### Translation pipeline
+
+`memory_index.py` runs each chunk through a small detect-and-maybe-translate
+pass before persisting. Detection is `langdetect` (pure Python, no model
+download). When the detected language is not English, the indexer calls Claude
+Haiku via the Anthropic API to translate the chunk to English; the result is
+stored in `chunks.translated_text`. The English-or-translated text is what gets
+embedded and added to `fts_chunks.translated_text`; the original goes to
+`chunks.text` and `fts_chunks.text`.
+
+```python
+from anthropic import Anthropic
+from langdetect import detect, LangDetectException
+
+_anthropic = Anthropic()  # reads ANTHROPIC_API_KEY
+
+
+def detect_lang(text: str) -> str:
+    try:
+        return detect(text)  # ISO 639-1
+    except LangDetectException:
+        return "en"  # short / ambiguous → assume English, skip translation
+
+
+def translate_to_english(text: str) -> str:
+    msg = _anthropic.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=2048,
+        messages=[
+            {
+                "role": "user",
+                "content": (
+                    "Translate the following text to English. Return only the "
+                    "translation, no preamble. Preserve markdown structure, "
+                    "wikilinks ([[...]]), and code blocks verbatim.\n\n" + text
+                ),
+            }
+        ],
+    )
+    return msg.content[0].text
+```
+
+**API key** lives in `secrets.toml [anthropic] api_key`; bootstrap prompts for
+it. Translation is per-chunk-once: re-indexing a file with unchanged hash reuses
+the stored `translated_text`. Cost at MVP volume (personal notes, mostly English
+with occasional Hebrew) is negligible.
+
+**Trade-off accepted.** This couples `sb-index` to the Anthropic API at index
+time. Offline indexing of non-English chunks is not supported in MVP. If this
+becomes a concern, swap `translate_to_english` for a local NLLB-200 model with
+no other code changes.
 
 ### `memory_index.py` — vault discovery + incremental pipeline
 
@@ -939,7 +1035,7 @@ def run_index(source_filter: str | None = None):
 - Path exclusions: `.obsidian/`, `.git/`, `.gitmodules/`, `.trash/`, `.claude/`.
 - Don't follow symlinks.
 - Skip files with <50 chars of post-frontmatter body.
-- Always include `SOUL.md`, `USER.md`, `MEMORY.md`, `human-vault-map.md`.
+- Always include `SOUL.md`, `USER.md`, `MEMORY.md`.
 
 **Skip logic (per file):**
 
@@ -1024,10 +1120,10 @@ sb-search "..." --source ai-vault
 sb-search "..." --json
 ```
 
-**MVP operational note:** indexing runs **on demand** in MVP — Hagai invokes
-`sb-index` manually (or after editing notes). Cron + systemd-timer scheduling
-moves to `08-deployment-systemd.md` once heartbeat (which depends on a recurring
-index) lands.
+**MVP operational note:** indexing runs every 5 minutes via the `sb-scheduler`
+daemon (Phase 9). Hagai can also invoke `sb-index` ad-hoc for mid-cycle
+freshness. The scheduler is started by bootstrap and managed as a systemd-user
+service.
 
 **Dependencies:** Phase 1, Phase 2. **Estimated complexity:** Medium
 
@@ -1102,13 +1198,13 @@ def cmd_add(args):
         "tags": args.tag or [],
     }
     occurred_at = args.occurred_at or datetime.now(timezone.utc).isoformat()
-    # source_id is a UUID so manual events are de-duped if the same row is
-    # accidentally re-submitted (e.g. retry after Ctrl-C).
+    # No idempotency: each invocation = a new event. A retry (e.g. after
+    # Ctrl-C) creates a duplicate row, which is fine for manual entry.
     eid = write_event(
         Event(
             source="manual",
-            type=args.type,  # 'note' for MVP; the schema accepts any string
-            source_id=str(uuid.uuid4()),
+            type=args.type,  # 'note' for MVP — see events.type CHECK constraint
+            source_id=None,
             occurred_at=occurred_at,
             payload=payload,
             metadata={"entered_by": "cli"},
@@ -1142,10 +1238,10 @@ shapes.
 - `sb-event list` returns it.
 - `sb-event` exit code is non-zero on validation errors (missing title, bad
   timestamp).
-- Re-running the same `sb-event add` is idempotent at the SQL level (UUID
-  source_id makes accidental duplicates safe — a fresh UUID per call means a
-  re-submit creates a new event, but the `(source, source_id)` UNIQUE INDEX
-  prevents storing the same UUID twice).
+- Each `sb-event add` invocation writes a new event. No idempotency: a re-submit
+  (Ctrl-C retry) creates a duplicate row. Acceptable for a manual CLI; callers
+  that need dedup are introduced by the integration PRDs and supply their own
+  stable `source_id`.
 - `sb-search` finds the event via the AI-vault if Hagai chose to also write the
   note into `ai-vault/` (RAG indexes vault files, not the events table — by
   design; the events table is the spine, the vault is the searchable surface).
@@ -1166,13 +1262,16 @@ moves AI → human only via MR, never via direct copy.
 
 **Single-repo mode (canonical).** One GitLab user, one repo. Hagai pushes
 directly to `main` from his working copy; the agent is restricted to feature
-branches + MR. The restriction is enforced by two layers:
+branches + MR. The restriction is enforced by two layers in MVP:
 
 1. **Soft guardrail** — `SOUL.md` "Promotion Discipline" + the SKILL workflow
    tell the agent to push only `ai/promote-*` branches and open MRs.
-2. **Hard guardrail** — `sb-guardrail` PreToolUse hook regex blocks
-   `git push.*\b(origin\s+)?main\b` when invoked from inside `human-vault/`. See
-   "Phase 8 (slim)" below.
+2. **GitLab branch protection on `main`** — server-side hard stop. Even if the
+   agent attempts `git push origin main`, the remote rejects it.
+
+A PreToolUse-level hard guardrail (regex-blocking `git push origin main` at the
+Bash-tool boundary) was in scope for an earlier draft and is deferred to
+`07-security-hardening.md`. The two layers above are sufficient for MVP.
 
 **GitLab instance:** `gitlab_host` (default `gitlab.com`) is set per instance in
 `config.toml [human_vault]`. For self-hosted corporate GitLab, **verify with
@@ -1200,8 +1299,7 @@ src/sb/scripts/sync_human_vault.py                # exposed as sb-sync-human-vau
 claude/skills/promote-to-human-vault/
 ├── SKILL.md
 └── scripts/
-    ├── promote.py
-    └── update_vault_map.py
+    └── promote.py
 ```
 
 **Configuration:**
@@ -1224,9 +1322,12 @@ indexer skip submodule logic when it's absent.
 
 **One-time GitLab setup:**
 
-Install `glab` CLI. For self-hosted instances,
-`glab auth login --hostname
-<gitlab_host>` once.
+Install `glab` CLI. The agent does **not** run `glab auth login` — `glab` is
+authenticated per-subprocess via env vars exported from
+`secrets.toml [gitlab]
+token` and `config.toml [human_vault] gitlab_host` (see
+`promote.py` below). This keeps a single source of truth for the token in
+`secrets.toml` and avoids a second secrets store under `~/.config/glab-cli/`.
 
 1. **Push `~/notes/work` to GitLab:**
    ```bash
@@ -1330,7 +1431,6 @@ def sync_human_vault() -> bool:
             ],
             text=True,
         ).strip()
-        structure_changed = False
         for line in log.splitlines():
             sha, iso_time, subject = line.split("\x00", 2)
             files = []
@@ -1354,8 +1454,6 @@ def sync_human_vault() -> bool:
                 parts = entry.split("\t")
                 status, path = parts[0], parts[-1]
                 files.append({"status": status, "path": path})
-                if status[0] in "ARD" and path.count("/") <= 2:
-                    structure_changed = True
             write_event(
                 Event(
                     source="human-vault",
@@ -1365,8 +1463,6 @@ def sync_human_vault() -> bool:
                     payload={"sha": sha, "subject": subject, "files": files},
                 )
             )
-        if structure_changed:
-            run_update_vault_map()
 
     write_event(
         Event(
@@ -1465,7 +1561,10 @@ def promote(
         ],
         env={
             **os.environ,
-            "GITLAB_HOST": GITLAB_HOST,
+            # `glab` reads GITLAB_URI for the host (not GITLAB_HOST) and
+            # GITLAB_TOKEN for auth. For gitlab.com both can be set anyway;
+            # for self-hosted, GITLAB_URI is required.
+            "GITLAB_URI": f"https://{GITLAB_HOST}",
             "GITLAB_TOKEN": GITLAB_TOKEN,
         },
         check=True,
@@ -1489,18 +1588,14 @@ Mandatory workflow (enforced by SOUL.md "Promotion Discipline"):
 1. **Trigger check.** Confirm content matches one of the five triggers in
    SOUL.md. If not, do not promote.
 2. **Search human vault.** `sb-search "<topic>" --source human-vault`.
-3. **Read top-3 results + `human-vault-map.md`.** Judgment-based dedup. If any
-   of the top-3 covers the same fact → propose a merge edit. If related but
-   distinct → extend the relevant section. Otherwise → new file.
+3. **Read top-3 results + list `human-vault/` top-level directories.**
+   Judgment-based dedup. If any of the top-3 covers the same fact → propose a
+   merge edit. If related but distinct → extend the relevant section. Otherwise
+   → new file.
 4. **Reformulate.** Rewrite to match human-vault voice/conventions. Never paste
    AI-vault prose verbatim.
 5. **Open MR.** Call `promote.py` with all six fields.
 6. **Tell Hagai.** "MR opened: [link]"
-
-**`update_vault_map.py`** scans `human-vault/` and rewrites
-`ai-vault/human-vault-map.md` with: top-level folders, file counts, naming
-conventions, recurring section headings, observed link patterns. Run on demand
-and (in this MVP) by `sync_human_vault()` when structure changes.
 
 **Dependencies:** Phase 3 (dual-vault indexer). **Estimated complexity:**
 Low–Medium
@@ -1522,8 +1617,7 @@ claude/skills/
 └── promote-to-human-vault/        # owned by Phase 4.5
     ├── SKILL.md
     └── scripts/
-        ├── promote.py
-        └── update_vault_map.py
+        └── promote.py
 ```
 
 **`vault-structure/SKILL.md`:**
@@ -1548,79 +1642,77 @@ deferred to `06-extended-skills.md`. They depend on integrations
 
 ---
 
-Phase 8 (slim): One Guardrail
------------------------------
+Phase 9 (slim): Scheduler + Operational Surface
+-----------------------------------------------
 
-Full sanitization + injection-defense + comprehensive blocked-pattern list moves
-to `07-security-hardening.md`. The MVP keeps **one guardrail** because Phase 4.5
-requires it: prevent the agent from pushing directly to `main` in
-`human-vault/`.
+### `sb-scheduler` daemon
 
-**Files:**
+A long-running, always-on daemon, one process per instance, dispatches the MVP's
+recurring jobs. It replaces what would otherwise be `cron` / `systemd-timer`
+entries — keeping the dispatch logic in our own code keeps it inside
+`find_instance()` resolution and `secrets.toml` loading without reimplementing
+those for cron entries.
 
-```
-src/sb/scripts/
-└── guardrails.py
-src/sb/hooks/
-└── guardrail_check.py             # exposed as `sb-guardrail`
-```
+**MVP jobs:**
 
-**`guardrails.py`:**
+| Job            | Default interval | Command    |
+| -------------- | ---------------- | ---------- |
+| `index_events` | 5 min            | `sb-index` |
 
-```python
-import re
+`sync_human_vault` is **not** scheduled in MVP; Hagai runs `sb-sync-human-vault`
+on demand. It moves to the scheduler in `04-heartbeat-and-reflection.md` along
+with the heartbeat itself.
 
-BLOCKED_PATTERNS = [
-    r"git push.*--force",
-    r"git remote set-url.*human-vault",
-    # Single-user mode: Hagai pushes to main from ~/notes/work; the agent must not.
-    r"git push\s+(--?\S+\s+)*\b(origin\s+)?main\b",
-]
+**Implementation:** simple loop over `[[scheduler.jobs]]` from `config.toml`,
+`subprocess.run(...)` each command at its interval, log result to
+`~/.local/log/second-brain/<instance>/scheduler.log`. No threading, no
+concurrent jobs in MVP — jobs are quick and serial is fine.
 
-
-def check_command(command: str, cwd: str) -> tuple[bool, str]:
-    # Restrict main-block to invocations whose cwd resolves under human-vault/.
-    is_human_vault = "/human-vault" in cwd or cwd.endswith("/human-vault")
-    for pat in BLOCKED_PATTERNS:
-        if "main" in pat and not is_human_vault:
-            continue
-        if re.search(pat, command, re.IGNORECASE):
-            return False, f"Blocked by guardrail: matches '{pat}'"
-    return True, "ok"
+```toml
+# config.toml
+[[scheduler.jobs]]
+name = "index_events"
+command = "sb-index"
+interval_seconds = 300
 ```
 
-**PreToolUse hook in `.claude/settings.json`:**
+**systemd user unit (templated by instance):**
 
-```json
-{
-    "hooks": {
-        "PreToolUse": [
-            {
-                "type": "command",
-                "command": "uv run --project $HOME/dotfiles/second-brain sb-guardrail",
-                "matcher": { "tool_name": "Bash" }
-            }
-        ]
-    }
-}
+```ini
+# ~/.config/systemd/user/sb-scheduler@.service  — installed by bootstrap.py
+[Unit]
+Description=Second-brain scheduler (instance %i)
+After=default.target
+
+[Service]
+Type=simple
+Environment=SECOND_BRAIN_INSTANCE=%h/second-brain/%i
+ExecStart=%h/.local/bin/uv run --project %h/dotfiles/second-brain sb-scheduler
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
 ```
 
-The hook reads the Bash tool's `command` from stdin payload and the cwd from the
-same payload, runs `check_command()`, and exits 2 with a stderr message on
-block.
+Bootstrap installs the unit (idempotent), then runs:
 
-**Dependencies:** Phase 4.5. **Estimated complexity:** Low
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now sb-scheduler@<instance>
+```
 
----
+Logs are reachable via `journalctl --user -u sb-scheduler@work`. The unit
+restarts on crash; it starts on login (WSL2 with systemd enabled satisfies this
+— `/etc/wsl.conf` must have `[boot] systemd=true`, which is the modern WSL2
+default).
 
-Phase 9 (slim): Manual Deployment
----------------------------------
+**Multi-instance.** The `@<instance>` template makes the unit reusable: when the
+planned `personal` instance lands,
+`systemctl --user enable --now
+sb-scheduler@personal` is the only step.
 
-The MVP ships with **no scheduled jobs**. cron/systemd-timer wiring lives in
-`08-deployment-systemd.md`, which is gated by the heartbeat / chat / index
-schedules — none of which the MVP includes.
-
-Operational surface:
+### Operational surface
 
 ```bash
 # One-time: sync the venv from pyproject.toml.
@@ -1645,6 +1737,10 @@ cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-event add 
 # Sync the human-vault submodule (Phase 4.5).
 cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-sync-human-vault
 
+# Scheduler (managed by systemd-user; ad-hoc commands).
+systemctl --user status sb-scheduler@work
+journalctl --user -u sb-scheduler@work -f
+
 # Operational commands on the cloud DB.
 sb-db --dump > ~/backups/cloud-$(date +%F).sql   # snapshot
 sb-db --status                                   # event count, sync health
@@ -1660,14 +1756,16 @@ cp ~/.local/share/second-brain/work/cloud-replica.db \
 ```
 
 **Logs:** soft-fail hook errors go to
-`~/.local/log/second-brain/<instance>/hooks.log`. No log rotation in MVP (volume
-is negligible while no background jobs run); lograte config moves to the
-deployment PRD.
+`~/.local/log/second-brain/<instance>/hooks.log`. Scheduler stdout/stderr go to
+journald (`journalctl --user -u sb-scheduler@<instance>`). No log rotation in
+MVP; lograte config moves to the deployment PRD.
 
-**Cost estimate (MVP-only):** essentially $0/month. No Claude API calls outside
-interactive Claude Code sessions, which Hagai already pays for. Turso free tier
-is well within bounds. Once heartbeat lands (`04-heartbeat-...`), the cost
-picture in the original PRD applies.
+**Cost estimate (MVP-only):** small but non-zero. The Anthropic API is now on
+the indexing path for non-English chunk translation (Phase 3). Per-chunk-once
+caching keeps cost bounded — at MVP volume (personal notes, mostly English)
+expect cents-to-low-dollars per month. Turso free tier covers the DB. Other
+Claude API usage is inside interactive Claude Code sessions Hagai already pays
+for.
 
 **Dependencies:** All MVP phases. **Estimated complexity:** Low (mostly docs).
 
@@ -1679,8 +1777,6 @@ MVP build order
 ```
 Phase 1 → Phase 2 → Phase 3 → Phase 4 (manual) → Phase 4.5 → Phase 5 (slim)
                                                        ↓
-                                                Phase 8 (slim)
-                                                       ↓
                                                 Phase 9 (slim)
 ```
 
@@ -1690,9 +1786,9 @@ conversation immediately benefits from memory injection.
 **Recommended second milestone (2–3 days):** Phases 1–3 + manual events. Vaults
 are searchable; events table is exercised.
 
-**Recommended third milestone (1 day):** Phase 4.5 + slim 8. Human-vault
+**Recommended third milestone (1 day):** Phase 4.5 + slim 9. Human-vault
 submodule mounted, indexer covers both vaults, `promote-to-human-vault` skill
-works end-to-end with the one guardrail in place.
+works end-to-end, scheduler keeps the index fresh.
 
 After that, pick from the follow-up PRDs in this directory based on which
 capability you most want next.
