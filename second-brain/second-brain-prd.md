@@ -65,8 +65,9 @@ dotfiles repo):
 │   └── 0001_init.sql                # → <instance>/schema.sql
 └── starter/                         # COPIED at bootstrap; diverges per instance
     ├── ai-vault/
-    │   ├── SOUL.md, USER.md, MEMORY.md, config.toml, human-vault-map.md
+    │   ├── SOUL.md, USER.md, MEMORY.md, human-vault-map.md
     │   └── .obsidian/
+    ├── config.toml                  # → <instance>/config.toml
     ├── claude-settings.json         # → <instance>/.claude/settings.json
     ├── env.example                  # → <instance>/.env
     └── gitignore                    # → <instance>/.gitignore
@@ -78,9 +79,10 @@ required):
 ```
 ~/second-brain/work/
 ├── ai-vault/                        # COPIED from starter/ai-vault/, then evolves
-│   ├── SOUL.md, USER.md, MEMORY.md, config.toml, human-vault-map.md
+│   ├── SOUL.md, USER.md, MEMORY.md, human-vault-map.md
 │   ├── .obsidian/
 │   └── briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/
+├── config.toml                      # COPIED from starter/config.toml, then evolves
 ├── human-vault/                     # git submodule → AI's fork (Phase 4.5)
 ├── .agents             → ~/dotfiles/second-brain/agents/
 ├── .claude/
@@ -104,9 +106,9 @@ required):
   the instance repo).
 - **Starter files diverge.**
   SOUL/USER/MEMORY/`config.toml`/`.claude/settings.json` are **copied** at
-  bootstrap, not symlinked: SOUL tone differs work-vs-personal, USER holds
-  per-instance account IDs, MEMORY evolves continuously, settings carry
-  per-instance permissions.
+  bootstrap, not symlinked: `config.toml` carries per-instance tuning, SOUL tone
+  differs work-vs-personal, USER holds per-instance account IDs, MEMORY evolves
+  continuously, settings carry per-instance permissions.
 - **Symlinks are relative**, so an instance is movable. Inside the instance
   repo, `git status` shows only data changes — code never appears as drift.
 
@@ -143,7 +145,6 @@ write access to the fork (MRs only) and read access to upstream via
 ├── SOUL.md                   # Agent persona, hard rules, editorial freedom, promotion discipline
 ├── USER.md                   # Hagai's profile, account IDs, team map, drafting criteria
 ├── MEMORY.md                 # Agent-owned live index: projects, risks, decisions, team context
-├── config.toml               # All tunable parameters
 ├── human-vault-map.md        # AI's running mental model of human-vault structure (populated in Phase 4.5)
 ├── briefings/
 │   ├── meetings/             # one .md per upcoming meeting (pre-meeting context)
