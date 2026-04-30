@@ -13,7 +13,9 @@ def get_status_line():
     model_name = data.get("model", {}).get("display_name", "")
     cw = data.get("context_window") or {}
     used_pct = cw.get("used_percentage") or 0
-    cost = data.get("cost", {}).get("total_cost_usd") or 0.0
+    total_input = cw.get("total_input_tokens") or 0
+    total_output = cw.get("total_output_tokens") or 0
+    effort_level = data.get("effort", {}).get("level", "")
     cwd = data.get("workspace", {}).get("current_dir", "")
 
     home = os.path.expanduser("~")
@@ -28,24 +30,39 @@ def get_status_line():
     YELLOW = "\033[33m"
     RESET = "\033[0m"
 
-    # Context Bar logic
+    total_tokens = total_input + total_output
+
+    # Context Bar logic — color by total token count
     bar_color = GREY
-    if used_pct > 80:
+    if total_tokens >= 200_000:
         bar_color = RED
-    elif used_pct > 50:
-        bar_color = YELLOW
+    elif total_tokens >= 100_000:
+        bar_color = ORANGE
 
     # Bar construction (10 blocks)
     num_blocks = max(0, min(10, round(used_pct / 10)))
     bar = "▓" * num_blocks + "░" * (10 - num_blocks)
 
-    # Order: cwd | model | bar | cost
+    # Format token counts (e.g. 12345 -> "12.3k", 1234567 -> "1.2M")
+    def fmt_tokens(n):
+        if n >= 1_000_000:
+            return f"{n / 1_000_000:.1f}M"
+        if n >= 1_000:
+            return f"{n / 1_000:.1f}k"
+        return str(n)
+
+    # Order: cwd | model | effort | bar | tokens
     cwd_part = f"{BLUE}{cwd}{RESET}"
     model_part = f"{ORANGE}◆ {model_name}{RESET}"
     bar_part = f"{bar_color}{bar} {used_pct}%{RESET}"
-    cost_part = f"{GREY}${cost:.2f}{RESET}"
+    tokens_part = f"{bar_color}{fmt_tokens(total_tokens)} ({fmt_tokens(total_input)}↓ {fmt_tokens(total_output)}↑){RESET}"
+    effort_part = f"{GREY}[{effort_level}]{RESET}" if effort_level else ""
 
-    return f"{cwd_part}  {model_part} {bar_part} {GREY}|{RESET} {cost_part}"
+    # Join model and effort with single space, rest with double space
+    model_effort = f"{model_part} {effort_part}" if effort_part else model_part
+    parts = [cwd_part, model_effort, f"{bar_part} {GREY}|{RESET} {tokens_part}"]
+
+    return "  ".join(parts)
 
 
 if __name__ == "__main__":
