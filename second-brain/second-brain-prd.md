@@ -554,16 +554,17 @@ CREATE VIEW completed_actions AS
 
 Every fact in the system is an event:
 
-| Event type           | Source                        | When written                                                                |
-| -------------------- | ----------------------------- | --------------------------------------------------------------------------- |
-| `email_thread`       | gmail                         | Heartbeat ingestion                                                         |
-| `calendar_event`     | calendar                      | Heartbeat ingestion                                                         |
-| `session_summary`    | session_compact / session_end | Hook on compact/stop                                                        |
-| `action_proposed`    | heartbeat / agent             | Agent generates a proposal                                                  |
-| `action_responded`   | user                          | Hagai accepts / rejects / modifies                                          |
-| `event_processed`    | agent                         | After processing an input event                                             |
-| `notification_sent`  | heartbeat / bot               | When a notification goes out                                                |
-| `human_vault_synced` | heartbeat                     | After `sync_human_vault()` runs (success or no-op) — feeds `db.py --status` |
+| Event type           | Source                        | When written                                                                 |
+| -------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| `email_thread`       | gmail                         | Heartbeat ingestion                                                          |
+| `calendar_event`     | calendar                      | Heartbeat ingestion                                                          |
+| `session_summary`    | session_compact / session_end | Hook on compact/stop                                                         |
+| `action_proposed`    | heartbeat / agent             | Agent generates a proposal                                                   |
+| `action_responded`   | user                          | Hagai accepts / rejects / modifies                                           |
+| `event_processed`    | agent                         | After processing an input event                                              |
+| `notification_sent`  | heartbeat / bot               | When a notification goes out                                                 |
+| `human_vault_synced` | heartbeat                     | After `sync_human_vault()` runs (success or no-op) — feeds `db.py --status`  |
+| `human_vault_commit` | human-vault                   | One per new commit observed by `sync_human_vault()` — drives change-reaction |
 
 #### Writing events (sync projection in one transaction)
 
@@ -1265,7 +1266,9 @@ HUMAN_VAULT_PATH = Path.home() / "second-brain/work/human-vault"
 
 
 def sync_human_vault() -> bool:
-    """Fast-forward human-vault to upstream/main. Returns True if HEAD advanced."""
+    """Fast-forward human-vault to upstream/main. For each new commit, write
+    one `human_vault_commit` event so the heartbeat reasoning phase can react
+    to Hagai's note changes in the same cycle. Returns True if HEAD advanced."""
     head_before = subprocess.check_output(
         ["git", "-C", str(HUMAN_VAULT_PATH), "rev-parse", "HEAD"], text=True
     ).strip()
@@ -1291,6 +1294,61 @@ def sync_human_vault() -> bool:
         ["git", "-C", str(HUMAN_VAULT_PATH), "rev-parse", "HEAD"], text=True
     ).strip()
     advanced = head_before != head_after
+
+    if advanced:
+        # One event per commit, oldest-first so event IDs preserve commit order.
+        # Payload is metadata only — full file content lives on disk in
+        # human-vault/ and is read on demand via `git show <sha>:<path>` (or
+        # the current working-tree file) during reasoning. The vault is the
+        # source of truth; we don't duplicate diffs into the DB.
+        # %x00 = NUL separator, survives any character in the subject line.
+        log = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                str(HUMAN_VAULT_PATH),
+                "log",
+                "--reverse",
+                "--format=%H%x00%aI%x00%s",
+                f"{head_before}..{head_after}",
+            ],
+            text=True,
+        ).strip()
+        for line in log.splitlines():
+            sha, iso_time, subject = line.split("\x00", 2)
+            files = []
+            raw_files = (
+                subprocess.check_output(
+                    [
+                        "git",
+                        "-C",
+                        str(HUMAN_VAULT_PATH),
+                        "show",
+                        "--name-status",
+                        "--format=",
+                        sha,
+                    ],
+                    text=True,
+                )
+                .strip()
+                .splitlines()
+            )
+            for entry in raw_files:
+                # `A path`, `M path`, `D path`, or `R100 old new` for renames.
+                parts = entry.split("\t")
+                status = parts[0]
+                path = parts[-1]
+                files.append({"status": status, "path": path})
+            write_event(
+                Event(
+                    source="human-vault",
+                    type="human_vault_commit",
+                    source_id=sha,  # UNIQUE(source, source_id) → idempotent re-sync
+                    occurred_at=iso_time,
+                    payload={"sha": sha, "subject": subject, "files": files},
+                )
+            )
+
     write_event(
         Event(
             source="heartbeat",
@@ -1308,7 +1366,9 @@ def sync_human_vault() -> bool:
 
 The `human_vault_synced` event is the system-health signal Phase 9's
 `db.py --status` reads to surface "last successful submodule sync" without
-grepping logs.
+grepping logs. The `human_vault_commit` events are the _content_ signal —
+consumed by the heartbeat reasoning phase to react to Hagai's note changes (see
+Phase 6).
 
 **`promote.py` — reformulate-then-MR (the only writer to human vault):**
 
@@ -1536,6 +1596,10 @@ via Discord DM. The heartbeat is the sole writer of MEMORY.md.
 
 ```python
 def gather_context() -> dict:
+    # sync_human_vault() does two things: (a) fast-forwards the local
+    # submodule, (b) writes one `human_vault_commit` event per new commit.
+    # Those events become available to the same heartbeat's reasoning phase —
+    # no second cycle needed.
     if sync_human_vault():  # Returns True if HEAD advanced
         # Reindex human-vault delta before reasoning, otherwise the chat / RAG
         # reads a corpus older than the events the heartbeat is about to ingest.
@@ -1555,7 +1619,59 @@ def gather_context() -> dict:
         "events_today": calendar.list_upcoming_events(days_ahead=1),
         "active_risks": parse_memory_risks(),  # From MEMORY.md
         "active_projects": parse_memory_projects(),  # From MEMORY.md
+        "human_vault_commits": fetch_unprocessed_human_vault_commits(),
     }
+
+
+def fetch_unprocessed_human_vault_commits() -> list[dict]:
+    """Commits not yet processed by *this* agent identity. Catches both
+    fresh commits from this run and stragglers from a previous run that
+    crashed before writing `event_processed`."""
+    rows = conn.execute(
+        """
+        SELECT e.id, e.source_id, e.occurred_at, e.payload
+        FROM events e
+        LEFT JOIN event_processing ep
+          ON ep.event_id = e.id AND ep.agent_id = ?
+        WHERE e.type = 'human_vault_commit' AND ep.id IS NULL
+        ORDER BY e.id
+        """,
+        (current_agent_id,),
+    ).fetchall()
+    out = []
+    for event_id, sha, occurred_at, payload_json in rows:
+        payload = json.loads(payload_json)
+        # Read the actual content from disk — vault is the source of truth.
+        # `git show <sha>:<path>` gives the exact post-commit version even if
+        # later commits in this batch modified the file again.
+        contents = {}
+        for f in payload["files"]:
+            if f["status"].startswith("D"):
+                continue  # deletion — nothing to read
+            try:
+                contents[f["path"]] = subprocess.check_output(
+                    [
+                        "git",
+                        "-C",
+                        str(HUMAN_VAULT_PATH),
+                        "show",
+                        f"{sha}:{f['path']}",
+                    ],
+                    text=True,
+                )
+            except subprocess.CalledProcessError:
+                contents[f["path"]] = "<unreadable>"
+        out.append(
+            {
+                "event_id": event_id,
+                "sha": sha,
+                "subject": payload["subject"],
+                "occurred_at": occurred_at,
+                "files": payload["files"],
+                "contents": contents,
+            }
+        )
+    return out
 ```
 
 **Ingest phase — write raw events via `write_event()`:**
@@ -1605,7 +1721,10 @@ Analyze this snapshot and produce a brief advisory (max 300 words):
 2. Deadlines in the next 48 hours
 3. Emails that need a reply action (flag subject + sender)
 4. Cross-team blockers to surface
-5. One suggested action for the most critical item
+5. Human-vault changes worth reacting to (new/modified notes — update
+   dossiers, link AI-vault analysis, switch to Workflow B for any meeting
+   Hagai already wrote up)
+6. One suggested action for the most critical item
 
 Context:
 {json.dumps(context, indent=2, default=str)}
@@ -1623,6 +1742,42 @@ Rules:
     )
     return response.content[0].text
 ```
+
+**Human-vault commit processing (same heartbeat cycle):**
+
+After reasoning, the heartbeat closes the loop on each commit it consumed. This
+is what `event_processing` exists for — the same pattern used for
+`email_thread`. Without it, the next heartbeat would re-surface the same commits
+forever.
+
+```python
+def mark_human_vault_commits_processed(commits: list[dict], output_refs: dict):
+    """Record (event_id, agent_id) → status. Re-runs are no-ops (UNIQUE constraint)."""
+    for commit in commits:
+        conn.execute(
+            "INSERT OR IGNORE INTO event_processing "
+            "(event_id, agent_id, started_at, completed_at, status, output_refs) "
+            "VALUES (?, ?, ?, ?, 'success', ?)",
+            (
+                commit["event_id"],
+                current_agent_id,
+                commit["occurred_at"],
+                now_utc(),
+                json.dumps(output_refs.get(commit["sha"], {})),
+            ),
+        )
+```
+
+`output_refs` captures what the agent did in response — e.g.
+`{"<sha>": {"updated_dossier": "dossiers/people/alice.md", "linked_analysis": [...]}}`.
+That history is queryable later: "for the last 50 human-vault commits, did the
+agent meaningfully react, or did it no-op?" — a direct quality signal on whether
+SOUL.md's reaction discipline is paying off.
+
+**Reprocessing with a smarter agent.** Because `event_processing` is keyed by
+`(event_id, agent_id)`, a new agent identity (different `prompt_hash`) sees
+every commit as unprocessed and gets to re-react with its better judgment. Old
+agent's outputs stay as immutable history.
 
 **Action generation:** When the heartbeat flags emails needing a reply:
 
