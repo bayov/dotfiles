@@ -125,10 +125,62 @@ python3 ~/dotfiles/second-brain/bootstrap.py personal   # later, same template
 2. Copy `starter/` into the instance (preserving subtree shape).
 3. Create the relative symlinks (`.agents`, `.claude/hooks`, `schema.sql`,
    `second-brain-prd.md`).
-4. Render `.env` from `env.example` — prompts for Turso URL, Discord IDs, GitLab
-   handle (if Phase 4.5 already in scope).
+4. **Interactively prompt for required + optional fields**, then render `.env`,
+   `USER.md`, and `config.toml` from their starter templates. See "Bootstrap
+   prompts" below.
 5. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"` so the audit
    trail starts from a known baseline.
+
+#### Bootstrap prompts
+
+The script reads each starter file, finds `{{placeholders}}`, prompts for each
+one, and writes the rendered file to the instance. Behavior:
+
+- **Required vs. optional.** Required prompts loop until non-empty. Optional
+  prompts accept empty input and leave a `# TODO` marker in the rendered file.
+- **Defaults.** Where a sensible default exists (timezone, working hours,
+  paths), the prompt shows it in `[brackets]` and accepts Enter to keep it.
+- **Re-runnable.** If the instance already exists, `bootstrap.py` parses the
+  existing `.env` / `USER.md` / `config.toml`, pre-fills prompts from current
+  values, and only re-prompts for unset / `# TODO` entries. Pass `--reconfigure`
+  to force re-prompting for everything.
+- **Phase-gated sections.** Phase 4.5 (GitLab) and Phase 7 (chat adapters)
+  prompts can be skipped — the script asks
+  `Configure GitLab integration now?
+  [y/N]` and writes only the relevant block
+  if yes. Skipping leaves a commented-out block in `.env` for later activation.
+- **Secrets stay out of git.** `.env` is gitignored; the bootstrap commit
+  includes `USER.md` and `config.toml` only. The script verifies `.gitignore`
+  contains `.env` before committing.
+
+| Group        | Prompt                                                                      | Required           | Target              |
+| ------------ | --------------------------------------------------------------------------- | ------------------ | ------------------- |
+| Profile      | Full name                                                                   | required           | `USER.md`           |
+| Profile      | Role (default: `Staff Software Engineer / Software Architect`)              | required (default) | `USER.md`           |
+| Profile      | Timezone (default: `Asia/Jerusalem`)                                        | required (default) | `USER.md`           |
+| Profile      | Working hours (default: `09:00–18:00 local`)                                | required (default) | `USER.md`           |
+| Google       | Gmail address                                                               | required           | `USER.md`, `.env`   |
+| Google       | OAuth credentials path (default: `~/.config/second-brain/credentials.json`) | required (default) | `.env`              |
+| DB           | `DATABASE_URL` mode: `turso` or `local-sqlite`                              | required           | `.env`              |
+| DB (turso)   | Turso DB URL (e.g. `libsql://my-db.turso.io`)                               | required if turso  | `.env`              |
+| DB (turso)   | Turso auth token                                                            | required if turso  | `.env`              |
+| Discord      | Configure Discord now? `[y/N]`                                              | optional           | gates the next two  |
+| Discord      | Bot token                                                                   | required if y      | `.env`              |
+| Discord      | Your Discord user ID (snowflake)                                            | required if y      | `.env`, `USER.md`   |
+| GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                                   | optional           | gates the next four |
+| GitLab       | `GITLAB_HOST` (default: `gitlab.com`)                                       | required if y      | `.env`              |
+| GitLab       | Personal/Project access token                                               | required if y      | `.env`              |
+| GitLab       | Upstream repo (e.g. `hagai/work-notes`)                                     | required if y      | `.env`, `USER.md`   |
+| GitLab       | Fork repo (e.g. `hagai-agent/work-notes`)                                   | required if y      | `.env`              |
+| Chat (7)     | `CHAT_ADAPTERS` (default: `discord`)                                        | optional (default) | `.env`              |
+
+The starter templates use `{{var_name}}` markers; bootstrap substitutes them
+verbatim. Adding a new field = add a marker to the relevant starter file plus
+one row to the prompt table inside `bootstrap.py`.
+
+A `python3 bootstrap.py --check <instance>` mode validates that no `# TODO`
+markers remain in `.env` / `USER.md` and exits non-zero otherwise — useful as a
+pre-flight before enabling the systemd service or cron jobs.
 
 `ai-vault/` is a regular folder versioned in the content repo — its git history
 is the audit trail for AI-vault writes. `human-vault/` is a git submodule
@@ -331,21 +383,20 @@ MEMORY.md Rules
 ### USER.md starter content
 
 ```markdown
-Hagai's Profile
-===============
+{{full_name}}'s Profile
+=======================
 
-- **Role:** Staff Software Engineer / Software Architect
-- **Timezone:** Asia/Jerusalem (UTC+3 summer, UTC+2 winter)
-- **Working hours:** 09:00–18:00 local (adjust as needed)
+- **Role:** {{role}}
+- **Timezone:** {{timezone}}
+- **Working hours:** {{working_hours}}
 
 Accounts
 --------
 
-- Gmail: hesosz@gmail.com
+- Gmail: {{gmail_address}}
 - Google Calendar: primary
-- Discord: [add your username/server IDs here]
-- GitLab: [add your handle here — employer instance, e.g.
-  gitlab.company.com/hagai]
+- Discord user ID: {{discord_user_id_or_TODO}}
+- GitLab: {{gitlab_upstream_repo_or_TODO}} (host: {{gitlab_host_or_TODO}})
 
 Team Map
 --------
