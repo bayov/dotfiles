@@ -154,20 +154,19 @@ chat systemd unit sets `SECOND_BRAIN_INSTANCE` explicitly. There is no other
 path-discovery mechanism in the codebase — anything that needs the instance dir
 calls `find_instance()`.
 
-> **⚠️ Open inconsistency — needs a dedicated /align pass on Phase 1.** Phase 4
-> was aligned on machine-local config at
+> **⚠️ Open inconsistency — needs a dedicated /align pass on Phase 1.** Phases 4
+> and 4.5 are aligned on machine-local secrets at
 > `~/.local/share/second-brain/<instance>/secrets.toml` (TOML, loaded via
-> `tomllib`), with `~/.config` reserved for VCS-trackable data. This Phase 1
+> `tomllib`), with non-secret integration config in `config.toml`. This Phase 1
 > section still describes a per-instance `.env` at
 > `~/second-brain/<instance>/.env`, populated by bootstrap prompts (lines
 > 128–181) — the same role, a different file, in a different location, in a
-> different format. Phase 4.5 (GitLab section, lines ~1651, 1699, 1817) shares
-> the same convention.
+> different format.
 >
-> Resolution should be a single `/align` pass on Phase 1 + 4.5 to migrate the
-> whole bootstrap/secrets surface to `secrets.toml` at the
-> `~/.local/share/second-brain/<instance>/` path. Until then, treat Phase 4 as
-> the canonical decision and these older references as stale.
+> Resolution should be a single `/align` pass on Phase 1 to migrate the
+> bootstrap/secrets surface to `secrets.toml` at the
+> `~/.local/share/second-brain/<instance>/` path. Until then, treat Phases 4 and
+> 4.5 as the canonical decision and these older references as stale.
 
 **Code/content split — rationale:**
 
@@ -238,26 +237,25 @@ one, and writes the rendered file to the instance. Behavior:
   includes `USER.md` and `config.toml` only. The script verifies `.gitignore`
   contains `.env` before committing.
 
-| Group        | Prompt                                                                      | Required           | Target              |
-| ------------ | --------------------------------------------------------------------------- | ------------------ | ------------------- |
-| Profile      | Full name                                                                   | required           | `USER.md`           |
-| Profile      | Role (default: `Staff Software Engineer / Software Architect`)              | required (default) | `USER.md`           |
-| Profile      | Timezone (default: `Asia/Jerusalem`)                                        | required (default) | `USER.md`           |
-| Profile      | Working hours (default: `09:00–18:00 local`)                                | required (default) | `USER.md`           |
-| Google       | Gmail address                                                               | required           | `USER.md`, `.env`   |
-| Google       | OAuth credentials path (default: `~/.config/second-brain/credentials.json`) | required (default) | `.env`              |
-| DB           | `DATABASE_URL` mode: `turso` or `local-sqlite`                              | required           | `.env`              |
-| DB (turso)   | Turso DB URL (e.g. `libsql://my-db.turso.io`)                               | required if turso  | `.env`              |
-| DB (turso)   | Turso auth token                                                            | required if turso  | `.env`              |
-| Discord      | Configure Discord now? `[y/N]`                                              | optional           | gates the next two  |
-| Discord      | Bot token                                                                   | required if y      | `.env`              |
-| Discord      | Your Discord user ID (snowflake)                                            | required if y      | `.env`, `USER.md`   |
-| GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                                   | optional           | gates the next four |
-| GitLab       | `GITLAB_HOST` (default: `gitlab.com`)                                       | required if y      | `.env`              |
-| GitLab       | Personal/Project access token                                               | required if y      | `.env`              |
-| GitLab       | Upstream repo (e.g. `hagai/work-notes`)                                     | required if y      | `.env`, `USER.md`   |
-| GitLab       | Fork repo (e.g. `hagai-agent/work-notes`)                                   | required if y      | `.env`              |
-| Chat (7)     | `CHAT_ADAPTERS` (default: `discord`)                                        | optional (default) | `.env`              |
+| Group        | Prompt                                                                      | Required           | Target                                 |
+| ------------ | --------------------------------------------------------------------------- | ------------------ | -------------------------------------- |
+| Profile      | Full name                                                                   | required           | `USER.md`                              |
+| Profile      | Role (default: `Staff Software Engineer / Software Architect`)              | required (default) | `USER.md`                              |
+| Profile      | Timezone (default: `Asia/Jerusalem`)                                        | required (default) | `USER.md`                              |
+| Profile      | Working hours (default: `09:00–18:00 local`)                                | required (default) | `USER.md`                              |
+| Google       | Gmail address                                                               | required           | `USER.md`, `.env`                      |
+| Google       | OAuth credentials path (default: `~/.config/second-brain/credentials.json`) | required (default) | `.env`                                 |
+| DB           | `DATABASE_URL` mode: `turso` or `local-sqlite`                              | required           | `.env`                                 |
+| DB (turso)   | Turso DB URL (e.g. `libsql://my-db.turso.io`)                               | required if turso  | `.env`                                 |
+| DB (turso)   | Turso auth token                                                            | required if turso  | `.env`                                 |
+| Discord      | Configure Discord now? `[y/N]`                                              | optional           | gates the next two                     |
+| Discord      | Bot token                                                                   | required if y      | `.env`                                 |
+| Discord      | Your Discord user ID (snowflake)                                            | required if y      | `.env`, `USER.md`                      |
+| GitLab (4.5) | Configure GitLab human-vault now? `[y/N]`                                   | optional           | gates the next three                   |
+| GitLab       | `gitlab_host` (default: `gitlab.com`)                                       | required if y      | `config.toml [human_vault]`            |
+| GitLab       | Repo (e.g. `donbayov/work-notes`)                                           | required if y      | `config.toml [human_vault]`, `USER.md` |
+| GitLab       | Personal access token                                                       | required if y      | `secrets.toml [gitlab]`                |
+| Chat (7)     | `CHAT_ADAPTERS` (default: `discord`)                                        | optional (default) | `.env`                                 |
 
 The starter templates use `{{var_name}}` markers; bootstrap substitutes them
 verbatim. Adding a new field = add a marker to the relevant starter file plus
@@ -271,9 +269,9 @@ pre-flight before enabling the systemd service or cron jobs.
 
 `ai-vault/` is a regular folder versioned in the content repo — its git history
 is the audit trail for AI-vault writes. `human-vault/` is a git submodule
-pointing to the AI's fork of the GitLab repo backing `~/notes/work`. The AI has
-write access to the fork (MRs only) and read access to upstream via
-`git fetch upstream`. See Phase 4.5.
+pointing to the single GitLab repo backing `~/notes/work`. The agent has read
+access via the working tree and write access only via feature branches + MR;
+direct push to `main` is blocked by the Phase 8 guardrail. See Phase 4.5.
 
 ### AI vault structure
 
@@ -404,12 +402,16 @@ emerges.
 Promotion Triggers (AI vault → human vault)
 -------------------------------------------
 
-Promote when:
+Promote only when one of these triggers fires (closed enum, must match the
+`PromotionTrigger` Literal in `promote.py`):
 
-- A meeting decision crystallizes (action taken, commitment made)
-- A risk graduates from "watching" to "tracked"
-- A pattern recurs across ≥3 events and is worth Hagai's long-term reference
-- Hagai explicitly asks "save this"
+1. **decision-crystallized** — a meaningful decision was made and reasoned
+   about.
+2. **risk-tracked** — a project risk worth recording surfaced.
+3. **pattern-recurred** — same theme appeared in 3+ distinct sessions/days.
+4. **incident-lesson-learned** — surprising failure or near-miss worth
+   remembering.
+5. **user-request** — Hagai explicitly said "save this."
 
 Never promote: speculative analysis, draft reasoning, transient briefings,
 operational logs.
@@ -417,16 +419,28 @@ operational logs.
 Promotion Discipline
 --------------------
 
-Before opening a MR to the human vault, I MUST:
+The human vault is Hagai's. I propose, he disposes — every promotion is an MR,
+never a direct write.
 
-1. Search the human vault for related notes
-   (`memory_search.py --source human-vault`)
-2. Read `human-vault-map.md` and decide placement (extend existing vs. create
-   new)
-3. Reformulate to match human-vault voice — never paste AI-vault prose
-4. If overlap >70% with an existing note, propose a merge edit, not a new file
-5. Include in the MR description: trigger, AI-vault source path, placement
-   rationale
+Before opening an MR, I MUST:
+
+1. Search the human vault (`memory_search.py --source human-vault`).
+2. Read the **top-3 results**. If any covers the same fact → propose a merge
+   edit on the existing file. If related but distinct → extend the relevant
+   section. Otherwise → new file. (No numeric overlap threshold — judgment based
+   on the actual content.)
+3. Read `ai-vault/human-vault-map.md` to choose folder placement.
+4. Reformulate to match human-vault voice, density, naming conventions, and link
+   style. Never paste AI-vault prose verbatim.
+5. Include in the MR description: trigger (one of the five), AI-vault source
+   path, placement rationale, dedup result.
+
+I MUST NEVER:
+
+- Push directly to `main` in human-vault.
+- Force-push any branch.
+- Modify `.git/config` or remotes.
+- Promote AI-vault prose verbatim.
 
 Meeting Notes Workflow
 ----------------------
@@ -1434,6 +1448,12 @@ token_path = "~/.local/share/second-brain/<instance>/token.json"
 [discord]
 bot_token = "..."
 user_id = "..."
+
+[gitlab]
+# Phase 4.5. Personal Access Token, scopes: api, read_repository,
+# write_repository. Branch protection on main keeps it from clobbering upstream;
+# the Phase 8 guardrail blocks `git push origin main` from agent context.
+token = "glpat-..."
 ```
 
 Phase 9's systemd unit invokes the Python entrypoint directly; the entrypoint
@@ -1913,32 +1933,40 @@ knowledge from the AI vault to the human vault via MR — with mandatory
 reformulation and dedup checks. The two vaults stay fully independent: content
 moves AI → human only via MR, never via direct copy.
 
-**GitLab instance:** Hagai's employer hosts GitLab on `${GITLAB_HOST}` (e.g.,
-`gitlab.company.com`). All `glab` commands and SSH URLs below use that host.
-Substitute `gitlab.com` if running on GitLab SaaS. **Verify with your employer**
-before pushing personal notes to a corporate GitLab — corporate GitLabs are
-often subject to admin visibility, retention policies, and DLP scanning. If
-that's a concern, host the human-vault on GitLab SaaS in a private personal
-namespace and keep the corporate instance for work code only.
+**Single-repo mode (canonical).** One GitLab user, one repo. Hagai pushes
+directly to `main` from his working copy; the agent is restricted to feature
+branches + MR. The restriction is enforced by two layers:
 
-**Fork-vs-single-repo trade-off:** The default flow uses an agent fork as the
-security boundary (agent token can only write to the fork; merges into upstream
-require Hagai's review). If your corporate GitLab forbids forks outside a group
-or doesn't allow a separate "agent" account, fall back to **single-repo mode**:
-one repo with branch protection on `main`; the agent pushes feature branches and
-opens MRs against the same repo. The MR review still gates promotion. Pick one
-and stay consistent — the security model differs.
+1. **Soft guardrail** — `SOUL.md` "Promotion Discipline" + the SKILL workflow
+   tell the agent to push only `ai/promote-*` branches and open MRs.
+2. **Hard guardrail** — Phase 8 hook regex blocks
+   `git push.*\b(origin\s+)?main\b` when invoked from inside `human-vault/`.
+
+(A two-repo "agent fork" mode with Project Access Tokens gives a stronger
+identity boundary but requires either a second user or PATs-per-project. Out of
+scope for v1; revisit if the soft+guardrail combination proves insufficient.)
+
+**GitLab instance:** `gitlab_host` (default `gitlab.com`) is set per instance in
+`config.toml [human_vault]`. For self-hosted corporate GitLab, **verify with
+your employer** before pushing personal notes — corporate GitLabs are often
+subject to admin visibility, retention policies, and DLP scanning. If that's a
+concern, host the human-vault on GitLab SaaS in a private personal namespace and
+keep the corporate instance for work code only.
 
 **Vault paths:**
 
 - Hagai's working copy (Obsidian, source of truth): `~/notes/work/` (a git repo
-  with a GitLab remote)
-- AI's read mirror (submodule of fork): `~/second-brain/work/human-vault/`
+  with a GitLab remote pointing at the same repo as the submodule)
+- Agent's read mirror (submodule): `~/second-brain/work/human-vault/`
+
+The two clones share `origin`. Hagai writes to upstream from `~/notes/work/`;
+the agent's heartbeat fast-forwards the submodule from `origin` and never pushes
+to `main`.
 
 **Key files to create / modify:**
 
 ```
-~/second-brain/work/human-vault/                  # git submodule → AI's fork
+~/second-brain/work/human-vault/                  # git submodule
 src/sb/scripts/memory_index.py                    # Already dual-vault (Phase 3)
 claude/skills/promote-to-human-vault/             # symlinked into <instance>/.claude/skills/
 ├── SKILL.md
@@ -1947,49 +1975,57 @@ claude/skills/promote-to-human-vault/             # symlinked into <instance>/.c
     └── update_vault_map.py                       # Refresh ai-vault/human-vault-map.md
 ```
 
+**Configuration:**
+
+```toml
+# ~/dotfiles/second-brain/config.toml — non-secret, checked in
+[human_vault]
+gitlab_host = "gitlab.com" # or "gitlab.company.com" for self-hosted
+repo = "donbayov/work-notes" # <namespace>/<project>
+```
+
+```toml
+# ~/.local/share/second-brain/<instance>/secrets.toml — never in VCS
+[gitlab]
+token = "glpat-..." # PAT, scopes: api, read_repository, write_repository
+```
+
+The `[human_vault]` section's presence is the opt-in flag — bootstrap and the
+heartbeat skip submodule logic when it's absent (matches Phase 4 integration
+opt-in). Phase 3's indexer already tolerates a missing submodule with one INFO
+log line.
+
 **One-time GitLab setup:**
 
 Install the `glab` CLI (`https://gitlab.com/gitlab-org/cli`). For self-hosted
-instances, run `glab auth login --hostname gitlab.company.com` once.
+instances, run `glab auth login --hostname <gitlab_host>` once.
 
 1. **Push `~/notes/work` to GitLab** — Hagai initializes the canonical repo
    (private, in his personal namespace):
    ```bash
-   glab repo create hagai/work-notes --private
-   git -C ~/notes/work remote add origin git@gitlab.company.com:hagai/work-notes.git
+   glab repo create donbayov/work-notes --private
+   git -C ~/notes/work remote add origin git@gitlab.com:donbayov/work-notes.git
    git -C ~/notes/work push -u origin main
    ```
 
-2. **Fork it** under the agent's identity (assumes a separate `hagai-agent`
-   GitLab user, or a sub-namespace Hagai owns):
-   ```bash
-   glab repo fork hagai/work-notes --clone=false
-   # The fork is the hard security boundary — agent token has write access to fork only.
-   # If your employer's GitLab forbids forking outside a group, use single-repo mode (see above).
-   ```
+2. **Branch-protect `main`** so the agent's instruction-level discipline has a
+   policy backstop visible in the GitLab UI:
+   - Settings → Repository → Protected branches → `main`
+   - Allowed to push: `Maintainers` (you).
+   - Allowed to merge: `Maintainers`.
+   - Self-approval: enabled (you're the only reviewer; GitLab can't enforce a
+     real review in single-user mode — that's your job at MR-read time).
 
-3. **Personal Access Token (project-scoped where possible)** — fork only:
-   - GitLab token type: **Project Access Token** on the fork
-     (`hagai-agent/work-notes`) is preferred over a user PAT — it's scoped to
-     one project, can't accidentally grant write to other repos.
-   - If your GitLab tier doesn't expose Project Access Tokens (Free SaaS limits
-     this), fall back to a Personal Access Token but expect to audit it more
-     carefully.
-   - Scopes: `api`, `read_repository`, `write_repository` (the `api` scope is
-     required for `glab mr create`).
-   - Add to `.env`:
-     ```
-     GITLAB_HOST=gitlab.company.com
-     GITLAB_TOKEN=glpat-...
-     HUMAN_VAULT_UPSTREAM=hagai/work-notes
-     HUMAN_VAULT_FORK=hagai-agent/work-notes
-     ```
+3. **Personal Access Token** — single-user, dedicated to the agent (separate
+   from any token you use day-to-day, so revocation is scoped):
+   - Scopes: `api`, `read_repository`, `write_repository` (`api` is required for
+     `glab mr create`).
+   - Store in `secrets.toml [gitlab] token`.
 
-4. **Add the fork as a submodule** under the project repo:
+4. **Add the repo as a submodule:**
    ```bash
    cd ~/second-brain/work
-   git submodule add git@gitlab.company.com:hagai-agent/work-notes.git human-vault
-   git -C human-vault remote add upstream git@gitlab.company.com:hagai/work-notes.git
+   git submodule add git@gitlab.com:donbayov/work-notes.git human-vault
    git commit -m "Add human-vault submodule"
 
    # The heartbeat advances human-vault past the parent's pinned commit.
@@ -1999,34 +2035,38 @@ instances, run `glab auth login --hostname gitlab.company.com` once.
    ```
 
    The submodule pointer is **not** pinned in practice — the heartbeat keeps the
-   submodule's branch on `main` floating with upstream. Avoid running
+   submodule's `main` branch fast-forwarded from `origin`. Avoid running
    `git submodule update` after the initial clone; let `sync_human_vault()`
    manage it.
 
-5. **Set the AI's git identity** for `ai-vault/` and `human-vault/` commits so
-   the audit trail doesn't pick up Hagai's identity:
+5. **Set the agent's git identity** for `ai-vault/` and `human-vault/` commits
+   so `git log` distinguishes agent activity from Hagai's:
    ```bash
-   git -C ~/second-brain/work config user.name  "second-brain-agent"
-   git -C ~/second-brain/work config user.email "agent@second-brain.local"
-   git -C ~/second-brain/work/human-vault config user.name  "second-brain-agent"
-   git -C ~/second-brain/work/human-vault config user.email "agent@second-brain.local"
+   git -C ~/second-brain/work config user.name  "bayov-agent"
+   git -C ~/second-brain/work config user.email "bayov-agent@second-brain.local"
+   git -C ~/second-brain/work/human-vault config user.name  "bayov-agent"
+   git -C ~/second-brain/work/human-vault config user.email "bayov-agent@second-brain.local"
    ```
+   This is advisory only — pushes still go through Hagai's GitLab account in
+   single-user mode. Author metadata is the audit signal in `git log`; the MR
+   description carries the same provenance for GitLab UI readers.
 
-6. **SSH key for the agent** (used by `git push origin <branch>` in
-   `promote.py`). Generate a dedicated key and register its public half on the
-   agent's GitLab account (preferred) or as a deploy key on the fork:
+6. **Dedicated SSH key for the agent** (used by `git push origin <branch>` in
+   `promote.py`). Scoped revocation: if the key leaks, you revoke it without
+   disrupting your normal git workflow.
    ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/second_brain_agent -C "second-brain-agent"
-   # Add to ~/.ssh/config so the submodule's git@gitlab.company.com URL picks it up:
-   #   Host gitlab.company.com
-   #     HostName gitlab.company.com
-   #     IdentityFile ~/.ssh/second_brain_agent
+   ssh-keygen -t ed25519 -f ~/.ssh/bayov_agent -C "bayov-agent"
+   # ~/.ssh/config — point the submodule's host at the dedicated key:
+   #   Host gitlab.com-bayov-agent
+   #     HostName gitlab.com
+   #     IdentityFile ~/.ssh/bayov_agent
    #     IdentitiesOnly yes
+   # Then set the submodule remote to use that host alias:
+   git -C ~/second-brain/work/human-vault remote set-url origin \
+     git@gitlab.com-bayov-agent:donbayov/work-notes.git
    ```
-   Then paste `~/.ssh/second_brain_agent.pub` into GitLab → User Settings → SSH
-   Keys (or Project → Settings → Repository → Deploy Keys with "Grant write
-   permissions"). The token in `.env` is for `glab mr create` only; git
-   transport uses SSH.
+   Add `~/.ssh/bayov_agent.pub` to GitLab → User Settings → SSH Keys. The token
+   in `secrets.toml` is for `glab mr create` only; git transport uses SSH.
 
 **Keep the submodule current — add to heartbeat pre-gather:**
 
@@ -2035,23 +2075,27 @@ HUMAN_VAULT_PATH = Path.home() / "second-brain/work/human-vault"
 
 
 def sync_human_vault() -> bool:
-    """Fast-forward human-vault to upstream/main. For each new commit, write
+    """Fast-forward human-vault to origin/main. For each new commit, write
     one `human_vault_commit` event so the heartbeat reasoning phase can react
-    to Hagai's note changes in the same cycle. Returns True if HEAD advanced."""
+    to Hagai's note changes in the same cycle. Returns True if HEAD advanced.
+
+    Single-repo mode: there is no `upstream` remote — `origin` is the canonical
+    repo, the same one Hagai pushes to from `~/notes/work/`. The agent never
+    pushes to `main`; the Phase 8 guardrail blocks it as a defense-in-depth.
+    """
     head_before = subprocess.check_output(
         ["git", "-C", str(HUMAN_VAULT_PATH), "rev-parse", "HEAD"], text=True
     ).strip()
     for cmd in [
-        ["git", "-C", str(HUMAN_VAULT_PATH), "fetch", "upstream"],
+        ["git", "-C", str(HUMAN_VAULT_PATH), "fetch", "origin"],
         [
             "git",
             "-C",
             str(HUMAN_VAULT_PATH),
             "merge",
             "--ff-only",
-            "upstream/main",
+            "origin/main",
         ],
-        ["git", "-C", str(HUMAN_VAULT_PATH), "push", "origin", "main"],
     ]:
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
@@ -2118,6 +2162,15 @@ def sync_human_vault() -> bool:
                 )
             )
 
+        # Structure-change-aware map refresh: re-scan only when the new commits
+        # actually shift top-level shape (adds/renames at depth ≤ 2). Pure
+        # content edits don't move folders or rename files, so the map is
+        # still accurate — skip the rescan to avoid noise. Set
+        # `structure_changed` = True inside the inner loop above when a file
+        # entry meets the criterion, then dispatch once after the loop:
+        if structure_changed:
+            run_update_vault_map()
+
     write_event(
         Event(
             source="heartbeat",
@@ -2142,23 +2195,42 @@ Phase 6).
 **`promote.py` — reformulate-then-MR (the only writer to human vault):**
 
 ```python
+# Config from `<instance>/config.toml [human_vault]`; secret from
+# `~/.local/share/second-brain/<instance>/secrets.toml [gitlab]`.
 HUMAN_VAULT_PATH = Path.home() / "second-brain/work/human-vault"
-UPSTREAM_REPO = os.environ["HUMAN_VAULT_UPSTREAM"]  # e.g. "hagai/work-notes"
-FORK_REPO = os.environ["HUMAN_VAULT_FORK"]  # e.g. "hagai-agent/work-notes"
-GITLAB_TOKEN = os.environ["GITLAB_TOKEN"]
-GITLAB_HOST = os.environ.get("GITLAB_HOST", "gitlab.com")
+GITLAB_HOST = config["human_vault"]["gitlab_host"]
+HUMAN_VAULT_REPO = config["human_vault"]["repo"]  # e.g. "donbayov/work-notes"
+GITLAB_TOKEN = secrets["gitlab"]["token"]
+
+# Closed enum — must match SOUL.md "Promotion Discipline".
+PromotionTrigger = Literal[
+    "decision-crystallized",
+    "risk-tracked",
+    "pattern-recurred",
+    "incident-lesson-learned",
+    "user-request",
+]
 
 
 def promote(
     ai_vault_source: str,  # path inside ai-vault/ that triggered promotion
     target_file: str,  # path inside human-vault/ (existing or new)
     reformulated_content: str,  # already reformulated to human-vault voice
-    trigger: str,  # decision crystallized | risk tracked | pattern recurred | user-request
+    trigger: PromotionTrigger,
     placement_rationale: str,  # why this file/section
     dedup_result: str,  # "no overlap" | "merged with <path>" | "extended <section>"
 ):
-    slug = trigger.lower().replace(" ", "-")[:40]
-    branch = f"ai/promote-{date.today()}-{slug}"
+    # Defensive: junk MRs are worse than a noisy refusal. Tune the floor as
+    # human-vault note size norms emerge.
+    if len(reformulated_content.strip()) < 100:
+        raise ValueError("reformulated content too short — refusing to open MR")
+
+    # Idempotent branch name: same (source, content) → same branch, so a retry
+    # after a transient failure won't open a duplicate MR.
+    digest = hashlib.sha256(
+        f"{ai_vault_source}\0{reformulated_content}".encode()
+    ).hexdigest()[:8]
+    branch = f"ai/promote-{date.today()}-{trigger}-{digest}"
 
     subprocess.run(
         ["git", "-C", HUMAN_VAULT_PATH, "checkout", "-b", branch], check=True
@@ -2179,15 +2251,14 @@ def promote(
         ],
         check=True,
     )
-    # Push to the fork (origin). Submodule remote is SSH (see Phase 4.5 setup),
-    # so this uses the agent's SSH key — no token in env. If you switch the
-    # remote to HTTPS, embed the token via a credential helper instead of argv.
+    # Push the feature branch. Submodule remote is SSH (see setup step 6) and
+    # uses the dedicated `bayov_agent` key — no token on argv.
     subprocess.run(
         ["git", "-C", HUMAN_VAULT_PATH, "push", "origin", branch],
         check=True,
     )
     body = (
-        f"**Proposed by:** Second Brain agent\n"
+        f"**Proposed by:** Second Brain agent (`bayov-agent`)\n"
         f"**Trigger:** {trigger}\n"
         f"**AI-vault source:** `{ai_vault_source}`\n"
         f"**Placement:** `{target_file}` — {placement_rationale}\n"
@@ -2195,17 +2266,15 @@ def promote(
         f"Review the diff, merge if useful, close if not. "
         f"Rejections with a one-line note improve future proposals."
     )
-    # Cross-fork MR: --source-project is the fork, --target-project is upstream.
-    # `glab` reads GITLAB_HOST and GITLAB_TOKEN from the environment.
+    # Single-repo MR: source and target are the same project; `glab` infers
+    # them from the local repo. GITLAB_HOST and GITLAB_TOKEN are read from env.
+    # On 401 → IntegrationAuthError("gitlab"). MR conflicts are not
+    # auto-rebased — let GitLab show the conflict and let Hagai decide.
     subprocess.run(
         [
             "glab",
             "mr",
             "create",
-            "--source-project",
-            FORK_REPO,
-            "--target-project",
-            UPSTREAM_REPO,
             "--source-branch",
             branch,
             "--target-branch",
@@ -2230,9 +2299,6 @@ def promote(
     )
 ```
 
-In single-repo mode (no fork), drop `--source-project` / `--target-project` and
-`glab` will open the MR within the current repo against `main`.
-
 **`promote-to-human-vault/SKILL.md`:**
 
 ```yaml
@@ -2244,38 +2310,45 @@ description: Promote durable AI-vault content to Hagai's human vault via GitLab 
 
 Mandatory workflow (enforced by SOUL.md "Promotion Discipline"):
 
-1. **Trigger check.** Confirm the AI-vault content matches a Promotion Trigger
-   from SOUL.md. If not, do not promote.
+1. **Trigger check.** Confirm the AI-vault content matches one of the five
+   triggers in SOUL.md (`decision-crystallized`, `risk-tracked`,
+   `pattern-recurred`, `incident-lesson-learned`, `user-request`). If not, do
+   not promote.
 2. **Search human vault.** `memory_search.py --source human-vault "<topic>"` —
-   gather related notes.
-3. **Read `human-vault-map.md`.** Decide placement: extend an existing note vs.
-   create a new one.
-4. **Dedup check.** If semantic overlap with an existing note >70%, propose a
-   merge edit (modify the existing file), not a new file. If overlap is partial,
-   extend the relevant section.
-5. **Reformulate.** Rewrite to match human-vault voice, density, naming
+   gather candidates.
+3. **Read top-3 results + `human-vault-map.md`.** Judgment-based dedup, no
+   numeric threshold:
+   - If any of the top-3 covers the same fact → propose a merge edit on the
+     existing file.
+   - If related but distinct → extend the relevant section of the closest file.
+   - Otherwise → new file. Use the map to choose folder placement.
+4. **Reformulate.** Rewrite to match human-vault voice, density, naming
    conventions, and link style. Never paste AI-vault prose verbatim.
-6. **Open MR.** Call `promote.py` with `ai_vault_source`, `target_file`,
+5. **Open MR.** Call `promote.py` with `ai_vault_source`, `target_file`,
    `reformulated_content`, `trigger`, `placement_rationale`, `dedup_result`.
-7. **Update `human-vault-map.md`.** If the human vault structure shifted, run
-   `update_vault_map.py` to refresh the AI's mental model.
-8. **Tell Hagai.** "MR opened: [link]"
+6. **Tell Hagai.** "MR opened: [link]"
+
+`human-vault-map.md` refresh is automatic — the heartbeat reruns
+`update_vault_map.py` when it observes new top-level adds/renames in synced
+commits (see `sync_human_vault`). The skill does not invoke it directly.
 
 **`update_vault_map.py`** scans `human-vault/` and rewrites
 `ai-vault/human-vault-map.md` with: top-level folders, file counts, naming
-conventions, recurring section headings, observed link patterns. Runs after
-every successful MR merge (or weekly via cron) so the AI's structural model
-never drifts.
+conventions, recurring section headings, observed link patterns.
 
-**Guardrail addition for Phase 8:**
+**Guardrail additions for Phase 8:**
 
 ```python
 (r"git push.*--force",)
 (r"git remote set-url.*human-vault",)
+# Single-user mode: Hagai pushes to main directly from ~/notes/work; the agent
+# must not. Match `git push origin main`, `git push main`, `git push -u origin main`,
+# etc., when the cwd resolves under human-vault/.
+(r"git push\s+(--?\S+\s+)*\b(origin\s+)?main\b",)
 ```
 
-**Dependencies:** Phase 3 (dual-vault indexer), Phase 4 (OAuth pattern — same
-env-loading discipline applies to `GITLAB_TOKEN`)\
+**Dependencies:** Phase 3 (dual-vault indexer), Phase 4 (config + secrets
+discipline applies to `[gitlab] token`)\
 **Estimated complexity:** Low–Medium
 
 ---
