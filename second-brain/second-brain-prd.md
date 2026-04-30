@@ -956,18 +956,33 @@ command = "uv run --project ~/dotfiles/second-brain pytest second-brain/tests/ho
 Phase 3: Memory Search (Hybrid RAG)
 -----------------------------------
 
-**What to build:** A local search pipeline that queries both vaults by meaning
-(semantic) and keyword, merged for best results. Runs in a **separate,
-local-only SQLite file** (`~/.local/share/second-brain/<instance>/rag.db`) — no
-separate server, and intentionally decoupled from the cloud DB so the heaviest
-data (embeddings) doesn't bloat sync traffic. The RAG DB is a pure cache:
-rebuildable anytime by re-running `memory_index.py`.
+**What to build:** A local search pipeline that queries every vault present in
+the instance by meaning (semantic) and keyword, merged for best results. Runs in
+a **separate, local-only SQLite file**
+(`~/.local/share/second-brain/<instance>/rag.db`) — no separate server, and
+intentionally decoupled from the cloud DB so the heaviest data (embeddings)
+doesn't bloat sync traffic. The RAG DB is a pure cache: rebuildable anytime by
+re-running `memory_index.py`.
+
+**Scope of this phase:** ship the indexer + search library + CLI. **No edits to
+the Phase 2 hooks.** Hook integration is deferred — `session-start` has no query
+and the right caller is a skill (Phase 5) or chat adapter (Phase 7) with
+explicit intent. `memory_search.py` is importable Python _and_ a CLI; both
+surfaces are first-class.
+
+**Language scope:** English-only. The chosen embedding model
+(`BAAI/bge-small-en-v1.5`) is English-only by design. Non-English content
+(Hebrew names in calendar invites, mixed-language emails) will be normalized to
+English via a translation step at _ingestion time_ in later phases — search
+itself stays monolingual. FTS5's `unicode61` tokenizer still indexes non-Latin
+script correctly, so any Hebrew that does sneak through is at least
+keyword-findable.
 
 **Key files to create:**
 
 ```
 .agents/scripts/
-├── rag_db.py          # Local RAG DB connection + schema (chunks, vec_chunks, fts_chunks)
+├── rag_db.py          # Local RAG DB connection + schema (chunks, vec_chunks, fts_chunks, indexed_files)
 ├── embeddings.py      # FastEmbed wrapper
 ├── memory_index.py    # Chunking + indexing pipeline (incremental, writes to rag.db)
 └── memory_search.py   # Hybrid search (0.7 vector + 0.3 keyword) — reads from rag.db
@@ -978,7 +993,58 @@ rebuildable anytime by re-running `memory_index.py`.
 `uv sync --project ~/dotfiles/second-brain`. FTS5 is built into Python's stdlib
 `sqlite3` — no install needed.
 
-**`embeddings.py` — model setup:**
+### `rag_db.py` — schema
+
+The RAG DB is a pure cache, so schema bumps **drop and rebuild** rather than
+migrate. `PRAGMA user_version` is checked on every connection; mismatch with the
+code constant triggers `DROP` of all tables, recreate, then a full re-index on
+the next pass. No backwards-compat shims, ever.
+
+```sql
+-- One row per chunk. Source of truth; vec_chunks/fts_chunks key off id.
+CREATE TABLE chunks (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_path  TEXT NOT NULL,        -- absolute path on disk
+    source_tag   TEXT NOT NULL,        -- 'ai-vault' | 'human-vault'
+    chunk_index  INTEGER NOT NULL,     -- 0-based order within the file
+    char_start   INTEGER NOT NULL,     -- offset in original file (for citation)
+    char_end     INTEGER NOT NULL,
+    text         TEXT NOT NULL,        -- post-cleaning chunk body
+    mtime_ns     INTEGER NOT NULL,     -- ns precision; fast-skip key
+    file_hash    TEXT NOT NULL,        -- sha256 of file bytes; truth (mtime can lie after `git checkout`)
+    embed_model  TEXT NOT NULL,        -- 'bge-small-en-v1.5' — detect model swaps for re-embed
+    indexed_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX chunks_path_idx ON chunks(source_path, chunk_index);
+CREATE INDEX chunks_tag_idx ON chunks(source_tag);
+
+-- sqlite-vec virtual table — rowid = chunks.id (manual link, not FK)
+CREATE VIRTUAL TABLE vec_chunks USING vec0(
+    embedding float[384]
+);
+
+-- FTS5 contentless: writers supply (rowid, text); query with MATCH.
+-- Saves ~30% storage vs. duplicated content; we always insert chunk + vec + fts
+-- together in a single transaction so external-content triggers buy nothing.
+CREATE VIRTUAL TABLE fts_chunks USING fts5(text, content='', tokenize='unicode61');
+
+-- Bookkeeping for fast "skip unchanged" lookups (single PK hit instead of
+-- scanning chunks for each file in every indexer pass).
+CREATE TABLE indexed_files (
+    source_path  TEXT PRIMARY KEY,
+    source_tag   TEXT NOT NULL,
+    mtime_ns     INTEGER NOT NULL,
+    file_hash    TEXT NOT NULL,
+    chunk_count  INTEGER NOT NULL,
+    indexed_at   TIMESTAMP NOT NULL
+);
+```
+
+`rag_db.py --init` is idempotent (`CREATE TABLE IF NOT EXISTS`) and is invoked
+from `bootstrap.py`. Phase 1 ships it as a no-op stub; Phase 3 fills it in
+without changing the bootstrap call site.
+
+### `embeddings.py` — model setup
 
 ```python
 from fastembed import TextEmbedding
@@ -995,61 +1061,219 @@ def embed_query(query: str) -> list[float]:
     return next(model.query_embed(query)).tolist()
 ```
 
-**`memory_index.py` — dual-vault incremental indexing:**
+### `memory_index.py` — vault discovery + incremental pipeline
+
+Vaults are **discovered at runtime**, not configured. The indexer derives its
+instance directory from its own unresolved `__file__` (same trick as the Phase 2
+`_setup.py`), then scans for known vault subdirectories. Missing directories
+(human-vault before Phase 4.5 lands the submodule) are silently skipped with one
+INFO log line — not an error. Adding a new vault is a code change, not a config
+edit, because each `source_tag` carries semantic implications (search filters,
+write authority, promotion paths).
 
 ```python
 from pathlib import Path
 
-VAULT_PATHS = [
-    {"path": Path.home() / "second-brain/work/ai-vault", "source": "ai-vault"},
-    {
-        "path": Path.home() / "second-brain/work/human-vault",
-        "source": "human-vault",
-    },
-]
+# Unresolved __file__ — preserves the symlink path so .parent.parent.parent
+# resolves to the *instance* dir, not the dotfiles dir.
+INSTANCE_DIR = Path(__file__).parent.parent.parent
+KNOWN_VAULTS = ("ai-vault", "human-vault")
+
+
+def discover_vaults() -> list[tuple[Path, str]]:
+    return [
+        (INSTANCE_DIR / name, name)
+        for name in KNOWN_VAULTS
+        if (INSTANCE_DIR / name).is_dir()
+    ]
 
 
 def run_index(source_filter: str | None = None):
-    for vault in VAULT_PATHS:
-        if source_filter and vault["source"] != source_filter:
+    for path, source_tag in discover_vaults():
+        if source_filter and source_tag != source_filter:
             continue
-        index_vault(vault["path"], source_tag=vault["source"])
-        reconcile_deletes(vault["path"], source_tag=vault["source"])
+        index_vault(path, source_tag=source_tag)
+        reconcile_deletes(path, source_tag=source_tag)
 ```
 
-- Skip files unchanged since last index (compare `mtime` against stored value)
-- Chunk at ~400 tokens with 50-token overlap (split on paragraph breaks first)
-- Batch-embed with `embed_batch()`, upsert into vec_chunks + fts_chunks tables
-- **Reconcile deletes**: after the upsert pass, `reconcile_deletes()` lists
-  every `source_path` in `chunks` for the vault, diffs against the on-disk file
-  set, and `DELETE`s chunks whose source file no longer exists. Without this,
-  renamed/deleted notes leave orphan chunks that surface as ghost results in
-  hybrid search.
+**File-scope rules** (applied during the walk):
+
+- Extension allowlist: `.md` only.
+- Path exclusions: `.obsidian/`, `.git/`, `.gitmodules`, `.trash/`.
+- **Don't follow symlinks** during the walk. `.agents/` is a symlink into
+  dotfiles; we never want code embedded as memory.
+- Skip files with <50 chars of post-frontmatter body (avoids embedding stubs).
+- Always include `SOUL.md`, `USER.md`, `MEMORY.md`, `human-vault-map.md` at
+  vault root.
+- `logs/` and `briefings/daily/` are included — easier to filter at search time
+  than to rebuild the index when you decide you wanted them.
+
+**Skip logic (per file):**
+
+1. Look up `(source_path)` in `indexed_files`.
+2. If `mtime_ns` matches → skip (fast path, no I/O).
+3. Else hash the file; if `file_hash` matches → update `mtime_ns` only (mtime
+   lied; common after `git checkout` or `cp -p`).
+4. Else re-chunk and re-embed.
+
+**Frontmatter handling:** YAML frontmatter (`---\n...\n---` at file head) is
+stripped before chunking and _not_ embedded. It's structured metadata; including
+it pollutes embeddings (a `tags: [foo]` line otherwise matches every tagged
+file). Future work may store the parsed dict in a `frontmatter_json` column.
+
+**Chunking algorithm** (~400 tokens with 50-token overlap, paragraph-aware):
+
+1. Tokenize the file with the **BGE tokenizer** (exposed via FastEmbed). Char
+   heuristics drift on Hebrew/code/URLs and silently overflow the model's
+   512-token limit.
+2. Parse the file into "blocks": paragraphs (run of non-empty lines separated by
+   ≥1 blank line), fenced code blocks, markdown tables, list items. Headings
+   stay attached to the following block.
+3. Greedy-pack blocks into chunks until adding the next block would exceed 400
+   tokens.
+4. **Atomic units that must not be split mid-block:** code blocks, tables, list
+   items. The only place we split mid-block is when a _single_ block exceeds 400
+   tokens — then a sliding token window cuts it.
+5. **Overlap = last 50 tokens of previous chunk prepended to next chunk.** The
+   overlap is duplicated text; `char_start`/`char_end` track only the
+   non-overlapping core for citation accuracy.
+6. **Heading context preservation:** when a chunk starts mid-section, prepend
+   the nearest enclosing H1/H2/H3 trail (e.g. `> Project X > Risks >`) as a
+   single line at chunk top. Big relevance win for queries like "risks for
+   project X" against chunks that say "blocked on infra" without otherwise
+   naming the project.
+7. Wikilinks `[[Target]]` / `[[Target|alias]]` are kept verbatim — they're the
+   strongest "this note connects to" signal embeddings can see.
+8. Strip before embedding: HTML comments `<!-- ... -->`, image refs
+   `![alt](url)` (keep `alt`), reference-style links `[text][ref]` → `text`.
+   Bold/italic markers stay (not worth the cost).
+9. Document-level cap: warn (don't fail) when a single file produces >100 chunks
+   — usually indicates an accidentally-committed log dump.
+
+**Per-file isolation:** wrap each file in `try/except`; on failure, log
+`warn`-level with the path and continue. Indexer ends with summary counters
+(`indexed=X skipped=Y errors=Z`) and exits non-zero only if `errors>0`. Cron
+mails on non-empty stderr; systemd marks the unit failed. Monitoring stays
+trivial.
+
+**Reconcile deletes:** after the upsert pass, `reconcile_deletes()` lists every
+`source_path` in `chunks` for the vault, diffs against the on-disk file set, and
+`DELETE`s chunks (and matching `vec_chunks` / `fts_chunks` / `indexed_files`
+rows) for files that no longer exist. Without this, renamed/deleted notes leave
+orphan chunks that surface as ghost results in hybrid search.
+
+**Concurrency safety:** the indexer takes an exclusive `flock` on `rag.db.lock`
+at startup (`fcntl.flock(LOCK_EX | LOCK_NB)`). On contention it exits 0 with
+`info: indexer already running, skipping` — the next cron tick picks up. Search
+has no lock; SQLite handles read concurrency natively, and indexer writes are
+short per-file transactions so reads stay responsive.
 
 **CLI flags:**
 
 ```bash
-python memory_index.py                          # Both vaults, full incremental pass
+python memory_index.py                          # All discovered vaults, full incremental pass
 python memory_index.py --source human-vault     # One vault only (used by heartbeat after submodule sync)
+python memory_index.py --verbose                # DEBUG-level logs
 ```
 
-**`memory_search.py` — hybrid search:**
+### `memory_search.py` — hybrid search
+
+Importable Python (`from memory_search import search`) and a CLI. The Python
+function is the primary contract; the CLI is a thin wrapper. Skills that call
+search repeatedly within one invocation should `import` to share the loaded
+embedding model (process cold-start dominates at ~2–4s for model load; warm
+in-process queries are <100ms).
 
 ```python
-# CLI: python memory_search.py "cross-team blockers" --limit 5
-# Option: --source human-vault | ai-vault (filter by vault)
-# Returns ranked chunks with source file + snippet
-# Score = 0.7 * vector_score + 0.3 * bm25_score (normalize each to [0,1] first)
+@dataclass
+class SearchHit:
+    source_path: str
+    source_tag: str  # 'ai-vault' | 'human-vault'
+    chunk_index: int
+    score: float  # fused, [0, 1]
+    vector_score: float  # for debugging weight tuning
+    bm25_score: float
+    snippet: str  # ~200 chars centered on best match
+    text: str  # full chunk for callers that want it
+
+
+def search(
+    query: str,
+    source: str | None = None,
+    limit: int = 5,
+) -> list[SearchHit]: ...
 ```
 
-**Run the indexer on a schedule** (Linux cron, every 15 minutes):
+**Hybrid scoring algorithm (union-then-rescore):**
 
-```cron
-*/15 * * * * uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_index.py
+1. Take top-50 from each side independently (vector via sqlite-vec, BM25 via
+   FTS5 `MATCH`).
+2. Union the candidate sets. For any chunk missing from one side's top-50, fetch
+   its actual score on that side rather than substituting a default — keeps
+   fusion honest when a chunk dominates one side and is rank ~200 on the other.
+3. **Vector normalization:** sqlite-vec returns L2 distance; convert to
+   similarity via `1 / (1 + distance)`. Already in `[0, 1]`. **No per-query
+   renormalization** — absolute similarity is meaningful.
+4. **BM25 normalization:** FTS5's `bm25()` is unbounded and negative (lower =
+   better). Min-max within the candidate set, then invert so higher is better.
+   The asymmetry — vector absolute, BM25 relative — is intentional: BM25 has no
+   zero point; cosine does.
+5. Fuse: `score = vector_weight * vec + (1 - vector_weight) * bm25`. Weights
+   come from `config.toml [search]` (default `vector_weight = 0.7`).
+6. Sort descending; tie-break on lower `chunk_index`, then more recent
+   `mtime_ns`.
+7. **Adjacent-chunk dedup:** when two results have the same `source_path` and
+   `|chunk_index_a − chunk_index_b| ≤ 1`, drop the lower-scored one. The
+   50-token overlap otherwise surfaces both halves of a single passage.
+8. Return top-`limit`.
+
+**Snippet generation:** for BM25-dominant hits, use FTS5's `snippet()` to
+highlight the matched term. For vector-dominant hits with no FTS hit in the
+candidate set, return the chunk's first 200 chars. Cheap heuristic; good enough.
+
+**CLI:**
+
+```bash
+python memory_search.py "cross-team blockers" --limit 5
+python memory_search.py "..." --source ai-vault     # filter by vault
+python memory_search.py "..." --json                # emits list[SearchHit] as JSON for skill/chat consumers
 ```
 
-**Dependencies:** Phase 1 (vault), Phase 2 (hooks can call `memory_search.py` to
-enrich context)\
+Default output is human-readable (path, score, snippet); `--json` is the
+contract for programmatic callers. Empty query or no candidates returns `[]` and
+exits 0 — not an error.
+
+### Operational notes
+
+- **Cron line, per instance.** Bootstrap _prints_ the line and exits — it does
+  not modify the user's crontab. Phase 9 will add a systemd user-timer
+  alternative; for Phase 3, cron is canonical.
+
+  ```cron
+  */15 * * * * uv run --project ~/dotfiles/second-brain python ~/second-brain/<instance>/.agents/scripts/memory_index.py
+  ```
+
+- **First-run cost:** ~80MB ONNX download to `~/.cache/fastembed/` on the first
+  `embed_batch()` call, plus a full corpus embed. For a fresh `ai-vault` (only
+  SOUL/USER/MEMORY/map) that's <30 chunks — trivial. The 15-min cadence absorbs
+  it. `bootstrap.py`'s final printout mentions the one-time download so the
+  operator isn't surprised.
+
+- **Logging.** Stdlib `logging` to stderr; INFO by default, DEBUG via
+  `--verbose`. Dynamic data goes through `extra={...}`, not into the message
+  string — mirrors the structured-logging rule from the project guide so a
+  future log shipper can parse cleanly.
+
+- **`config.toml [search]`:**
+
+  ```toml
+  [search]
+  vector_weight = 0.7 # bm25_weight = 1 - vector_weight
+  candidate_k = 50 # top-K per side before fusion
+  ```
+
+**Dependencies:** Phase 1 (vault), Phase 2 (hooks coexist; no edits required in
+Phase 3 — integration deferred to Phase 5+ skills and Phase 7 chat adapters)\
 **Estimated complexity:** Medium
 
 ---
