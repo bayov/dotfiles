@@ -54,13 +54,18 @@ dotfiles repo):
 ~/dotfiles/second-brain/
 ├── second-brain-prd.md              # this spec
 ├── bootstrap.py                     # scaffolds a new ~/second-brain/<instance>/
-├── agents/                          # → <instance>/.agents/  (whole dir symlinked)
-│   ├── scripts/                     #   db.py, check_context_size.py, memory_index.py, ...
-│   ├── skills/                      #   populated in Phase 4.5+
-│   ├── hooks/                       #   guardrail-check.py (Phase 8)
-│   └── chat/                        #   adapters + core (Phase 7)
+├── pyproject.toml                   # declares the `sb` package + console scripts
+│                                    #   (sb-index, sb-search, sb-heartbeat,
+│                                    #    sb-reflect, sb-db, sb-rag-db, sb-chat,
+│                                    #    sb-context-check, sb-guardrail, ...)
+├── src/sb/                          # ordinary importable Python package
+│   ├── instance.py                  #   find_instance() — marker-file ascent
+│   ├── scripts/                     #   db.py, memory_index.py, heartbeat.py, ...
+│   ├── chat/                        #   adapters + core (Phase 7)
+│   └── hooks/                       #   guardrail_check.py (Phase 8)
 ├── claude/
-│   └── hooks/                       # → <instance>/.claude/hooks/  (lifecycle hooks)
+│   ├── hooks/                       # → <instance>/.claude/hooks/   (Claude Code lifecycle hooks)
+│   └── skills/                      # → <instance>/.claude/skills/  (populated in Phase 4.5+)
 ├── schema/
 │   └── 0001_init.sql                # → <instance>/schema.sql
 └── starter/                         # COPIED at bootstrap; diverges per instance
@@ -83,16 +88,71 @@ required):
 │   ├── .obsidian/
 │   └── briefings/, dossiers/, meetings/, drafts/, analysis/, logs/, questions/
 ├── config.toml                      # COPIED from starter/config.toml, then evolves
+│                                    # (also serves as the instance marker — see find_instance)
 ├── human-vault/                     # git submodule → AI's fork (Phase 4.5)
-├── .agents             → ~/dotfiles/second-brain/agents/
 ├── .claude/
 │   ├── hooks           → ~/dotfiles/second-brain/claude/hooks/
+│   ├── skills          → ~/dotfiles/second-brain/claude/skills/
 │   └── settings.json                # COPIED (per-instance permissions)
 ├── schema.sql          → ~/dotfiles/second-brain/schema/0001_init.sql
 ├── second-brain-prd.md → ~/dotfiles/second-brain/second-brain-prd.md
 ├── .env                             # COPIED from starter/env.example, edited
 └── .gitignore                       # COPIED
 ```
+
+**No `.agents/` symlink.** Earlier drafts symlinked
+`~/dotfiles/second-brain/agents/` into each instance as `.agents/`, so scripts
+could derive their instance dir from an unresolved `__file__`. That trick has
+been retired in favor of an ordinary Python package (`src/sb/`) plus runtime
+instance discovery via [`find_instance()`](#find_instance--instance-discovery).
+Code is now invoked by console-script name (`sb-index`, `sb-heartbeat`, …) from
+the instance directory, with `uv run --project ~/dotfiles/second-brain`
+supplying the venv. The only remaining symlinks are the Claude-Code-side
+artifacts (`.claude/hooks`, `.claude/skills`) which must live at well-known
+instance-relative paths because Claude Code itself discovers them by path.
+
+#### `find_instance()` — instance discovery
+
+A single helper at `src/sb/instance.py` is the only mechanism by which code
+locates the instance directory:
+
+```python
+# src/sb/instance.py
+import os
+from pathlib import Path
+
+INSTANCE_MARKER = "config.toml"
+
+
+def find_instance(start: Path | None = None) -> Path:
+    """Locate the second-brain instance directory.
+
+    Resolution order:
+      1. `SECOND_BRAIN_INSTANCE` env var, if set (used by the systemd chat unit
+         and by ad-hoc invocations that don't have a useful cwd).
+      2. Marker-file ascent from `start` (default: `Path.cwd()`) — walk up until
+         a directory containing `config.toml` is found. Same idea as how `git`
+         finds the repo root.
+
+    Raises `RuntimeError` if neither produces a hit.
+    """
+    if env := os.environ.get("SECOND_BRAIN_INSTANCE"):
+        return Path(env).expanduser().resolve()
+    current = (start or Path.cwd()).resolve()
+    for parent in (current, *current.parents):
+        if (parent / INSTANCE_MARKER).is_file():
+            return parent
+    raise RuntimeError(
+        f"No second-brain instance found above {start or Path.cwd()} "
+        f"(no `{INSTANCE_MARKER}` marker, and SECOND_BRAIN_INSTANCE is unset)"
+    )
+```
+
+Cron jobs `cd ~/second-brain/<instance>` before invoking the script; Claude Code
+hooks receive `cwd` in their JSON payload and pass it to `find_instance`; the
+chat systemd unit sets `SECOND_BRAIN_INSTANCE` explicitly. There is no other
+path-discovery mechanism in the codebase — anything that needs the instance dir
+calls `find_instance()`.
 
 > **⚠️ Open inconsistency — needs a dedicated /align pass on Phase 1.** Phase 4
 > was aligned on machine-local config at
@@ -111,10 +171,10 @@ required):
 
 **Code/content split — rationale:**
 
-- **Single source of truth for code.** All Python scripts, Claude-Code hooks,
-  skills, and the cloud-DB schema live in `~/dotfiles/second-brain/`. Edit once,
-  both `work/` and (future) `personal/` see the change instantly via symlinks.
-  No per-instance code drift.
+- **Single source of truth for code.** All Python code, Claude-Code hooks,
+  skills, and the cloud-DB schema live in `~/dotfiles/second-brain/`. Edit once
+  and `uv run --project ~/dotfiles/second-brain` picks the change up immediately
+  for every instance — no per-instance code drift.
 - **Audit trail per instance.** Each `~/second-brain/<instance>/` is its own git
   repo. Its history captures only AI-vault content writes — clean separation
   between _code changes_ (commits to dotfiles) and _agent activity_ (commits to
@@ -124,8 +184,11 @@ required):
   bootstrap, not symlinked: `config.toml` carries per-instance tuning, SOUL tone
   differs work-vs-personal, USER holds per-instance account IDs, MEMORY evolves
   continuously, settings carry per-instance permissions.
-- **Symlinks are relative**, so an instance is movable. Inside the instance
-  repo, `git status` shows only data changes — code never appears as drift.
+- **Instance is movable.** The remaining `.claude/hooks` and `.claude/skills`
+  symlinks are relative, and the package is found via uv's `--project` flag
+  rather than any in-instance path. Moving an instance dir requires no code
+  edits. Inside the instance repo, `git status` shows only data changes — code
+  never appears as drift.
 
 **Bootstrap:**
 
@@ -138,17 +201,18 @@ uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstra
 
 1. `git init ~/second-brain/<instance>/` if absent.
 2. Copy `starter/` into the instance (preserving subtree shape).
-3. Create the relative symlinks (`.agents`, `.claude/hooks`, `schema.sql`,
-   `second-brain-prd.md`).
+3. Create the relative symlinks (`.claude/hooks`, `.claude/skills`,
+   `schema.sql`, `second-brain-prd.md`).
 4. **Interactively prompt for required + optional fields**, then render `.env`,
    `USER.md`, and `config.toml` from their starter templates. See "Bootstrap
    prompts" below.
-5. Run `db.py --init` (cloud DB schema; primes the local SQLite file in fallback
-   mode; idempotent) and `rag_db.py --init` (local RAG DB schema; no-op stub
-   until Phase 3). Bootstrap invokes both as Python subprocesses using
-   `sys.executable` — since bootstrap itself runs under
+5. Run `sb-db --init` (cloud DB schema; primes the local SQLite file in fallback
+   mode; idempotent) and `sb-rag-db --init` (local RAG DB schema; no-op stub
+   until Phase 3). Bootstrap invokes both as Python subprocesses with
+   `cwd=<instance>` and `SECOND_BRAIN_INSTANCE=<instance>` so `find_instance()`
+   resolves correctly. Since bootstrap itself runs under
    `uv run --project ~/dotfiles/second-brain`, the venv is already resolved and
-   the subprocesses inherit it.
+   the subprocesses inherit it via `sys.executable`.
 6. `git -C ~/second-brain/<instance> commit -m "Initial scaffold"` so the audit
    trail starts from a known baseline.
 
@@ -507,7 +571,7 @@ Add to `.config/test.toml`:
 ```toml
 [[test_suite]]
 name = "context_size_check"
-command = "uv run python .agents/scripts/check_context_size.py"
+command = "uv run --project ~/dotfiles/second-brain sb-context-check"
 ```
 
 `check_context_size.py` reads `config.toml [context] max_bytes.*`, checks
@@ -804,23 +868,19 @@ relative paths inside the hook resolve against the instance.
 `TRANSCRIPT` (Path or None), `CWD`, `HOOK_EVENT` as module attributes. Hooks
 import what they need.
 
-**Path resolution in `_setup.py`.** Two paths must resolve correctly: dotfiles
-for code, instance for content. Symlinks complicate this — use unresolved
-`__file__` for the instance side, resolved for the dotfiles side.
+**Path resolution in `_setup.py`.** The instance dir comes from
+`find_instance()` — using the `cwd` field of the Claude-Code hook payload as the
+starting point — and the package is imported normally (no `sys.path`
+manipulation), since hooks run under `uv run --project
+~/dotfiles/second-brain`
+and `sb` is a regular installable package.
 
 ```python
 # ~/dotfiles/second-brain/claude/hooks/_setup.py
 import json, pathlib, sys, tomllib
 
-# Instance dir: derive from UNRESOLVED __file__ — keeps the symlink path,
-# so .parent.parent.parent gives ~/second-brain/<instance>/.
-INSTANCE_DIR = pathlib.Path(__file__).parent.parent.parent
-
-# Scripts dir: RESOLVE __file__ to follow the symlink into dotfiles.
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parent.parent.parent / "agents" / "scripts"
-)
-sys.path.insert(0, str(SCRIPTS_DIR))
+from sb.instance import find_instance
+from sb.scripts.db import write_event, Event  # re-exported for hooks
 
 # stdin parse (gated for unit tests where stdin isn't a Claude Code payload)
 _PAYLOAD = json.load(sys.stdin) if not sys.stdin.isatty() else {}
@@ -833,10 +893,12 @@ TRANSCRIPT = (
 CWD = _PAYLOAD.get("cwd", str(pathlib.Path.cwd()))
 HOOK_EVENT = _PAYLOAD.get("hook_event_name", "unknown")
 
+# Claude Code launches in the instance dir, so `cwd` from the payload sits
+# inside the instance — find_instance walks up from there to the marker.
+INSTANCE_DIR = find_instance(pathlib.Path(CWD))
+
 with (INSTANCE_DIR / "config.toml").open("rb") as f:
     config = tomllib.load(f)
-
-from db import write_event, Event  # noqa: E402  — sys.path set above
 ```
 
 `_setup.py` also wraps each hook's `main()` in soft-fail boilerplate (catch all
@@ -996,7 +1058,7 @@ keyword-findable.
 **Key files to create:**
 
 ```
-.agents/scripts/
+src/sb/scripts/
 ├── rag_db.py          # Local RAG DB connection + schema (chunks, vec_chunks, fts_chunks, indexed_files)
 ├── embeddings.py      # FastEmbed wrapper
 ├── memory_index.py    # Chunking + indexing pipeline (incremental, writes to rag.db)
@@ -1078,28 +1140,28 @@ def embed_query(query: str) -> list[float]:
 
 ### `memory_index.py` — vault discovery + incremental pipeline
 
-Vaults are **discovered at runtime**, not configured. The indexer derives its
-instance directory from its own unresolved `__file__` (same trick as the Phase 2
-`_setup.py`), then scans for known vault subdirectories. Missing directories
-(human-vault before Phase 4.5 lands the submodule) are silently skipped with one
-INFO log line — not an error. Adding a new vault is a code change, not a config
-edit, because each `source_tag` carries semantic implications (search filters,
-write authority, promotion paths).
+Vaults are **discovered at runtime**, not configured. The indexer locates its
+instance via `find_instance()` (cwd ascent, or `SECOND_BRAIN_INSTANCE`), then
+scans for known vault subdirectories. Missing directories (human-vault before
+Phase 4.5 lands the submodule) are silently skipped with one INFO log line — not
+an error. Adding a new vault is a code change, not a config edit, because each
+`source_tag` carries semantic implications (search filters, write authority,
+promotion paths).
 
 ```python
 from pathlib import Path
 
-# Unresolved __file__ — preserves the symlink path so .parent.parent.parent
-# resolves to the *instance* dir, not the dotfiles dir.
-INSTANCE_DIR = Path(__file__).parent.parent.parent
+from sb.instance import find_instance
+
 KNOWN_VAULTS = ("ai-vault", "human-vault")
 
 
 def discover_vaults() -> list[tuple[Path, str]]:
+    instance_dir = find_instance()
     return [
-        (INSTANCE_DIR / name, name)
+        (instance_dir / name, name)
         for name in KNOWN_VAULTS
-        if (INSTANCE_DIR / name).is_dir()
+        if (instance_dir / name).is_dir()
     ]
 
 
@@ -1114,9 +1176,10 @@ def run_index(source_filter: str | None = None):
 **File-scope rules** (applied during the walk):
 
 - Extension allowlist: `.md` only.
-- Path exclusions: `.obsidian/`, `.git/`, `.gitmodules`, `.trash/`.
-- **Don't follow symlinks** during the walk. `.agents/` is a symlink into
-  dotfiles; we never want code embedded as memory.
+- Path exclusions: `.obsidian/`, `.git/`, `.gitmodules/`, `.trash/`, `.claude/`
+  (the hooks/skills symlinks point at dotfiles — we never want code or
+  configuration embedded as memory).
+- **Don't follow symlinks** during the walk.
 - Skip files with <50 chars of post-frontmatter body (avoids embedding stubs).
 - Always include `SOUL.md`, `USER.md`, `MEMORY.md`, `human-vault-map.md` at
   vault root.
@@ -1265,7 +1328,7 @@ exits 0 — not an error.
   alternative; for Phase 3, cron is canonical.
 
   ```cron
-  */15 * * * * uv run --project ~/dotfiles/second-brain python ~/second-brain/<instance>/.agents/scripts/memory_index.py
+  */15 * * * * cd ~/second-brain/<instance> && uv run --project ~/dotfiles/second-brain sb-index
   ```
 
 - **First-run cost:** ~80MB ONNX download to `~/.cache/fastembed/` on the first
@@ -1305,7 +1368,7 @@ ships a no-op stub).
 **File structure:**
 
 ```
-.agents/scripts/integrations/
+src/sb/scripts/integrations/
 ├── registry.py              # Reads [integrations] enabled from config.toml
 ├── query.py                 # Unified CLI: query.py gmail list [--format=text|json]
 ├── shared_auth.py           # Google OAuth2 (Gmail + Calendar) + retry helper
@@ -1811,7 +1874,7 @@ credentials are present (skip otherwise) — run manually, never in CI.
 
 ### Phase 4 acceptance — what's "done"
 
-- `~/dotfiles/second-brain/.agents/scripts/integrations/` has every file in the
+- `~/dotfiles/second-brain/src/sb/scripts/integrations/` has every file in the
   structure above, including `sanitize.py` (no-op stub) and `errors.py`.
 - `secrets.example.toml` checked in at the repo root.
 - `config.toml` gains `[integrations]`, `[integrations.gmail]`, and
@@ -1875,13 +1938,13 @@ and stay consistent — the security model differs.
 **Key files to create / modify:**
 
 ```
-~/second-brain/work/human-vault/                # git submodule → AI's fork
-.agents/scripts/memory_index.py                  # Already dual-vault (Phase 3)
-.agents/skills/promote-to-human-vault/
+~/second-brain/work/human-vault/                  # git submodule → AI's fork
+src/sb/scripts/memory_index.py                    # Already dual-vault (Phase 3)
+claude/skills/promote-to-human-vault/             # symlinked into <instance>/.claude/skills/
 ├── SKILL.md
 └── scripts/
-    ├── promote.py                               # Search + reformulate + branch + MR
-    └── update_vault_map.py                      # Refresh ai-vault/human-vault-map.md
+    ├── promote.py                                # Search + reformulate + branch + MR
+    └── update_vault_map.py                       # Refresh ai-vault/human-vault-map.md
 ```
 
 **One-time GitLab setup:**
@@ -2227,7 +2290,7 @@ surfacing project risks.
 **Key files to create:**
 
 ```
-.agents/skills/
+claude/skills/                # symlinked into <instance>/.claude/skills/
 ├── vault-structure/
 │   ├── SKILL.md
 │   └── references/
@@ -2286,7 +2349,7 @@ via Discord DM. The heartbeat is the sole writer of MEMORY.md.
 **Key files to create:**
 
 ```
-.agents/scripts/
+src/sb/scripts/
 ├── heartbeat.py
 └── memory_reflect.py
 ```
@@ -2295,7 +2358,7 @@ via Discord DM. The heartbeat is the sole writer of MEMORY.md.
 
 ```cron
 # Active hours: 08:00–19:00 Israel time (UTC+3 summer, Sun–Thu)
-*/30 5-16 * * 0-4  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/heartbeat.py
+*/30 5-16 * * 0-4  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-heartbeat
 ```
 
 **`heartbeat.py` — data gathering phase:**
@@ -2313,7 +2376,8 @@ def gather_context() -> dict:
         subprocess.run(
             [
                 sys.executable,  # heartbeat itself runs under uv-managed venv
-                ".agents/scripts/memory_index.py",
+                "-m",
+                "sb.scripts.memory_index",
                 "--source",
                 "human-vault",
             ],
@@ -2558,7 +2622,7 @@ def notify_linux(title: str, body: str):
 **`memory_reflect.py` — daily at 08:00 Israel time:**
 
 ```cron
-0 5 * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_reflect.py
+0 5 * * *  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-reflect
 ```
 
 Process:
@@ -2619,8 +2683,8 @@ partitions per platform without per-platform schema.
 ### Key files
 
 ```
-.agents/chat/
-├── run.py                    # Entry point — fans out to enabled adapters
+src/sb/chat/
+├── run.py                    # Entry point — fans out to enabled adapters (exposed as `sb-chat`)
 ├── core.py                   # Platform-agnostic Claude loop
 ├── session_store.py          # DB-backed history (chat_messages projection)
 ├── adapter.py                # ChatAdapter protocol + ChatMessage dataclass
@@ -2805,7 +2869,8 @@ contract is wrong — fix the contract, not the platform.
 # ~/.config/systemd/user/second-brain-chat.service
 [Service]
 WorkingDirectory=%h/second-brain/work
-ExecStart=uv run --project %h/dotfiles/second-brain python %h/second-brain/work/.agents/chat/run.py
+Environment=SECOND_BRAIN_INSTANCE=%h/second-brain/work
+ExecStart=uv run --project %h/dotfiles/second-brain sb-chat
 EnvironmentFile=%h/second-brain/work/.env
 Restart=always
 ```
@@ -2830,7 +2895,7 @@ Claude.
 **Key files to create:**
 
 ```
-.agents/scripts/
+src/sb/scripts/
 ├── sanitize.py
 └── guardrails.py
 ```
@@ -2905,7 +2970,7 @@ def check_command(command: str) -> tuple[bool, str]:
         "PreToolUse": [
             {
                 "type": "command",
-                "command": "uv run --project $HOME/dotfiles/second-brain python .agents/hooks/guardrail-check.py",
+                "command": "uv run --project $HOME/dotfiles/second-brain sb-guardrail",
                 "matcher": { "tool_name": "Bash" }
             }
         ]
@@ -2924,24 +2989,25 @@ Phase 9: Deployment (Linux Local)
 **What to build:** Wire all scheduled scripts to Linux cron, set up the Discord
 bot as a systemd user service, and verify end-to-end flow.
 
-**Cron jobs summary (`crontab -e`):** Paths are instance-rooted
-(`~/second-brain/work/.agents/...`) so symlinks resolve into
-`~/dotfiles/second-brain/`. Logs are per-instance.
+**Cron jobs summary (`crontab -e`):** Each line `cd`s into the instance dir
+first; `find_instance()` then resolves the instance from cwd. Logs are
+per-instance.
 
-All scheduled scripts run via
-`uv run --project ~/dotfiles/second-brain python ...` (same invocation pattern
-as Phase 2 hooks). uv resolves the project venv without requiring activation,
-which cron does not inherit.
+All scheduled scripts run via console scripts under
+`uv run --project ~/dotfiles/second-brain ...`. uv resolves the project venv
+without requiring activation (which cron does not inherit), and the console
+scripts (`sb-index`, `sb-heartbeat`, `sb-reflect`) are declared in the package
+`pyproject.toml`.
 
 ```cron
 # Memory indexer — every 15 minutes
-*/15 * * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_index.py >> ~/.local/log/second-brain/work/index.log 2>&1
+*/15 * * * *  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-index >> ~/.local/log/second-brain/work/index.log 2>&1
 
 # Heartbeat — every 30 min, Israeli working hours (Sun–Thu, 08:00–19:00 local = 05:00–16:00 UTC summer)
-*/30 5-16 * * 0-4  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/heartbeat.py >> ~/.local/log/second-brain/work/heartbeat.log 2>&1
+*/30 5-16 * * 0-4  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-heartbeat >> ~/.local/log/second-brain/work/heartbeat.log 2>&1
 
 # Daily reflection — 08:00 Israel time (05:00 UTC summer)
-0 5 * * *  uv run --project ~/dotfiles/second-brain python ~/second-brain/work/.agents/scripts/memory_reflect.py >> ~/.local/log/second-brain/work/reflect.log 2>&1
+0 5 * * *  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-reflect >> ~/.local/log/second-brain/work/reflect.log 2>&1
 ```
 
 **Note on Israel work week:** Sunday–Thursday. Cron day-of-week `0-4` (Sun=0,
@@ -2955,24 +3021,26 @@ manual re-init or recovery:
 ```bash
 # Cloud DB schema — creates tables in Turso (or local SQLite, depending on DATABASE_URL).
 # Idempotent (CREATE TABLE IF NOT EXISTS); also primes the embedded replica file.
-uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --init
+cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-db --init
 
 # Local RAG DB schema (separate file, local-only)
-uv run --project ~/dotfiles/second-brain python .agents/scripts/rag_db.py --init
+cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-rag-db --init
 ```
 
 **Operational commands:**
 
 ```bash
+# All commands assume cwd=~/second-brain/work so find_instance() resolves correctly.
+
 # Snapshot the cloud DB to a portable file (.sql text or .db file)
-uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --dump > ~/backups/cloud-$(date +%F).sql
+uv run --project ~/dotfiles/second-brain sb-db --dump > ~/backups/cloud-$(date +%F).sql
 
 # Wipe and rebuild projections from events (after schema change or new agent)
-uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --rebuild
+uv run --project ~/dotfiles/second-brain sb-db --rebuild
 
 # Show current state: event count, projection cursor positions, agents registered,
 # plus a sync-health panel (see below).
-uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --status
+uv run --project ~/dotfiles/second-brain sb-db --status
 ```
 
 **`--status` sync-health panel.** When something feels stale ("did the agent see
@@ -3004,7 +3072,7 @@ new state to maintain.
 
 ```bash
 # 1. Capture a final snapshot
-uv run --project ~/dotfiles/second-brain python .agents/scripts/db.py --dump > ~/backups/cloud-final.sql
+uv run --project ~/dotfiles/second-brain sb-db --dump > ~/backups/cloud-final.sql
 
 # 2. Promote the embedded replica to be the source of truth
 cp ~/.local/share/second-brain/work/cloud-replica.db \
@@ -3042,7 +3110,7 @@ one-line edit to `pyproject.toml` followed by `uv sync`.
 **OAuth first-run flow:**
 
 ```bash
-uv run --project ~/dotfiles/second-brain python .agents/scripts/integrations/shared_auth.py
+cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain python -m sb.scripts.integrations.shared_auth
 # Token saved to GOOGLE_TOKEN_PATH — auto-refreshes after that
 ```
 
@@ -3107,27 +3175,31 @@ the agent gains the `promote-to-human-vault` MR path for durable knowledge.
 
 ---
 
-_This PRD was last updated 2026-04-30 with two changes: (1) **code/content
-split** — code now lives in `~/dotfiles/second-brain/` (single source of truth
-across instances), content lives in per-instance repos at
-`~/second-brain/<instance>/` (today: `work`; planned: `personal`) which contain
-AI-vault data + relative symlinks back into dotfiles; per-instance state under
-`~/.local/share/second-brain/<instance>/` to avoid replica/RAG collisions;
-bootstrap is
+_This PRD was last updated 2026-04-30 with three changes: (1) **code/content
+split** — code now lives in `~/dotfiles/second-brain/` as an ordinary
+installable Python package (`src/sb/`, console scripts `sb-index`,
+`sb-heartbeat`, …), content lives in per-instance repos at
+`~/second-brain/<instance>/` (today: `work`; planned: `personal`); per-instance
+state under `~/.local/share/second-brain/<instance>/` to avoid replica/RAG
+collisions; bootstrap is
 `uv run --project ~/dotfiles/second-brain python ~/dotfiles/second-brain/bootstrap.py <instance>`.
-(2) **GitLab migration** — human-vault remote moved from GitHub to GitLab
-(Hagai's employer hosts GitLab; `GITLAB_HOST` configurable, `glab` CLI replaces
-`gh`, `GITLAB_TOKEN` replaces `GITHUB_HUMAN_VAULT_TOKEN`, MR replaces PR
-throughout). Earlier dual-vault alignment review preserved. Key architectural
-decisions: event sourcing with a cloud SQL DB (Turso/libSQL) as single source of
-truth, accessed via embedded replica for local-disk read latency; **rich AI
-Obsidian vault** at `~/second-brain/work/ai-vault/` (briefings, dossiers,
-drafts, analysis, logs, questions — AI is sole writer with editorial freedom)
-sitting alongside the **read-only mirror of the human vault** at
-`~/second-brain/work/human-vault/` (git submodule of the AI's fork of
-`~/notes/work`); promotion AI → human only via MR with mandatory search +
-reformulation + dedup discipline; separate local RAG DB regenerable from vault
-files; actions and responses merged in one projection table with full history
-preserved in events; agents (not just models) tracked as first-class identity
-for reprocessability; substrate swappable to plain SQLite via `DATABASE_URL`
-change with no code rewrite._
+(2) **Instance discovery** moved from the unresolved-`__file__` /
+`.agents/`-symlink trick to a single `find_instance()` helper that ascends from
+cwd looking for `config.toml` (or honors `SECOND_BRAIN_INSTANCE`); the only
+remaining symlinks are `.claude/hooks` and `.claude/skills`, which Claude Code
+itself discovers by path. (3) **GitLab migration** — human-vault remote moved
+from GitHub to GitLab (Hagai's employer hosts GitLab; `GITLAB_HOST`
+configurable, `glab` CLI replaces `gh`, `GITLAB_TOKEN` replaces
+`GITHUB_HUMAN_VAULT_TOKEN`, MR replaces PR throughout). Earlier dual-vault
+alignment review preserved. Key architectural decisions: event sourcing with a
+cloud SQL DB (Turso/libSQL) as single source of truth, accessed via embedded
+replica for local-disk read latency; **rich AI Obsidian vault** at
+`~/second-brain/work/ai-vault/` (briefings, dossiers, drafts, analysis, logs,
+questions — AI is sole writer with editorial freedom) sitting alongside the
+**read-only mirror of the human vault** at `~/second-brain/work/human-vault/`
+(git submodule of the AI's fork of `~/notes/work`); promotion AI → human only
+via MR with mandatory search + reformulation + dedup discipline; separate local
+RAG DB regenerable from vault files; actions and responses merged in one
+projection table with full history preserved in events; agents (not just models)
+tracked as first-class identity for reprocessability; substrate swappable to
+plain SQLite via `DATABASE_URL` change with no code rewrite._
