@@ -148,7 +148,7 @@
             "ctrl-n": "workspace::NewFile",
             "shift-new": "workspace::NewWindow",
             "ctrl-shift-n": "workspace::NewWindow",
-            "ctrl-`": "terminal_panel::Toggle",
+            "alt-`": "terminal_panel::Toggle",
             "f10": ["app_menu::OpenApplicationMenu", "Zed"],
             "alt-1": "project_panel::Toggle",
             "alt-2": "git_panel::ToggleFocus",
@@ -447,7 +447,6 @@
         "context": "Editor && mode == full",
         "bindings": {
             "shift-enter": "editor::Newline",
-            "enter": "editor::Newline",
             "ctrl-enter": "editor::NewlineBelow",
             "ctrl-shift-enter": "editor::NewlineAbove",
             "ctrl-k ctrl-z": "editor::ToggleSoftWrap",
@@ -460,6 +459,12 @@
             "ctrl-shift-backspace": "editor::GoToPreviousChange",
             "ctrl-shift-alt-backspace": "editor::GoToNextChange",
             "alt-enter": "editor::OpenSelectionsInMultibuffer"
+        }
+    },
+    {
+        "context": "Editor && !showing_completions",
+        "bindings": {
+            "enter": "editor::Newline"
         }
     },
     {
@@ -903,7 +908,7 @@
             "alt-tab": "agent::CycleFavoriteModels",
             "alt-l": "agent::CycleFavoriteModels",
             "shift-alt-i": "agent::ToggleOptionsMenu",
-            "ctrl-alt-shift-n": "agent::ToggleNewThreadMenu",
+            "alt-n": "agent::ToggleNewThreadMenu",
             "shift-alt-escape": "agent::ExpandMessageEditor",
             "ctrl->": "agent::AddSelectionToThread",
             "ctrl-shift-e": "project_panel::ToggleFocus",
@@ -1031,14 +1036,14 @@
         }
     },
     {
-        "context": "AcpThread > Editor && !use_modifier_to_send",
+        "context": "AcpThread > Editor && !use_modifier_to_send && !showing_completions",
         "use_key_equivalents": true,
         "bindings": {
             "enter": "agent::Chat"
         }
     },
     {
-        "context": "AcpThread > Editor && use_modifier_to_send",
+        "context": "AcpThread > Editor && use_modifier_to_send && !showing_completions",
         "use_key_equivalents": true,
         "bindings": {
             "ctrl-enter": "agent::Chat",
@@ -1728,9 +1733,28 @@
         "bindings": {
             "ctrl-shift-enter": "workspace::OpenWithSystem"
         }
-    }
-
+    },
     // ============================================================
     // UNCATEGORIZED (NEW BINDS WILL BE ADDED BELOW THIS COMMENT)
     // ============================================================
+    {
+        "bindings": {
+            "ctrl-alt-8": "vim::ResizePaneUp"
+        }
+    },
+    {
+        "bindings": {
+            "ctrl-alt-4": "vim::ResizePaneLeft"
+        }
+    },
+    {
+        "bindings": {
+            "ctrl-alt-2": "vim::ResizePaneDown"
+        }
+    },
+    {
+        "bindings": {
+            "ctrl-alt-6": "vim::ResizePaneRight"
+        }
+    }
 ]

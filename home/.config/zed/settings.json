@@ -19,6 +19,7 @@
         "dock": "right"
     },
     "agent": {
+        "use_modifier_to_send": true,
         "dock": "left",
         "show_turn_stats": true,
         "play_sound_when_agent_done": "always",
@@ -64,7 +65,14 @@
             "user": null,
             "projects": [
                 {
-                    "paths": ["/home/bayov/projects/accounting"]
+                    "paths": [
+                        "/home/bayov/projects/accounting"
+                    ]
+                },
+                {
+                    "paths": [
+                        "/home/bayov/projects/dotfiles-second-brain"
+                    ]
                 }
             ]
         }
