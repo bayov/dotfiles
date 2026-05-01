@@ -1,7 +1,6 @@
 ---
 name: align
-description: Align with user's intent and goals
-disable-model-invocation: true
+description: Use when `/align` is explicitly mentioned.
 ---
 
 Interview me relentlessly about every aspect of this plan/design until we reach

@@ -44,8 +44,8 @@ if status is-interactive
     abbr -a z zellij
     abbr -a zl zellij list-sessions
     abbr -a zka zellij kill-all-sessions
-    abbr -a c docker-sandbox --no-rebuild -- claude --dangerously-skip-permissions
-    abbr -a g docker-sandbox --no-rebuild -- gemini --yolo
+    abbr -a c claude --dangerously-skip-permissions
+    abbr -a g gemini --yolo
     abbr -a oc opencode
     abbr -a lmd glow --width 160
 
@@ -69,7 +69,7 @@ if status is-interactive
     set -gx fish_greeting
 
     # fzf settings
-    # ------------    
+    # ------------
     set -gx FZF_DEFAULT_OPTS '
         --cycle
         --style=full
