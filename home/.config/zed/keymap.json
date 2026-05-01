@@ -334,7 +334,11 @@
             "ctrl-k up": "pane::SplitUp",
             "ctrl-k down": "pane::SplitDown",
             "ctrl-k left": "pane::SplitLeft",
-            "ctrl-k right": "pane::SplitRight"
+            "ctrl-k right": "pane::SplitRight",
+            "ctrl-alt-8": "vim::ResizePaneUp",
+            "ctrl-alt-2": "vim::ResizePaneDown",
+            "ctrl-alt-4": "vim::ResizePaneLeft",
+            "ctrl-alt-6": "vim::ResizePaneRight"
         }
     },
     {
@@ -1737,24 +1741,4 @@
     // ============================================================
     // UNCATEGORIZED (NEW BINDS WILL BE ADDED BELOW THIS COMMENT)
     // ============================================================
-    {
-        "bindings": {
-            "ctrl-alt-8": "vim::ResizePaneUp"
-        }
-    },
-    {
-        "bindings": {
-            "ctrl-alt-4": "vim::ResizePaneLeft"
-        }
-    },
-    {
-        "bindings": {
-            "ctrl-alt-2": "vim::ResizePaneDown"
-        }
-    },
-    {
-        "bindings": {
-            "ctrl-alt-6": "vim::ResizePaneRight"
-        }
-    }
 ]
