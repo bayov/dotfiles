@@ -466,7 +466,7 @@
         }
     },
     {
-        "context": "Editor && !showing_completions",
+        "context": "!Picker && Editor && !showing_completions",
         "bindings": {
             "enter": "editor::Newline"
         }
@@ -1737,7 +1737,7 @@
         "bindings": {
             "ctrl-shift-enter": "workspace::OpenWithSystem"
         }
-    },
+    }
     // ============================================================
     // UNCATEGORIZED (NEW BINDS WILL BE ADDED BELOW THIS COMMENT)
     // ============================================================
