@@ -451,7 +451,6 @@
         "context": "Editor && mode == full",
         "bindings": {
             "shift-enter": "editor::Newline",
-            "ctrl-enter": "editor::NewlineBelow",
             "ctrl-shift-enter": "editor::NewlineAbove",
             "ctrl-k ctrl-z": "editor::ToggleSoftWrap",
             "ctrl-k z": "editor::ToggleSoftWrap",
@@ -466,7 +465,7 @@
         }
     },
     {
-        "context": "!Picker && Editor && !showing_completions",
+        "context": "Editor && !Picker && !BufferSearchBar && !showing_completions",
         "bindings": {
             "enter": "editor::Newline"
         }
@@ -475,14 +474,6 @@
         "context": "Editor && !edit_prediction",
         "bindings": {
             "alt-\\": "zed::ToggleFullScreen"
-        }
-    },
-    {
-        "context": "Editor && mode == auto_height",
-        "bindings": {
-            "ctrl-enter": "editor::Newline",
-            "shift-enter": "editor::Newline",
-            "ctrl-shift-enter": "editor::NewlineBelow"
         }
     },
 
@@ -657,7 +648,7 @@
     {
         "context": "Editor && showing_completions",
         "bindings": {
-            "enter": "editor::ConfirmCompletion",
+            "enter": "editor::ComposeCompletion",
             "shift-enter": "editor::ConfirmCompletionReplace",
             "tab": "editor::ComposeCompletion"
         }

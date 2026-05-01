@@ -9,7 +9,10 @@
 {
     "agent_servers": {
         "claude-acp": {
-            "type": "registry"
+            "type": "registry",
+            "env": {
+                "ACP_PERMISSION_MODE": "bypassPermissions"
+            }
         }
     },
     "outline_panel": {
@@ -19,6 +22,10 @@
         "dock": "right"
     },
     "agent": {
+        "tool_permissions": {
+            "default": "allow",
+            "tools": {}
+        },
         "use_modifier_to_send": true,
         "dock": "left",
         "show_turn_stats": true,
@@ -65,14 +72,10 @@
             "user": null,
             "projects": [
                 {
-                    "paths": [
-                        "/home/bayov/projects/accounting"
-                    ]
+                    "paths": ["/home/bayov/projects/accounting"]
                 },
                 {
-                    "paths": [
-                        "/home/bayov/projects/dotfiles-second-brain"
-                    ]
+                    "paths": ["/home/bayov/projects/dotfiles-second-brain"]
                 }
             ]
         }
