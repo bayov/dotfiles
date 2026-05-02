@@ -1,19 +1,42 @@
 ---
 name: decompose
-description: Break a plan into tasks
+description: Break a design into vertical-slice tasks
 disable-model-invocation: true
 ---
 
-Break a plan into small vertical slices.
+Break an approved design into small vertical slices, each captured as a task
+file under `plan/{slug}/tasks/`.
+
+## Input
+
+Before decomposing, read whichever of these exist:
+
+- `plan/{slug}/prd.md` — the product contract. User stories here are the source
+  of truth for what each slice must advance.
+- `plan/{slug}/design.md` — the engineering contract. Components, data model,
+  data flow, and migration plan are authoritative; do not relitigate them.
+- `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim in task
+  names and descriptions.
+
+If the design is missing or contested, stop and send the user back to
+`design-interview` — do not invent design answers in tasks.
 
 ## What is a Vertical Slice?
 
 A vertical slice is a small task that goes through all relevant layers of the
 system end-to-end (e.g., schema, API, UI, tests) to produce a narrow but
-complete piece of functionality.
+complete piece of user-visible behavior.
 
 Vertical slices ensure short feedback loops and reduce the risk of downstream
 integration issues.
+
+A good slice:
+
+- Advances at least one PRD user story.
+- Touches every layer needed to ship that behavior.
+- Is independently mergeable.
+- Ships behind whichever flag/gate the design's Migration Plan specifies (if
+  any).
 
 Avoid horizontal tasks like:
 
@@ -26,7 +49,7 @@ Avoid horizontal tasks like:
 
 ### 1. Decomposition
 
-1. Start from user-visible behavior.
+1. Start from user-visible behavior (PRD user stories).
 2. Cut scope to the smallest useful outcome.
 3. Include every layer needed for that outcome.
 4. Make tasks independent when possible.
@@ -37,11 +60,23 @@ Avoid horizontal tasks like:
 Present the proposed slice breakdown to the user for approval in the form of a
 table.
 
-| Task      | Blocked by               | Description      |
-| --------- | ------------------------ | ---------------- |
-| task_name | Names of dependent tasks | Task description |
+| Task      | Blocked by               | User stories | Components     | Description      |
+| --------- | ------------------------ | ------------ | -------------- | ---------------- |
+| task_name | Names of dependent tasks | S1, S2       | Comp A, Comp B | Task description |
 
-> List tasks in dependency order (blockers first)
+> List tasks in dependency order (blockers first).
+
+### 2. Completeness check
+
+Before asking for approval, verify:
+
+- Every PRD user story is advanced by at least one slice (or is explicitly out
+  of scope for this plan).
+- Every design component that needs new behavior appears in at least one slice.
+- The dependency graph is acyclic and every blocker exists in the table.
+
+List any uncovered stories or components as Open Questions for the user rather
+than silently dropping them.
 
 Ask the user:
 
@@ -51,28 +86,10 @@ Ask the user:
 
 Iterate until the user approves the breakdown.
 
-### 2. Writing tasks
+### 3. Writing tasks
 
-Write each of the user-approved tasks as a file
-plan/{change_name}/tasks/{task_name}.md using the template below.
-
-<task-template>
-A concise description of this vertical slice. Describe the end-to-end behavior,
-not layer-by-layer implementation.
-
-## Blocked by
-
-- Blocked by plan/{change_name}/tasks/{task_name}.md
-
-> Omit the "Blocked by" section if there are no blockers
-
-## Acceptance criteria
-
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
-
-</task-template>
+For each user-approved task, copy [template.md](./template.md) to
+`plan/{slug}/tasks/{task_name}.md` and fill out each section.
 
 ## Examples
 
@@ -80,6 +97,11 @@ not layer-by-layer implementation.
 
 ```md
 Implement the ability to archive and unarchive notes.
+
+## References
+
+- PRD: S3, S4 (plan/archive-notes/prd.md)
+- Design: NoteStore, NotesListView (plan/archive-notes/design.md)
 
 ## Acceptance criteria
 

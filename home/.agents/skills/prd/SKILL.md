@@ -24,7 +24,7 @@ Before writing, read whichever of these exist:
 
 1. Confirm with the user: problem framing, target users, in/out of scope, and
    how success will be measured. If any of these are unresolved or contested,
-   send them back through `align` — do not invent answers in the PRD.
+   send them back through `prd-interview` — do not invent answers in the PRD.
 
 2. Copy [template.md](./template.md) to `plan/{slug}/prd.md` and fill out each
    section.
