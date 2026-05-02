@@ -5,3 +5,9 @@ linker = "spread"
 tags = ["wsl"]
 linker = "windows-symlink"
 dst = "/mnt/c/Users/hesos/AppData/Local/warp/Warp/config"
+
+[[link]]
+tags = ["wsl"]
+src = "themes"
+linker = "windows-symlink"
+dst = "/mnt/c/Users/hesos/AppData/Roaming/warp/Warp/data/themes"

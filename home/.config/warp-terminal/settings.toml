@@ -3,7 +3,9 @@ spacing = "compact"
 
 [appearance.themes]
 system_theme = false
-theme = "phenomenon"
+theme = {
+  custom = { name = "Bayov", path = 'C:\Users\hesos\AppData\Roaming\warp\Warp\data\themes\bayov.yaml' },
+}
 
 [appearance.text]
 font_size = 13.0
@@ -31,6 +33,9 @@ show_block_dividers = true
 
 [appearance.tabs]
 show_indicators_button = true
+
+[appearance.full_screen_apps]
+alt_screen_padding = { custom = { uniform_padding = 0.0 } }
 
 [terminal]
 

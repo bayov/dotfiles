@@ -1,0 +1,25 @@
+name: Bayov
+details: darker
+accent: '#7f95b8'
+foreground: '#c5c8c6'
+background: '#1d1f21'
+cursor: '#ced0d6'
+terminal_colors:
+  normal:
+    black: '#1d1f21'
+    red: '#cc6666'
+    green: '#b5bd68'
+    yellow: '#f0c674'
+    blue: '#81a2be'
+    magenta: '#b294bb'
+    cyan: '#8abeb7'
+    white: '#c5c8c6'
+  bright:
+    black: '#666666'
+    red: '#cc6666'
+    green: '#b5bd68'
+    yellow: '#f0c674'
+    blue: '#81a2be'
+    magenta: '#b294bb'
+    cyan: '#8abeb7'
+    white: '#ffffff'
