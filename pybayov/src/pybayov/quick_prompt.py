@@ -9,6 +9,7 @@ import json
 import math
 import os
 import random
+import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -838,7 +839,7 @@ def _select_models() -> list[str]:
 
 async def _await_first_winner(
     worker_tasks: list[asyncio.Task[bytes]],
-    worker_procs: list[asyncio.subprocess.Process],
+    worker_transports: list[asyncio.ReadTransport],
 ) -> tuple[str | None, str | None]:
     """Wait for the first task to return non-empty output; clean up the rest."""
     winner = None
@@ -869,11 +870,9 @@ async def _await_first_winner(
             t.cancel()
         if remaining:
             await asyncio.gather(*remaining, return_exceptions=True)
-        for proc in worker_procs:
+        for transport in worker_transports:
             try:
-                transport = getattr(proc, "_transport", None)
-                if transport is not None:
-                    transport.close()
+                transport.close()
             except Exception:
                 pass
         await asyncio.sleep(0)  # let close callbacks run before loop shuts down
@@ -891,40 +890,48 @@ async def race_models(prompt: str) -> tuple[str, str]:
     selected_models = _select_models()
     debug(f"Selected models for race: {selected_models}")
 
-    # 2. Start workers as detached processes
-    # We use start_new_session=True so they outlive the parent script.
-    # They communicate their result via stdout.
-    worker_procs: list[asyncio.subprocess.Process] = []
+    # Workers are launched via plain subprocess.Popen (not
+    # asyncio.create_subprocess_exec) so asyncio's child watcher does not
+    # register their PIDs against the parent's loop. Otherwise, when a
+    # detached loser exits after asyncio.run() has closed the loop, the
+    # watcher thread logs "Loop ... that handles pid ... is closed".
+    loop = asyncio.get_running_loop()
+    worker_transports: list[asyncio.ReadTransport] = []
     worker_tasks: list[asyncio.Task[bytes]] = []
     for model in selected_models:
         cmd = [sys.executable, __file__, "--internal-worker", model]
         if _verbose:
             cmd.append("--verbose")
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         assert proc.stdin is not None
         assert proc.stdout is not None
-        # Send prompt immediately
         proc.stdin.write(prompt.encode())
-        await proc.stdin.drain()
         proc.stdin.close()
 
-        # Capture output from worker
-        worker_procs.append(proc)
-        worker_tasks.append(asyncio.create_task(proc.stdout.read(), name=model))
+        # Hand stdout off to an asyncio transport for non-blocking reads.
+        # Detach the pipe from Popen so transport.close() owns it (avoids
+        # double-close from Popen.__del__).
+        stdout = proc.stdout
+        proc.stdout = None
+        reader = asyncio.StreamReader()
+        transport, _ = await loop.connect_read_pipe(
+            lambda r=reader: asyncio.StreamReaderProtocol(r), stdout
+        )
+        worker_transports.append(transport)
+        worker_tasks.append(asyncio.create_task(reader.read(), name=model))
 
-    # 3. Wait for the first worker to produce output
-    # Cancel remaining read tasks and close subprocess transports explicitly
-    # while the event loop is still running. Without this, transports are
-    # closed by GC after the loop shuts down, causing "Event loop is closed"
-    # errors from BaseSubprocessTransport.__del__.
-    winner, winner_model = await _await_first_winner(worker_tasks, worker_procs)
+    # Wait for the first worker to produce output. Cancel remaining read
+    # tasks and close pipe transports while the event loop is still running.
+    winner, winner_model = await _await_first_winner(
+        worker_tasks, worker_transports
+    )
     if winner is None or winner_model is None:
         raise RuntimeError("All models failed to produce a response.")
     return winner, winner_model
