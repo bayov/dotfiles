@@ -17,6 +17,11 @@ not layer-by-layer implementation. Use GLOSSARY.md terms verbatim.
 - [ ] Criterion 1
 - [ ] Criterion 2
 - [ ] Criterion 3
+- [ ] Glossary / docs owned by this slice are updated (list each: e.g.
+      `GLOSSARY.md` term **X**, `design.md` cross-ref, README example).
+
+> Drop the docs criterion if the slice introduces no domain terms and touches no
+> doc surface.
 
 ## Out of scope
 

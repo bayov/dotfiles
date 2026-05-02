@@ -12,11 +12,16 @@ file under `plan/{slug}/tasks/`.
 Before decomposing, read whichever of these exist:
 
 - `plan/{slug}/prd.md` — the product contract. User stories here are the source
-  of truth for what each slice must advance.
+  of truth for what each slice must advance. The **Glossary Changes** section
+  lists every term the PRD depends on.
 - `plan/{slug}/design.md` — the engineering contract. Components, data model,
-  data flow, and migration plan are authoritative; do not relitigate them.
+  data flow, and migration plan are authoritative; do not relitigate them. The
+  **Glossary Changes** section lists every term the design depends on.
 - `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim in task
   names and descriptions.
+
+Every entry in the prd.md / design.md **Glossary Changes** sections must be
+owned by the slice that introduces or changes the corresponding behavior.
 
 If the design is missing or contested, stop and send the user back to
 `design-interview` — do not invent design answers in tasks.
@@ -33,10 +38,22 @@ integration issues.
 A good slice:
 
 - Advances at least one PRD user story.
-- Touches every layer needed to ship that behavior.
+- Touches every layer needed to ship that behavior — including docs.
 - Is independently mergeable.
 - Ships behind whichever flag/gate the design's Migration Plan specifies (if
   any).
+
+Docs ship with the code that justifies them. A slice owns:
+
+- Glossary entries for any domain term it introduces, renames, or removes (apply
+  via `update-glossary`).
+- Updates to `design.md` / `prd.md` if implementation surfaces drift from the
+  contract.
+- Any README, code example, or in-repo doc that references the behavior the
+  slice changes.
+
+Don't bundle all glossary or doc work into a separate "docs" slice — that
+recreates the horizontal-slice problem.
 
 Avoid horizontal tasks like:
 
@@ -73,10 +90,12 @@ Before asking for approval, verify:
 - Every PRD user story is advanced by at least one slice (or is explicitly out
   of scope for this plan).
 - Every design component that needs new behavior appears in at least one slice.
+- Every entry in the prd.md / design.md **Glossary Changes** sections is owned
+  by exactly one slice (or is explicitly deferred).
 - The dependency graph is acyclic and every blocker exists in the table.
 
-List any uncovered stories or components as Open Questions for the user rather
-than silently dropping them.
+List any uncovered stories, components, or glossary terms as Open Questions for
+the user rather than silently dropping them.
 
 Ask the user:
 
@@ -109,6 +128,7 @@ Implement the ability to archive and unarchive notes.
 - [ ] An existing archived note can be unarchived.
 - [ ] An archived note no longer appears in the default notes list.
 - [ ] An unarchived note appears in the default notes list again.
+- [ ] `GLOSSARY.md` defines **Archived note** (per design.md Glossary Changes).
 ```
 
 ### Bad (Horizontal Slice)

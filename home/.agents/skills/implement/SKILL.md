@@ -28,13 +28,20 @@ Before implementing, read:
 
 ## Stop and kick back when
 
-- A blocker task is unfinished → resume `implement` on that task first.
+- A blocker task is unfinished → stop. Report that the task isn't ready because
+  `{blocker_name}` is incomplete; let the user decide what to do next. Don't
+  auto-switch to implementing the blocker.
 - The task contradicts the design or PRD → back to `design-interview` or
   `prd-interview`. Don't paper over it in code.
 - The design is silent on a load-bearing question (a contract, an invariant, a
   failure mode) → back to `design-interview`.
 - The task itself is the wrong shape (too thick, too thin, wrong slice) → back
   to `decompose`.
+- A new domain term surfaces that isn't in `GLOSSARY.md` and isn't already
+  listed under the prd.md / design.md **Glossary Changes** sections → pause,
+  agree on the term with the user, run `update-glossary` (or back to
+  `design-interview` if the term is load-bearing). Don't ship code naming a
+  concept the glossary doesn't.
 
 ## Process
 
@@ -110,6 +117,11 @@ Before declaring done:
 - For UI changes: exercise the feature in a browser. Verify the golden path and
   at least one edge case. If you can't run the UI, say so explicitly rather than
   claiming success.
+- Docs owed by this slice are updated in the same change:
+  - Glossary entries the slice owns — apply via `update-glossary`.
+  - `design.md` / `prd.md` cross-references if implementation diverged from the
+    contract (with user approval).
+  - READMEs, code examples, or in-repo docs that reference the changed behavior.
 - Anything left undone is captured back in the task file's Out of scope or
   surfaced to the user — don't leave silent gaps.
 
@@ -151,3 +163,29 @@ boundary, confirm:
 
 If a "mock" is wrapping one of your own modules, that's a sign the boundary is
 in the wrong place; redesign before continuing.
+
+## Checklist
+
+Work top-to-bottom. Don't skip; each item gates the next. Detail for each step
+lives in the sections above.
+
+- [ ] **Inputs read**: task, design, prd, glossary, all `Blocked by` tasks.
+- [ ] **Blockers complete**: every blocker's acceptance criteria are `[x]`.
+- [ ] **No kick-back trigger fires** (see _Stop and kick back when_).
+- [ ] **Plan agreed with user**: interfaces, ordered behaviors, test levels,
+      mocked boundaries.
+- [ ] **Tracer bullet GREEN**: one end-to-end test for the golden path passes.
+- [ ] **Incremental loop**: every planned behavior added via RED → GREEN, one at
+      a time.
+- [ ] **Refactor pass**: duplication, shallow modules, pass-throughs addressed;
+      full suite green after each step.
+- [ ] **Acceptance criteria** in the task file all ticked `[x]`.
+- [ ] **Quality gates pass**: full test suite, lint, typecheck, format. No
+      skipped or `.only` tests.
+- [ ] **UI verified** in a browser (golden path + one edge case), or explicit
+      "couldn't run UI" note.
+- [ ] **Docs updated in the same change**: glossary entries via
+      `update-glossary`; design.md/prd.md cross-refs (with user approval) if
+      behavior diverged; READMEs / examples that reference changed behavior.
+- [ ] **Gaps surfaced**: anything undone is in the task file's Out of scope or
+      raised to the user — no silent omissions.
