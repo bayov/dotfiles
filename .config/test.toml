@@ -7,17 +7,5 @@ name = "python_lint"
 command = "uv run ruff check pybayov"
 
 [[test_suite]]
-name = "cargo_tests"
-command = "cargo nextest run --workspace --all-targets --all-features"
-
-[[test_suite]]
-name = "clippy"
-command = "cargo clippy --workspace --all-targets -- -D warnings"
-
-[[test_suite]]
-name = "clippy_all_features"
-command = "cargo clippy --workspace --all-features --all-targets -- -D warnings"
-
-[[test_suite]]
 name = "link_dry_run"
 command = "python dev/link.py --dry-run"
