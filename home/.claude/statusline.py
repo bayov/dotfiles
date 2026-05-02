@@ -13,8 +13,14 @@ def get_status_line():
     model_name = data.get("model", {}).get("display_name", "")
     cw = data.get("context_window") or {}
     used_pct = cw.get("used_percentage") or 0
-    total_input = cw.get("total_input_tokens") or 0
-    total_output = cw.get("total_output_tokens") or 0
+    cur = cw.get("current_usage") or {}
+    # Input tokens currently in context (matches used_percentage formula)
+    in_tok = (
+        (cur.get("input_tokens") or 0)
+        + (cur.get("cache_creation_input_tokens") or 0)
+        + (cur.get("cache_read_input_tokens") or 0)
+    )
+    out_tok = cur.get("output_tokens") or 0
     effort_level = data.get("effort", {}).get("level", "")
     cwd = data.get("workspace", {}).get("current_dir", "")
 
@@ -30,13 +36,11 @@ def get_status_line():
     YELLOW = "\033[33m"
     RESET = "\033[0m"
 
-    total_tokens = total_input + total_output
-
-    # Context Bar logic — color by total token count
+    # Color by input tokens in context (the metric the bar's percentage reflects)
     bar_color = GREY
-    if total_tokens >= 200_000:
+    if in_tok >= 200_000:
         bar_color = RED
-    elif total_tokens >= 100_000:
+    elif in_tok >= 100_000:
         bar_color = ORANGE
 
     # Bar construction (10 blocks)
@@ -55,13 +59,13 @@ def get_status_line():
     cwd_part = f"{BLUE}{cwd}{RESET}"
     model_part = f"{ORANGE}◆ {model_name}{RESET}"
     bar_part = f"{bar_color}{bar} {used_pct}%{RESET}"
-    tokens_part = f"{bar_color}{fmt_tokens(total_tokens)} ({fmt_tokens(total_input)}↓ {fmt_tokens(total_output)}↑){RESET}"
+    tokens_part = f"{bar_color}{fmt_tokens(in_tok + out_tok)} ({fmt_tokens(in_tok)}↓ {fmt_tokens(out_tok)}↑){RESET}"
     effort_part = f"{GREY}[{effort_level}]{RESET}" if effort_level else ""
 
     # Join model and effort with single space, rest with double space
     model_effort = f"{model_part} {effort_part}" if effort_part else model_part
     parts = [cwd_part, model_effort]
-    if total_tokens > 0:
+    if in_tok + out_tok > 0:
         parts.append(f"{bar_part} {GREY}|{RESET} {tokens_part}")
 
     return "  ".join(parts)
