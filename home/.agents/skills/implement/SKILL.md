@@ -1,46 +1,38 @@
 ---
 name: implement
 description: Implement a task via TDD
+argument-hint: <path-to-task-file>
 disable-model-invocation: true
 ---
 
-Implement a single task file (`plan/{slug}/tasks/{task_name}.md`) end-to-end
-using test-driven development.
+Implement a single task end-to-end using test-driven development.
 
-The task file is the source of truth for **what** ships in this slice. The
-design doc is the source of truth for **how**. Don't relitigate either; if
-implementation reveals a real gap, stop and kick back.
+The task file is passed as the argument. Read it, then follow its **References**
+section to read the design contract it points to. Also read `GLOSSARY.md` (and
+relevant sub-glossaries) — use those terms verbatim in module, function, and
+test names. For each entry under the task's `Blocked by` section, read that task
+file and confirm its acceptance criteria are all checked.
 
-## Input
-
-Before implementing, read:
-
-- `plan/{slug}/tasks/{task_name}.md` — the task. Acceptance criteria,
-  References, Out of scope, and Blocked by are authoritative.
-- `plan/{slug}/design.md` — components, interfaces, data model, migration plan,
-  and testing strategy. Don't redesign here.
-- `plan/{slug}/prd.md` — user stories the slice advances. Use these to phrase
-  test names in user-visible terms.
-- `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim in
-  module, function, and test names.
-- Any task files listed under `Blocked by` — confirm their acceptance criteria
-  are all checked. If not, stop.
+The acceptance criteria are the source of truth for **what** ships. The
+referenced design doc is the source of truth for **how**. Don't relitigate
+either; if implementation reveals a real gap, stop and kick back.
 
 ## Stop and kick back when
 
 - A blocker task is unfinished → stop. Report that the task isn't ready because
   `{blocker_name}` is incomplete; let the user decide what to do next. Don't
   auto-switch to implementing the blocker.
-- The task contradicts the design or PRD → back to `design-interview` or
-  `prd-interview`. Don't paper over it in code.
-- The design is silent on a load-bearing question (a contract, an invariant, a
-  failure mode) → back to `design-interview`.
+- The task contradicts a referenced doc → back to whichever interview produced
+  that doc (`design-interview`, `prd-interview`, or `plan-interview`). Don't
+  paper over it in code.
+- The referenced design is silent on a load-bearing question (a contract, an
+  invariant, a failure mode) → back to the interview that owns it.
 - The task itself is the wrong shape (too thick, too thin, wrong slice) → back
   to `decompose`.
 - A new domain term surfaces that isn't in `GLOSSARY.md` and isn't already
-  listed under the prd.md / design.md **Glossary Changes** sections → pause,
-  agree on the term with the user, run `update-glossary` (or back to
-  `design-interview` if the term is load-bearing). Don't ship code naming a
+  listed under the **Glossary Changes** section of a referenced doc → pause,
+  agree on the term with the user, run `update-glossary` (or back to the
+  relevant interview if the term is load-bearing). Don't ship code naming a
   concept the glossary doesn't.
 
 ## Process
@@ -169,7 +161,8 @@ in the wrong place; redesign before continuing.
 Work top-to-bottom. Don't skip; each item gates the next. Detail for each step
 lives in the sections above.
 
-- [ ] **Inputs read**: task, design, prd, glossary, all `Blocked by` tasks.
+- [ ] **Inputs read**: task, the docs it references, glossary, all `Blocked by`
+      tasks.
 - [ ] **Blockers complete**: every blocker's acceptance criteria are `[x]`.
 - [ ] **No kick-back trigger fires** (see _Stop and kick back when_).
 - [ ] **Plan agreed with user**: interfaces, ordered behaviors, test levels,

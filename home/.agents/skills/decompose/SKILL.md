@@ -9,22 +9,23 @@ file under `plan/{slug}/tasks/`.
 
 ## Input
 
-Before decomposing, read whichever of these exist:
+Read whichever of these exist under `plan/{slug}/`:
 
-- `plan/{slug}/prd.md` — the product contract. User stories here are the source
-  of truth for what each slice must advance. The **Glossary Changes** section
-  lists every term the PRD depends on.
-- `plan/{slug}/design.md` — the engineering contract. Components, data model,
-  data flow, and migration plan are authoritative; do not relitigate them. The
-  **Glossary Changes** section lists every term the design depends on.
-- `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim in task
-  names and descriptions.
+- `prd.md` — user stories are the source of truth for what each slice advances.
+- `design.md` — components, data model, data flow, migration plan are the
+  engineering contract.
+- `plan.md` — single combined doc covering both. Acceptance Criteria drive what
+  each slice advances; Design / Migration are the engineering contract.
 
-Every entry in the prd.md / design.md **Glossary Changes** sections must be
+Also read `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim
+in task names and descriptions.
+
+Every entry in the **Glossary Changes** section of the input doc(s) must be
 owned by the slice that introduces or changes the corresponding behavior.
 
-If the design is missing or contested, stop and send the user back to
-`design-interview` — do not invent design answers in tasks.
+If the design is missing or contested, stop and send the user back to the
+relevant interview (`design-interview` or `plan-interview`) — do not invent
+design answers in tasks.
 
 ## What is a Vertical Slice?
 

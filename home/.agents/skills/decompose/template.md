@@ -3,8 +3,15 @@ not layer-by-layer implementation. Use GLOSSARY.md terms verbatim.
 
 ## References
 
-- PRD: S1, S2 (plan/{slug}/prd.md)
-- Design: {Component A}, {Component B}; D2 (plan/{slug}/design.md)
+List whichever of `plan/{slug}/`'s `prd.md`, `design.md`, `plan.md` this slice
+draws from. Cite the user stories, components, decisions, or acceptance criteria
+the slice advances.
+
+Example:
+
+- plan/{slug}/prd.md (User Stories: S1, S2)
+- plan/{slug}/design.md (Components A, B; Decision D2)
+- plan/{slug}/plan.md (Component A; Decision D1)
 
 ## Blocked by
 
