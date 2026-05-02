@@ -136,4 +136,5 @@ mode = "enabled"
 play_notification_sound = true
 
 [system]
-prefer_low_power_gpu = true
+prefer_low_power_gpu = false
+preferred_graphics_backend = "dx_12"

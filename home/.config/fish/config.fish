@@ -9,6 +9,10 @@ set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 set -gx BUN_INSTALL "$HOME/.bun"
 
+if test "$TERM_PROGRAM" = WarpTerminal
+    set -Ua fish_features no-query-terminal
+end
+
 # Global aliases (even if shell is not interactive)
 alias cat=batcat
 alias bat=batcat
