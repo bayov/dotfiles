@@ -347,6 +347,11 @@ def print_box(args: BoxArgs) -> None:
     else:
         border_top = ml + fg_esc(box_bg) + "▄" * width + RESET
 
+    # Save cursor at top so the redraw can restore it without depending on
+    # a precise newline count. Anything written to stderr while the wrapped
+    # function runs (warnings, etc.) would otherwise shift the cursor and
+    # the relative-up redraw would clear the wrong region.
+    sys.stderr.write("\033[s")
     for _ in range(mt):
         sys.stderr.write("\n")
     sys.stderr.write(border_top + "\n")
@@ -447,8 +452,7 @@ def run_with_spinner(
                 for raw in (result_text.splitlines() or [""])
                 for w in _eb.word_wrap(raw, inner_width)
             ]
-            total_box_lines = mt + _a.box_pad_top + _a.box_pad_bottom + mb + 3
-            sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+            sys.stderr.write("\033[u\033[J")
             sys.stderr.write(
                 _eb.render_box(lines, _make_box_config(_a, mt, mb)) + "\n"
             )
@@ -485,10 +489,7 @@ def _handle_spinner_failure(
             )
             box_lines = [cmd_line, error_msg]
         mt, mb = _resolve_margins(box_args)
-        total_box_lines = (
-            mt + box_args.box_pad_top + box_args.box_pad_bottom + mb + 3
-        )
-        sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+        sys.stderr.write("\033[u\033[J")
         sys.stderr.write(
             _eb.render_box(box_lines, _make_box_config(box_args, mt, mb)) + "\n"
         )
@@ -525,12 +526,8 @@ def _handle_spinner_success(
             for raw in (result_text.splitlines() or [""])
             for w in _eb.word_wrap(raw, inner_width)
         ]
-        # move to top of box (including margins), clear, redraw with results
         mt, mb = _resolve_margins(box_args)
-        total_box_lines = (
-            mt + box_args.box_pad_top + box_args.box_pad_bottom + mb + 3
-        )
-        sys.stderr.write(f"\033[{total_box_lines}A\r\033[J")
+        sys.stderr.write("\033[u\033[J")
         sys.stderr.write(
             _eb.render_box(lines, _make_box_config(box_args, mt, mb)) + "\n"
         )
