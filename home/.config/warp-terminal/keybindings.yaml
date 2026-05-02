@@ -1,76 +1,45 @@
 ---
-# Disabled (no sheet equivalent / not used)
-"code_view:close_all_tabs": none
-"workspace:show_command_search": none      # sheet uses Alt+A for command palette
-"workspace:show_theme_chooser": none
-"terminal:open_share_modal": none
-"pane_group:navigate_next": none           # using directional below
+"pane_group:navigate_right": alt-shift-right
+"terminal:copy_outputs": ctrl-shift-c
+"terminal:clear_blocks": ctrl-alt-l
+"terminal:home": alt-home
+"input:clear_screen": ctrl-l
+"terminal:end": alt-end
 "pane_group:navigate_prev": none
-
-# Tab navigation (sheet: Alt+Left/Right; matches Zellij)
-"workspace:open_new_tab": "alt-t"
-"workspace:activate_prev_tab": "alt-left"
-"workspace:activate_next_tab": "alt-right"
-
-# Workspace UI
-"workspace:toggle_command_palette": "alt-a"        # sheet: Alt+A = Search actions
-"workspace:show_settings_modal": "alt-'"           # sheet: Alt+' = Settings
-"workspace:show_keybinding_settings": "alt-;"      # sheet: Alt+; = Keymapping
-"workspace:increase_font_size": "ctrl-="           # sheet: Ctrl+= = Zoom in
-"workspace:decrease_font_size": "ctrl--"           # sheet: Ctrl+- = Zoom out
-"workspace:reset_font_size": "ctrl-0"              # sheet: Ctrl+0 = Reset zoom
-
-# Find / history search / clear screen
-"terminal:find": "ctrl-f"                          # sheet: Ctrl+F = Search editor
-"input:search_command_history": "ctrl-r"          # classic shell binding
-"input:clear_screen": "ctrl-l"                    # classic shell binding
-
-# Terminal input focus (sheet: Alt+E = Focus editor)
-"terminal:focus_input": "alt-e"
-
-# Scrolling (matches Zellij)
-"terminal:home": "alt-home"
-"terminal:end": "alt-end"
-"terminal:page_up": "alt-pageup"
-"terminal:page_down": "alt-pagedown"
-
-# Pane focus — directional (matches Zellij Alt+Shift+direction)
-"pane_group:navigate_up": "alt-shift-up"
-"pane_group:navigate_down": "alt-shift-down"
-"pane_group:navigate_left": "alt-shift-left"
-"pane_group:navigate_right": "alt-shift-right"
-
-# Pane splitting
-"pane_group:add_right": "ctrl-alt-right"
-"pane_group:add_down": "ctrl-alt-down"
-
-# Pane resize — sheet uses numpad (Ctrl+Alt+{N4,N6,N8,N2}).
-# WARNING: Warp docs only enumerate `numpadenter`; numpad digit spelling is
-# undocumented. If `numpadN` doesn't parse, try `kp_N` or fall back to the
-# regular number row (`ctrl-alt-N`).
-"pane_group:resize_left": "ctrl-alt-numpad4"
-"pane_group:resize_right": "ctrl-alt-numpad6"
-"pane_group:resize_up": "ctrl-alt-numpad8"
-"pane_group:resize_down": "ctrl-alt-numpad2"
-
-# Command editor — word navigation (already Linux default; explicit for clarity)
-"editor_view:move_forward_one_word": "ctrl-right"
-"editor_view:move_backward_one_word": "ctrl-left"
-
-# Command editor — cut to end of line (sheet: Ctrl+Shift+X)
-"editor_view:cut_all_right": "ctrl-shift-x"
-
-# Command editor — clear input box (Linux default; explicit for clarity)
-"editor_view:clear_buffer": "ctrl-c"
-
-# Paste (default; explicit per request — sheet's "paste from history" has no
-# Warp action)
-"terminal:paste": "ctrl-shift-v"
-
-# Block actions
+"workspace:show_theme_chooser": none
+"terminal:copy_commands": ctrl-alt-c
+"editor_view:move_forward_one_word": ctrl-right
+"code_view:close_all_tabs": none
+"pane_group:resize_right": ctrl-alt-6
+"pane_group:resize_left": ctrl-alt-4
+"pane_group:navigate_up": alt-shift-up
+"workspace:show_settings_modal": "alt-'"
+"workspace:activate_prev_tab": alt-left
+"terminal:open_share_modal": none
+"pane_group:add_down": ctrl-alt-down
+"pane_group:navigate_next": none
+"editor_view:cut_all_right": ctrl-shift-x
+"workspace:show_keybinding_settings": alt-;
 "terminal:select_previous_block": "alt-,"
-"terminal:select_next_block": "alt-."
-"terminal:clear_blocks": "ctrl-alt-l"
-"terminal:copy": "ctrl-c"                          # block selected: copy command + output
-"terminal:copy_outputs": "ctrl-shift-c"           # block selected: copy output
-"terminal:copy_commands": "ctrl-alt-c"            # block selected: copy command
+"workspace:increase_font_size": ctrl-=
+"pane_group:navigate_left": alt-shift-left
+"terminal:page_down": alt-pagedown
+"workspace:activate_next_tab": alt-right
+"pane_group:resize_up": ctrl-alt-8
+"workspace:reset_font_size": ctrl-0
+"terminal:copy": ctrl-c
+"pane_group:navigate_down": alt-shift-down
+"editor_view:move_backward_one_word": ctrl-left
+"workspace:open_new_tab": alt-t
+"workspace:toggle_command_palette": alt-a
+"terminal:page_up": alt-pageup
+"editor_view:clear_buffer": ctrl-c
+"workspace:decrease_font_size": ctrl--
+"workspace:show_command_search": none
+"terminal:select_next_block": alt-.
+"terminal:focus_input": alt-e
+"input:search_command_history": ctrl-r
+"terminal:find": ctrl-f
+"pane_group:resize_down": ctrl-alt-2
+"pane_group:add_right": ctrl-alt-right
+"terminal:paste": ctrl-shift-v
