@@ -21,9 +21,12 @@ instead.
 Ubiquitous Language
 -------------------
 
-Look for relevant `GLOSSARY.md` files which describe the project's ubiquitous
-language. As part of aligning with the user, you need to build a shared
-understanding of the domain and a precise vocabulary for discussing it.
+The project's ubiquitous language is defined in `GLOSSARY.md` files. As part of
+aligning with the user, you need to build a shared understanding of the domain
+and a precise vocabulary for discussing it.
+
+Don't couple glossary entries to implementation details. Only include terms that
+are meaningful to domain experts.
 
 During the session
 ------------------
@@ -52,28 +55,27 @@ When the user uses vague or overloaded terms, propose a precise canonical term.
 "You're saying 'account' — do you mean the Customer or the User? Those are
 different things."
 
-### Update GLOSSARY.md inline
-
-When a term is resolved, update `GLOSSARY.md` right there. Don't batch these up
-— capture them as they happen. Follow the format in
-[GLOSSARY_FORMAT.md](./GLOSSARY_FORMAT.md).
-
-Don't couple `GLOSSARY.md` to implementation details. Only include terms that
-are meaningful to domain experts.
-
 Interview session persistence
 -----------------------------
 
-Store the state of the interview session (questions asked, answers given,
-glossary updates) in `ALIGN.md`. This allows the session to be paused and
-resumed, and provides a record of the shared understanding that was built so
-far.
+Store interview session state in `ALIGN.md`. This is the single source of truth
+for the session (questions asked, answers given, and proposed glossary changes).
+It allows the session to be paused and resumed, and provides a record of the
+shared understanding that was built so far.
 
-Update `ALIGN.md` after each question-answer or glossary update. Use format:
+**Persist after every event.** Update `ALIGN.md` immediately after:
+
+- each answer the user gives to a question
+- each proposed glossary change
+- any other meaningful resolution
+
+Do not batch updates. Write to `ALIGN.md` before asking the next question.
+
+### ALIGN.md format
 
 ```md
-Align Session
-=============
+Title of the plan being discussed
+=================================
 
 Brief summary of plan being discussed.
 
@@ -87,4 +89,19 @@ Additional question details (if needed).
 **Answer:**
 
 Answer details, including any follow-up questions that arose.
+
+Proposed glossary changes
+-------------------------
+
+### New term: **Term**
+
+A concise definition of the new term.
+
+### Updated term: **Term**
+
+The proposed change to the existing definition.
+
+### Removed term: **Term**
+
+Reason for removing the term.
 ```
