@@ -2,6 +2,105 @@
 import sys
 import json
 import os
+import time
+import subprocess
+import urllib.request
+from datetime import datetime, timezone
+
+
+CACHE_DIR = os.path.expanduser("~/.cache/claude-statusline")
+USAGE_CACHE = os.path.join(CACHE_DIR, "usage.json")
+USAGE_LOCK = os.path.join(CACHE_DIR, "usage.lock")
+USAGE_TTL = 120  # seconds
+USAGE_LOCK_TTL = 30  # seconds — minimum gap between refresh attempts
+
+
+def _mtime(path):
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def read_usage_cache():
+    """Return cached usage dict or None. No staleness check — caller decides."""
+    try:
+        with open(USAGE_CACHE) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def trigger_usage_refresh_if_stale():
+    """Spawn a detached refresh if cache is older than TTL and no in-flight lock."""
+    now = time.time()
+    cache_mt = _mtime(USAGE_CACHE)
+    if cache_mt is not None and now - cache_mt < USAGE_TTL:
+        return
+    lock_mt = _mtime(USAGE_LOCK)
+    if lock_mt is not None and now - lock_mt < USAGE_LOCK_TTL:
+        return
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(USAGE_LOCK, "w") as f:
+            f.write(str(now))
+        subprocess.Popen(
+            [sys.executable, os.path.realpath(__file__), "--refresh-usage"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+
+def _read_oauth_token():
+    path = os.path.expanduser("~/.claude/.credentials.json")
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return (data.get("claudeAiOauth") or {}).get("accessToken")
+    except Exception:
+        return None
+
+
+def refresh_usage_cache():
+    """Fetch usage from Anthropic API and atomically write cache file."""
+    try:
+        token = _read_oauth_token()
+        if not token:
+            return
+        req = urllib.request.Request(
+            "https://api.anthropic.com/api/oauth/usage",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "anthropic-beta": "oauth-2025-04-20",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read())
+        five = body.get("five_hour") or {}
+        seven = body.get("seven_day") or {}
+        out = {
+            "fetched_at": int(time.time()),
+            "session_pct": five.get("utilization"),
+            "session_resets_at": five.get("resets_at"),
+            "weekly_pct": seven.get("utilization"),
+            "weekly_resets_at": seven.get("resets_at"),
+        }
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = USAGE_CACHE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(out, f)
+        os.replace(tmp, USAGE_CACHE)
+    except Exception:
+        pass
+    finally:
+        try:
+            os.remove(USAGE_LOCK)
+        except OSError:
+            pass
 
 
 def parse_transcript(path):
@@ -98,7 +197,6 @@ def get_status_line():
 
     model_name = data.get("model", {}).get("display_name", "")
     cw = data.get("context_window") or {}
-    used_pct = cw.get("used_percentage") or 0
     cur = cw.get("current_usage") or {}
     # Input tokens currently in context (matches used_percentage formula)
     in_tok = (
@@ -124,16 +222,12 @@ def get_status_line():
     YELLOW = "\033[33m"
     RESET = "\033[0m"
 
-    # Color by input tokens in context (the metric the bar's percentage reflects)
-    bar_color = GREY
+    # Color by input tokens in context
+    ctx_color = GREY
     if in_tok >= 200_000:
-        bar_color = RED
+        ctx_color = RED
     elif in_tok >= 100_000:
-        bar_color = ORANGE
-
-    # Bar construction (10 blocks)
-    num_blocks = max(0, min(10, round(used_pct / 10)))
-    bar = "▓" * num_blocks + "░" * (10 - num_blocks)
+        ctx_color = ORANGE
 
     # Format token counts: no decimals for k, one decimal for M (e.g. 55k, 1.1M)
     def fmt_tokens(n):
@@ -159,21 +253,61 @@ def get_status_line():
 
     # Order: cwd | model | effort | bar | context tokens | session tokens
     cwd_part = f"{BLUE}{cwd}{RESET}"
-    model_part = f"{ORANGE}◆ {model_name}{RESET}"
-    bar_part = f"{bar_color}{bar}{RESET}"
-    tokens_part = f"{bar_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
+    model_part = f"{MAGENTA}◆ {model_name}{RESET}"
+    tokens_part = f"{ctx_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
     effort_part = f"{GREY}[{effort_level}]{RESET}" if effort_level else ""
 
     model_effort = f"{model_part} {effort_part}" if effort_part else model_part
     parts = [cwd_part, f"{GREY}|{RESET} {model_effort}"]
     if in_tok + out_tok > 0:
-        parts.append(f"{GREY}|{RESET} {bar_part} {tokens_part}")
+        parts.append(f"{GREY}|{RESET} {tokens_part}")
     if sess_total > 0:
         session_part = (
             f"{GREY}| ⧗ {fmt_duration(sess_secs)} "
             f"({fmt_tokens(sess_total)}, {fmt_tokens(sess_cached)} cached){RESET}"
         )
         parts.append(session_part)
+
+    def remaining_secs(iso_str):
+        if not iso_str:
+            return None
+        try:
+            t = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+            return max(0, int((t - datetime.now(timezone.utc)).total_seconds()))
+        except Exception:
+            return None
+
+    def fmt_remaining(secs):
+        days, rem = divmod(secs, 86400)
+        hours, rem = divmod(rem, 3600)
+        mins = rem // 60
+        if days:
+            return f"{days}d{hours}h" if hours else f"{days}d"
+        if hours:
+            return f"{hours}h{mins}m" if mins else f"{hours}h"
+        return f"{mins}m"
+
+    trigger_usage_refresh_if_stale()
+    usage = read_usage_cache()
+    if usage:
+        bits = []
+        for label, pct_key, reset_key in (
+            ("S", "session_pct", "session_resets_at"),
+            ("W", "weekly_pct", "weekly_resets_at"),
+        ):
+            pct = usage.get(pct_key)
+            if not isinstance(pct, (int, float)):
+                continue
+            piece = f"{label}: {round(pct)}%"
+            left = remaining_secs(usage.get(reset_key))
+            if left is not None:
+                piece += f" ({fmt_remaining(left)})"
+            if label == "S":
+                color = RED if pct >= 90 else YELLOW if pct >= 70 else GREY
+                piece = f"{color}{piece}{GREY}"
+            bits.append(piece)
+        if bits:
+            parts.append(f"{GREY}| {', '.join(bits)}{RESET}")
 
     line1 = " ".join(parts)
 
@@ -192,4 +326,7 @@ def get_status_line():
 
 
 if __name__ == "__main__":
+    if "--refresh-usage" in sys.argv:
+        refresh_usage_cache()
+        sys.exit(0)
     print(get_status_line())
