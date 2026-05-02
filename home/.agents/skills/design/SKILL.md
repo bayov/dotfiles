@@ -57,6 +57,11 @@ Rules:
 
 - Push complexity down behind narrow interfaces. Callers should know less than
   implementers.
+- Prefer a few deep modules over many shallow ones, even when each shallow
+  module looks clean in isolation. Shallowness lives in the seams _between_
+  modules, not just within one module — a system of small narrow modules can be
+  shallow as a whole because callers must know all of them and how to compose
+  them.
 - Delete pass-through layers, thin wrappers, and adapters that only forward
   calls or rename fields. Merge into caller or callee.
 - Hide parameters with obvious defaults; expose overrides only where needed.
@@ -64,28 +69,44 @@ Rules:
   wrong — redraw it.
 - Information leakage: if a change inside module A regularly forces a change in
   module B, A's interface is exposing internals it shouldn't.
+- One implementation = hypothetical seam. Two implementations = real seam. Don't
+  introduce an interface (mock-able boundary, abstract base, plugin point)
+  unless something actually varies across it. Speculative seams add interface
+  cost without paying it back.
 
-Smell test: list the interface and the implementation. If they are similar in
-size, the module is shallow — redesign.
+Deletion test: imagine deleting the module. If complexity vanishes, it was a
+pass-through — delete it. If complexity reappears across N callers, the module
+was earning its keep.
+
+The interface is the test surface. Callers and tests cross the same seam. If the
+testing strategy needs to reach _past_ the interface to verify behavior, the
+module is the wrong shape — redesign before writing tests around it.
 
 Example — a `RateLimiter`:
 
-Shallow (avoid):
+Shallow (avoid) — four small modules, each with a clean narrow interface:
 
 ```
-newBucket(key, capacity, refillRate, refillUnit, burstSize, clock)
-tryAcquire(bucket, tokens, now)
-peek(bucket) -> currentTokens, lastRefillTime
-setCapacity(bucket, capacity)
-setRefill(bucket, rate, unit)
-serializeBucket(bucket) -> bytes
-deserializeBucket(bytes) -> bucket
+Clock
+  now() -> Instant
+TokenBucket(capacity, refillRate)
+  acquire(tokens, now) -> bool
+  remaining(now) -> int
+KeyedBucketStore
+  get(key) -> TokenBucket
+  put(key, bucket)
+RetryAfterCalculator
+  compute(bucket, tokens, now) -> Duration
 ```
 
-Callers must understand token buckets, manage clocks, serialize state, and pick
-refill units. Switching to a sliding-window algorithm breaks every caller.
+Each module is small, easy to unit-test, and looks fine in isolation. The
+shallowness is in the seams: to rate-limit a request, the caller must fetch the
+bucket, thread the clock, attempt acquire, and compute retry-after on denial.
+Apply the deletion test to `RetryAfterCalculator` — complexity just moves to the
+caller. Switching algorithms (sliding window) breaks the seams every caller
+depends on.
 
-Deep (prefer):
+Deep (prefer) — collapses all four seams:
 
 ```
 allow(key) -> Allowed | Denied(retryAfter)
