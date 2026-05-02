@@ -17,7 +17,7 @@ Before writing, read whichever of these exist:
 
 - `GLOSSARY.md` (and relevant sub-glossaries) — the project's existing
   ubiquitous language. Use these terms verbatim in the PRD.
-- `plan/{slug}/align_session.md` — the alignment session's Q&A and proposed
+- `plan/{slug}/prd_interview.md` — the alignment session's Q&A and proposed
   glossary changes. Treat answers as authoritative; do not relitigate them.
 
 ## Steps

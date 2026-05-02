@@ -12,7 +12,7 @@ dependencies between decisions one-by-one. For each question, provide your
 recommended answer.
 
 Ask the questions one at a time, waiting for feedback on each question before
-continuing.
+continuing. For each question, provide your recommended answers.
 
 If a question can be answered by exploring the codebase, explore the codebase
 instead.

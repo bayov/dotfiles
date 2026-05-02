@@ -17,9 +17,8 @@ tight — this is not a research deck.
 
 ## User Stories
 
-<!-- A numbered list of user stories, one per subsection. Each subsection's
-heading is a short descriptor; the body is the story sentence plus any
-clarifying notes. -->
+A numbered list of user stories, one per subsection. Each subsection's heading
+is a short descriptor; the body is the story sentence plus any clarifying notes.
 
 <user-story-example>
 ### S1: See account balance
@@ -68,7 +67,7 @@ Engineering risks (scaling, migration, dependencies) belong in the design doc.
 ## Glossary Changes
 
 Proposed additions, updates, and removals to `GLOSSARY.md` that this PRD depends
-on. Carry forward any changes from `align_session.md` that haven't yet been
+on. Carry forward any changes from `prd_interview.md` that haven't yet been
 applied, plus any new terms surfaced while drafting the PRD:
 
 ### New term: **Term**
