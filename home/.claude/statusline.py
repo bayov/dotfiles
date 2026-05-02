@@ -319,7 +319,7 @@ def get_status_line():
             if s not in seen:
                 seen.add(s)
                 unique.append(s)
-        skills_line = f"{MAGENTA}skills: {', '.join(unique)}{RESET}"
+        skills_line = f"{GREY}skills: {', '.join(unique)}{RESET}"
         return f"{line1}\n{skills_line}"
 
     return line1
