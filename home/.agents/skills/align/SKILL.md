@@ -22,8 +22,7 @@ Ubiquitous Language
 -------------------
 
 The project's ubiquitous language is defined in `GLOSSARY.md` files. As part of
-aligning with the user, you need to build a shared understanding of the domain
-and a precise vocabulary for discussing it.
+the session, you'll also build a precise, shared vocabulary for the domain.
 
 Don't couple glossary entries to implementation details. Only include terms that
 are meaningful to domain experts.
@@ -55,21 +54,18 @@ When the user uses vague or overloaded terms, propose a precise canonical term.
 "You're saying 'account' — do you mean the Customer or the User? Those are
 different things."
 
-Interview session persistence
------------------------------
+Persistence
+-----------
 
-Store interview session state in `ALIGN.md`. This is the single source of truth
-for the session (questions asked, answers given, and proposed glossary changes).
-It allows the session to be paused and resumed, and provides a record of the
-shared understanding that was built so far.
+`ALIGN.md` is the session's source of truth — questions, answers, proposed
+glossary changes — so the session can be paused, resumed, and reviewed.
 
 **Persist after every event.** Update `ALIGN.md` immediately after:
 
-- each answer the user gives to a question
+- each user answer
 - each proposed glossary change
-- any other meaningful resolution
 
-Do not batch updates. Write to `ALIGN.md` before asking the next question.
+Write to `ALIGN.md` before asking the next question.
 
 ### ALIGN.md format
 
@@ -105,3 +101,5 @@ The proposed change to the existing definition.
 
 Reason for removing the term.
 ```
+
+Only include the sections that apply.
