@@ -253,9 +253,9 @@ def get_status_line():
 
     # Order: cwd | model | effort | bar | context tokens | session tokens
     cwd_part = f"{BLUE}{cwd}{RESET}"
-    model_part = f"{MAGENTA}◆ {model_name}{RESET}"
+    model_part = f"{MAGENTA}{model_name}{RESET}"
     tokens_part = f"{ctx_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
-    effort_part = f"{GREY}[{effort_level}]{RESET}" if effort_level else ""
+    effort_part = f"[{effort_level}]" if effort_level else ""
 
     model_effort = f"{model_part} {effort_part}" if effort_part else model_part
     parts = [cwd_part, f"{GREY}|{RESET} {model_effort}"]
