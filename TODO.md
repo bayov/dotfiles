@@ -1,16 +1,6 @@
 TODO
 ====
 
-- handle home/.claude/statusline.py
-- Remove unnecessary ruff lint rules
-
-Awf
----
-
-- Review functionality
-- Implement `dynamic_task_lists_plan.md`
-- Define `research -> scope -> design -> decompose -> implement` workflow
-
 Second Brain
 ------------
 

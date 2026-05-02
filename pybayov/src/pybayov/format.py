@@ -4,6 +4,7 @@
 import argparse
 import fnmatch
 import os
+import re
 import subprocess
 import sys
 import time
@@ -289,6 +290,39 @@ def _shebang_interpreter(file: Path) -> str | None:
     return Path(parts[0]).name
 
 
+def _glob_match(file: Path, pattern: str) -> bool:
+    """
+    Return True if `file` matches the glob `pattern`.
+
+    Unlike `Path.match()`, correctly handles `**` as zero-or-more path
+    components. Python 3.12's `Path.match()` treats a trailing `**` as
+    matching exactly one component, so `.obsidian/plugins/**` would not
+    match `.obsidian/plugins/sub/file.json`.
+
+    Matching is done from the right, like `Path.match()` for relative patterns.
+    """
+    if "**" not in pattern:
+        return file.match(pattern)
+    # Build a regex: ** → .* (any chars incl /), * → [^/]*, ? → [^/]
+    i, parts = 0, []
+    while i < len(pattern):
+        if pattern[i : i + 2] == "**":
+            parts.append(".*")
+            i += 2
+        elif pattern[i] == "*":
+            parts.append("[^/]*")
+            i += 1
+        elif pattern[i] == "?":
+            parts.append("[^/]")
+            i += 1
+        else:
+            parts.append(re.escape(pattern[i]))
+            i += 1
+    # Anchor to a path-component boundary so partial component names don't match.
+    regex = re.compile(r"(?:^|[/\\])" + "".join(parts) + r"\Z", re.DOTALL)
+    return bool(regex.search(str(file)))
+
+
 def _file_matches(
     file: Path,
     exts: set[str],
@@ -303,7 +337,7 @@ def _file_matches(
     Shebang patterns only apply to extensionless files (including dotfiles
     like `.gitignore`, where `Path(".gitignore").suffix == ""`).
     """
-    if any(file.match(g) for g in globs):
+    if any(_glob_match(file, g) for g in globs):
         return True
     if file.suffix:
         return file.suffix in exts
@@ -445,7 +479,7 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
         if (
             path.suffix in reg.supported_exts
             or path.suffix == ""
-            or any(path.match(g) for g in reg.supported_globs)
+            or any(_glob_match(path, g) for g in reg.supported_globs)
         ):
             yield path
         else:
@@ -458,7 +492,8 @@ def collect_file_or_directory(path: Path) -> Iterable[Path]:
                 yield f
         for f in path.rglob("*"):
             if f.is_file() and (
-                f.suffix == "" or any(f.match(g) for g in reg.supported_globs)
+                f.suffix == ""
+                or any(_glob_match(f, g) for g in reg.supported_globs)
             ):
                 yield f
     else:
@@ -518,7 +553,7 @@ def _filter_by_extension(
         if (
             f.suffix in reg.supported_exts
             or f.suffix == ""
-            or any(f.match(g) for g in reg.supported_globs)
+            or any(_glob_match(f, g) for g in reg.supported_globs)
         ):
             files.add(f)
         else:

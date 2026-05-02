@@ -1,5 +1,0 @@
-doc-valid-idents = [
-    # Clippy defaults
-    "..",
-    # Project additions
-]
