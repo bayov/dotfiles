@@ -3,6 +3,7 @@
 
 import argparse
 import fnmatch
+import glob
 import os
 import re
 import subprocess
@@ -58,8 +59,9 @@ class Formatter:
     # `env`.
     shebangs: set[str] = field(default_factory=set[str])
 
-    # Glob patterns (e.g. "**/Makefile", "**/.gitignore") matched against
-    # the file path. Takes priority over extension and shebang matching.
+    # Glob patterns matched against the project-root-relative file path.
+    # Takes priority over extension and shebang matching. Use `**/` to match
+    # at any depth (e.g. `**/Makefile`, `.obsidian/plugins/**`).
     globs: set[str] = field(default_factory=set[str])
 
     def format_files(self, files: Sequence[Path]) -> None:
@@ -294,33 +296,16 @@ def _glob_match(file: Path, pattern: str) -> bool:
     """
     Return True if `file` matches the glob `pattern`.
 
-    Unlike `Path.match()`, correctly handles `**` as zero-or-more path
-    components. Python 3.12's `Path.match()` treats a trailing `**` as
-    matching exactly one component, so `.obsidian/plugins/**` would not
-    match `.obsidian/plugins/sub/file.json`.
-
-    Matching is done from the right, like `Path.match()` for relative patterns.
+    `pattern` is matched against the path relative to `project_root()`, so
+    patterns are anchored at the project root. Use a `**/` prefix to match
+    at any depth (e.g. `**/Makefile`, `.obsidian/plugins/**`).
     """
-    if "**" not in pattern:
-        return file.match(pattern)
-    # Build a regex: ** → .* (any chars incl /), * → [^/]*, ? → [^/]
-    i, parts = 0, []
-    while i < len(pattern):
-        if pattern[i : i + 2] == "**":
-            parts.append(".*")
-            i += 2
-        elif pattern[i] == "*":
-            parts.append("[^/]*")
-            i += 1
-        elif pattern[i] == "?":
-            parts.append("[^/]")
-            i += 1
-        else:
-            parts.append(re.escape(pattern[i]))
-            i += 1
-    # Anchor to a path-component boundary so partial component names don't match.
-    regex = re.compile(r"(?:^|[/\\])" + "".join(parts) + r"\Z", re.DOTALL)
-    return bool(regex.search(str(file)))
+    try:
+        rel = str(file.relative_to(project_root()))
+    except ValueError:
+        return False
+    regex = glob.translate(pattern, recursive=True, include_hidden=True)
+    return bool(re.fullmatch(regex, rel))
 
 
 def _file_matches(
