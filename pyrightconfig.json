@@ -1,5 +1,6 @@
 {
-    "include": ["pybayov"],
+    "include": ["pybayov", "home/.agents/skills"],
+    "exclude": ["**/.venv", "**/__pycache__"],
     "extraPaths": ["pybayov/src"],
     "pythonVersion": "3.12",
     "typeCheckingMode": "strict",

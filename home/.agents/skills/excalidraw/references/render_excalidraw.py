@@ -1,8 +1,11 @@
-"""Render Excalidraw JSON to PNG using Playwright + headless Chromium.
+"""
+Render Excalidraw JSON to PNG using Playwright + headless Chromium.
 
 Usage:
-    uv run python render_excalidraw.py <path-to-file.excalidraw> [--output path.png] [--scale 2] [--width 1920]
+    uv run python render_excalidraw.py <path-to-file.excalidraw>
+        [--output path.png] [--scale 2] [--width 1920]
 """
+# ruff: noqa: INP001
 
 from __future__ import annotations
 
@@ -10,10 +13,18 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
+
+Element = dict[str, Any]
+
+INSTALL_HINT = (
+    "Run: cd .claude/skills/excalidraw/references"
+    " && uv sync && uv run playwright install chromium"
+)
 
 
-def validate_excalidraw(data: dict) -> list[str]:
-    """Validate Excalidraw JSON structure. Returns list of errors (empty = valid)."""
+def validate_excalidraw(data: dict[str, Any]) -> list[str]:
+    """Validate Excalidraw JSON. Returns list of errors (empty = valid)."""
     errors: list[str] = []
 
     if data.get("type") != "excalidraw":
@@ -23,16 +34,16 @@ def validate_excalidraw(data: dict) -> list[str]:
         errors.append("Missing 'elements' array")
     elif not isinstance(data["elements"], list):
         errors.append("'elements' must be an array")
-    elif len(data["elements"]) == 0:
+    elif len(cast("list[Any]", data["elements"])) == 0:
         errors.append("'elements' array is empty — nothing to render")
 
     return errors
 
 
 def compute_bounding_box(
-    elements: list[dict],
+    elements: list[Element],
 ) -> tuple[float, float, float, float]:
-    """Compute bounding box (min_x, min_y, max_x, max_y) across all elements."""
+    """Bounding box (min_x, min_y, max_x, max_y) across all elements."""
     min_x = float("inf")
     min_y = float("inf")
     max_x = float("-inf")
@@ -41,14 +52,14 @@ def compute_bounding_box(
     for el in elements:
         if el.get("isDeleted"):
             continue
-        x = el.get("x", 0)
-        y = el.get("y", 0)
-        w = el.get("width", 0)
-        h = el.get("height", 0)
+        x = float(cast("float", el.get("x", 0)))
+        y = float(cast("float", el.get("y", 0)))
+        w = float(cast("float", el.get("width", 0)))
+        h = float(cast("float", el.get("height", 0)))
 
         # For arrows/lines, points array defines the shape relative to x,y
         if el.get("type") in ("arrow", "line") and "points" in el:
-            for px, py in el["points"]:
+            for px, py in cast("list[tuple[float, float]]", el["points"]):
                 min_x = min(min_x, x + px)
                 min_y = min(min_y, y + py)
                 max_x = max(max_x, x + px)
@@ -65,25 +76,21 @@ def compute_bounding_box(
     return (min_x, min_y, max_x, max_y)
 
 
-def render(
+def render(  # noqa: C901, PLR0915
     excalidraw_path: Path,
     output_path: Path | None = None,
     scale: int = 2,
     max_width: int = 1920,
 ) -> Path:
     """Render an .excalidraw file to PNG. Returns the output PNG path."""
-    # Import playwright here so validation errors show before import errors
+    # Import playwright here so validation errors show before import errors.
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: PLC0415
     except ImportError:
         print("ERROR: playwright not installed.", file=sys.stderr)
-        print(
-            "Run: cd .claude/skills/excalidraw-diagram/references && uv sync && uv run playwright install chromium",
-            file=sys.stderr,
-        )
+        print(INSTALL_HINT, file=sys.stderr)
         sys.exit(1)
 
-    # Read and validate
     raw = excalidraw_path.read_text(encoding="utf-8")
     try:
         data = json.loads(raw)
@@ -93,27 +100,23 @@ def render(
 
     errors = validate_excalidraw(data)
     if errors:
-        print(f"ERROR: Invalid Excalidraw file:", file=sys.stderr)
+        print("ERROR: Invalid Excalidraw file:", file=sys.stderr)
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         sys.exit(1)
 
-    # Compute viewport size from element bounding box
     elements = [e for e in data["elements"] if not e.get("isDeleted")]
     min_x, min_y, max_x, max_y = compute_bounding_box(elements)
     padding = 80
     diagram_w = max_x - min_x + padding * 2
     diagram_h = max_y - min_y + padding * 2
 
-    # Cap viewport width, let height be natural
     vp_width = min(int(diagram_w), max_width)
     vp_height = max(int(diagram_h), 600)
 
-    # Output path
     if output_path is None:
         output_path = excalidraw_path.with_suffix(".png")
 
-    # Template path (same directory as this script)
     template_path = Path(__file__).parent / "render_template.html"
     if not template_path.exists():
         print(f"ERROR: Template not found at {template_path}", file=sys.stderr)
@@ -125,17 +128,13 @@ def render(
         try:
             browser = p.chromium.launch(headless=True)
         except Exception as e:
-            if "Executable doesn't exist" in str(
-                e
-            ) or "browserType.launch" in str(e):
+            msg = str(e)
+            if "Executable doesn't exist" in msg or "browserType.launch" in msg:
                 print(
                     "ERROR: Chromium not installed for Playwright.",
                     file=sys.stderr,
                 )
-                print(
-                    "Run: cd .claude/skills/excalidraw-diagram/references && uv run playwright install chromium",
-                    file=sys.stderr,
-                )
+                print(INSTALL_HINT, file=sys.stderr)
                 sys.exit(1)
             raise
 
@@ -144,13 +143,11 @@ def render(
             device_scale_factor=scale,
         )
 
-        # Load the template
         page.goto(template_url)
 
-        # Wait for the ES module to load (imports from esm.sh)
-        page.wait_for_function("window.__moduleReady === true", timeout=30000)
+        # Wait for the ES module to load (imports from esm.sh).
+        page.wait_for_function("window.__moduleReady === true", timeout=90000)
 
-        # Inject the diagram data and render
         json_str = json.dumps(data)
         result = page.evaluate(f"window.renderDiagram({json_str})")
 
@@ -164,12 +161,11 @@ def render(
             browser.close()
             sys.exit(1)
 
-        # Wait for render completion signal
         page.wait_for_function(
-            "window.__renderComplete === true", timeout=15000
+            "window.__renderComplete === true",
+            timeout=15000,
         )
 
-        # Screenshot the SVG element
         svg_el = page.query_selector("#root svg")
         if svg_el is None:
             print("ERROR: No SVG element found after render.", file=sys.stderr)
@@ -183,11 +179,14 @@ def render(
 
 
 def main() -> None:
+    """Parse CLI args and render the input file."""
     parser = argparse.ArgumentParser(
-        description="Render Excalidraw JSON to PNG"
+        description="Render Excalidraw JSON to PNG",
     )
     parser.add_argument(
-        "input", type=Path, help="Path to .excalidraw JSON file"
+        "input",
+        type=Path,
+        help="Path to .excalidraw JSON file",
     )
     parser.add_argument(
         "--output",

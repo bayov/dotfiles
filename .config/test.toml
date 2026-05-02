@@ -4,7 +4,7 @@ command = "uv run pyright"
 
 [[test_suite]]
 name = "python_lint"
-command = "uv run ruff check pybayov"
+command = "uv run ruff check pybayov home/.agents/skills"
 
 [[test_suite]]
 name = "link_dry_run"
