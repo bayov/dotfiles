@@ -304,7 +304,12 @@ def _glob_match(file: Path, pattern: str) -> bool:
         rel = str(file.relative_to(project_root()))
     except ValueError:
         return False
-    regex = glob.translate(pattern, recursive=True, include_hidden=True)
+    regex = cast(
+        str,
+        glob.translate(  # type: ignore[attr-defined]
+            pattern, recursive=True, include_hidden=True
+        ),
+    )
     return bool(re.fullmatch(regex, rel))
 
 
@@ -360,12 +365,13 @@ def _validate_formatters(
                 f"Shebang {shebang!r} is claimed by multiple"
                 f" formatters: {names}"
             )
-    for glob in supported_globs:
-        handlers = [f for f in formatters if glob in f.globs]
+    for glob_pattern in supported_globs:
+        handlers = [f for f in formatters if glob_pattern in f.globs]
         if len(handlers) > 1:
             names = ", ".join(f.name for f in handlers)
             raise ValueError(
-                f"Glob {glob!r} is claimed by multiple formatters: {names}"
+                f"Glob {glob_pattern!r} is claimed by multiple"
+                f" formatters: {names}"
             )
 
 
