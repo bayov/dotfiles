@@ -1,11 +1,11 @@
 ---
-name: align
-description: Align with user's intent and goals
+name: grill-me
+description: Interview the user relentlessly to reach shared understanding
 disable-model-invocation: true
 ---
 
-Interview me relentlessly about every aspect of this plan/design until we reach
-a shared understanding. Walk down each branch of the design tree, resolving
+Interview me relentlessly about every aspect of this plan until we reach a
+shared understanding. Walk down each branch of the design tree, resolving
 dependencies between decisions one-by-one. For each question, provide your
 recommended answers.
 
