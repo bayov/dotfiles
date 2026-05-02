@@ -108,12 +108,12 @@
     { "command": "-cursorBottomSelect", "key": "ctrl+shift+end" },
     { "command": "cursorBottomSelect", "key": "shift+ctrl+pagedown", "when": "textInputFocus" },
     { "command": "cursorBottom", "key": "ctrl+pagedown", "when": "textInputFocus" },
-    { "command": "cursorBottom", "key": "ctrl+end", "when": "textInputFocus" },
+    { "command": "cursorBottom", "key": "alt+end", "when": "textInputFocus" },
 
     { "command": "-cursorTopSelect", "key": "ctrl+shift+home" },
     { "command": "cursorTopSelect", "key": "shift+ctrl+pageup", "when": "textInputFocus" },
     { "command": "cursorTop", "key": "ctrl+pageup", "when": "textInputFocus" },
-    { "command": "cursorTop", "key": "ctrl+home", "when": "textInputFocus" },
+    { "command": "cursorTop", "key": "alt+home", "when": "textInputFocus" },
 
     { "command": "-cursorWordRightSelect", "key": "ctrl+shift+right" },
     {
