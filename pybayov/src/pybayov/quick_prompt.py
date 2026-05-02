@@ -903,7 +903,7 @@ async def race_models(prompt: str) -> tuple[str, str]:
         if _verbose:
             cmd.append("--verbose")
 
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # noqa: ASYNC220
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
