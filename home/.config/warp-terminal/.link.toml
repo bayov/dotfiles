@@ -1,0 +1,7 @@
+[[link]]
+linker = "spread"
+
+[[link]]
+tags = ["wsl"]
+linker = "windows-symlink"
+dst = "/mnt/c/Users/hesos/AppData/Local/warp/Warp/config"
