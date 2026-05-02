@@ -126,9 +126,12 @@ and `backgroundColor` values are placeholders — always pull actual colors from
     "boundElements": [{ "id": "text1", "type": "text" }],
     "link": null,
     "locked": false,
-    "roundness": { "type": 3 }
+    "roundness": null
 }
 ```
+
+Always use `"roundness": null` (square corners). Do not use `{ "type": 3 }` —
+the palette specifies square corners as the convention.
 
 ## Text (centered in shape)
 

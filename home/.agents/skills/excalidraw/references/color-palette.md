@@ -7,20 +7,30 @@
 Colors encode meaning, not decoration. Each semantic purpose has a fill/stroke
 pair.
 
-| Semantic Purpose  | Fill      | Stroke                        |
-| ----------------- | --------- | ----------------------------- |
-| Primary/Neutral   | `#3b82f6` | `#1e3a5f`                     |
-| Secondary         | `#60a5fa` | `#1e3a5f`                     |
-| Tertiary          | `#93c5fd` | `#1e3a5f`                     |
-| Start/Trigger     | `#fed7aa` | `#c2410c`                     |
-| End/Success       | `#a7f3d0` | `#047857`                     |
-| Warning/Reset     | `#fee2e2` | `#dc2626`                     |
-| Decision          | `#fef3c7` | `#b45309`                     |
-| AI/LLM            | `#ddd6fe` | `#6d28d9`                     |
-| Inactive/Disabled | `#dbeafe` | `#1e40af` (use dashed stroke) |
-| Error             | `#fecaca` | `#b91c1c`                     |
+| Semantic Purpose  | Fill        | Stroke                        |
+| ----------------- | ----------- | ----------------------------- |
+| Primary/Neutral   | `#81a2be`   | `#c5c8c6`                     |
+| Secondary         | `#8abeb7`   | `#c5c8c6`                     |
+| Tertiary          | `#214283`   | `#81a2be`                     |
+| Start/Trigger     | `#ea9e46`   | `#c5c8c6`                     |
+| End/Success       | `#b5bd68`   | `#c5c8c6`                     |
+| Warning/Reset     | `#cc6666`   | `#c5c8c6`                     |
+| Decision          | `#f0c674`   | `#c5c8c6`                     |
+| AI/LLM            | `#b294bb`   | `#c5c8c6`                     |
+| Inactive/Disabled | `#454547`   | `#666666` (use dashed stroke) |
+| Error             | `#cc6666`   | `#fdff50`                     |
+| Grouping/Boundary | transparent | `#666666` (use dashed stroke) |
 
 **Rule**: Always pair a darker stroke with a lighter fill for contrast.
+
+**Corners**: All rectangles use square corners (`"roundness": null`). Do not use
+rounded corners.
+
+**Grouping/Boundary** wraps related subcomponents in a dashed rectangle with no
+fill — used for module boundaries, trust/network zones, transaction scopes, or
+"only when X" conditional regions. Place the group label in the top-left corner
+using `#969896` body text. Solid shapes inside still use their own semantic
+colors; the dashed wrapper does not compete visually.
 
 ---
 
@@ -30,11 +40,11 @@ Use color on free-floating text to create visual hierarchy without containers.
 
 | Level          | Color     | Use For                             |
 | -------------- | --------- | ----------------------------------- |
-| Title          | `#1e40af` | Section headings, major labels      |
-| Subtitle       | `#3b82f6` | Subheadings, secondary labels       |
-| Body/Detail    | `#64748b` | Descriptions, annotations, metadata |
-| On light fills | `#374151` | Text inside light-colored shapes    |
-| On dark fills  | `#ffffff` | Text inside dark-colored shapes     |
+| Title          | `#ced0d6` | Section headings, major labels      |
+| Subtitle       | `#c5c8c6` | Subheadings, secondary labels       |
+| Body/Detail    | `#969896` | Descriptions, annotations, metadata |
+| On light fills | `#1d1f21` | Text inside light/yellow shapes     |
+| On dark fills  | `#ffffff` | Text inside saturated shapes        |
 
 ---
 
@@ -45,8 +55,11 @@ technical diagrams.
 
 | Artifact          | Background | Text Color                            |
 | ----------------- | ---------- | ------------------------------------- |
-| Code snippet      | `#1e293b`  | Syntax-colored (language-appropriate) |
-| JSON/data example | `#1e293b`  | `#22c55e` (green)                     |
+| Code snippet      | `#1d1f21`  | Syntax-colored (language-appropriate) |
+| JSON/data example | `#1d1f21`  | `#b5bd68` (terminal green)            |
+
+Add a `#454547` stroke around evidence artifacts so they separate from the
+canvas background.
 
 ---
 
@@ -55,8 +68,8 @@ technical diagrams.
 | Element                                       | Color                                                         |
 | --------------------------------------------- | ------------------------------------------------------------- |
 | Arrows                                        | Use the stroke color of the source element's semantic purpose |
-| Structural lines (dividers, trees, timelines) | Primary stroke (`#1e3a5f`) or Slate (`#64748b`)               |
-| Marker dots (fill + stroke)                   | Primary fill (`#3b82f6`)                                      |
+| Structural lines (dividers, trees, timelines) | Foreground (`#c5c8c6`) or muted (`#666666`)                   |
+| Marker dots (fill + stroke)                   | Primary fill (`#81a2be`)                                      |
 
 ---
 
@@ -64,4 +77,4 @@ technical diagrams.
 
 | Property          | Value     |
 | ----------------- | --------- |
-| Canvas background | `#ffffff` |
+| Canvas background | `#1d1f21` |
