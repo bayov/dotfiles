@@ -1,5 +1,4 @@
-Multi-Instance (`personal` alongside `work`)
-============================================
+# Multi-Instance (`personal` alongside `work`)
 
 **Status:** Future (post-MVP). **Depends on:** MVP. The MVP already pays the
 design tax to support multiple instances (`find_instance()`, per-instance state
@@ -8,15 +7,13 @@ under `~/.local/share/second-brain/<instance>/`, instance-marker =
 when a second instance is actually bootstrapped — and a place to track
 per-instance divergence as it shows up.
 
-What to build
--------------
+## What to build
 
 Bootstrap a `personal` instance against the same `~/dotfiles/second-brain/`
 codebase, with its own AI vault, MEMORY/SOUL/USER, cloud DB, and (if Hagai
 chooses) human-vault. Verify all CLIs resolve the right instance from cwd.
 
-Bootstrap
----------
+## Bootstrap
 
 ```bash
 uv run --project ~/dotfiles/second-brain \
@@ -35,8 +32,7 @@ prompts re-run; sensible defaults differ:
 - **Human vault**: optional. If Hagai keeps a `~/notes/personal/` repo, point
   Phase 4.5 at it; otherwise skip the GitLab section.
 
-Verification checklist
-----------------------
+## Verification checklist
 
 After bootstrap:
 
@@ -52,8 +48,7 @@ SOUL/USER/MEMORY; launching it in `~/second-brain/work/` injects the work
 versions. The same `.claude/hooks` symlink resolves both because the hooks call
 `find_instance(cwd)` per fire.
 
-Per-instance state surfaces
----------------------------
+## Per-instance state surfaces
 
 | Surface                       | Per-instance? | Path                                                      |
 | ----------------------------- | ------------- | --------------------------------------------------------- |
@@ -94,8 +89,7 @@ systemctl --user enable --now second-brain-chat@work
 systemctl --user enable --now second-brain-chat@personal
 ```
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - Bootstrap succeeds for `personal` without touching the `work` instance.
 - Each CLI resolves the instance from cwd correctly; no cross-talk.

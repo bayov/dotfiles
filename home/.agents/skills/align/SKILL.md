@@ -4,8 +4,7 @@ description: Build a shared understanding and a ubiquitous language.
 disable-model-invocation: true
 ---
 
-Interview Session
-=================
+# Interview Session
 
 Interview the user relentlessly about every aspect of their plan until you reach
 a shared understanding. Walk down each branch of the design tree, resolving
@@ -18,8 +17,7 @@ continuing.
 If a question can be answered by exploring the codebase, explore the codebase
 instead.
 
-Ubiquitous Language
--------------------
+## Ubiquitous Language
 
 The project's ubiquitous language is defined in `GLOSSARY.md` files. As part of
 the session, you'll also build a precise, shared vocabulary for the domain.
@@ -27,8 +25,7 @@ the session, you'll also build a precise, shared vocabulary for the domain.
 Don't couple glossary entries to implementation details. Only include terms that
 are meaningful to domain experts.
 
-During the session
-------------------
+## During the session
 
 ### Discuss concrete scenarios
 
@@ -54,8 +51,7 @@ When the user uses vague or overloaded terms, propose a precise canonical term.
 "You're saying 'account' — do you mean the Customer or the User? Those are
 different things."
 
-Persistence
------------
+## Persistence
 
 `ALIGN.md` is the session's source of truth — questions, answers, proposed
 glossary changes — so the session can be paused, resumed, and reviewed.
@@ -70,13 +66,11 @@ Write to `ALIGN.md` before asking the next question.
 ### ALIGN.md format
 
 ```md
-Title of the plan being discussed
-=================================
+# Title of the plan being discussed
 
 Brief summary of plan being discussed.
 
-Interview session
------------------
+## Interview session
 
 ### Q1: Title of question
 
@@ -86,8 +80,7 @@ Additional question details (if needed).
 
 Answer details, including any follow-up questions that arose.
 
-Proposed glossary changes
--------------------------
+## Proposed glossary changes
 
 ### New term: **Term**
 

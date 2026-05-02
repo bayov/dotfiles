@@ -6,8 +6,7 @@ disable-model-invocation: true
 
 Break a plan into small vertical slices.
 
-What is a Vertical Slice?
--------------------------
+## What is a Vertical Slice?
 
 A vertical slice is a small task that goes through all relevant layers of the
 system end-to-end (e.g., schema, API, UI, tests) to produce a narrow but
@@ -23,8 +22,7 @@ Avoid horizontal tasks like:
 - build all UI components
 - write all tests
 
-Process
--------
+## Process
 
 ### 1. Decomposition
 
@@ -62,15 +60,13 @@ plan/{change_name}/tasks/{task_name}.md using the template below.
 A concise description of this vertical slice. Describe the end-to-end behavior,
 not layer-by-layer implementation.
 
-Blocked by
-----------
+## Blocked by
 
 - Blocked by plan/{change_name}/tasks/{task_name}.md
 
 > Omit the "Blocked by" section if there are no blockers
 
-Acceptance criteria
--------------------
+## Acceptance criteria
 
 - [ ] Criterion 1
 - [ ] Criterion 2
@@ -78,16 +74,14 @@ Acceptance criteria
 
 </task-template>
 
-Examples
---------
+## Examples
 
 ### Good (Vertical Slice)
 
 ```md
 Implement the ability to archive and unarchive notes.
 
-Acceptance criteria
--------------------
+## Acceptance criteria
 
 - [ ] An existing note can be archived.
 - [ ] An existing archived note can be unarchived.
@@ -101,8 +95,7 @@ Acceptance criteria
 Implement the database schema for notes, including support for create,
 archive/unarchive, and delete.
 
-Acceptance criteria
--------------------
+## Acceptance criteria
 
 - [ ] Tables or columns exist for notes.
 - [ ] Schema supports state needed by create, archive/unarchive, and delete.

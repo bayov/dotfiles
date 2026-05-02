@@ -1,5 +1,4 @@
-Chat Interface (Conversational Access via Adapters)
-===================================================
+# Chat Interface (Conversational Access via Adapters)
 
 **Status:** Future (post-MVP). **Depends on:** MVP, `03-discord-outbound.md`
 (for token + user_id reuse), `04-heartbeat-and-reflection.md` (which introduces
@@ -9,15 +8,13 @@ keep working unchanged; this PRD adds `discord.py` and an asyncio event loop to
 serve interactive conversations. Adding Slack/Telegram/iMessage/SMS later is a
 single file plus an env-var entry.
 
-What to build
--------------
+## What to build
 
 A persistent chat surface — Discord today, others later — built on a
 platform-agnostic core and a thin per-platform adapter. Conversation history is
 event-sourced.
 
-Architecture
-------------
+## Architecture
 
 Three layers, top-to-bottom:
 
@@ -33,8 +30,7 @@ Three layers, top-to-bottom:
 Each conversation has a stable, platform-namespaced `session_id` (e.g.
 `discord:741...`, `slack:C0X...`).
 
-Key files
----------
+## Key files
 
 ```
 src/sb/chat/
@@ -51,8 +47,7 @@ src/sb/chat/
 
 `pyproject.toml` adds `discord.py` (gateway/inbound now needs it).
 
-`adapter.py` — the contract
----------------------------
+## `adapter.py` — the contract
 
 ```python
 @dataclass
@@ -82,8 +77,7 @@ Adapter responsibilities (the contract, not optional):
 - **Idempotent reply** — on transient send failures, do not double-invoke
   `handle`.
 
-`core.py`
----------
+## `core.py`
 
 ```python
 from anthropic import Anthropic
@@ -130,8 +124,7 @@ async def handle(msg: ChatMessage) -> str:
     return reply
 ```
 
-`adapters/discord_adapter.py`
------------------------------
+## `adapters/discord_adapter.py`
 
 ```python
 import discord, os
@@ -170,8 +163,7 @@ class DiscordAdapter:
 the Discord Developer Portal and re-invite the bot. (The outbound-only PRD did
 not need this.)
 
-`run.py` — fan out
-------------------
+## `run.py` — fan out
 
 ```python
 import asyncio, os
@@ -188,8 +180,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-`chat_messages` projection
---------------------------
+## `chat_messages` projection
 
 ```sql
 CREATE TABLE chat_messages (
@@ -208,8 +199,7 @@ CREATE INDEX chat_messages_session ON chat_messages(session_id, id);
 `chat_messages`. `get_history(session_id)` is
 `SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY id`.
 
-Adding a new platform (the test of the abstraction)
----------------------------------------------------
+## Adding a new platform (the test of the abstraction)
 
 1. Create `adapters/slack_adapter.py` implementing `ChatAdapter` (auth via Slack
    signing secret, session_id `slack:{channel_id}`).
@@ -220,8 +210,7 @@ Adding a new platform (the test of the abstraction)
 If a new platform requires a change to `core.py` or the schema, the contract is
 wrong — fix the contract, not the platform.
 
-Run as a background service
----------------------------
+## Run as a background service
 
 Owned by `08-deployment-systemd.md`. Reference unit:
 
@@ -235,8 +224,7 @@ EnvironmentFile=%h/second-brain/work/.env
 Restart=always
 ```
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `sb-chat` starts, accepts a DM from Hagai's Discord, responds with Claude
   output, persists both turns as `chat_message` events.

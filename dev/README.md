@@ -1,8 +1,6 @@
-Install & Link
-==============
+# Install & Link
 
-install.sh
-----------
+## install.sh
 
 Runs all numbered scripts in `install/` in order:
 
@@ -20,8 +18,7 @@ Runs all numbered scripts in `install/` in order:
 | `10_gum.sh`               | gum (terminal UI)                                                                  |
 | `11_claude_code.sh`       | Claude Code CLI + Playwright Chrome                                                |
 
-link.py
--------
+## link.py
 
 Mirrors `home/` into `$HOME`, creating symlinks that match the directory
 structure.

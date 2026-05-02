@@ -1,11 +1,9 @@
-pybayov
-=======
+# pybayov
 
 Internal Python utility package. Available via `PYTHONPATH` set in `.bashrc` /
 `config.fish`; modules are invoked through shell aliases defined there.
 
-Modules
--------
+## Modules
 
 | Module                           | Alias                         | Purpose                                                                     |
 | -------------------------------- | ----------------------------- | --------------------------------------------------------------------------- |
@@ -18,8 +16,7 @@ Modules
 | `generate_commit_description.py` | `generate-commit-description` | Generate commit message via AI                                              |
 | `util.py`                        | —                             | Shared ANSI colors and path helpers used by other modules and `dev/link.py` |
 
-Running directly
-----------------
+## Running directly
 
 ```sh
 uv run python -m pybayov.spinner

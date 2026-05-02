@@ -1,19 +1,16 @@
-Discord Outbound (DM Notifier)
-==============================
+# Discord Outbound (DM Notifier)
 
 **Status:** Future (post-MVP). **Depends on:** `01-gmail-integration.md` (shared
 `secrets.py`, `errors.py`, `registry.py`, `query.py`). **Note:** outbound only.
 Inbound chat (gateway connection, per-user conversations) is its own larger PRD:
 `05-chat-interface.md`.
 
-What to build
--------------
+## What to build
 
 A REST-only Discord client that sends a DM. Used by future heartbeat
 notifications.
 
-Files
------
+## Files
 
 ```
 src/sb/scripts/integrations/
@@ -25,8 +22,7 @@ PRD). **Not** `discord.py` — outbound DMs don't need the gateway/WebSocket; th
 lib forces an `asyncio.Client` lifecycle plus intents config that are pure
 overhead for fire-and-forget DMs. The chat-interface PRD adds it.
 
-Auth setup
-----------
+## Auth setup
 
 1. Discord Developer Portal → New Application → Bot → Enable bot.
 2. Permissions: Send Messages (DMs only). Outbound-only — **no "Message Content
@@ -48,8 +44,7 @@ user_id = "..."
 enabled = ["gmail", "calendar", "discord"]
 ```
 
-`discord_client.py`
--------------------
+## `discord_client.py`
 
 ```python
 import httpx
@@ -94,8 +89,7 @@ def notify(message: str) -> None:
     )
 ```
 
-`query.py` subcommand
----------------------
+## `query.py` subcommand
 
 ```bash
 sb-query discord notify "Action ready: reply to Alice re: Q3 launch"
@@ -103,15 +97,13 @@ sb-query discord notify "Action ready: reply to Alice re: Q3 launch"
 # on MessageTooLong, so a calling agent has what it needs to recover.
 ```
 
-Tests
------
+## Tests
 
 - `discord_client.tests.py` — patch `httpx.post`; assert two-call flow,
   `MessageTooLong` raised at 2001 chars, `IntegrationAuthError` on 401, retry on
   429/5xx.
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `[integrations].enabled` includes `"discord"`.
 - `sb-query discord notify "hello"` lands in Hagai's DMs.

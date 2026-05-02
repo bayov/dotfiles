@@ -7,8 +7,7 @@ disable-model-invocation: true
 Produce a PRD (Product Requirements Document) based on the current conversation
 context and codebase understanding.
 
-Steps
------
+## Steps
 
 1. Explore the current state of the codebase (if you haven't already).
 
@@ -24,18 +23,15 @@ Steps
 
 <prd-template>
 
-Problem Statement
------------------
+## Problem Statement
 
 The problem that the user is facing, from the user's perspective.
 
-Solution
---------
+## Solution
 
 The solution to the problem, from the user's perspective.
 
-User Stories
-------------
+## User Stories
 
 A LONG, numbered list of user stories. Each user story should be in the format
 of:
@@ -49,8 +45,7 @@ of:
 This list of user stories should be extremely extensive and cover all aspects of
 the feature.
 
-Implementation Decisions
-------------------------
+## Implementation Decisions
 
 A list of implementation decisions that were made. This can include:
 
@@ -65,8 +60,7 @@ A list of implementation decisions that were made. This can include:
 Do NOT include specific file paths or code snippets. They may end up being
 outdated very quickly.
 
-Testing Decisions
------------------
+## Testing Decisions
 
 A list of testing decisions that were made. Include:
 
@@ -75,13 +69,11 @@ A list of testing decisions that were made. Include:
 - Which modules will be tested
 - Prior art for the tests (i.e. similar types of tests in the codebase)
 
-Out of Scope
-------------
+## Out of Scope
 
 A description of the things that are out of scope for this PRD.
 
-Further Notes
--------------
+## Further Notes
 
 Any further notes about the feature.
 

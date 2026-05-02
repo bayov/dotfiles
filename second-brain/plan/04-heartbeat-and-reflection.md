@@ -1,5 +1,4 @@
-Proactive Systems — Heartbeat + Daily Reflection
-================================================
+# Proactive Systems — Heartbeat + Daily Reflection
 
 **Status:** Future (post-MVP). **Depends on:** MVP, `01-gmail-integration.md`,
 `02-google-calendar-integration.md`, `03-discord-outbound.md`. (Heartbeat is the
@@ -7,8 +6,7 @@ first place the integrations get exercised together. Without at least Gmail it
 has nothing to ingest; without Calendar it has no deadline signal; without
 Discord-out it has no notification channel.)
 
-What to build
--------------
+## What to build
 
 A scheduled heartbeat that gathers context, reasons with Claude, writes events
 (raw inputs + proposed actions), and delivers advisories via Discord DM. The
@@ -17,8 +15,7 @@ heartbeat is the **sole writer of MEMORY.md**.
 A daily reflection job (08:00 Israel time) that consolidates the day's session
 summaries into MEMORY.md and a daily briefing.
 
-Files
------
+## Files
 
 ```
 src/sb/scripts/
@@ -34,8 +31,7 @@ here is the canonical reference):
 */30 5-16 * * 0-4  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-heartbeat
 ```
 
-This PRD adds new event types
------------------------------
+## This PRD adds new event types
 
 | Event type          | Source          | When written                               |
 | ------------------- | --------------- | ------------------------------------------ |
@@ -46,8 +42,7 @@ This PRD adds new event types
 | `event_processed`   | agent           | After processing an input event            |
 | `notification_sent` | heartbeat/bot   | When a Discord DM goes out                 |
 
-This PRD introduces the projection layer
-----------------------------------------
+## This PRD introduces the projection layer
 
 The MVP shipped only the `events` table. This PRD is the first one with real
 consumers for derived state, so it introduces the projection tables, the
@@ -178,8 +173,7 @@ prompt = new `prompt_hash` = new row. This is what makes
 re-marks every prior input event as unprocessed for the new identity, and the
 next run reprocesses with better judgment.
 
-Heartbeat — gather phase
-------------------------
+## Heartbeat — gather phase
 
 ```python
 def gather_context() -> dict:
@@ -263,8 +257,7 @@ def fetch_unprocessed_human_vault_commits() -> list[dict]:
     return out
 ```
 
-Ingest phase
-------------
+## Ingest phase
 
 ```python
 def ingest_events(context: dict):
@@ -290,8 +283,7 @@ def ingest_events(context: dict):
         )
 ```
 
-Reasoning phase (Claude SDK)
-----------------------------
+## Reasoning phase (Claude SDK)
 
 ```python
 from anthropic import Anthropic
@@ -331,8 +323,7 @@ Rules:
     return response.content[0].text
 ```
 
-Human-vault commit processing (same cycle)
-------------------------------------------
+## Human-vault commit processing (same cycle)
 
 After reasoning, close the loop on each consumed commit. Without this, the next
 heartbeat would re-surface the same commits forever.
@@ -362,8 +353,7 @@ def mark_human_vault_commits_processed(commits: list[dict], output_refs: dict):
 every commit as unprocessed and re-reacts with its better judgment. Old agent's
 outputs stay as immutable history.
 
-Action generation
------------------
+## Action generation
 
 When the heartbeat flags emails needing a reply:
 
@@ -379,8 +369,7 @@ When the heartbeat flags emails needing a reply:
    content, agent_id}, source_event_id=email_event_id))`.
 6. Send Discord DM, then `write_event(Event(type="notification_sent", ...))`.
 
-AI-vault writes (heartbeat is the primary writer of dossiers/briefings)
------------------------------------------------------------------------
+## AI-vault writes (heartbeat is the primary writer of dossiers/briefings)
 
 Beyond MEMORY.md, the heartbeat freely writes to `ai-vault/`:
 
@@ -395,8 +384,7 @@ Beyond MEMORY.md, the heartbeat freely writes to `ai-vault/`:
 
 Use `[[wikilinks]]` for navigability in Obsidian.
 
-MEMORY.md update (sole writer)
-------------------------------
+## MEMORY.md update (sole writer)
 
 After processing events:
 
@@ -405,8 +393,7 @@ After processing events:
   recency-desc.
 - Enforce `max_bytes.MEMORY` from config.toml.
 
-Notification dedupe
--------------------
+## Notification dedupe
 
 The `notifications` projection table replaces md5-hash diffing. Each action
 triggers at most one Discord DM:
@@ -433,8 +420,7 @@ def notify_about_action(action_id: str, message: str):
     )
 ```
 
-`memory_reflect.py` — daily at 08:00 Israel
--------------------------------------------
+## `memory_reflect.py` — daily at 08:00 Israel
 
 ```cron
 0 5 * * *  cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain sb-reflect
@@ -453,20 +439,17 @@ Process:
    action via `write_event(action_proposed)` (search/dedup/reformulate
    discipline from MVP Phase 4.5 applies).
 
-Advisor-mode behaviors
-----------------------
+## Advisor-mode behaviors
 
 - Heartbeat proposes actions for review — never acts.
 - All Discord notifications are advisory.
 - No autonomous sending, posting, or purchasing.
 
-Estimated cost
---------------
+## Estimated cost
 
 ~$0.05/heartbeat × 22 runs/day × 22 workdays/month ≈ **$24/month**.
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `sb-heartbeat` runs end-to-end against real Gmail/Calendar/Discord.
 - One Discord DM per actionable item; never duplicate.

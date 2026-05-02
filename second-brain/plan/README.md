@@ -1,5 +1,4 @@
-Second Brain — Plan Index
-=========================
+# Second Brain — Plan Index
 
 This directory replaces the monolithic `second-brain-prd.md` with a vertical MVP
 slice plus focused follow-up PRDs. Each follow-up is a self-contained feature
@@ -8,8 +7,7 @@ that can be built independently once the MVP is in place.
 Build the MVP first. Then pick follow-ups based on which capability you most
 want next.
 
-MVP (build first — end-to-end working system)
----------------------------------------------
+## MVP (build first — end-to-end working system)
 
 - [00-mvp.md](00-mvp.md) — Memory layer, cloud DB, hooks, hybrid RAG, manual
   event entry, human-vault GitLab integration with MR-based promotion, two
@@ -17,8 +15,7 @@ MVP (build first — end-to-end working system)
   — collect events, persist session memory, search both vaults, propose changes
   to the human vault via MR.
 
-Follow-ups (each a vertical feature; pick what's most useful next)
-------------------------------------------------------------------
+## Follow-ups (each a vertical feature; pick what's most useful next)
 
 - [01-gmail-integration.md](01-gmail-integration.md) — First automated
   collector. Brings the shared integration scaffolding (`shared_auth`,
@@ -42,8 +39,7 @@ Follow-ups (each a vertical feature; pick what's most useful next)
 - [09-multi-instance.md](09-multi-instance.md) — Bootstrap a `personal` instance
   alongside `work`.
 
-Suggested order
----------------
+## Suggested order
 
 ```
 00-mvp
@@ -59,8 +55,7 @@ Suggested order
                                               09-multi-instance (any time after MVP)
 ```
 
-Architectural commitments (do not break)
-----------------------------------------
+## Architectural commitments (do not break)
 
 These are load-bearing across all PRDs:
 

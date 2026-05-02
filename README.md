@@ -1,7 +1,6 @@
 Personal dotfiles managed with a custom symlinker and shell install scripts.
 
-Install
--------
+## Install
 
 ```sh
 # Install all packages and tools
@@ -17,8 +16,7 @@ Install
 - WezTerm — https://wezterm.org/install/windows.html
 - JetBrains Mono (font) — https://www.jetbrains.com/lp/mono/
 
-Structure
----------
+## Structure
 
 | Directory  | Contents                                                               |
 | ---------- | ---------------------------------------------------------------------- |
@@ -28,8 +26,7 @@ Structure
 | `ahk/`     | AutoHotkey 2.0 scripts for Windows automation                          |
 | `config/`  | Misc config files (commit template, AI model list, sandbox Dockerfile) |
 
-Development
------------
+## Development
 
 Run `bayov-format` before committing and `bayov-test` before pushing:
 
@@ -38,8 +35,7 @@ bayov-format   # alias: precommit
 bayov-test     # alias: prepush --quiet --show-failures
 ```
 
-What gets configured
---------------------
+## What gets configured
 
 - **Shell**: Fish 4+ with fzf integration, custom functions, and Starship prompt
 - **Terminal**: WezTerm (custom Lua config, color scheme, tab bar)

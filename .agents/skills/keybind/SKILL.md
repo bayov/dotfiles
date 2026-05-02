@@ -5,16 +5,14 @@ disable-model-invocation: true
 model: haiku
 ---
 
-Keybind Manager
-===============
+# Keybind Manager
 
 This skill handles keybinding changes across all apps in this dotfiles setup.
 The main challenge is the **terminal shadowing stack**: keys flow through
 WezTerm → Zellij → running app (Fish/Fresh/Claude Code), and a binding at a
 higher layer silently consumes the key before lower layers see it.
 
-Config file locations
----------------------
+## Config file locations
 
 | App             | Config file                                          | Context                                     |
 | --------------- | ---------------------------------------------------- | ------------------------------------------- |
@@ -25,8 +23,7 @@ Config file locations
 | **Fresh**       | `~/dotfiles/home/.config/fresh/config.json`          | Editor (lowest priority in terminal)        |
 | **Claude Code** | `~/dotfiles/home/.claude/keybindings.json`           | CLI tool (lowest priority in terminal)      |
 
-Terminal shadowing
-------------------
+## Terminal shadowing
 
 When using a terminal-based app (Fish, Fresh, Claude Code), keys pass through:
 
@@ -46,8 +43,7 @@ consumed upstream.
 - Sometimes the right fix is to remove/pass-through the higher-layer binding
   rather than adding a new one
 
-Workflow
---------
+## Workflow
 
 1. Read the relevant config files to understand current bindings
 2. Check for shadowing conflicts across the terminal stack
@@ -60,8 +56,7 @@ app. **Fetch the relevant docs URL** when you need to look up valid action
 names, key name constants, `when`-clause contexts, or any other details not
 covered in the reference — do not guess.
 
-Common patterns
----------------
+## Common patterns
 
 **Adding a binding to a terminal app (Fish/Fresh/Claude Code):** First check if
 the key is free in WezTerm and Zellij. If not, you'll need to either unbind it

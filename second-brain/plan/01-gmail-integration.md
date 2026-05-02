@@ -1,5 +1,4 @@
-Gmail Integration
-=================
+# Gmail Integration
 
 **Status:** Future (post-MVP). **Depends on:** MVP (Phase 1 cloud DB, manual
 event entry path), `secrets.toml` discipline established by Phase 4.5. **Why
@@ -11,8 +10,7 @@ a real consumer.
 
 ---
 
-What to build
--------------
+## What to build
 
 A Gmail collector that lists important unread threads, surfaces them as
 `email_thread` events in the cloud DB, and exposes a `query.py gmail` subcommand
@@ -21,8 +19,7 @@ for ad-hoc inspection. **No heartbeat ingestion** in this PRD — that's wired i
 implementation** — Phase 4 ships a no-op stub; the real one lands in
 `07-security-hardening.md`.
 
-Files
------
+## Files
 
 ```
 src/sb/scripts/integrations/
@@ -40,8 +37,7 @@ src/sb/scripts/integrations/
 `pyproject.toml` adds: `google-auth`, `google-auth-oauthlib`,
 `google-api-python-client`, `httpx`, `tenacity`.
 
-Configuration
--------------
+## Configuration
 
 ```toml
 # config.toml
@@ -60,8 +56,7 @@ credentials_path = "~/.local/share/second-brain/<instance>/credentials.json"
 token_path = "~/.local/share/second-brain/<instance>/token.json"
 ```
 
-Auth setup
-----------
+## Auth setup
 
 1. Google Cloud Console → Create project → Enable Gmail API.
 2. OAuth consent screen → Add Gmail address as test user.
@@ -86,8 +81,7 @@ Auth setup
 - `https://www.googleapis.com/auth/gmail.compose` (only if the agent should
   create Gmail drafts)
 
-Error model — `errors.py`
--------------------------
+## Error model — `errors.py`
 
 ```python
 class IntegrationError(Exception): ...
@@ -118,8 +112,7 @@ RefreshError`, 401/403) map to `IntegrationAuthError`.
 Errors are isolated **per integration**: one broken integration does not crash a
 caller — it returns an empty list.
 
-`gmail.py` — unit is the thread, not the message
-------------------------------------------------
+## `gmail.py` — unit is the thread, not the message
 
 ```python
 @dataclass
@@ -161,8 +154,7 @@ re-surfaces the thread when it grows.
 **Rate limits:** Gmail API: 250 quota units/sec, 1B/day. At 20 threads/heartbeat
 every 30 min: ~200 units/hour — well within limits.
 
-`query.py` subcommands
-----------------------
+## `query.py` subcommands
 
 ```bash
 sb-query gmail list                         # Unread important threads (text)
@@ -173,8 +165,7 @@ sb-query gmail list --format=json           # Programmatic / tests
 Output formatters: text (one block per item, stable field labels) and JSON
 (`[asdict(item), ...]`). Tests assert against JSON.
 
-Integration template (`integration_template.py`)
-------------------------------------------------
+## Integration template (`integration_template.py`)
 
 Copy this file when wiring up a new platform. The contract every integration
 must satisfy: auth stays in Python, Claude only ever sees typed data, external
@@ -195,8 +186,7 @@ Pattern every integration follows:
 If a new integration needs to break this contract, the contract is wrong — fix
 the template, not the integration.
 
-Registry
---------
+## Registry
 
 ```python
 # registry.py — reads [integrations].enabled and resolves each name.
@@ -209,8 +199,7 @@ _MODULES = {
 
 Missing creds for an enabled integration → fail-fast with a clear error.
 
-Tests
------
+## Tests
 
 CLAUDE.md mandates "no network" in the default suite. Tests mock at the SDK
 boundary:
@@ -224,8 +213,7 @@ boundary:
 A separate `tests/integration_live/` holds opt-in tests that hit real Gmail when
 credentials are present. Run manually, never CI.
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `secrets.example.toml` checked in.
 - `config.toml` gains `[integrations]` and `[integrations.gmail]`.
@@ -238,8 +226,7 @@ sanitize_external_text real impl (security PRD).
 
 ---
 
-Hand-off to the heartbeat PRD
------------------------------
+## Hand-off to the heartbeat PRD
 
 The heartbeat PRD picks Gmail up by writing one event per thread:
 

@@ -1,14 +1,11 @@
-TODO
-====
+# TODO
 
-Second Brain
-------------
+## Second Brain
 
 - Make sure we translate Hebrew to English for all incoming data to the second
   brain (whether from integrations or anywhere else).
 
-Infeasible
-----------
+## Infeasible
 
 - Terminal support numpad keys (alt+numpad) to resize
   - Currently, this doesn't work because there's a problem with WezTerm

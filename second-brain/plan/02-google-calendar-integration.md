@@ -1,27 +1,23 @@
-Google Calendar Integration
-===========================
+# Google Calendar Integration
 
 **Status:** Future (post-MVP). **Depends on:** `01-gmail-integration.md` (shared
 `shared_auth.py`, `registry.py`, `query.py`, `errors.py`, `secrets.toml`,
 `pyproject.toml` deps). Calendar reuses Gmail's OAuth token via `shared_auth`.
 
-What to build
--------------
+## What to build
 
 A Calendar collector that lists upcoming events and deadline-keyword matches,
 exposed via `sb-query calendar`. **No heartbeat ingestion** here — that's
 `04-heartbeat-and-reflection.md`.
 
-Files
------
+## Files
 
 ```
 src/sb/scripts/integrations/
 └── calendar.py
 ```
 
-Configuration
--------------
+## Configuration
 
 ```toml
 [integrations]
@@ -34,15 +30,13 @@ deadline_keywords = ["deadline", "due", "review", "launch", "release"]
 # Per-user vocabulary — Hebrew speakers may want "מועד אחרון", etc.
 ```
 
-Auth
-----
+## Auth
 
 Shared OAuth2 token from `shared_auth.py`. Add scope:
 
 - `https://www.googleapis.com/auth/calendar.readonly`
 
-`calendar.py`
--------------
+## `calendar.py`
 
 ```python
 @dataclass
@@ -74,24 +68,21 @@ def list_events_with_deadlines(
 **Israel timezone note:** Always store/compare in UTC. Display in
 `Asia/Jerusalem` using `zoneinfo`.
 
-`query.py` subcommands
-----------------------
+## `query.py` subcommands
 
 ```bash
 sb-query calendar upcoming        # Next [days_ahead] days, all enabled calendars
 sb-query calendar deadlines       # Events matching deadline_keywords
 ```
 
-Tests
------
+## Tests
 
 - `calendar.tests.py` — patch `googleapiclient.discovery.build`; assert `Event`
   shape, `"all"`-calendar expansion, deadline keyword filter (case-insensitive,
   multi-keyword).
 - `tests/integration_live/calendar_live.py` — opt-in.
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `[integrations.calendar]` in `config.toml`.
 - `calendar` listed in `[integrations].enabled`.
@@ -104,8 +95,7 @@ Acceptance — "done"
 
 ---
 
-Hand-off to the heartbeat PRD
------------------------------
+## Hand-off to the heartbeat PRD
 
 ```python
 for ev in calendar.list_events_with_deadlines(...):

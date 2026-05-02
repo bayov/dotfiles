@@ -1,5 +1,4 @@
-Security Hardening (Full)
-=========================
+# Security Hardening (Full)
 
 **Status:** Future (post-MVP). **Depends on:** MVP (`guardrails.py` exists with
 one pattern), at least one integration PRD (so `sanitize_external_text` has real
@@ -9,8 +8,7 @@ because Phase 4.5 requires it. This PRD widens the guardrails, replaces the
 no-op `sanitize.py` stub with the real defense, and formalizes API-key
 isolation.
 
-What to build
--------------
+## What to build
 
 Three-layer defense:
 
@@ -20,8 +18,7 @@ Three-layer defense:
    at PreToolUse time.
 3. **API key isolation** — Claude never sees secrets; Python handles auth.
 
-Files
------
+## Files
 
 ```
 src/sb/scripts/
@@ -29,8 +26,7 @@ src/sb/scripts/
 └── guardrails.py           # widens the one-pattern MVP version
 ```
 
-`sanitize.py` — 3-layer defense
--------------------------------
+## `sanitize.py` — 3-layer defense
 
 ````python
 import re
@@ -60,8 +56,7 @@ Apply at integration boundaries — `gmail.py`, `calendar.py`, future `slack.py`
 etc. — wherever a free-text field is constructed into a typed dataclass passed
 onward to Claude.
 
-`guardrails.py` — full pattern list
------------------------------------
+## `guardrails.py` — full pattern list
 
 ```python
 import re
@@ -97,8 +92,7 @@ def check_command(command: str, cwd: str) -> tuple[bool, str]:
 `PreToolUse` hook (already wired in MVP — this PRD only widens the pattern list
 it consults).
 
-API key isolation
------------------
+## API key isolation
 
 - Claude never sees `.env` values or `secrets.toml` content.
 - Python scripts handle all auth and pass only typed data to Claude.
@@ -115,8 +109,7 @@ secrets.toml
 ~/.local/share/second-brain/*/token.json
 ```
 
-Tests
------
+## Tests
 
 - `sanitize.tests.py` — golden inputs covering each pattern; assert wrapper tags
   emitted; assert real markdown that happens to contain "act as" in prose is
@@ -125,8 +118,7 @@ Tests
 - `guardrails.tests.py` — every pattern, both directions (blocked / allowed),
   cwd-conditional behavior for the `main` pattern.
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - All integration boundaries pass external text through
   `sanitize_external_text()`.

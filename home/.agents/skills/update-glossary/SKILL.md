@@ -8,8 +8,7 @@ Update `GLOSSARY.md` to reflect new, changed, or removed terms — typically fro
 an alignment session (`ALIGN.md`) or a discussion that surfaced terminology
 issues.
 
-Process
--------
+## Process
 
 1. Locate the relevant `GLOSSARY.md`. In multi-glossary repos, pick the one that
    owns the term's domain; create a new sub-glossary only if no existing one
@@ -23,17 +22,14 @@ Process
 5. If the change introduces a synonym for an existing term, list it under
    `_Avoid_` rather than creating a duplicate entry.
 
-Format
-------
+## Format
 
 ```md
-{Glossary Name}
-===============
+# {Glossary Name}
 
 {One or two sentence description of what this glossary is and why it exists.}
 
-Language
---------
+## Language
 
 **Order**: A request from a customer to purchase goods. _Avoid_: Purchase,
 transaction
@@ -44,21 +40,18 @@ Bill, payment request
 **Customer**: A person or organization that places orders. _Avoid_: Client,
 buyer, account
 
-Relationships
--------------
+## Relationships
 
 - An **Order** produces one or more **Invoices**
 - An **Invoice** belongs to exactly one **Customer**
 
-Example dialogue
-----------------
+## Example dialogue
 
 > **Dev:** "When a **Customer** places an **Order**, do we create the
 > **Invoice** immediately?" **Domain expert:** "No — an **Invoice** is only
 > generated once a **Fulfillment** is confirmed."
 
-Flagged ambiguities
--------------------
+## Flagged ambiguities
 
 - "account" was used to mean both **Customer** and **User** — resolved: these
   are distinct concepts.
@@ -67,8 +60,7 @@ Flagged ambiguities
 Group terms under subheadings when natural clusters emerge; otherwise a flat
 list is fine.
 
-Rules
------
+## Rules
 
 - **Be opinionated.** When multiple words exist for the same concept, pick one
   and list the rest under `_Avoid_`. Ambiguity in the glossary defeats its
@@ -86,15 +78,13 @@ Rules
   patterns don't belong even if the project uses them heavily. Before adding,
   ask: is this concept unique to this domain, or general?
 
-Multi-glossary repos
---------------------
+## Multi-glossary repos
 
 If the repo has more than one glossary, the root `GLOSSARY.md` is an index
 rather than a term list:
 
 ```md
-Glossaries
-==========
+# Glossaries
 
 - [Ordering](./src/ordering/GLOSSARY.md) — receives and tracks customer orders
 - [Billing](./src/billing/GLOSSARY.md) — generates invoices and processes
@@ -102,8 +92,7 @@ Glossaries
 - [Fulfillment](./src/fulfillment/GLOSSARY.md) — manages warehouse picking and
   shipping
 
-Relationships
--------------
+## Relationships
 
 - **Ordering → Fulfillment**: Ordering emits `OrderPlaced` events; Fulfillment
   consumes them to start picking

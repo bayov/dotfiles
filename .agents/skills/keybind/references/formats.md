@@ -1,8 +1,6 @@
-Keybind Format Reference
-========================
+# Keybind Format Reference
 
-WezTerm (`~/dotfiles/home/wezterm/wezterm.lua`)
------------------------------------------------
+## WezTerm (`~/dotfiles/home/wezterm/wezterm.lua`)
 
 Docs: https://wezfurlong.org/wezterm/config/keys.html\
 Key names reference:
@@ -29,8 +27,7 @@ Entries in `config.keys = { ... }` as Lua tables:
 `config.disable_default_key_bindings = true` is set, so only explicitly listed
 bindings are active.
 
-Zellij (`~/dotfiles/home/.config/zellij/config.kdl`)
-----------------------------------------------------
+## Zellij (`~/dotfiles/home/.config/zellij/config.kdl`)
 
 Docs: https://zellij.dev/documentation/keybindings\
 Actions reference: https://zellij.dev/documentation/keybindings-possible-actions
@@ -62,8 +59,7 @@ keybinds clear-defaults=true {
 
 `clear-defaults=true` is set, so only explicitly listed bindings are active.
 
-VS Code (`~/dotfiles/home/.config/Code/User/keybindings.json`)
---------------------------------------------------------------
+## VS Code (`~/dotfiles/home/.config/Code/User/keybindings.json`)
 
 Docs: https://code.visualstudio.com/docs/getstarted/keybindings\
 When-clause contexts:
@@ -92,8 +88,7 @@ JSON array of objects:
 - **`when`**: optional context expression
 - **Prefix `-`** on command: removes a default binding
 
-Fish (`~/dotfiles/home/.config/fish/config.fish`)
--------------------------------------------------
+## Fish (`~/dotfiles/home/.config/fish/config.fish`)
 
 Docs: https://fishshell.com/docs/current/cmds/bind.html\
 Readline functions: https://fishshell.com/docs/current/interactive.html#readline
@@ -115,8 +110,7 @@ bind ctrl-delete kill-word
   `forward-word`, `up-or-search`, `beginning-of-line`, etc.) or custom fish
   function names
 
-Fresh (`~/dotfiles/home/.config/fresh/config.json`)
----------------------------------------------------
+## Fresh (`~/dotfiles/home/.config/fresh/config.json`)
 
 Docs: https://getfresh.dev/docs/configuration/keyboard (fetch if you need to
 look up context values)\
@@ -159,8 +153,7 @@ JSON array in the `"keybinds"` field:
 - **`action`**: Fresh action name string
 - **`when`**: optional context — `"global"`, `"normal"`, etc.
 
-Claude Code (`~/dotfiles/home/.claude/keybindings.json`)
---------------------------------------------------------
+## Claude Code (`~/dotfiles/home/.claude/keybindings.json`)
 
 Docs: https://docs.anthropic.com/en/docs/claude-code/keyboard-shortcuts
 

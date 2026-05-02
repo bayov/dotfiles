@@ -1,20 +1,17 @@
-Extended Skills (Beyond MVP)
-============================
+# Extended Skills (Beyond MVP)
 
 **Status:** Future (post-MVP). **Depends on:** MVP (Phases 1–3 + 4.5 + slim 5),
 `02-google-calendar-integration.md` (`surface-risks` queries calendar
 deadlines), `04-heartbeat-and-reflection.md` (MEMORY.md is reliably populated
 only once heartbeat runs daily).
 
-What to build
--------------
+## What to build
 
 Additional Claude skills that activate once integrations are wired. The MVP
 ships `vault-structure` and `promote-to-human-vault`; this PRD adds the next
 batch.
 
-`surface-risks`
----------------
+## `surface-risks`
 
 The most common engineering-leadership task: surface project risks, blockers,
 and cross-team dependencies as a prioritized [P0/P1/P2] list.
@@ -45,8 +42,7 @@ Trigger: `/surface-risks` or "what are the risks", "what could go wrong",
 3. Pass assembled context to Claude: "List risks by severity [P0/P1/P2] with
    owner and mitigation. Be direct and terse."
 
-Future skills (sketch)
-----------------------
+## Future skills (sketch)
 
 When the heartbeat / reflection PRDs land and dossiers/briefings are populated,
 the following skills become natural follow-ups. Each is its own small drop-in
@@ -65,8 +61,7 @@ once written; none changes the architecture.
 Each should follow the contract: a Python helper script gathers structured
 context, Claude does the language work, output goes to a known AI-vault path.
 
-Acceptance — "done" (per skill)
--------------------------------
+## Acceptance — "done" (per skill)
 
 - `SKILL.md` description triggers correctly on natural-language phrasing.
 - Helper script is deterministic; Claude does only the synthesis.

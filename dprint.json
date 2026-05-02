@@ -10,7 +10,7 @@
         "textWrap": "always",
         "emphasisKind": "underscores",
         "strongKind": "asterisks",
-        "headingKind": "setext"
+        "headingKind": "atx"
     },
     "toml": {},
     "ruff": { "lineLength": 80 },

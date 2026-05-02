@@ -1,5 +1,4 @@
-Hagai's Second Brain — MVP PRD
-==============================
+# Hagai's Second Brain — MVP PRD
 
 **Status:** MVP (vertical slice). **Goal:** ship a working end-to-end second
 brain that captures events, persists session memory, searches both vaults by
@@ -44,8 +43,7 @@ with better agents as they are released.
 
 ---
 
-Phase 1: Foundation (Memory Layer + Cloud DB)
----------------------------------------------
+## Phase 1: Foundation (Memory Layer + Cloud DB)
 
 **What to build:** The `bootstrap.py` scaffolder, AI-vault skeleton, core memory
 files (SOUL/USER/MEMORY), cloud DB (Turso/libSQL with embedded replica), and
@@ -356,26 +354,22 @@ rules in particular should reflect the actual surfaces this brain touches —
 don't carry rules about systems that aren't in scope.
 
 ```markdown
-Agent Soul
-==========
+# Agent Soul
 
-Identity
---------
+## Identity
 
 I am Hagai's engineering second brain. I think like a Staff Engineer: I surface
 risks early, flag blockers across teams, and prefer directness over
 pleasantries.
 
-Hard Rules (Advisor Mode)
--------------------------
+## Hard Rules (Advisor Mode)
 
 - NEVER send emails, post messages, or act on behalf of Hagai without explicit
   approval.
 - NEVER post to social media.
 - I propose actions. Present for review. Wait.
 
-Vault Boundaries
-----------------
+## Vault Boundaries
 
 - AI vault (`~/second-brain/work/ai-vault/`): my working memory. I am sole
   writer. Hagai is read-only.
@@ -383,14 +377,12 @@ Vault Boundaries
   Hagai's curated knowledge. Read-only for me. Changes only via the
   `promote-to-human-vault` skill (MR).
 
-Vault Editorial Freedom (AI vault)
-----------------------------------
+## Vault Editorial Freedom (AI vault)
 
 The AI vault is mine to write freely. Use the standard subfolders and add new
 ones when a clear category emerges.
 
-Promotion Triggers (AI vault → human vault)
--------------------------------------------
+## Promotion Triggers (AI vault → human vault)
 
 Promote only when one of these triggers fires (closed enum, must match the
 `PromotionTrigger` Literal in `promote.py`):
@@ -409,8 +401,7 @@ projection that the MVP doesn't have. Reintroduced in
 Never promote: speculative analysis, draft reasoning, transient briefings,
 operational logs.
 
-Promotion Discipline
---------------------
+## Promotion Discipline
 
 Before opening an MR, I MUST:
 
@@ -431,20 +422,17 @@ I MUST NEVER:
 - Modify `.git/config` or remotes.
 - Promote AI-vault prose verbatim.
 
-Communication Style
--------------------
+## Communication Style
 
 - Concise. Technical substance only.
 - Flag risks with severity: [P0 blocker / P1 risk / P2 watch].
 
-Actions
--------
+## Actions
 
 - I propose actions; Hagai accepts, rejects, or modifies them.
 - Rejections ALWAYS carry a one-line note.
 
-MEMORY.md Rules
----------------
+## MEMORY.md Rules
 
 - I am the sole writer of MEMORY.md.
 - Each section has a hard cap (see config.toml). When full, evict by
@@ -455,20 +443,17 @@ MEMORY.md Rules
 ### USER.md starter content
 
 ```markdown
-{{full_name}}'s Profile
-=======================
+# {{full_name}}'s Profile
 
 - **Role:** {{role}}
 - **Timezone:** {{timezone}}
 - **Working hours:** {{working_hours}}
 
-Accounts
---------
+## Accounts
 
 - GitLab: {{gitlab_upstream_repo_or_TODO}} (host: {{gitlab_host_or_TODO}})
 
-Team Map
---------
+## Team Map
 
 <!-- Populate manually -->
 <!-- Format: Name | Role | Timezone | Notes -->
@@ -477,26 +462,21 @@ Team Map
 ### MEMORY.md starter content
 
 ```markdown
-Active Memory
-=============
+# Active Memory
 
-Active Projects
----------------
+## Active Projects
 
 <!-- Max 7 bullets. One-liners only. Evict: priority-desc then recency-desc. -->
 
-Open Risks
-----------
+## Open Risks
 
 <!-- Max 10 bullets. Format: [P0/P1/P2] Risk — owner -->
 
-Key Decisions
--------------
+## Key Decisions
 
 <!-- Max 10 bullets. Format: YYYY-MM-DD | Decision -->
 
-Team Context
-------------
+## Team Context
 
 <!-- Max 20 bullets. -->
 ```
@@ -659,8 +639,7 @@ onward, `write_event` performs the insert and dispatch in a single transaction.
 
 ---
 
-Phase 2: Hooks (Context Persistence)
-------------------------------------
+## Phase 2: Hooks (Context Persistence)
 
 **What to build:** Three Python hook scripts that inject memory into every
 Claude conversation and write session events to the event log on compaction or
@@ -856,8 +835,7 @@ Payload shape:
 
 ---
 
-Phase 3: Memory Search (Hybrid RAG)
------------------------------------
+## Phase 3: Memory Search (Hybrid RAG)
 
 **What to build:** A local search pipeline that queries every vault present in
 the instance by meaning (semantic) and keyword, merged for best results. Runs in
@@ -1129,8 +1107,7 @@ service.
 
 ---
 
-Phase 4 (slim): Manual Event Entry
-----------------------------------
+## Phase 4 (slim): Manual Event Entry
 
 **What to build:** A CLI that writes events to the cloud DB, exercising the same
 `write_event()` write path that future automated integrations will use. The MVP
@@ -1250,8 +1227,7 @@ shapes.
 
 ---
 
-Phase 4.5: Human Vault Integration (Submodule + Promotion via MR)
------------------------------------------------------------------
+## Phase 4.5: Human Vault Integration (Submodule + Promotion via MR)
 
 **What to build:** Mount the GitLab repo backing `~/notes/work/` as a git
 submodule inside the project (`~/second-brain/work/human-vault/`) so the agent
@@ -1602,8 +1578,7 @@ Low–Medium
 
 ---
 
-Phase 5 (slim): Skills (MVP starter pack)
------------------------------------------
+## Phase 5 (slim): Skills (MVP starter pack)
 
 **What to build:** Two skills — one teaches Claude how the dual-vault layout
 works, the other is the `promote-to-human-vault` skill described in Phase 4.5.
@@ -1642,8 +1617,7 @@ deferred to `06-extended-skills.md`. They depend on integrations
 
 ---
 
-Phase 9 (slim): Scheduler + Operational Surface
------------------------------------------------
+## Phase 9 (slim): Scheduler + Operational Surface
 
 ### `sb-scheduler` daemon
 
@@ -1771,8 +1745,7 @@ for.
 
 ---
 
-MVP build order
----------------
+## MVP build order
 
 ```
 Phase 1 → Phase 2 → Phase 3 → Phase 4 (manual) → Phase 4.5 → Phase 5 (slim)

@@ -1,20 +1,17 @@
-Deployment — cron + systemd User Services
-=========================================
+# Deployment — cron + systemd User Services
 
 **Status:** Future (post-MVP). **Depends on:** Whichever of
 `04-heartbeat-and-reflection.md` / `05-chat-interface.md` you've shipped — those
 are the things this PRD schedules. The MVP runs everything on demand; this PRD
 wires it to keep running unattended.
 
-What to build
--------------
+## What to build
 
 Wire the recurring jobs (memory indexer, heartbeat, daily reflection,
 human-vault sync) to cron — and the long-running chat bot to a systemd user
 service. End-to-end smoke after wiring.
 
-Cron jobs
----------
+## Cron jobs
 
 Each line `cd`s into the instance dir; `find_instance()` then resolves from cwd.
 Logs are per-instance.
@@ -38,8 +35,7 @@ without requiring activation (cron does not inherit one), and console scripts
 
 **Israel work week:** Sunday–Thursday. Cron day-of-week `0-4` (Sun=0, Thu=4).
 
-systemd user service for the chat bot
--------------------------------------
+## systemd user service for the chat bot
 
 ```ini
 # ~/.config/systemd/user/second-brain-chat.service
@@ -58,8 +54,7 @@ systemctl --user enable --now second-brain-chat
 systemctl --user status second-brain-chat
 ```
 
-Python environment setup
-------------------------
+## Python environment setup
 
 The project lives at `~/dotfiles/second-brain/` with a uv-managed venv at
 `~/dotfiles/second-brain/.venv`. All runtime invocations (hooks, cron, systemd)
@@ -73,16 +68,14 @@ uv sync --project ~/dotfiles/second-brain
 Add `.venv/` to `.gitignore`. Adding a new dep is one line in `pyproject.toml`
 followed by `uv sync`.
 
-OAuth first-run
----------------
+## OAuth first-run
 
 ```bash
 cd ~/second-brain/work && uv run --project ~/dotfiles/second-brain python -m sb.scripts.integrations.shared_auth
 # Token saved; auto-refreshes after that.
 ```
 
-Log rotation
-------------
+## Log rotation
 
 ```
 # /etc/logrotate.d/second-brain-user (or run logrotate as user)
@@ -94,8 +87,7 @@ Log rotation
 }
 ```
 
-Operational commands
---------------------
+## Operational commands
 
 ```bash
 # Snapshot the cloud DB to a portable file (.sql text or .db file)
@@ -130,8 +122,7 @@ note from this morning?"), one CLI answers it. Sections:
 
 Implementation: plain SQL + one `os.stat` on the replica file. No new state.
 
-Swap-away from Turso
---------------------
+## Swap-away from Turso
 
 The embedded replica is the built-in escape hatch:
 
@@ -147,8 +138,7 @@ cp ~/.local/share/second-brain/work/cloud-replica.db \
 # Same db.py works in both modes — no code changes.
 ```
 
-Cost estimate (with everything wired up)
-----------------------------------------
+## Cost estimate (with everything wired up)
 
 | Component                                         | Monthly Cost      |
 | ------------------------------------------------- | ----------------- |
@@ -159,8 +149,7 @@ Cost estimate (with everything wired up)
 | Infrastructure                                    | $0 (local)        |
 | **Total**                                         | **~$29–39/month** |
 
-Acceptance — "done"
--------------------
+## Acceptance — "done"
 
 - `crontab -l` shows the three lines and they fire on schedule.
 - `systemctl --user status second-brain-chat` is green.
