@@ -53,20 +53,22 @@ different things."
 
 ## Persistence
 
-`ALIGN.md` is the session's source of truth — questions, answers, proposed
-glossary changes — so the session can be paused, resumed, and reviewed.
+`plan/{slug}/align_session.md` is the session's source of truth — questions,
+answers, proposed glossary changes — so the session can be paused, resumed, and
+reviewed. Pick a short kebab-case `{slug}` that names the change being planned
+(e.g. `plan/archive-notes/align_session.md`).
 
-**Persist after every event.** Update `ALIGN.md` immediately after:
+**Persist after every event.** Update `align_session.md` immediately after:
 
 - each user answer
 - each proposed glossary change
 
-Write to `ALIGN.md` before asking the next question.
+Write to `align_session.md` before asking the next question.
 
-### ALIGN.md format
+### align_session.md format
 
 ```md
-# Title of the plan being discussed
+# {slug}
 
 Brief summary of plan being discussed.
 
