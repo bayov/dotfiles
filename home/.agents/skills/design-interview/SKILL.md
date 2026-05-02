@@ -34,18 +34,7 @@ This is an **engineering** alignment, not a product alignment. Steer every
 question toward how the system is built and the trade-offs involved — not what
 the user sees or why the feature exists.
 
-In scope:
-
-- Component / module boundaries and responsibilities.
-- Interfaces, schemas, API contracts, data models.
-- Data flow, state ownership, control flow across components.
-- Tech choices: libraries, frameworks, storage, protocols.
-- Engineering risks: scaling, performance, migration, dependencies, security,
-  observability, failure modes.
-- Backwards compatibility, rollout, and data migration strategy.
-- Testing strategy at the system level.
-
-Out of scope (defer elsewhere):
+Out of scope:
 
 - Problem framing, target users, user stories, success criteria — those belong
   in the PRD.
@@ -64,12 +53,12 @@ propose glossary changes for terms meaningful to domain experts.
 
 ## During the session
 
-### Discuss concrete scenarios
+### Walk concrete scenarios
 
-When component relationships or data flows are being discussed, stress-test them
-with specific scenarios. Walk a real request through the system. Probe edge
-cases: concurrent writes, partial failures, retries, stale caches, permission
-boundaries.
+When component relationships or data flows are being discussed, walk a real
+request through the system end-to-end. Probe failure modes: timeouts, partial
+data, concurrent writes, retries, stale caches, permission boundaries. Push
+until each failure mode has a defined behavior, not "it shouldn't happen."
 
 ### Cross-reference with code
 
@@ -83,17 +72,56 @@ For every non-trivial design decision, ask what alternatives were considered and
 why this one wins. If the user can't articulate the trade-off, that's a sign the
 decision isn't actually made yet.
 
-### Surface failure modes
+### Pressure-test boundaries
 
-For each component or interaction, ask: what happens when this fails, times out,
-returns partial data, or is called concurrently? Push until each failure mode
-has a defined behavior, not "it shouldn't happen."
+For each component the user proposes, ask: what does its interface hide that
+callers don't need to know? If we deleted it, would complexity vanish, or
+reappear across N callers? Is there a second implementation, or just a
+hypothetical seam? Don't accept a decomposition just because each part looks
+clean in isolation — check whether callers must thread the seams between them.
 
 ### Pin down the contract
 
 For each interface or schema discussed, push for the actual shape: field names,
 types, nullability, error cases. "It returns the user" is not a contract; the
 field list is.
+
+### Pin down testing
+
+For each component or flow agreed, ask: what's the riskiest behavior, and what
+test pins it down? At what level — unit, integration, end-to-end — and why? What
+invariants must always hold (concurrency, retries, migration paths)? What can't
+be tested automatically, and how will that be verified instead?
+
+### Pin down rollout
+
+For each schema, contract, or storage change, ask: what's the deploy ordering?
+Is there a backwards-compatibility window? How do we roll back, and what state
+can't be rolled back?
+
+Does this need a gate at all? If yes: what behavior does it gate, what state
+does it ship in, what flips it forward, what flips it back, and — if it's not
+meant to be permanent — what triggers its removal and who owns that?
+
+## Session readiness
+
+Before ending, confirm each item below has an answer or is captured as an open
+question:
+
+- Context: background, current state, constraints, stakeholders.
+- Engineering goals and non-goals.
+- Component boundaries with interfaces, what they hide, and dependencies.
+- Data model changes.
+- Data flow end-to-end, including at least one failure path.
+- Each non-trivial decision with alternatives considered.
+- Testing strategy: risk map, levels, invariants, manual checks.
+- Engineering risks / trade-offs with mitigations.
+- Migration plan: deploy ordering, backwards compat, rollout controls, rollback.
+- Observability: signals tied to failure modes.
+- Open questions with owners.
+
+If a load-bearing question is still open, leave it in Open Questions rather than
+inventing an answer.
 
 ## Persistence
 

@@ -106,7 +106,9 @@ How the change ships safely.
   required ordering between them.
 - **Backwards compatibility:** the compatibility window, if any, and what
   callers must do to stay compatible.
-- **Rollout controls:** feature flags, staged rollout, kill switches.
+- **Rollout controls:** for each gate (flag, staged rollout, kill switch): what
+  it gates, launch state, ramp criteria, kill conditions, and — if not permanent
+  — removal trigger + owner.
 - **Rollback:** how we revert if something goes wrong, and any state that can't
   be rolled back.
 
