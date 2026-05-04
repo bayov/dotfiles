@@ -9,7 +9,50 @@ echo -e "\033[0m"
 
 source "$(dirname "$0")/sudo.sh"
 
-if [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
+if [ "$(uname)" = "Darwin" ]; then
+	echo "Detected macOS. Installing packages via Homebrew..."
+
+	# Ensure Xcode Command Line Tools are present (provides clang, git, etc.)
+	if ! xcode-select -p >/dev/null 2>&1; then
+		echo "Installing Xcode Command Line Tools (a GUI prompt may appear)..."
+		xcode-select --install || true
+		until xcode-select -p >/dev/null 2>&1; do
+			sleep 5
+		done
+	fi
+
+	# Ensure Homebrew is installed and on PATH for this shell
+	if ! command -v brew >/dev/null 2>&1; then
+		echo "Installing Homebrew..."
+		NONINTERACTIVE=1 /bin/bash -c \
+			"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	fi
+	if [ -x /opt/homebrew/bin/brew ]; then
+		eval "$(/opt/homebrew/bin/brew shellenv)"
+	elif [ -x /usr/local/bin/brew ]; then
+		eval "$(/usr/local/bin/brew shellenv)"
+	fi
+
+	brew update
+
+	# macOS counterparts of the Debian package list. Most equivalents are
+	# directly named; build-essential/libssl-dev/clang are covered by Xcode
+	# CLT + openssl@3, and snap-based glow becomes a brew formula.
+	brew install \
+		pkg-config \
+		openssl@3 \
+		gnupg \
+		unzip \
+		git \
+		curl \
+		python3 \
+		fd \
+		ripgrep \
+		btop \
+		bat \
+		shfmt \
+		glow
+elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
 	echo "Detected Debian-based system. Installing packages via apt..."
 
 	# Set apt-get options for Docker
@@ -49,5 +92,5 @@ if [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
 		$SUDO rm -rf /var/lib/apt/lists/*
 	fi
 else
-	echo "Skipping apt installation (non-Debian system)."
+	echo "Skipping platform-specific installation (unknown system)."
 fi

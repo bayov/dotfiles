@@ -13,6 +13,15 @@ if ! command -v cargo-binstall >/dev/null 2>&1; then
 	curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 fi
 
+# binstall queries the GitHub API for every package; unauthenticated requests
+# get rate-limited fast. If `gh` is logged in, hand its token to binstall so we
+# stay under the higher authenticated limit and avoid slow source-build fallbacks.
+if [ -z "${GITHUB_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
+	if gh auth status >/dev/null 2>&1; then
+		GITHUB_TOKEN="$(gh auth token 2>/dev/null)" && export GITHUB_TOKEN
+	fi
+fi
+
 cargo binstall -y --secure cargo-binstall # updates cargo-binstall
 cargo binstall -y --secure jj-cli
 cargo binstall -y --secure eza
@@ -22,7 +31,10 @@ cargo binstall -y --secure stylua
 
 # For speeding up compilation
 cargo binstall -y --secure sccache
-cargo binstall -y --secure wild-linker
+# wild-linker only targets ELF (Linux); macOS uses Mach-O and Apple's ld.
+if [ "$(uname)" != "Darwin" ]; then
+	cargo binstall -y --secure wild-linker
+fi
 
 # For better test runner
 cargo binstall -y --secure cargo-nextest

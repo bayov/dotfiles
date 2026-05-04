@@ -1,5 +1,14 @@
 [[link]]
+tags = ["!mac"]
 linker = "spread"
+
+# macOS Warp reads themes from ~/.warp/themes/ and stores other
+# settings in defaults (not file-based), so only themes are linked.
+[[link]]
+tags = ["mac"]
+src = "themes"
+linker = "symlink"
+dst = "~/.warp/themes"
 
 [[link]]
 tags = ["wsl"]

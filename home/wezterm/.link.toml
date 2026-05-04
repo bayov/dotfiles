@@ -4,6 +4,11 @@ linker = "symlink"
 dst = "~/.config/wezterm"
 
 [[link]]
+tags = ["mac"]
+linker = "symlink"
+dst = "~/.config/wezterm"
+
+[[link]]
 tags = ["wsl"]
 linker = "windows-symlink"
 dst = "/mnt/c/Users/hesos/.config/wezterm"

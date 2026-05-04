@@ -1,11 +1,18 @@
 [[link]]
+tags = ["!mac"]
 linker = "spread"
 dst = "~/.config/Code/User/"
 
 # For use as a remote VSCode configuration (Linux / vscode-server)
 [[link]]
+tags = ["!mac"]
 linker = "spread"
 dst = "~/.vscode-server/data/Machine/"
+
+[[link]]
+tags = ["mac"]
+linker = "spread"
+dst = "~/Library/Application Support/Code/User/"
 
 [[link]]
 tags = ["wsl"]
