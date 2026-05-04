@@ -62,7 +62,27 @@ def _read_oauth_token():
             data = json.load(f)
         return (data.get("claudeAiOauth") or {}).get("accessToken")
     except Exception:
-        return None
+        pass
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(
+                [
+                    "security",
+                    "find-generic-password",
+                    "-s",
+                    "Claude Code-credentials",
+                    "-w",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if out.returncode == 0:
+                data = json.loads(out.stdout.strip())
+                return (data.get("claudeAiOauth") or {}).get("accessToken")
+        except Exception:
+            pass
+    return None
 
 
 def refresh_usage_cache():
