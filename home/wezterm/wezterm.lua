@@ -21,7 +21,11 @@ config.enable_scroll_bar = false
 -- Font
 config.font = wezterm.font("JetBrains Mono NL")
 config.line_height = 1.0
-config.font_size = 10
+if wezterm.target_triple:find("darwin") then
+    config.font_size = 14
+else
+    config.font_size = 10
+end
 wezterm.GLOBAL.base_font_size = config.font_size
 config.harfbuzz_features = { "calt=0", "clig=0", "liga=0" } -- disable ligatures
 -- Colors

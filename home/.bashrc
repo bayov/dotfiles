@@ -21,9 +21,15 @@ _prepend_path "$HOME/.opencode/bin"
 unset -f _prepend_path
 
 # ── Global Aliases ─────────────────────────────────────────────────────────────
-alias cat=batcat
-alias bat=batcat
-alias fd=fdfind
+# On Debian, `bat` and `fd` ship as `batcat`/`fdfind` to avoid name conflicts;
+# on macOS (brew) they keep their upstream names, so only alias when needed.
+if command -v batcat >/dev/null 2>&1; then
+	alias cat=batcat
+	alias bat=batcat
+fi
+if command -v fdfind >/dev/null 2>&1; then
+	alias fd=fdfind
+fi
 
 # pybayov script aliases
 alias bayov-format="uv run python -m pybayov.format"

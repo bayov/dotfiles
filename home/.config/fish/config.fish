@@ -14,9 +14,15 @@ if test "$TERM_PROGRAM" = WarpTerminal
 end
 
 # Global aliases (even if shell is not interactive)
-alias cat=batcat
-alias bat=batcat
-alias fd=fdfind
+# On Debian, `bat` and `fd` ship as `batcat`/`fdfind` to avoid name conflicts;
+# on macOS (brew) they keep their upstream names, so only alias when needed.
+if command -q batcat
+    alias cat=batcat
+    alias bat=batcat
+end
+if command -q fdfind
+    alias fd=fdfind
+end
 
 # pybayov script aliases
 alias bayov-format="uv run python -m pybayov.format"

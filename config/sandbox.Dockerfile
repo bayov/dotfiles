@@ -59,6 +59,9 @@ RUN bash dev/install/11_gum.sh
 COPY --chown=sandbox:sandbox dev/install/12_claude_code.sh dev/install/
 RUN bash dev/install/12_claude_code.sh
 
+COPY --chown=sandbox:sandbox dev/install/14_jetbrains_mono.sh dev/install/
+RUN bash dev/install/14_jetbrains_mono.sh
+
 # Default command is fish.
 ENV SHELL="/usr/bin/fish"
 CMD ["/usr/bin/fish"]
