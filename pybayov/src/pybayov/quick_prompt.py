@@ -53,7 +53,7 @@ def get_model_config() -> list[dict[str, Any]]:
 
 
 def is_model_enabled(m: dict[str, Any]) -> bool:
-    """True if the current machine profile is in `enabled_on_machine_profiles`."""
+    """Return True if this machine's profile is allowed by the model entry."""
     return machine_profile() in m["enabled_on_machine_profiles"]
 
 

@@ -1,4 +1,4 @@
-"""Detect this machine's profile, via a `.machine-profile` marker at project root."""
+"""Detect this machine's profile via the `.machine-profile` marker file."""
 
 import os
 import sys
@@ -17,7 +17,7 @@ VALID_MACHINE_PROFILES: frozenset[str] = frozenset({"personal", "cato"})
 
 @lru_cache(maxsize=1)
 def machine_profile() -> MachineProfile:
-    """Return the marker's contents. Exit with an error if missing or invalid."""
+    """Return the marker's contents; exit if missing or invalid."""
     if not MACHINE_PROFILE_FILE.exists():
         print(
             f"error: {MACHINE_PROFILE_FILE} is missing.\n"
