@@ -15,10 +15,12 @@ end
 
 # Global aliases (even if shell is not interactive)
 # On Debian, `bat` and `fd` ship as `batcat`/`fdfind` to avoid name conflicts;
-# on macOS (brew) they keep their upstream names, so only alias when needed.
+# on macOS (brew) they keep their upstream names. Alias to whichever exists.
 if command -q batcat
     alias cat=batcat
     alias bat=batcat
+else if command -q bat
+    alias cat=bat
 end
 if command -q fdfind
     alias fd=fdfind
