@@ -33,6 +33,13 @@
         "model": "claude/haiku",
         "cli": "claude",
         "model_id": "claude-haiku-4-5-20251001",
-        "enabled_on_machine_profiles": ["personal", "cato"]
+        "enabled_on_machine_profiles": ["personal"]
+    },
+    {
+        "model": "claude/opus-low",
+        "cli": "claude",
+        "model_id": "opus",
+        "effort": "low",
+        "enabled_on_machine_profiles": ["cato"]
     }
 ]

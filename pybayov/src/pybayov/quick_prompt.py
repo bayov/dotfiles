@@ -570,11 +570,11 @@ def _parse_ndjson_output(stdout: bytes) -> tuple[str, str | None]:
 
 
 async def _launch_proc(
-    cli: str, model_id: str, prompt: str
+    cli: str, model_id: str, prompt: str, effort: str | None = None
 ) -> tuple[asyncio.subprocess.Process, bytes | None]:
     """Launch the CLI subprocess and return (proc, stdin_input)."""
     if cli == "claude":
-        proc = await asyncio.create_subprocess_exec(
+        args = [
             "claude",
             "-p",
             prompt,
@@ -582,6 +582,11 @@ async def _launch_proc(
             model_id,
             "--max-turns",
             "1",
+        ]
+        if effort:
+            args.extend(["--effort", effort])
+        proc = await asyncio.create_subprocess_exec(
+            *args,
             stdin=asyncio.subprocess.DEVNULL,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -660,8 +665,9 @@ async def run_model(model: str, prompt: str) -> dict[str, Any]:
     model_info = _get_model_config_map().get(model, {})
     cli: str = model_info["cli"]
     model_id: str = model_info["model_id"]
+    effort: str | None = model_info.get("effort")
 
-    proc, communicate_input = await _launch_proc(cli, model_id, prompt)
+    proc, communicate_input = await _launch_proc(cli, model_id, prompt, effort)
 
     try:
         stdout, stderr = await asyncio.wait_for(

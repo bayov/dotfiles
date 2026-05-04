@@ -80,12 +80,17 @@ config.quick_select_patterns = {
 }
 config.quick_select_alphabet = "qwerasdzxcv"
 
--- Start in full-screen
+-- Start in full-screen on the primary display (the one with the menu bar).
+-- Without set_position, macOS spawns the window on whichever display had
+-- focus / the cursor — toggling fullscreen there pins it to the wrong space.
 wezterm.on("gui-attached", function(window, pane)
+    local main_screen = wezterm.gui.screens().main
     local workspace = mux.get_active_workspace()
-    for _, window in ipairs(mux.all_windows()) do
-        if window:get_workspace() == workspace then
-            window:gui_window():toggle_fullscreen()
+    for _, w in ipairs(mux.all_windows()) do
+        if w:get_workspace() == workspace then
+            local gw = w:gui_window()
+            gw:set_position(main_screen.x, main_screen.y)
+            gw:toggle_fullscreen()
         end
     end
 end)
