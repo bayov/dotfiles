@@ -20,7 +20,7 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
     set -fx fzf_jj_status_command jj diff --summary --color=always
 
     set -f fzf_directory_header "[Alt+E] Edit file · [Ctrl+R] Restore file"
-    set -f selected_paths (
+    set -f fzf_output (
         eval "$fzf_jj_status_command" |
         fzf \
             --header="$fzf_directory_header" \
@@ -32,19 +32,24 @@ function _fzf_search_jj_status --description "Search the output of jj status. Re
             --preview-window bottom:80% \
             --nth="2.." \
             --height=100% \
-            --bind="alt-e:execute($EDITOR (_fzf_parse_jj_diff_path {}))+abort" \
+            --expect=alt-e \
             --bind="ctrl-r:execute-silent(printf '%s\n' {+} | fish -c 'while read -l line; set -l path (_fzf_parse_jj_diff_path \$line); jj restore \"file:\\\"\$path\\\"\"; end')+reload(fish -c '$fzf_jj_status_command')" \
             --bind="ctrl-y:execute-silent(printf '%s\n' {+} | fish -c 'while read -l line; _fzf_parse_jj_diff_path \$line; end | string collect | clip')" \
             --bind="ctrl-alt-c:execute-silent(printf '%s\n' {+} | fish -c 'while read -l line; _fzf_parse_jj_diff_path \$line; end | string collect | clip')" \
             $fzf_jj_status_opts
     )
-    if test $status -eq 0
+    set -f fzf_status $status
+    if test $fzf_status -eq 0
+        set -f key $fzf_output[1]
         set -f cleaned_paths
-        for path in $selected_paths
+        for path in $fzf_output[2..]
             set --append cleaned_paths (_fzf_parse_jj_diff_path $path)
         end
-
-        commandline --current-token --replace -- (string escape -- $cleaned_paths | string join ' ')
+        if test "$key" = alt-e
+            $EDITOR $cleaned_paths
+        else
+            commandline --current-token --replace -- (string escape -- $cleaned_paths | string join ' ')
+        end
     end
 
     commandline --function repaint

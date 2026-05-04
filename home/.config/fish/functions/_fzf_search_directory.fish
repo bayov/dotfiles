@@ -11,7 +11,7 @@ function _fzf_search_directory --description "Search the current directory. Repl
         --header="$fzf_directory_header" \
         --multi \
         --ansi \
-        --bind="alt-e:execute($EDITOR {})+abort" \
+        --expect=alt-e \
         $fzf_directory_opts
 
     set -f token (commandline --current-token)
@@ -26,14 +26,28 @@ function _fzf_search_directory --description "Search the current directory. Repl
         set --append fd_cmd --base-directory=$unescaped_exp_token
         # use the directory name as fzf's prompt to indicate the search is limited to that directory
         set --prepend fzf_arguments --prompt="Directory $unescaped_exp_token ❯ " --preview="_fzf_preview_file $expanded_token{}"
-        set -f file_paths_selected $unescaped_exp_token($fd_cmd 2>/dev/null | fzf $fzf_arguments)
+        set -f fzf_output ($fd_cmd 2>/dev/null | fzf $fzf_arguments)
+        set -f fzf_status $status
+        set -f base $unescaped_exp_token
     else
         set --prepend fzf_arguments --prompt="Directory ❯ " --query="$unescaped_exp_token" --preview='_fzf_preview_file {}'
-        set -f file_paths_selected ($fd_cmd 2>/dev/null | fzf $fzf_arguments)
+        set -f fzf_output ($fd_cmd 2>/dev/null | fzf $fzf_arguments)
+        set -f fzf_status $status
+        set -f base ""
     end
 
-    if test $status -eq 0
-        commandline --current-token --replace -- (string escape -- $file_paths_selected | string join ' ')
+    if test $fzf_status -eq 0
+        # First line is the key pressed (empty for Enter), rest are selections
+        set -f key $fzf_output[1]
+        set -f file_paths_selected
+        for path in $fzf_output[2..]
+            set --append file_paths_selected $base$path
+        end
+        if test "$key" = alt-e
+            $EDITOR $file_paths_selected
+        else
+            commandline --current-token --replace -- (string escape -- $file_paths_selected | string join ' ')
+        end
     end
 
     commandline --function repaint
