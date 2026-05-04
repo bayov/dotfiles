@@ -17,6 +17,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from pybayov.machine import machine_profile
+
 DOTFILES_DIR: Path = Path(
     os.environ.get("DOTFILES_DIR", str(Path.home() / "dotfiles"))
 )
@@ -50,18 +52,28 @@ def get_model_config() -> list[dict[str, Any]]:
         sys.exit(1)
 
 
+def is_model_enabled(m: dict[str, Any]) -> bool:
+    """True if the current machine profile is in `enabled_on_machine_profiles`."""
+    return machine_profile() in m["enabled_on_machine_profiles"]
+
+
 def load_model_pool() -> list[str]:
     """Load the model pool from the configuration file."""
     config = get_model_config()
     for m in config:
-        if "cli" not in m or "model_id" not in m:
+        missing = [
+            f
+            for f in ("cli", "model_id", "enabled_on_machine_profiles")
+            if f not in m
+        ]
+        if missing:
             print(
-                f"Error: Model '{m.get('model')}' is missing required fields"
-                " 'cli' and/or 'model_id'.",
+                f"Error: Model '{m.get('model')}' is missing required fields:"
+                f" {', '.join(missing)}.",
                 file=sys.stderr,
             )
             sys.exit(1)
-    pool = [m["model"] for m in config if m.get("enabled", True)]
+    pool = [m["model"] for m in config if is_model_enabled(m)]
     if not pool:
         print(
             "Error: No models are enabled in the configuration.",
@@ -426,9 +438,7 @@ def print_stats() -> None:
 
     # Get all configured models to ensure they are represented in the table
     model_config = get_model_config()
-    enabled_models = {
-        m["model"] for m in model_config if m.get("enabled", True)
-    }
+    enabled_models = {m["model"] for m in model_config if is_model_enabled(m)}
 
     # Ensure all configured models are in data, even if they haven't run yet
     _ensure_all_models_in_data(data, model_config)
@@ -449,7 +459,7 @@ def print_stats() -> None:
 
     # Calculate column widths
     model_names = [m["model"] for m in model_config]
-    any_disabled = any(not m.get("enabled", True) for m in model_config)
+    any_disabled = any(not is_model_enabled(m) for m in model_config)
     model_col_width = max(
         max(len(name) for name in model_names) + (11 if any_disabled else 0),
         len("Model"),

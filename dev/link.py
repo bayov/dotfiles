@@ -26,6 +26,7 @@ except ImportError:
     except ImportError:
         tomllib = None  # type: ignore[assignment]
 
+from pybayov.machine import machine_profile
 from pybayov.util import (
     BOLD,
     CYAN,
@@ -1083,6 +1084,7 @@ def dispatch(link: Link, ctx: Context, *, unlink: bool = False) -> None:
 
 def main() -> None:
     require_project_root()
+    machine_profile()  # fail-fast if .machine-profile is missing or invalid
 
     config_dir = PROJECT_ROOT / CONFIG_DIR
 

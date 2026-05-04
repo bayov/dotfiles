@@ -13,3 +13,10 @@ detect = "test \"$(uname)\" = \"Linux\" && test -z \"$WSL_DISTRO_NAME\""
 
 [tags.mac]
 detect = "test \"$(uname)\" = \"Darwin\""
+
+# Machine profile (sourced from the `.machine-profile` marker at project root).
+[tags.personal]
+detect = "test \"$(cat .machine-profile 2>/dev/null)\" = \"personal\""
+
+[tags.cato]
+detect = "test \"$(cat .machine-profile 2>/dev/null)\" = \"cato\""

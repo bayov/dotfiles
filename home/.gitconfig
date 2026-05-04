@@ -21,6 +21,12 @@
 [include]
     path = ~/.config/delta/themes.gitconfig
 
+# Per-machine overrides (e.g. work URL rewrites). Optional: git silently
+# ignores includes whose path doesn't exist, so this is a no-op on machines
+# without a local file.
+[include]
+    path = ~/.gitconfig.local
+
 [merge]
     conflictStyle = zdiff3
 
