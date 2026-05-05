@@ -222,12 +222,10 @@
     //--------------------------------------------------------------------------
 
     { "command": "-workbench.action.nextEditor", "key": "ctrl+pagedown" },
-    { "command": "workbench.action.nextEditor", "key": "alt+right", "when": "!isMac" },
-    { "command": "workbench.action.nextEditor", "key": "ctrl+cmd+shift+right", "when": "isMac" },
+    { "command": "workbench.action.nextEditor", "key": "alt+right" },
 
     { "command": "-workbench.action.previousEditor", "key": "ctrl+pageup" },
-    { "command": "workbench.action.previousEditor", "key": "alt+left", "when": "!isMac" },
-    { "command": "workbench.action.previousEditor", "key": "ctrl+cmd+shift+left", "when": "isMac" },
+    { "command": "workbench.action.previousEditor", "key": "alt+left" },
 
     { "command": "-workbench.action.moveEditorLeftInGroup", "key": "ctrl+shift+pageup" },
     { "command": "-editor.action.inlineSuggest.showPrevious", "key": "alt+[", "when": "inlineSuggestionVisible && !editorReadonly" },
