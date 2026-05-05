@@ -1,0 +1,69 @@
+{
+    "title": "Option+Left/Right -> Cmd+Ctrl+Shift+Left/Right (Obsidian/VSCode/Cursor) for tab-switch binding",
+    "rules": [
+        {
+            "description": "Option+Left -> Cmd+Ctrl+Shift+Left in Obsidian/VSCode/Cursor",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "left_arrow",
+                        "modifiers": { "mandatory": ["option"] }
+                    },
+                    "to": [
+                        {
+                            "key_code": "left_arrow",
+                            "modifiers": [
+                                "left_command",
+                                "left_control",
+                                "left_shift"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_if",
+                            "bundle_identifiers": [
+                                "^md\\.obsidian$",
+                                "^com\\.microsoft\\.VSCode$",
+                                "^com\\.todesktop\\.230313mzl4w4u92$"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "description": "Option+Right -> Cmd+Ctrl+Shift+Right in Obsidian/VSCode/Cursor",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "right_arrow",
+                        "modifiers": { "mandatory": ["option"] }
+                    },
+                    "to": [
+                        {
+                            "key_code": "right_arrow",
+                            "modifiers": [
+                                "left_command",
+                                "left_control",
+                                "left_shift"
+                            ]
+                        }
+                    ],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_if",
+                            "bundle_identifiers": [
+                                "^md\\.obsidian$",
+                                "^com\\.microsoft\\.VSCode$",
+                                "^com\\.todesktop\\.230313mzl4w4u92$"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
