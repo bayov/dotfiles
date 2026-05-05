@@ -1,0 +1,4 @@
+[[link]]
+tags = ["mac"]
+linker = "recursive"
+dst = "~/.config/karabiner"

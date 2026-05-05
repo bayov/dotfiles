@@ -1,0 +1,67 @@
+{
+    "title": "Ctrl+C / Ctrl+V as Cmd+C / Cmd+V (excluding terminals)",
+    "rules": [
+        {
+            "description": "Ctrl+C -> Cmd+C (copy)",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "c",
+                        "modifiers": {
+                            "mandatory": ["control"],
+                            "optional": ["caps_lock"]
+                        }
+                    },
+                    "to": [{ "key_code": "c", "modifiers": ["left_command"] }],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": [
+                                "^com\\.apple\\.Terminal$",
+                                "^com\\.googlecode\\.iterm2$",
+                                "^co\\.zeit\\.hyper$",
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^io\\.alacritty$",
+                                "^com\\.github\\.wez\\.wezterm$",
+                                "^dev\\.warp\\.Warp-Stable$",
+                                "^org\\.gnu\\.Emacs$"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "description": "Ctrl+V -> Cmd+V (paste)",
+            "manipulators": [
+                {
+                    "type": "basic",
+                    "from": {
+                        "key_code": "v",
+                        "modifiers": {
+                            "mandatory": ["control"],
+                            "optional": ["caps_lock"]
+                        }
+                    },
+                    "to": [{ "key_code": "v", "modifiers": ["left_command"] }],
+                    "conditions": [
+                        {
+                            "type": "frontmost_application_unless",
+                            "bundle_identifiers": [
+                                "^com\\.apple\\.Terminal$",
+                                "^com\\.googlecode\\.iterm2$",
+                                "^co\\.zeit\\.hyper$",
+                                "^net\\.kovidgoyal\\.kitty$",
+                                "^io\\.alacritty$",
+                                "^com\\.github\\.wez\\.wezterm$",
+                                "^dev\\.warp\\.Warp-Stable$",
+                                "^org\\.gnu\\.Emacs$"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
