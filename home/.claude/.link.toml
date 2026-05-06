@@ -1,2 +1,22 @@
 [[link]]
 linker = "spread"
+
+# Machine-specific settings.json: pick the file matching the active profile tag.
+[[link]]
+src = "settings.cato.json"
+tags = ["cato"]
+dst = "~/.claude/settings.json"
+
+[[link]]
+src = "settings.personal.json"
+tags = ["personal"]
+dst = "~/.claude/settings.json"
+
+# Don't also link the source files under their original names.
+[[link]]
+src = "settings.cato.json"
+linker = "ignore"
+
+[[link]]
+src = "settings.personal.json"
+linker = "ignore"
