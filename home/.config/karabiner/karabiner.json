@@ -67,6 +67,24 @@
                         ]
                     },
                     {
+                        "description": "Option+F4 -> Cmd+W (close window/tab, PC-style)",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "f4",
+                                    "modifiers": { "mandatory": ["option"] }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "w",
+                                        "modifiers": ["left_command"]
+                                    }
+                                ],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
                         "description": "Cmd+A -> Cmd+Ctrl+A (free Cmd+A for custom Mac shortcut, e.g. Spotlight)",
                         "manipulators": [
                             {
