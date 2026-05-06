@@ -12,6 +12,7 @@
     "file_explorer": { "show_hidden": true },
     "file_browser": { "show_hidden": true },
     "keybindings": [
+        { "key": "a", "modifiers": ["ctrl"], "action": "select_all" },
         { "key": "w", "modifiers": ["ctrl"], "action": "expand_selection" },
         {
             "key": "a",

@@ -29,7 +29,8 @@
         "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
         "excludedCommands": ["cargo:*", "sccache:*"]
     },
-    "effortLevel": "high",
+    "effortLevel": "xhigh",
+    "advisorModel": "opus",
     "skipDangerousModePermissionPrompt": true,
     "theme": "dark",
     "preferredNotifChannel": "notifications_disabled"
