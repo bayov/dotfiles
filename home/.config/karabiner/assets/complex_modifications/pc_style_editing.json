@@ -291,7 +291,8 @@
                                 "^io\\.alacritty$",
                                 "^com\\.github\\.wez\\.wezterm$",
                                 "^dev\\.warp\\.Warp-Stable$",
-                                "^org\\.gnu\\.Emacs$"
+                                "^org\\.gnu\\.Emacs$",
+                                "^com\\.microsoft\\.VSCode$"
                             ]
                         }
                     ]
@@ -324,7 +325,8 @@
                                 "^io\\.alacritty$",
                                 "^com\\.github\\.wez\\.wezterm$",
                                 "^dev\\.warp\\.Warp-Stable$",
-                                "^org\\.gnu\\.Emacs$"
+                                "^org\\.gnu\\.Emacs$",
+                                "^com\\.microsoft\\.VSCode$"
                             ]
                         }
                     ]
@@ -357,7 +359,8 @@
                                 "^io\\.alacritty$",
                                 "^com\\.github\\.wez\\.wezterm$",
                                 "^dev\\.warp\\.Warp-Stable$",
-                                "^org\\.gnu\\.Emacs$"
+                                "^org\\.gnu\\.Emacs$",
+                                "^com\\.microsoft\\.VSCode$"
                             ]
                         }
                     ]
@@ -390,7 +393,8 @@
                                 "^io\\.alacritty$",
                                 "^com\\.github\\.wez\\.wezterm$",
                                 "^dev\\.warp\\.Warp-Stable$",
-                                "^org\\.gnu\\.Emacs$"
+                                "^org\\.gnu\\.Emacs$",
+                                "^com\\.microsoft\\.VSCode$"
                             ]
                         }
                     ]

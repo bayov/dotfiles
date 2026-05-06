@@ -16,11 +16,8 @@ globs = [
     ".bayov-personal-project",
     ".python-version",
     "config/generate-commit-description-template.md",
-    "home/.config/Code/User/keybindings.json",
-    "home/.config/zed/settings.json",
-    "home/.config/zed/keymap.json",
+    "home/.config/**",
     "home/.claude/settings.json",
-    "home/.config/warp-terminal/**",
 ]
 
 [[formatter]]

@@ -1,4 +1,12 @@
 [[link]]
 tags = ["mac"]
-linker = "recursive"
+linker = "spread"
 dst = "~/.config/karabiner"
+
+# Karabiner-Elements rewrites karabiner.json in place, replacing any symlink
+# with a real file. Copy instead so the dotfiles version is the source of
+# truth — re-run dev/link.py to push edits to ~/.config/karabiner/.
+[[link]]
+tags = ["mac"]
+src = "karabiner.json"
+linker = "copy"
