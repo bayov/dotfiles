@@ -18,6 +18,7 @@ globs = [
     "config/generate-commit-description-template.md",
     "home/.config/**",
     "home/.claude/settings.json",
+    "home/.claude/settings.cato.json",
 ]
 
 [[formatter]]

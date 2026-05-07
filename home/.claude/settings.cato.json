@@ -1,37 +1,59 @@
 {
-    "$schema": "https://json.schemastore.org/claude-code-settings.json",
-    "attribution": { "commit": "", "pr": "" },
-    "permissions": { "allow": ["WebSearch"], "deny": ["AskUserQuestion"] },
-    "statusLine": {
-        "type": "command",
-        "command": "python3 ~/.claude/statusline.py"
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch"
+    ],
+    "deny": [
+      "AskUserQuestion"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 ~/.claude/statusline.py"
+  },
+  "enabledPlugins": {
+    "skill-creator@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "warp@claude-code-warp": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "*"
+      ]
     },
-    "enabledPlugins": {
-        "skill-creator@claude-plugins-official": true,
-        "rust-analyzer-lsp@claude-plugins-official": true,
-        "context7@claude-plugins-official": true,
-        "pyright-lsp@claude-plugins-official": true,
-        "typescript-lsp@claude-plugins-official": true,
-        "warp@claude-code-warp": true
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache",
+        "//tmp/claude"
+      ]
     },
-    "extraKnownMarketplaces": {
-        "claude-code-warp": {
-            "source": {
-                "source": "github",
-                "repo": "warpdotdev/claude-code-warp"
-            }
-        }
-    },
-    "sandbox": {
-        "enabled": false,
-        "autoAllowBashIfSandboxed": true,
-        "network": { "allowedDomains": ["*"] },
-        "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
-        "excludedCommands": ["cargo:*", "sccache:*"]
-    },
-    "effortLevel": "high",
-    "advisorModel": "opus",
-    "skipDangerousModePermissionPrompt": true,
-    "theme": "dark",
-    "preferredNotifChannel": "notifications_disabled"
+    "excludedCommands": [
+      "cargo:*",
+      "sccache:*"
+    ]
+  },
+  "effortLevel": "medium",
+  "advisorModel": "opus",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "preferredNotifChannel": "notifications_disabled"
 }
