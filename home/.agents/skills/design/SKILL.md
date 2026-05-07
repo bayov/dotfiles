@@ -4,7 +4,9 @@ description: Produce a design doc
 disable-model-invocation: true
 ---
 
-Produce a design doc: `plan/{slug}/design.md`.
+Produce a design doc: `$PLAN_DIR/{slug}/design.md`.
+
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
 
 A design doc describes **how** the change will be built — at a level engineers
 can review and implement against. It assumes the PRD has settled the **what /
@@ -17,11 +19,11 @@ Focus on architecture and approach, not line-by-line implementation. Reference
 
 Before writing, read whichever of these exist:
 
-- `plan/{slug}/prd.md` — the product contract. Treat it as authoritative; do not
-  relitigate scope or success criteria here.
-- `plan/{slug}/design_interview.md` — the design alignment session's Q&A and
-  proposed glossary changes. Treat answers as authoritative; do not relitigate
-  them.
+- `$PLAN_DIR/{slug}/prd.md` — the product contract. Treat it as authoritative;
+  do not relitigate scope or success criteria here.
+- `$PLAN_DIR/{slug}/design_interview.md` — the design alignment session's Q&A
+  and proposed glossary changes. Treat answers as authoritative; do not
+  relitigate them.
 - `GLOSSARY.md` (and relevant sub-glossaries) — the project's existing
   ubiquitous language. Use these terms verbatim in the design doc.
 
@@ -32,8 +34,8 @@ Before writing, read whichever of these exist:
    send them back through `design-interview` — do not invent answers in the
    design doc.
 
-2. Copy [template.md](./template.md) to `plan/{slug}/design.md` and fill out
-   each section.
+2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/design.md` and fill
+   out each section.
 
 ## Principles
 

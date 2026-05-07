@@ -9,6 +9,19 @@ set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 set -gx BUN_INSTALL "$HOME/.bun"
 
+# Read .machine-profile file, and warn if it doesn't exist
+if test -f "$DOTFILES_DIR/.machine-profile"
+    set -gx MACHINE_PROFILE (string trim (cat "$DOTFILES_DIR/.machine-profile"))
+else if status is-interactive
+    set_color yellow
+    echo "warning: $DOTFILES_DIR/.machine-profile not found" >&2
+    set_color normal
+end
+
+if test "$MACHINE_PROFILE" = cato
+    set -gx PLAN_DIR ~/plan
+end
+
 if test "$TERM_PROGRAM" = WarpTerminal
     set -Ua fish_features no-query-terminal
 end

@@ -4,7 +4,9 @@ description: Produce a combined plan doc (what / why / how / acceptance criteria
 disable-model-invocation: true
 ---
 
-Produce a plan doc: `plan/{slug}/plan.md`.
+Produce a plan doc: `$PLAN_DIR/{slug}/plan.md`.
+
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
 
 A plan doc bundles **what** is being built, **why**, and **how** — plus the
 acceptance criteria `implement` will work against, in a single document.
@@ -20,8 +22,9 @@ off at that scale.
 Before writing, read whichever of these exist:
 
 - `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim.
-- `plan/{slug}/plan_interview.md` — the alignment session's Q&A and proposed
-  glossary changes. Treat answers as authoritative; do not relitigate them.
+- `$PLAN_DIR/{slug}/plan_interview.md` — the alignment session's Q&A and
+  proposed glossary changes. Treat answers as authoritative; do not relitigate
+  them.
 
 ## Steps
 
@@ -30,13 +33,13 @@ Before writing, read whichever of these exist:
    rollout. If any of these are unresolved or contested, send them back through
    `plan-interview` — do not invent answers in the plan.
 
-2. Copy [template.md](./template.md) to `plan/{slug}/plan.md` and fill out each
-   section.
+2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/plan.md` and fill out
+   each section.
 
 ## After the plan is approved
 
 Run `decompose` against `plan.md` — usually one task file under
-`plan/{slug}/tasks/`, occasionally 2–3 if the change benefits from
+`$PLAN_DIR/{slug}/tasks/`, occasionally 2–3 if the change benefits from
 independently-mergeable pieces. Then run `implement` per task, passing the task
 file path as the argument. The plan doc serves as the design reference each task
 points back to.

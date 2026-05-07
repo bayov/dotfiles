@@ -5,11 +5,13 @@ disable-model-invocation: true
 ---
 
 Break an approved design into small vertical slices, each captured as a task
-file under `plan/{slug}/tasks/`.
+file under `$PLAN_DIR/{slug}/tasks/`.
+
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
 
 ## Input
 
-Read whichever of these exist under `plan/{slug}/`:
+Read whichever of these exist under `$PLAN_DIR/{slug}/`:
 
 - `prd.md` — user stories are the source of truth for what each slice advances.
 - `design.md` — components, data model, data flow, migration plan are the
@@ -109,7 +111,7 @@ Iterate until the user approves the breakdown.
 ### 3. Writing tasks
 
 For each user-approved task, copy [template.md](./template.md) to
-`plan/{slug}/tasks/{task_name}.md` and fill out each section.
+`$PLAN_DIR/{slug}/tasks/{task_name}.md` and fill out each section.
 
 ## Examples
 
@@ -120,8 +122,8 @@ Implement the ability to archive and unarchive notes.
 
 ## References
 
-- PRD: S3, S4 (plan/archive-notes/prd.md)
-- Design: NoteStore, NotesListView (plan/archive-notes/design.md)
+- PRD: S3, S4 ($PLAN_DIR/archive-notes/prd.md)
+- Design: NoteStore, NotesListView ($PLAN_DIR/archive-notes/design.md)
 
 ## Acceptance criteria
 

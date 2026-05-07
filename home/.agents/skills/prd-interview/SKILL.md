@@ -81,9 +81,12 @@ be measured, ask how the team will know the feature is working.
 
 ## Persistence
 
-`plan/{slug}/prd_interview.md` is the session's source of truth — questions,
-answers, proposed glossary changes — so the session can be paused, resumed, and
-reviewed. Pick a short kebab-case `{slug}` that names the change being planned.
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+
+`$PLAN_DIR/{slug}/prd_interview.md` is the session's source of truth —
+questions, answers, proposed glossary changes — so the session can be paused,
+resumed, and reviewed. Pick a short kebab-case `{slug}` that names the change
+being planned.
 
 **Persist after every event.** Update `prd_interview.md` immediately after:
 

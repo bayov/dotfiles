@@ -5,21 +5,23 @@ argument-hint: [slug]
 disable-model-invocation: true
 ---
 
-Sync `plan/{slug}/` markdown artifacts into Linear so they persist beyond the
-local working directory.
+Sync `$PLAN_DIR/{slug}/` markdown artifacts into Linear so they persist beyond
+the local working directory.
 
-The repo's `plan/` is intentionally uncommitted scratch. Linear is the system of
-record. This skill is the one-way bridge `plan/{slug}/ → Linear`.
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+
+The repo's `$PLAN_DIR/` is intentionally uncommitted scratch. Linear is the
+system of record. This skill is the one-way bridge `$PLAN_DIR/{slug}/ → Linear`.
 
 ## Invocation
 
 - With argument: `/linear-sync-plan archive-notes` operates on
-  `plan/archive-notes/`.
-- Without argument: must be run from inside a `plan/{slug}/` directory; infer
-  slug from the directory name.
+  `$PLAN_DIR/archive-notes/`.
+- Without argument: must be run from inside a `$PLAN_DIR/{slug}/` directory;
+  infer slug from the directory name.
 
-If the slug doesn't resolve to an existing `plan/{slug}/` directory, stop and
-ask the user.
+If the slug doesn't resolve to an existing `$PLAN_DIR/{slug}/` directory, stop
+and ask the user.
 
 ## Linear shape
 
@@ -57,10 +59,10 @@ Defaults baked in:
 `prd.md`+`design.md` and `plan.md` are mutually exclusive in the workflow — if
 both somehow exist, push all three and warn the user.
 
-## Idempotency: `plan/{slug}/.linear.json`
+## Idempotency: `$PLAN_DIR/{slug}/.linear.json`
 
 The mapping file is the source of truth for "which Linear records belong to this
-slug." It is gitignored along with the rest of `plan/`. Schema:
+slug." It is gitignored along with the rest of `$PLAN_DIR/`. Schema:
 
 ```json
 {
@@ -89,8 +91,8 @@ file at the end.
 
 ### 1. Load state
 
-Read `plan/{slug}/.linear.json` if present. Compute `sha256` for every file in
-the "What to push" table that exists locally.
+Read `$PLAN_DIR/{slug}/.linear.json` if present. Compute `sha256` for every file
+in the "What to push" table that exists locally.
 
 ### 2. Resolve the parent issue
 
@@ -171,12 +173,12 @@ Task files commonly contain references like:
 
 ```
 ## References
-- Design: NoteStore, NotesListView (plan/archive-notes/design.md)
-- PRD: S3, S4 (plan/archive-notes/prd.md)
+- Design: NoteStore, NotesListView ($PLAN_DIR/archive-notes/design.md)
+- PRD: S3, S4 ($PLAN_DIR/archive-notes/prd.md)
 ```
 
 Inside the Linear sub-issue description (only — leave the local file untouched),
-rewrite each `(plan/{slug}/<name>.md)` to a markdown link pointing at the
+rewrite each `($PLAN_DIR/{slug}/<name>.md)` to a markdown link pointing at the
 corresponding Linear Document URL from `.linear.json`. The Linear Document URL
 format is `https://linear.app/hakasecurity/document/<slug-or-id>` — prefer
 fetching the URL from the `save_document` response when available.

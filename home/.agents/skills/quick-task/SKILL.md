@@ -7,7 +7,9 @@ disable-model-invocation: true
 # Quick Task Session
 
 For a change small enough to fit one vertical slice. Run a short interview, then
-write `plan/{slug}/task.md`.
+write `$PLAN_DIR/{slug}/task.md`.
+
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
 
 Interview the user relentlessly about every aspect of the task until you reach a
 shared understanding.
@@ -48,6 +50,6 @@ find a contradiction, surface it before writing the task.
 ## Output
 
 1. Pick a short kebab-case `{slug}` that names the change.
-2. Copy [template.md](./template.md) to `plan/{slug}/task.md` and fill out each
-   section.
+2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/task.md` and fill out
+   each section.
 3. Show the file to the user for approval. Iterate until approved.

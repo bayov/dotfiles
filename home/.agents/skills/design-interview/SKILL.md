@@ -20,8 +20,10 @@ instead.
 
 Before starting, read:
 
-- `plan/{slug}/prd.md` — the PRD. Treat the **what / who / why** as settled;
-  this session is about **how**.
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+
+- `$PLAN_DIR/{slug}/prd.md` — the PRD. Treat the **what / who / why** as
+  settled; this session is about **how**.
 - `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim.
 
 If the PRD is missing, contested, or contradicts what the user is now saying,
@@ -125,9 +127,9 @@ inventing an answer.
 
 ## Persistence
 
-`plan/{slug}/design_interview.md` is the session's source of truth — questions,
-answers, proposed glossary changes — so the session can be paused, resumed, and
-reviewed. Use the same `{slug}` as the PRD.
+`$PLAN_DIR/{slug}/design_interview.md` is the session's source of truth —
+questions, answers, proposed glossary changes — so the session can be paused,
+resumed, and reviewed. Use the same `{slug}` as the PRD.
 
 **Persist after every event.** Update `design_interview.md` immediately after:
 
