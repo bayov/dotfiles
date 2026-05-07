@@ -52,6 +52,23 @@ suffices.
 
 - Description of the change, if not obvious from the title or commit messages.
 
+## Before opening or updating a PR
+
+Run from repo root, scoped to each service touched:
+
+- `just <service-path>/ pre-commit` — lint, type-check, format
+- `just <service-path>/ <test-recipe>` — recipe name varies by service (e.g.
+  `unit-test`, `unit-tests`); check the service's justfile. Cached, so re-runs
+  are cheap.
+
+If the change touches:
+
+- FastAPI routes or protos → `just generate-api-clients`
+- `schema/` ORM → `just migrations "<message>"`
+
+Stop and surface failures to the user; do not push past a red pre-commit or
+failing tests.
+
 ## Surface to the user at end of turn
 
 Mention when you:
