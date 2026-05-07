@@ -86,6 +86,10 @@ Rules:
   refactor.
 - Tests use public interfaces only. No reaching past the seam.
 - Never refactor while RED. Get to GREEN first.
+- No references to planning artifacts in code or tests. Don't mention task
+  files, design docs, PRDs, plan files, or acceptance criteria by name in
+  comments, docstrings, identifiers, or commit messages. The code must read as
+  if it was written without any planning artifacts.
 
 ### 4. Refactor
 
@@ -182,5 +186,8 @@ lives in the sections above.
 - [ ] **Docs updated in the same change**: glossary entries via
       `update-glossary`; design.md/prd.md cross-refs (with user approval) if
       behavior diverged; READMEs / examples that reference changed behavior.
+- [ ] **No planning artifact leakage**: no references to task files, design
+      docs, PRDs, or plan files in code, tests, comments, or identifiers. Code
+      reads as if written without planning artifacts.
 - [ ] **Gaps surfaced**: anything undone is in the task file's Out of scope or
       raised to the user — no silent omissions.
