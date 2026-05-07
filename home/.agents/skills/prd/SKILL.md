@@ -2,6 +2,8 @@
 name: prd
 description: Produce a PRD
 disable-model-invocation: true
+model: opus
+effort: medium
 ---
 
 Produce a PRD (Product Requirements Document): `$PLAN_DIR/{slug}/prd.md`.

@@ -2,6 +2,8 @@
 name: plan-interview
 description: Interview the user to align on a medium-scope change before drafting the plan. Combines product (what/why) and design (how) in one session.
 disable-model-invocation: true
+model: opus
+effort: high
 ---
 
 # Plan Interview Session
@@ -85,9 +87,11 @@ inventing an answer.
 
 ## Persistence
 
-`plan/{slug}/plan_interview.md` is the session's source of truth — questions,
-answers, proposed glossary changes — so the session can be paused, resumed, and
-reviewed. Pick a short kebab-case `{slug}` that names the change.
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+
+`$PLAN_DIR/{slug}/plan_interview.md` is the session's source of truth —
+questions, answers, proposed glossary changes — so the session can be paused,
+resumed, and reviewed. Pick a short kebab-case `{slug}` that names the change.
 
 **Persist after every event.** Update `plan_interview.md` immediately after:
 

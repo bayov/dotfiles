@@ -2,6 +2,8 @@
 name: update-glossary
 description: Update the project's GLOSSARY.md
 disable-model-invocation: true
+model: opus
+effort: medium
 ---
 
 Update `GLOSSARY.md` to reflect new, changed, or removed terms — typically from

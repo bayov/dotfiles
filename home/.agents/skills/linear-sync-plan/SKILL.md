@@ -3,6 +3,8 @@ name: linear-sync-plan
 description: Sync plan artifacts to Linear.
 argument-hint: [slug]
 disable-model-invocation: true
+model: sonnet
+effort: medium
 ---
 
 Sync `$PLAN_DIR/{slug}/` markdown artifacts into Linear so they persist beyond

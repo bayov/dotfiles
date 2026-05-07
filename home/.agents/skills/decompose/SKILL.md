@@ -2,6 +2,8 @@
 name: decompose
 description: Break a design into vertical-slice tasks
 disable-model-invocation: true
+model: opus
+effort: high
 ---
 
 Break an approved design into small vertical slices, each captured as a task

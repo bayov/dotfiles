@@ -2,6 +2,8 @@
 name: plan
 description: Produce a combined plan doc (what / why / how / acceptance criteria) for changes small enough to fit one document.
 disable-model-invocation: true
+model: opus
+effort: medium
 ---
 
 Produce a plan doc: `$PLAN_DIR/{slug}/plan.md`.

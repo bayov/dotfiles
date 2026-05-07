@@ -2,6 +2,8 @@
 name: prd-interview
 description: Interview the user to align on a PRD before drafting it.
 disable-model-invocation: true
+model: opus
+effort: xhigh
 ---
 
 # PRD Interview Session

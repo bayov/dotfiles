@@ -2,6 +2,8 @@
 name: design
 description: Produce a design doc
 disable-model-invocation: true
+model: opus
+effort: medium
 ---
 
 Produce a design doc: `$PLAN_DIR/{slug}/design.md`.

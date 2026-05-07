@@ -2,6 +2,8 @@
 name: design-interview
 description: Interview the user to align on a design before drafting the design doc.
 disable-model-invocation: true
+model: opus
+effort: xhigh
 ---
 
 # Design Interview Session

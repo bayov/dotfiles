@@ -3,6 +3,8 @@ name: implement
 description: Implement a task via TDD
 argument-hint: <path-to-task-file>
 disable-model-invocation: true
+model: opus
+effort: high
 ---
 
 Implement a single task end-to-end using test-driven development.
