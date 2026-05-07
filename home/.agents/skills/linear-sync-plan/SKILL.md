@@ -138,9 +138,9 @@ records always have a parent:
 
 1. **Parent issue** (`save_issue`):
    - Title: `[<slug>] <H1 from prd.md or plan.md>`
-   - Description: a brief index — one line per Document title and one line per
-     sub-issue title with its Linear identifier. Regenerate this index every
-     push so it stays accurate.
+   - Description: summary of the slug's purpose (from prd.md or plan.md intro).
+     Documents and sub-issues appear automatically in the Linear UI — do not add
+     `# Documents` or `# Sub-issues` index sections.
    - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
    - Don't set state.
 
