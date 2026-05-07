@@ -1,0 +1,77 @@
+---
+name: jj
+description: Open Linear issues and GitHub PRs.
+disable-model-invocation: true
+---
+
+# jj workflow
+
+Use jj for repo operations. The skill captures _already-made_ edits into Linear
+issues and PRs — it does not write code. Work the decision tree top-down:
+identify the task, check state, take the matching action.
+
+## Identify the task
+
+Pick exactly one entry point from the user's request:
+
+- **New PR** — edits exist locally, no PR yet → [new-pr.md](new-pr.md)
+- **Update PR** — edits exist locally, a PR already covers this work →
+  [update-pr.md](update-pr.md)
+- **Stacked PR** — open a new PR on top of an existing one →
+  [stacked-pr.md](stacked-pr.md)
+- **Recovery** — a command failed or the repo is in an unexpected state →
+  [recovery.md](recovery.md)
+
+PRs are the unit. Whether a PR contains one commit or several is an
+implementation detail; never restructure commits unless the user asks.
+
+Bookmark and PR text rules apply across all paths →
+[naming](#naming-and-writing). End-of-turn surfacing rules →
+[surface](#surface-to-the-user-at-end-of-turn).
+
+## Naming and writing
+
+**Bookmark**: `<issue-key-lower>-<kebab-title>`. Cap at 80 chars; trim the
+title, never the key. Example:
+`hs-10349-remove-foo-reference-from-monorepo-map`.
+
+**Commit title**: imperative mood, ≤72 chars, no issue key.
+
+- Good: `Remove foo reference from MONOREPO-MAP`
+- Bad: `HS-10349 - removed foo reference from monorepo map`
+
+**Commit body**: optional, one short paragraph on _why_. Omit when the title
+suffices.
+
+**PR title**: `HS-NNNN <Sentence-case title>`. Examples:
+
+- `HS-10333 Move unique-count gauge emission to a cron`
+- `HS-10346 Cache shared proto generation to improve CI performance`
+
+**PR body**:
+
+- Description of the change, if not obvious from the title or commit messages.
+
+## Surface to the user at end of turn
+
+Mention when you:
+
+- Auto-tracked a bookmark
+- Auto-advanced a bookmark across multiple commits
+- Used `--team` override
+- Split a commit to exclude unrelated changes
+- Rescued from detached-HEAD or stale working copy
+- Skipped a path that would have required force-push or `--ignore-immutable`
+- Stopped before rebasing upper PRs in a stack
+
+## IMPORTANT: AVOID
+
+- Do not write or modify code as part of this skill.
+- Do not run `jj rebase` to reorganize a stack (exception:
+  [stacked-pr §3](stacked-pr.md#3-after-the-bottom-pr-merges)).
+- Do not resolve conflicts — stop and ask the user.
+- Do not call the Linear API directly; go through `just create-issue`.
+- Do not auto-rebase upper PRs in a stack after updating one below.
+- Do not restructure existing commits (squash/split/reorder) unless the user
+  asks.
+- Do not move a bookmark backward or to a non-fast-forward target.

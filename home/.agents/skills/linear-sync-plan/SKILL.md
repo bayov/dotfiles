@@ -116,10 +116,12 @@ each file into one of:
 - **unchanged** — hash matches (skip, no Linear writes)
 - **gone** — listed in `.linear.json` but no longer present locally
 
-For each `changed` and `new` file, present a short summary (file path, old→new
-hash, line-count delta if cheap) and ask the user to confirm the push. A blanket
-"push everything changed? [Y/n]" is fine when the set is small (≤3 files);
-itemize when larger.
+**new** files are pushed without prompting — they have no Linear counterpart
+yet, so there is nothing to overwrite.
+
+For `changed` files only, present a short summary (file path, line-count delta
+if cheap) and ask the user to confirm the push. A blanket "push everything
+changed? [Y/n]" is fine when the set is small (≤3 files); itemize when larger.
 
 For `gone` files (only relevant for tasks — docs are mandatory):
 

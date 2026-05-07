@@ -793,6 +793,9 @@
 
     { "command": "workbench.files.action.collapseExplorerFolders", "key": "ctrl+shift+numpad_subtract", "when": "filesExplorerFocus" },
 
+    { "command": "-renameFile", "key": "enter", "when": "filesExplorerFocus && !inputFocus" },
+    { "command": "list.select", "key": "enter", "when": "filesExplorerFocus && !inputFocus" },
+
     // Free alt+4,6,7,8,9 from "open editor at index N" defaults
     { "command": "-workbench.action.openEditorAtIndex4", "key": "alt+4" },
     { "command": "-workbench.action.openEditorAtIndex6", "key": "alt+6" },
