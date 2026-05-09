@@ -51,8 +51,7 @@
       "sccache:*"
     ]
   },
-  "effortLevel": "medium",
-  "advisorModel": "opus",
+  "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "preferredNotifChannel": "notifications_disabled"
