@@ -1,5 +1,6 @@
 A concise description of this vertical slice. Describe the end-to-end behavior,
-not layer-by-layer implementation. Use GLOSSARY.md terms verbatim.
+not layer-by-layer implementation. Use `$GLOSSARY_DIR/GLOSSARY.md` terms
+verbatim.
 
 ## References
 
@@ -25,7 +26,8 @@ Example:
 - [ ] Criterion 2
 - [ ] Criterion 3
 - [ ] Glossary / docs owned by this slice are updated (list each: e.g.
-      `GLOSSARY.md` term **X**, `design.md` cross-ref, README example).
+      `$GLOSSARY_DIR/GLOSSARY.md` term **X**, `design.md` cross-ref, README
+      example).
 
 > Drop the docs criterion if the slice introduces no domain terms and touches no
 > doc surface.

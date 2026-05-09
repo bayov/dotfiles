@@ -8,7 +8,8 @@ effort: medium
 
 Produce a plan doc: `$PLAN_DIR/{slug}/plan.md`.
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 A plan doc bundles **what** is being built, **why**, and **how** — plus the
 acceptance criteria `implement` will work against, in a single document.
@@ -23,7 +24,8 @@ off at that scale.
 
 Before writing, read whichever of these exist:
 
-- `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim.
+- `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+  `$GLOSSARY_DIR`) — use these terms verbatim.
 - `$PLAN_DIR/{slug}/plan_interview.md` — the alignment session's Q&A and
   proposed glossary changes. Treat answers as authoritative; do not relitigate
   them.

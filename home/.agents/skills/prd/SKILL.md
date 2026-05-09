@@ -8,7 +8,8 @@ effort: medium
 
 Produce a PRD (Product Requirements Document): `$PLAN_DIR/{slug}/prd.md`.
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 A PRD describes **what** is being built, **who** it's for, and **why** — at a
 level both product managers and engineers can read. Avoid discussing
@@ -19,8 +20,9 @@ choices).
 
 Before writing, read whichever of these exist:
 
-- `GLOSSARY.md` (and relevant sub-glossaries) — the project's existing
-  ubiquitous language. Use these terms verbatim in the PRD.
+- `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+  `$GLOSSARY_DIR`) — the project's existing ubiquitous language. Use these terms
+  verbatim in the PRD.
 - `$PLAN_DIR/{slug}/prd_interview.md` — the alignment session's Q&A and proposed
   glossary changes. Treat answers as authoritative; do not relitigate them.
 

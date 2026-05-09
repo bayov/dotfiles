@@ -20,6 +20,7 @@ end
 
 if test "$MACHINE_PROFILE" = cato
     set -gx PLAN_DIR ~/plan
+    set -gx GLOSSARY_DIR ~/plan/glossary
 end
 
 if test "$TERM_PROGRAM" = WarpTerminal

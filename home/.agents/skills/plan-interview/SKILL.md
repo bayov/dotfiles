@@ -38,7 +38,8 @@ Out of scope at this altitude:
 
 ## Ubiquitous Language
 
-The project's ubiquitous language is defined in `GLOSSARY.md` files. If a new
+The project's ubiquitous language is defined in `GLOSSARY.md` files under
+`$GLOSSARY_DIR` (env var; defaults to the project root if unset). If a new
 domain term surfaces, propose it as a glossary change. If the user uses a term
 that conflicts with existing language, call it out.
 
@@ -87,7 +88,8 @@ inventing an answer.
 
 ## Persistence
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 `$PLAN_DIR/{slug}/plan_interview.md` is the session's source of truth —
 questions, answers, proposed glossary changes — so the session can be paused,

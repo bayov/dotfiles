@@ -6,15 +6,18 @@ model: opus
 effort: medium
 ---
 
-Update `GLOSSARY.md` to reflect new, changed, or removed terms — typically from
-an alignment session (`ALIGN.md`) or a discussion that surfaced terminology
-issues.
+Update `$GLOSSARY_DIR/GLOSSARY.md` to reflect new, changed, or removed terms —
+typically from an alignment session (`ALIGN.md`) or a discussion that surfaced
+terminology issues.
+
+> **Glossary root:** `$GLOSSARY_DIR` env var (defaults to the project root if
+> unset). All glossary paths below resolve relative to it.
 
 ## Process
 
-1. Locate the relevant `GLOSSARY.md`. In multi-glossary repos, pick the one that
-   owns the term's domain; create a new sub-glossary only if no existing one
-   fits.
+1. Locate the relevant `GLOSSARY.md` under `$GLOSSARY_DIR`. In multi-glossary
+   repos, pick the one that owns the term's domain; create a new sub-glossary
+   only if no existing one fits.
 2. Read it before editing so you preserve tone and existing structure.
 3. Apply each proposed change (add / update / remove). Definitions belong only
    if they're meaningful to a domain expert — skip implementation details and
@@ -82,16 +85,16 @@ list is fine.
 
 ## Multi-glossary repos
 
-If the repo has more than one glossary, the root `GLOSSARY.md` is an index
-rather than a term list:
+If the repo has more than one glossary, `$GLOSSARY_DIR/GLOSSARY.md` is an index
+rather than a term list. Sub-glossaries live in subdirectories under
+`$GLOSSARY_DIR`:
 
 ```md
 # Glossaries
 
-- [Ordering](./src/ordering/GLOSSARY.md) — receives and tracks customer orders
-- [Billing](./src/billing/GLOSSARY.md) — generates invoices and processes
-  payments
-- [Fulfillment](./src/fulfillment/GLOSSARY.md) — manages warehouse picking and
+- [Ordering](./ordering/GLOSSARY.md) — receives and tracks customer orders
+- [Billing](./billing/GLOSSARY.md) — generates invoices and processes payments
+- [Fulfillment](./fulfillment/GLOSSARY.md) — manages warehouse picking and
   shipping
 
 ## Relationships

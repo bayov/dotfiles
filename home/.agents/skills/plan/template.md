@@ -29,7 +29,7 @@ the public interface — outcome, not implementation.
 - [ ] Criterion 2
 - [ ] Criterion 3
 - [ ] Glossary / docs owned by this change are updated (list each: e.g.
-      `GLOSSARY.md` term **X**, README example, in-repo doc).
+      `$GLOSSARY_DIR/GLOSSARY.md` term **X**, README example, in-repo doc).
 
 > Drop the docs criterion if the change introduces no domain terms and touches
 > no doc surface.
@@ -138,9 +138,9 @@ before implementation begins.
 
 ## Glossary Changes
 
-Proposed additions, updates, and removals to `GLOSSARY.md` that this plan
-depends on. Carry forward changes from `plan_interview.md` plus any new terms
-surfaced while drafting.
+Proposed additions, updates, and removals to `$GLOSSARY_DIR/GLOSSARY.md` that
+this plan depends on. Carry forward changes from `plan_interview.md` plus any
+new terms surfaced while drafting.
 
 Only include terms meaningful to domain experts. Internal technical names stay
 in this doc.

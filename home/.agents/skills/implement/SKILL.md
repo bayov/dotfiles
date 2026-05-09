@@ -9,11 +9,15 @@ effort: high
 
 Implement a single task end-to-end using test-driven development.
 
+> **Glossary root:** `$GLOSSARY_DIR` env var (defaults to the project root if
+> unset).
+
 The task file is passed as the argument. Read it, then follow its **References**
-section to read the design contract it points to. Also read `GLOSSARY.md` (and
-relevant sub-glossaries) — use those terms verbatim in module, function, and
-test names. For each entry under the task's `Blocked by` section, read that task
-file and confirm its acceptance criteria are all checked.
+section to read the design contract it points to. Also read
+`$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under `$GLOSSARY_DIR`)
+— use those terms verbatim in module, function, and test names. For each entry
+under the task's `Blocked by` section, read that task file and confirm its
+acceptance criteria are all checked.
 
 The acceptance criteria are the source of truth for **what** ships. The
 referenced design doc is the source of truth for **how**. Don't relitigate
@@ -31,9 +35,9 @@ either; if implementation reveals a real gap, stop and kick back.
   invariant, a failure mode) → back to the interview that owns it.
 - The task itself is the wrong shape (too thick, too thin, wrong slice) → back
   to `decompose`.
-- A new domain term surfaces that isn't in `GLOSSARY.md` and isn't already
-  listed under the **Glossary Changes** section of a referenced doc → pause,
-  agree on the term with the user, run `update-glossary` (or back to the
+- A new domain term surfaces that isn't in `$GLOSSARY_DIR/GLOSSARY.md` and isn't
+  already listed under the **Glossary Changes** section of a referenced doc →
+  pause, agree on the term with the user, run `update-glossary` (or back to the
   relevant interview if the term is load-bearing). Don't ship code naming a
   concept the glossary doesn't.
 

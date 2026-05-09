@@ -44,8 +44,9 @@ user sees."
 
 ## Ubiquitous Language
 
-The project's ubiquitous language is defined in `GLOSSARY.md` files. As part of
-the session, build a precise, shared vocabulary for the domain.
+The project's ubiquitous language is defined in `GLOSSARY.md` files under
+`$GLOSSARY_DIR` (env var; defaults to the project root if unset). As part of the
+session, build a precise, shared vocabulary for the domain.
 
 Don't couple glossary entries to implementation details. Only include terms that
 are meaningful to domain experts.
@@ -67,8 +68,8 @@ said partial cancellation is possible — which is right?"
 ### Challenge against the glossary
 
 When the user uses a term that conflicts with the existing language in
-`GLOSSARY.md`, call it out immediately. "GLOSSARY.md defines 'cancellation' as
-X, but you seem to mean Y — which is it?"
+`$GLOSSARY_DIR/GLOSSARY.md`, call it out immediately. "GLOSSARY.md defines
+'cancellation' as X, but you seem to mean Y — which is it?"
 
 ### Sharpen fuzzy language
 
@@ -83,7 +84,8 @@ be measured, ask how the team will know the feature is working.
 
 ## Persistence
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 `$PLAN_DIR/{slug}/prd_interview.md` is the session's source of truth —
 questions, answers, proposed glossary changes — so the session can be paused,

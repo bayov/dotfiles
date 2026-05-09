@@ -1,5 +1,6 @@
 A concise description of this change. Describe the end-to-end user-visible
-behavior, not layer-by-layer implementation. Use GLOSSARY.md terms verbatim.
+behavior, not layer-by-layer implementation. Use `$GLOSSARY_DIR/GLOSSARY.md`
+terms verbatim.
 
 ## References
 
@@ -9,7 +10,7 @@ names, or modules — whatever a reader needs to orient.
 Example:
 
 - `src/auth/session.ts` — `createSession`, `revokeSession`
-- `GLOSSARY.md` — **Session**
+- `$GLOSSARY_DIR/GLOSSARY.md` — **Session**
 
 > Omit if the change is genuinely self-contained and a reader can find
 > everything from the description alone.
@@ -20,7 +21,7 @@ Example:
 - [ ] Criterion 2
 - [ ] Criterion 3
 - [ ] Glossary / docs owned by this task are updated (list each: e.g.
-      `GLOSSARY.md` term **X**, README example).
+      `$GLOSSARY_DIR/GLOSSARY.md` term **X**, README example).
 
 > Drop the docs criterion if the task introduces no domain terms and touches no
 > doc surface.

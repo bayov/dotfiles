@@ -22,11 +22,13 @@ instead.
 
 Before starting, read:
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 - `$PLAN_DIR/{slug}/prd.md` — the PRD. Treat the **what / who / why** as
   settled; this session is about **how**.
-- `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim.
+- `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+  `$GLOSSARY_DIR`) — use these terms verbatim.
 
 If the PRD is missing, contested, or contradicts what the user is now saying,
 stop and send the user back to `prd-interview` — don't relitigate product
@@ -50,10 +52,11 @@ build it."
 
 ## Ubiquitous Language
 
-The project's ubiquitous language is defined in `GLOSSARY.md` files. The design
-may introduce **technical** terms (component names, internal concepts) that
-don't belong in the domain glossary — keep those in the design doc itself. Only
-propose glossary changes for terms meaningful to domain experts.
+The project's ubiquitous language is defined in `GLOSSARY.md` files under
+`$GLOSSARY_DIR`. The design may introduce **technical** terms (component names,
+internal concepts) that don't belong in the domain glossary — keep those in the
+design doc itself. Only propose glossary changes for terms meaningful to domain
+experts.
 
 ## During the session
 

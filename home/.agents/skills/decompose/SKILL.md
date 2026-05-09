@@ -9,7 +9,8 @@ effort: high
 Break an approved design into small vertical slices, each captured as a task
 file under `$PLAN_DIR/{slug}/tasks/`.
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 ## Input
 
@@ -21,8 +22,8 @@ Read whichever of these exist under `$PLAN_DIR/{slug}/`:
 - `plan.md` — single combined doc covering both. Acceptance Criteria drive what
   each slice advances; Design / Migration are the engineering contract.
 
-Also read `GLOSSARY.md` (and relevant sub-glossaries) — use these terms verbatim
-in task names and descriptions.
+Also read `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+`$GLOSSARY_DIR`) — use these terms verbatim in task names and descriptions.
 
 Every entry in the **Glossary Changes** section of the input doc(s) must be
 owned by the slice that introduces or changes the corresponding behavior.
@@ -133,7 +134,8 @@ Implement the ability to archive and unarchive notes.
 - [ ] An existing archived note can be unarchived.
 - [ ] An archived note no longer appears in the default notes list.
 - [ ] An unarchived note appears in the default notes list again.
-- [ ] `GLOSSARY.md` defines **Archived note** (per design.md Glossary Changes).
+- [ ] `$GLOSSARY_DIR/GLOSSARY.md` defines **Archived note** (per design.md
+      Glossary Changes).
 ```
 
 ### Bad (Horizontal Slice)

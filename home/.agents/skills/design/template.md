@@ -129,9 +129,10 @@ If an open question is load-bearing for the design, send it back through
 
 ## Glossary Changes
 
-Proposed additions, updates, and removals to `GLOSSARY.md` that this design
-depends on. Carry forward any changes from `design_interview.md` that haven't
-yet been applied, plus any new terms surfaced while drafting the design.
+Proposed additions, updates, and removals to `$GLOSSARY_DIR/GLOSSARY.md` that
+this design depends on. Carry forward any changes from `design_interview.md`
+that haven't yet been applied, plus any new terms surfaced while drafting the
+design.
 
 Only include terms meaningful to domain experts. Internal technical names
 (component names, private types) stay in this doc, not the glossary.

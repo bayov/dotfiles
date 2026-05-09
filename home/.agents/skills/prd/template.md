@@ -66,9 +66,9 @@ Engineering risks (scaling, migration, dependencies) belong in the design doc.
 
 ## Glossary Changes
 
-Proposed additions, updates, and removals to `GLOSSARY.md` that this PRD depends
-on. Carry forward any changes from `prd_interview.md` that haven't yet been
-applied, plus any new terms surfaced while drafting the PRD:
+Proposed additions, updates, and removals to `$GLOSSARY_DIR/GLOSSARY.md` that
+this PRD depends on. Carry forward any changes from `prd_interview.md` that
+haven't yet been applied, plus any new terms surfaced while drafting the PRD:
 
 ### New term: **Term**
 

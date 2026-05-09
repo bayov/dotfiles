@@ -9,7 +9,8 @@ disable-model-invocation: true
 For a change small enough to fit one vertical slice. Run a short interview, then
 write `$PLAN_DIR/{slug}/task.md`.
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 Interview the user relentlessly about every aspect of the task until you reach a
 shared understanding.
@@ -31,9 +32,9 @@ instead.
 
 ## Ubiquitous Language
 
-Read `GLOSSARY.md` (and relevant sub-glossaries) before drafting. Use those
-terms verbatim in the task description, acceptance criteria, and any test names
-you suggest.
+Read `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+`$GLOSSARY_DIR`) before drafting. Use those terms verbatim in the task
+description, acceptance criteria, and any test names you suggest.
 
 If a new domain term surfaces during the interview:
 

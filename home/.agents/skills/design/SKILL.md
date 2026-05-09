@@ -8,7 +8,8 @@ effort: medium
 
 Produce a design doc: `$PLAN_DIR/{slug}/design.md`.
 
-> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
+> **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset). **Glossary
+> root:** `$GLOSSARY_DIR` env var (defaults to the project root if unset).
 
 A design doc describes **how** the change will be built — at a level engineers
 can review and implement against. It assumes the PRD has settled the **what /
@@ -26,8 +27,9 @@ Before writing, read whichever of these exist:
 - `$PLAN_DIR/{slug}/design_interview.md` — the design alignment session's Q&A
   and proposed glossary changes. Treat answers as authoritative; do not
   relitigate them.
-- `GLOSSARY.md` (and relevant sub-glossaries) — the project's existing
-  ubiquitous language. Use these terms verbatim in the design doc.
+- `$GLOSSARY_DIR/GLOSSARY.md` (and relevant sub-glossaries under
+  `$GLOSSARY_DIR`) — the project's existing ubiquitous language. Use these terms
+  verbatim in the design doc.
 
 ## Steps
 
