@@ -59,6 +59,7 @@ fish_add_path /snap/bin
 fish_add_path ~/.cargo/bin
 fish_add_path ~/.local/share/pnpm
 fish_add_path ~/.opencode/bin
+fish_add_path ~/go/bin
 fish_add_path $BUN_INSTALL/bin
 
 # Configuration that applies only for interactive shell sessions

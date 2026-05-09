@@ -18,6 +18,7 @@ _prepend_path "/snap/bin"
 _prepend_path "$HOME/.cargo/bin"
 _prepend_path "$HOME/.local/share/pnpm"
 _prepend_path "$HOME/.opencode/bin"
+_prepend_path "$HOME/go/bin"
 unset -f _prepend_path
 
 # ── Global Aliases ─────────────────────────────────────────────────────────────
