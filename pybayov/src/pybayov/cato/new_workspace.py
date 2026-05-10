@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Clone haka into ~/workspaces/<name> and run engine_service bootstrap.
+"""Clone a project into ~/workspaces/<name> and run its bootstrap.
 
 Usage:
-    new_workspace.py <name>             # clone + copy .env + generate + install
-    new_workspace.py <name> --no-setup  # clone + copy only
+    new_workspace.py <project> <name>             # clone + copy .env + generate + install
+    new_workspace.py <project> <name> --no-setup  # clone + copy only
 
 Skips any step that installs globally (e.g. `just setup-air`, which puts
 `air` in ~/go/bin). Run those manually once per machine if needed. The Go
@@ -21,8 +21,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-SOURCE_REPO = Path.home() / "projects" / "haka"
+PROJECTS_DIR = Path.home() / "projects"
 WORKSPACES_DIR = Path.home() / "workspaces"
+SUPPORTED_PROJECTS: list[str] = ["haka"]
 COPY_ALLOWLIST: list[str] = [".env"]
 
 # Ensure Go-installed binaries (protoc-gen-go, air, etc.) are on PATH for all
@@ -43,22 +44,28 @@ def main() -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    p.add_argument(
+        "project",
+        choices=SUPPORTED_PROJECTS,
+        help="project to clone from ~/projects/<project>",
+    )
     p.add_argument("name", help="workspace name → ~/workspaces/<name>")
     p.add_argument(
         "--no-setup", action="store_true", help="skip just install / setup-air"
     )
     args = p.parse_args()
 
+    source_repo = PROJECTS_DIR / args.project
     dest = WORKSPACES_DIR / args.name
     if dest.exists():
         print(f"error: workspace already exists: {dest}", file=sys.stderr)
         return 1
-    if not SOURCE_REPO.is_dir():
-        print(f"error: source repo not found: {SOURCE_REPO}", file=sys.stderr)
+    if not source_repo.is_dir():
+        print(f"error: source repo not found: {source_repo}", file=sys.stderr)
         return 1
 
     url = subprocess.check_output(
-        ["git", "-C", str(SOURCE_REPO), "remote", "get-url", "origin"],
+        ["git", "-C", str(source_repo), "remote", "get-url", "origin"],
         text=True,
     ).strip()
 
@@ -66,7 +73,7 @@ def main() -> int:
     run(["jj", "git", "clone", "--colocate", url, str(dest)])
 
     for item in COPY_ALLOWLIST:
-        src = SOURCE_REPO / item
+        src = source_repo / item
         if not src.exists():
             print(f"skip (missing in source): {item}")
             continue
