@@ -119,9 +119,9 @@ each file into one of:
 **new** files are pushed without prompting — they have no Linear counterpart
 yet, so there is nothing to overwrite.
 
-For `changed` files only, present a short summary (file path, line-count delta
-if cheap) and ask the user to confirm the push. A blanket "push everything
-changed? [Y/n]" is fine when the set is small (≤3 files); itemize when larger.
+For `changed` files, push immediately without asking — Linear content is always
+overwritten with local file content. Report what was pushed after the fact (file
+path, change summary).
 
 For `gone` files (only relevant for tasks — docs are mandatory):
 
