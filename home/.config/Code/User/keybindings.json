@@ -434,9 +434,10 @@
 
     // Rifler plugin (enhanced find/replace)
     { "command": "-rifler.open", "key": "ctrl+alt+f" },
-    { "command": "rifler.open", "key": "ctrl+shift+f" },
-
-    { "command": "-rifler.openReplace", "key": "ctrl+alt+r" },
+    {
+        "command": "-rifler.openReplace",
+        "key": "ctrl+alt+r"
+    },
     { "command": "rifler.openReplace", "key": "ctrl+shift+r" },
 
     //--------------------------------------------------------------------------
