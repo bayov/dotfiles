@@ -114,7 +114,11 @@ Iterate until the user approves the breakdown.
 ### 3. Writing tasks
 
 For each user-approved task, copy [template.md](./template.md) to
-`$PLAN_DIR/{slug}/tasks/{task_name}.md` and fill out each section.
+`$PLAN_DIR/{slug}/tasks/{NN}_{task_name}.md` and fill out each section.
+
+Prefix each filename with a zero-padded number (`01_`, `02_`, ...) reflecting
+the natural execution order from the dependency table. Tasks that can run in
+parallel still get sequential numbers — pick an order that respects blockers.
 
 ## Examples
 
