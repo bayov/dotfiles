@@ -41,13 +41,13 @@ if command -q fdfind
 end
 
 # pybayov script aliases
-alias bayov-format="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.format"
-alias bayov-test="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.test"
-alias echo-box="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.echo_box"
-alias spinner="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.spinner"
-alias quick-prompt="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.quick_prompt"
-alias docker-sandbox="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.docker_sandbox"
-alias generate-commit-description="uv run --project $DOTFILES_DIR/pybayov python -m pybayov.generate_commit_description"
+alias bayov-format="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.format"
+alias bayov-test="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.test"
+alias echo-box="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.echo_box"
+alias spinner="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.spinner"
+alias quick-prompt="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.quick_prompt"
+alias docker-sandbox="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.docker_sandbox"
+alias generate-commit-description="env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.generate_commit_description"
 
 alias precommit=bayov-format
 alias prepush="bayov-test --quiet --show-failures"
