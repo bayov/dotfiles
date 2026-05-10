@@ -52,6 +52,7 @@
     ]
   },
   "effortLevel": "high",
+  "advisorModel": "opus",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "preferredNotifChannel": "notifications_disabled"
