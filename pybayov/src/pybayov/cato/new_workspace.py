@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Clone a project into ~/workspaces/<name> and run its bootstrap.
+"""
+Clone a project into ~/workspaces/<name> and run its bootstrap.
 
 Usage:
-    new_workspace.py <project> <name>             # clone + copy .env + generate + install
+    new_workspace.py <project> <name>             # clone + copy .env + generate
     new_workspace.py <project> <name> --no-setup  # clone + copy only
 
 Skips any step that installs globally (e.g. `just setup-air`, which puts
@@ -35,11 +36,13 @@ if _GOBIN not in os.environ.get("PATH", "").split(":"):
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> None:
+    """Print and execute a shell command, raising on failure."""
     print(f"$ {' '.join(cmd)}" + (f"  (cwd={cwd})" if cwd else ""))
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
 def main() -> int:
+    """Parse args, clone, copy, and optionally bootstrap the workspace."""
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
