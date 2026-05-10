@@ -1,5 +1,5 @@
 ---
-name: plan
+name: write-plan
 description: Produce a combined plan doc (what / why / how / acceptance criteria) for changes small enough to fit one document.
 disable-model-invocation: true
 model: opus
@@ -16,9 +16,9 @@ acceptance criteria `implement` will work against, in a single document.
 
 If product scope is contested, or the design has many independent decisions, or
 the change splits into more than ~3 independently-shippable slices, stop and
-route the user to `prd-interview` → `prd` → `design-interview` → `design` →
-`decompose` → `implement` instead — separate product and design contracts pay
-off at that scale.
+route the user to `prd-interview` → `write-prd` → `design-interview` →
+`write-design` → `decompose` → `implement` instead — separate product and design
+contracts pay off at that scale.
 
 ## Input
 
@@ -49,14 +49,15 @@ file path as the argument. The plan doc serves as the design reference each task
 points back to.
 
 If decomposition would produce more than ~3 slices, that's a signal the change
-has outgrown a single combined doc — route to `prd` + `design` instead.
+has outgrown a single combined doc — route to `write-prd` + `write-design`
+instead.
 
 ## Principles
 
 - **Prefer deep modules.** Push complexity behind narrow interfaces. Justify
   each component by what its interface hides, not by what it contains. Don't
-  introduce a seam unless something actually varies across it. (See the `design`
-  skill for the full treatment.)
+  introduce a seam unless something actually varies across it. (See the
+  `write-design` skill for the full treatment.)
 - **Testing is part of the design.** The plan must say how the change will be
   tested: riskiest behavior, test level, invariants, anything verified manually
   instead.

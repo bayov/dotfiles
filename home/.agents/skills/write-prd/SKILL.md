@@ -1,5 +1,5 @@
 ---
-name: prd
+name: write-prd
 description: Produce a PRD
 disable-model-invocation: true
 model: opus

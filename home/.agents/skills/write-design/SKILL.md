@@ -1,5 +1,5 @@
 ---
-name: design
+name: write-design
 description: Produce a design doc
 disable-model-invocation: true
 model: opus
