@@ -16,7 +16,7 @@ Example:
 
 ## Blocked by
 
-- plan/{slug}/tasks/{task_name}.md
+- plan/{slug}/tasks/{task-name}.md
 
 > Omit the "Blocked by" section if there are no blockers.
 

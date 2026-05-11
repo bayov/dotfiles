@@ -85,7 +85,7 @@ table.
 
 | Task      | Blocked by               | User stories | Components     | Description      |
 | --------- | ------------------------ | ------------ | -------------- | ---------------- |
-| task_name | Names of dependent tasks | S1, S2       | Comp A, Comp B | Task description |
+| task-name | Names of dependent tasks | S1, S2       | Comp A, Comp B | Task description |
 
 > List tasks in dependency order (blockers first).
 
@@ -114,9 +114,9 @@ Iterate until the user approves the breakdown.
 ### 3. Writing tasks
 
 For each user-approved task, copy [template.md](./template.md) to
-`$PLAN_DIR/{slug}/tasks/{NN}_{task_name}.md` and fill out each section.
+`$PLAN_DIR/{slug}/tasks/{NN}-{task_name}.md` and fill out each section.
 
-Prefix each filename with a zero-padded number (`01_`, `02_`, ...) reflecting
+Prefix each filename with a zero-padded number (`01-`, `02-`, ...) reflecting
 the natural execution order from the dependency table. Tasks that can run in
 parallel still get sequential numbers — pick an order that respects blockers.
 

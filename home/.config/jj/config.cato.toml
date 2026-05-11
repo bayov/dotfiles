@@ -1,0 +1,35 @@
+"$schema" = "https://jj-vcs.github.io/jj/latest/config-schema.json"
+
+[user]
+email = "hagai.akibayov@catonetworks.com"
+name = "Hagai Akibayov"
+
+[ui]
+pager = "delta"
+diff-formatter = ":git"
+
+[gg.ui]
+theme-override = "dark"
+recent-workspaces = ["/home/bayov/projects/accounting"]
+
+[template-aliases]
+# for fzf
+one_line_no_graph = """
+if(
+  root,
+  format_root_commit(self),
+  separate(" ",
+    committer.timestamp().format("%Y-%m-%d"),
+    format_short_change_id(change_id),
+    bookmarks,
+    if(mine, "", label("author", author.email())),
+    if(conflict, label("conflict", "conflict")),
+    if(empty, label("empty", "(empty)")),
+    if(
+      description,
+      description.first_line(),
+      label(if(empty, "empty"), description_placeholder),
+    ),
+  )
+) ++ "\n"
+"""
