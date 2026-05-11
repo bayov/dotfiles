@@ -4,7 +4,7 @@ function new_workspace -d "Clone <project> into ~/workspaces/<name>, bootstrap, 
         return 1
     end
 
-    uv run python -m pybayov.cato.new_workspace $argv
+    env -u VIRTUAL_ENV uv run --project $DOTFILES_DIR/pybayov python -m pybayov.cato.new_workspace $argv
     or return $status
 
     cd ~/workspaces/$argv[2]
