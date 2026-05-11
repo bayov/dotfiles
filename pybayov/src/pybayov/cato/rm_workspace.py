@@ -4,7 +4,7 @@ Move a workspace from ~/workspaces/<name> to /tmp/deleted-workspaces/<name>.
 
 Usage:
     rm_workspace.py [name]   # explicit workspace name
-    rm_workspace.py          # infer from current directory if inside ~/workspaces
+    rm_workspace.py          # infer from cwd if inside ~/workspaces
 
 Warns and prompts before removing if the workspace has uncommitted changes
 or commits not yet merged to trunk.
@@ -24,11 +24,12 @@ TRASH_DIR = Path("/tmp/deleted-workspaces")
 
 def _jj(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["jj"] + args, cwd=cwd, capture_output=True, text=True
+        ["jj", *args], cwd=cwd, capture_output=True, text=True
     )
 
 
 def workspace_issues(path: Path) -> list[str]:
+    """Return a list of reasons why the workspace is not safe to delete."""
     issues: list[str] = []
 
     r = _jj(["diff", "--summary"], path)
@@ -54,6 +55,7 @@ def workspace_issues(path: Path) -> list[str]:
 
 
 def main() -> int:
+    """Entry point."""
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
