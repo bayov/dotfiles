@@ -1,24 +1,26 @@
+> **Writing rules:** Bullets only outside the Problem Statement paragraph. ≤20
+> words per bullet. Omit any section that has nothing load-bearing to record —
+> do not leave empty headings.
+
 ## Problem Statement
 
-The problem the user is facing, from the user's perspective. Describe the
-situation and the pain — not the solution.
+The problem the user is facing, from the user's perspective. One paragraph, ≤80
+words. Situation and pain — not the solution.
 
 ## Solution
 
-A short narrative (a paragraph or two) of the solution from the user's
-perspective. What changes for them? What can they now do that they couldn't
-before? No implementation detail.
+What changes for the user, from their perspective. Bullets, outcome only, no
+implementation detail.
 
 ## Target Users
 
-The personas this PRD is for. One short paragraph per persona covering who they
-are, what they're trying to accomplish, and the context they operate in. Keep it
-tight — this is not a research deck.
+One bullet per persona: who they are, what they're trying to accomplish, context
+they operate in. ≤25 words each.
 
 ## User Stories
 
-A numbered list of user stories, one per subsection. Each subsection's heading
-is a short descriptor; the body is the story sentence plus any clarifying notes.
+A numbered list, one subsection per story. Heading is a short descriptor; body
+is the story sentence plus any clarifying notes (≤2 lines).
 
 <user-story-example>
 ### S1: See account balance
@@ -27,8 +29,9 @@ As a mobile bank customer, I want to see balance on my accounts, so that I can
 make better informed decisions about my spending.
 </user-story-example>
 
-The list should be extensive and cover all aspects of the feature, including
-edge cases and failure modes from the user's perspective.
+Cover the behavior the user can observe — golden path plus failure/edge modes
+that change the UX. Skip variants that share the same shape as an existing
+story.
 
 ## Success Criteria
 

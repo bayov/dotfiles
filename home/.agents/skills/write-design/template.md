@@ -1,15 +1,16 @@
+> **Writing rules:** Bullets only outside the Overview paragraph. ≤20 words per
+> bullet. Omit any section / sub-bullet that has nothing load-bearing to record
+> — do not leave empty headings. Reference `prd.md` rather than restating it.
+
 ## Context
 
-Background and current state needed to understand the design. Cover:
+Background and current state needed to understand the design. Bullets under each
+sub-heading:
 
-- **Background:** what exists today and how it works at a high level.
-- **Current state:** the relevant pieces of the system this design touches.
-- **Constraints:** technical, organizational, or timeline limits the design must
-  respect.
-- **Stakeholders:** teams or systems that depend on this area or will be
-  affected by the change.
-
-Reference `prd.md` for motivation and requirements — don't restate them.
+- **Background:** what exists today, at a high level.
+- **Current state:** the parts of the system this design touches.
+- **Constraints:** technical, organizational, or timeline limits.
+- **Stakeholders:** teams or systems affected by the change.
 
 ## Goals / Non-Goals
 
@@ -24,9 +25,9 @@ Product-level goals belong in the PRD, not here.
 
 ## Overview
 
-A short narrative (a paragraph or two) of the proposed design. The shape of the
-solution at a glance: the main components, how they fit together, and the core
-idea that makes the design work.
+One short paragraph (≤80 words). The shape of the solution at a glance: main
+components, how they fit together, the core idea that makes the design work.
+This is the only place prose is allowed.
 
 ## Components
 
