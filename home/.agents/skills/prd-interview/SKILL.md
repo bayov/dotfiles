@@ -99,13 +99,7 @@ being planned.
 
 Write to `prd_interview.md` before asking the next question.
 
-After each persist, if any decision-changing information was dropped to meet the
-≤200-word limit, tell the user what was omitted.
-
 ### prd_interview.md format
-
-> Whole doc ≤200 words. Keep Q&A bodies terse — one or two lines each. Drop any
-> question that didn't change a decision.
 
 ```md
 # {slug}
