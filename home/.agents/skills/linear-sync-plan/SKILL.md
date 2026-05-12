@@ -36,8 +36,8 @@ For a slug `archive-notes`:
 │     ├── Design                           ← design.md
 │     └── Plan                             ← plan.md (only if no prd/design)
 └── Sub-issues
-      ├── [archive-notes] Archive a note   ← tasks/archive_a_note.md
-      └── [archive-notes] Unarchive a note ← tasks/unarchive_a_note.md
+      ├── [archive-notes/01] Archive a note   ← tasks/archive_a_note.md
+      └── [archive-notes/02] Unarchive a note ← tasks/unarchive_a_note.md
 ```
 
 Defaults baked in:
@@ -151,7 +151,9 @@ records always have a parent:
    verbatim file body. Store the returned UUID in `.linear.json`.
 
 3. **Sub-issues** (`save_issue`): for each `tasks/*.md`:
-   - Title: `[<slug>] <H1 from task file>`
+   - Title: `[<slug>/<zero-padded-index>] <H1 from task file>` where the index
+     is the 1-based position of the task file in alphabetical sort order of
+     `tasks/*.md`, zero-padded to two digits (e.g. `01`, `02`)
    - Parent: parent issue ID
    - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
    - Description: the task file body, with **path-style references rewritten to
