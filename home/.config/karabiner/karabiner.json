@@ -5,6 +5,23 @@
             "complex_modifications": {
                 "rules": [
                     {
+                        "description": "Cmd+Tab -> F3 (Mission Control)",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "tab",
+                                    "modifiers": { "mandatory": ["command"] }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f3"
+                                    }
+                                ],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
                         "description": "Option+Left -> Cmd+Ctrl+Shift+Left in Obsidian/VSCode/Cursor",
                         "manipulators": [
                             {
