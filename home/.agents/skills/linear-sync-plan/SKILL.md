@@ -45,7 +45,8 @@ Defaults baked in:
 - Team: `FW` (AI Security for Apps)
 - Assignee on every issue: `hagai.akibayov@catonetworks.com`
 - No Linear Project, no Linear labels, no cycle assignment
-- Parent issue state is never set explicitly — it rolls up from sub-issues
+- Parent and sub-issue states are managed by the skill — see "State derivation"
+  below
 
 ## What to push, what to skip
 
@@ -142,7 +143,8 @@ records always have a parent:
      Documents and sub-issues appear automatically in the Linear UI — do not add
      `# Documents` or `# Sub-issues` index sections.
    - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
-   - Don't set state.
+   - State: derived from sub-issue states (see "Parent state derivation" below).
+     On first push, default to **Todo**.
 
 2. **Documents** (`save_document`): for each pushed doc, create or update with
    `issue: <parent-issue-id>`, `title` from the table above, `content` =
@@ -154,8 +156,8 @@ records always have a parent:
    - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
    - Description: the task file body, with **path-style references rewritten to
      Linear Document URLs** (see "Reference rewriting" below).
-   - State: derived from acceptance-criteria checkboxes (see "State derivation"
-     below).
+   - State: see "State derivation" below — GitHub-linked tasks are left
+     untouched; others derive from acceptance-criteria checkboxes.
    - Markdown checkboxes (`- [ ]` / `- [x]`) stay verbatim — Linear renders them
      as native interactive checkboxes.
 
@@ -193,22 +195,46 @@ relative path.
 
 ## State derivation
 
-Look for the `## Acceptance criteria` section in each task file. Count top-level
-checkboxes:
+To resolve state names to IDs, call `list_issue_statuses` for team `FW` once per
+run and cache.
 
-- 0 of N checked → **Backlog**
+### Sub-issue state (tasks)
+
+**GitHub-linked tasks** (sub-issue has any GitHub PR attachment, e.g. from
+`create_attachment` or Linear's GitHub integration): **do not touch state** —
+Linear's GitHub integration updates it automatically. Skip the state field in
+the `save_issue` call.
+
+**Non-GitHub tasks** (no PR attachment — typically non-code rollout, ops, or
+research tasks): derive state from top-level checkboxes inside
+`## Acceptance criteria`:
+
+- 0 of N checked → **Todo**
 - 1..(N-1) of N checked → **In Progress**
 - N of N checked → **Done**
 
-Only checkboxes inside `## Acceptance criteria` count. Checkboxes elsewhere in
-the file (e.g., `## Out of scope`) are informational and ignored.
+Only checkboxes inside `## Acceptance criteria` count. Checkboxes elsewhere
+(e.g., `## Out of scope`) are informational and ignored. If the section is
+missing or has zero checkboxes, default to **Todo** and warn.
 
-If the file has no `## Acceptance criteria` section or zero checkboxes, default
-to **Backlog** and warn the user.
+### Parent state derivation
 
-To set the right state via `save_issue`, first call `list_issue_statuses` for
-team `FW` to resolve the state names to IDs. Cache the IDs for the duration of
-the run; they're stable enough that re-fetching every push is fine.
+The parent issue's state is set explicitly by the skill (it tracks the overall
+plan/prd/design lifecycle). Derive from sub-issue states _after_ sub-issues have
+been written in step 4.3:
+
+- All sub-issues **Todo** → parent **Todo**
+- Any sub-issue **In Progress**, or mixed Todo/Done → parent **In Progress**
+- All sub-issues **Done**, and parent has at least one open (non-merged) GitHub
+  PR attachment → parent **In Review**
+- All sub-issues **Done**, and no open PR attachments remain → parent **Done**
+
+If the parent has no sub-issues yet (first push with only docs), default to
+**Todo**.
+
+The parent's state is re-evaluated on every push — bumping a sub-issue to Done
+may roll the parent forward. Issue this `save_issue` update _after_ the
+sub-issue writes in step 4.3 so it reflects the latest sub-issue state.
 
 ## Sync direction
 

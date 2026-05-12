@@ -67,6 +67,8 @@ If the change touches:
 
 - FastAPI routes or protos → `just generate-api-clients`
 - `schema/` ORM → `just migrations "<message>"`
+- Go module deps changed → `just generate-api-clients` then `go mod tidy` in
+  each affected service directory
 
 Stop and surface failures to the user; do not push past a red pre-commit or
 failing tests.
