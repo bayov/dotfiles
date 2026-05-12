@@ -9,7 +9,7 @@ wired, not in commit count.
 1. The edits sit on top of the current top bookmark (place via
    `jj new
    <top-bookmark>` if needed; if edits already build on it, fine).
-2. [Create the Linear issue](new-pr.md#2-create-the-linear-issue).
+2. [Resolve the Linear issue](new-pr.md#2-resolve-the-linear-issue).
 3. [Publish](new-pr.md#3-publish): describe, bookmark, push.
 4. `gh pr create --base <previous-bookmark>`. `<previous-bookmark>` is the
    bookmark of the PR directly below this one in the stack — not `main` and not

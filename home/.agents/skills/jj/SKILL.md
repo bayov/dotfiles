@@ -84,6 +84,8 @@ Mention when you:
 - Rescued from detached-HEAD or stale working copy
 - Skipped a path that would have required force-push or `--ignore-immutable`
 - Stopped before rebasing upper PRs in a stack
+- Resolved the Linear issue from a `.task-reference` marker (state which task
+  and which Linear issue) instead of creating a new one
 
 ## IMPORTANT: AVOID
 

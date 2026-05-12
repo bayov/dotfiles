@@ -11,17 +11,25 @@ The edits to publish are already on `@` or its ancestors above the base.
   [recovery](recovery.md) before continuing. Push only the intended changes.
 - `@` is detached or in an unexpected place → [recovery](recovery.md) first.
 
-## 2. Create the Linear issue
+## 2. Resolve the Linear issue
 
-Run
-`just create-issue --title "<title>" --non-interactive --skip-branch
---team "<team>"`.
-Always pass `--skip-branch`. Pick `<team>` per §2.1. Re-state the chosen team
-and the one-line reason to the user before running.
+Pick the first branch that applies:
 
-On `Default team 'X' not found` or `Team 'X' not found`, retry once with
-`--team "R&D"` and tell the user team selection failed. Ask the user to confirm
-the team only if both attempts fail.
+1. **User supplied an issue key** (e.g. `HS-10349`) → use it. Skip the rest of
+   this section.
+2. **`.task-reference` exists at repo root** → read the task file path from it,
+   derive `$PLAN_DIR/{slug}/` from that path, and look up the sub-issue ID for
+   this task in `.linear.json` (`tasks["<task-basename>.md"]`). Use that issue
+   key. If `.linear.json` is missing or the task isn't synced, stop and ask the
+   user — the user likely needs to run `/linear-sync-plan {slug}` first.
+3. **Otherwise** → create a new issue:
+   `just create-issue --title "<title>" --non-interactive --skip-branch --team "<team>"`.
+   Always pass `--skip-branch`. Pick `<team>` per §2.1. Re-state the chosen team
+   and the one-line reason to the user before running.
+
+   On `Default team 'X' not found` or `Team 'X' not found`, retry once with
+   `--team "R&D"` and tell the user team selection failed. Ask the user to
+   confirm the team only if both attempts fail.
 
 ### 2.1 Team routing
 
@@ -56,12 +64,14 @@ nothing else fits.
 
 ## 3. Publish
 
-1. Ensure every commit in the PR has a meaningful message
+1. If `.task-reference` exists at repo root, `rm .task-reference` now — before
+   any describe/snapshot — so the marker doesn't land in the published commit.
+2. Ensure every commit in the PR has a meaningful message
    ([naming](SKILL.md#naming-and-writing)). `jj describe` any that don't.
-2. Create bookmark `<issue-key-lower>-<kebab-title>` at the tip
+3. Create bookmark `<issue-key-lower>-<kebab-title>` at the tip
    ([naming](SKILL.md#naming-and-writing)).
-3. `jj git push --bookmark <name>`. On `Non-tracking remote bookmark
+4. `jj git push --bookmark <name>`. On `Non-tracking remote bookmark
    exists`,
    run `jj bookmark track <name>@origin` and retry.
-4. `gh pr create` with title and body per [naming](SKILL.md#naming-and-writing).
-5. Output the PR URL.
+5. `gh pr create` with title and body per [naming](SKILL.md#naming-and-writing).
+6. Output the PR URL.

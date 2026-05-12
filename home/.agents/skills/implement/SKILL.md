@@ -43,6 +43,11 @@ either; if implementation reveals a real gap, stop and kick back.
 
 ## Process
 
+### 0. Mark the task
+
+Write the absolute path of the task file to `.task-reference` at repo root
+(overwrite if it exists).
+
 ### 1. Plan
 
 Before writing any code, agree with the user on:
@@ -173,6 +178,7 @@ lives in the sections above.
 
 - [ ] **Inputs read**: task, the docs it references, glossary, all `Blocked by`
       tasks.
+- [ ] **`.task-reference`** at repo root with the absolute task file path.
 - [ ] **Blockers complete**: every blocker's acceptance criteria are `[x]`.
 - [ ] **No kick-back trigger fires** (see _Stop and kick back when_).
 - [ ] **Plan agreed with user**: interfaces, ordered behaviors, test levels,
