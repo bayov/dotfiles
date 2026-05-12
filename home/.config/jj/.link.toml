@@ -1,2 +1,12 @@
 [[link]]
-linker = "spread"
+linker = "ignore"
+
+[[link]]
+src = "config.cato.toml"
+tags = ["cato"]
+dst = "~/.config/jj/config.toml"
+
+[[link]]
+src = "config.personal.toml"
+tags = ["personal"]
+dst = "~/.config/jj/config.toml"

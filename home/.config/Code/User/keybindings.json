@@ -66,7 +66,9 @@
 
 { "command": "-copyFilePath", "key": "shift+alt+c" },
     { "command": "-copyFilePath", "key": "ctrl+shift+c", "when": "!editorFocus && !terminalFocus" },
-    { "command": "copyFilePath", "key": "ctrl+k ctrl+shift+c", "when": "!editorFocus && !terminalFocus" },
+    { "command": "-copyFilePath", "key": "alt+cmd+c", "when": "!editorFocus" },
+    { "command": "-copyFilePath", "key": "cmd+k alt+cmd+c", "when": "editorFocus" },
+    { "command": "copyFilePath", "key": "ctrl+shift+alt+c", "when": "!terminalFocus" },
 
     { "command": "-workbench.action.terminal.openNativeConsole", "key": "ctrl+shift+c", "when": "!terminalFocus" },
     { "command": "-copyRelativeFilePath", "key": "ctrl+k ctrl+shift+c", "when": "editorFocus" },
@@ -951,9 +953,12 @@
     // Font size / auto-fix unbinds (freeing shift+alt+.,)
     { "command": "-editor.action.fontZoomOut", "key": "shift+alt+,", "when": "editorTextFocus" },
     { "command": "-editor.action.autoFix", "key": "shift+alt+.", "when": "textInputFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/" },
-    { "command": "-editor.action.fontZoomIn", "key": "shift+alt+.", "when": "editorTextFocus" },
 
     //--------------------------------------------------------------------------
     // Uncategorized (keybinding modifications done in UI will appear below)
+    //
+    // "-editor.action.fontZoomIn" intentionally left in this section to ensure
+    // new binds added through vscode UI are added under it.
     //--------------------------------------------------------------------------
+    {"command": "-editor.action.fontZoomIn", "key": "shift+alt+.", "when": "editorTextFocus"},
 ]
