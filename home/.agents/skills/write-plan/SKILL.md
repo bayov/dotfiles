@@ -32,13 +32,16 @@ Before writing, read whichever of these exist:
 
 ## Steps
 
-1. Confirm with the user: problem framing, the user-visible change, acceptance
-   criteria, component boundaries, key interfaces, testing strategy, and
-   rollout. If any of these are unresolved or contested, send them back through
-   `plan-interview` — do not invent answers in the plan.
+1. Confirm with the user: problem framing, the user-visible change, and
+   acceptance criteria. If any of these are unresolved or contested, send them
+   back through `plan-interview` — do not invent answers in the plan.
 
-2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/plan.md` and fill out
-   each section.
+2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/plan.md` and fill it
+   out. Follow the template's writing rules: bullets only outside the Problem
+   paragraph, ≤15 words per bullet, omit optional sections rather than leaving
+   empty headings. The **Notes** section is the only place for decisions / risks
+   / testing approach / rollout — add a bullet there only if it would surprise a
+   reviewer or change the AC.
 
 ## After the plan is approved
 
@@ -54,10 +57,14 @@ instead.
 
 ## Principles
 
-- **Prefer deep modules.** Push complexity behind narrow interfaces. Justify
-  each component by what its interface hides, not by what it contains. Don't
-  introduce a seam unless something actually varies across it. (See the
-  `write-design` skill for the full treatment.)
-- **Testing is part of the design.** The plan must say how the change will be
-  tested: riskiest behavior, test level, invariants, anything verified manually
-  instead.
+- **Keep it short.** The plan is for a change small enough to fit one document.
+  If a section needs paragraphs of justification, the change has outgrown
+  `write-plan` — route to `write-prd` + `write-design`.
+- **AC is the spine.** Everything else exists to justify the AC. If a section
+  doesn't change the AC, omit it.
+- **Prefer deep modules** when the change introduces a new seam. Justify the
+  boundary by what the interface hides. (See `write-design` for the full
+  treatment — record only the result here, as a Notes bullet if non-obvious.)
+- **Testing belongs in the AC** when it's the standard shape ("covered by
+  integration test for X"). Use a Notes bullet only if the approach is
+  non-obvious or risky.
