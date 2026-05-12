@@ -19,6 +19,8 @@ Pick exactly one entry point from the user's request:
   [update-pr.md](update-pr.md)
 - **Stacked PR** — open a new PR on top of an existing one →
   [stacked-pr.md](stacked-pr.md)
+- **Rebase** — pull latest `main` and rebase the current PR (or stack) onto it →
+  [rebase.md](rebase.md)
 - **Recovery** — a command failed or the repo is in an unexpected state →
   [recovery.md](recovery.md)
 

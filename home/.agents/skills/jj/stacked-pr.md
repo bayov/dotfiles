@@ -11,7 +11,10 @@ wired, not in commit count.
    <top-bookmark>` if needed; if edits already build on it, fine).
 2. [Create the Linear issue](new-pr.md#2-create-the-linear-issue).
 3. [Publish](new-pr.md#3-publish): describe, bookmark, push.
-4. `gh pr create --base <previous-bookmark>`.
+4. `gh pr create --base <previous-bookmark>`. `<previous-bookmark>` is the
+   bookmark of the PR directly below this one in the stack — not `main` and not
+   the bottom of the stack. The diffbase must form the chain: 1st PR → `main`,
+   2nd PR → 1st PR's bookmark, 3rd PR → 2nd PR's bookmark, etc.
 
 ## 2. Update a PR inside the stack
 
