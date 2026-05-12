@@ -104,6 +104,9 @@ Write to `plan_interview.md` before asking the next question.
 
 ### plan_interview.md format
 
+> Whole doc ≤200 words. Keep Q&A bodies terse — one or two lines each. Drop any
+> question that didn't change a decision.
+
 ```md
 # {slug}
 

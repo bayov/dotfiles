@@ -1,5 +1,6 @@
-> **Writing rules:** Bullets only outside the Problem paragraph. ≤15 words per
-> bullet. Omit optional sections entirely — do not include empty headings.
+> **Writing rules:** Whole doc ≤300 words. Bullets only outside the Problem
+> paragraph. ≤15 words per bullet. Omit optional sections entirely — do not
+> include empty headings.
 
 ## Problem & Solution
 

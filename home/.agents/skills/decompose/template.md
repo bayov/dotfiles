@@ -1,3 +1,6 @@
+<!-- Writing rules: Whole doc ≤150 words. Bullets only. ≤15 words per bullet.
+Omit optional sections entirely — do not leave empty headings. -->
+
 A concise description of this vertical slice. Describe the end-to-end behavior,
 not layer-by-layer implementation. Use `$GLOSSARY_DIR/GLOSSARY.md` terms
 verbatim.

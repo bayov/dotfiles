@@ -101,6 +101,9 @@ Write to `prd_interview.md` before asking the next question.
 
 ### prd_interview.md format
 
+> Whole doc ≤200 words. Keep Q&A bodies terse — one or two lines each. Drop any
+> question that didn't change a decision.
+
 ```md
 # {slug}
 

@@ -1,6 +1,6 @@
-> **Writing rules:** Bullets only outside the Problem Statement paragraph. ≤20
-> words per bullet. Omit any section that has nothing load-bearing to record —
-> do not leave empty headings.
+> **Writing rules:** Whole doc ≤400 words. Bullets only outside the Problem
+> Statement paragraph. ≤20 words per bullet. Omit any section that has nothing
+> load-bearing to record — do not leave empty headings.
 
 ## Problem Statement
 

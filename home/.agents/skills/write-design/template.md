@@ -1,6 +1,7 @@
-> **Writing rules:** Bullets only outside the Overview paragraph. ≤20 words per
-> bullet. Omit any section / sub-bullet that has nothing load-bearing to record
-> — do not leave empty headings. Reference `prd.md` rather than restating it.
+> **Writing rules:** Whole doc ≤800 words. Bullets only outside the Overview
+> paragraph. ≤20 words per bullet. Omit any section / sub-bullet that has
+> nothing load-bearing to record — do not leave empty headings. Reference
+> `prd.md` rather than restating it.
 
 ## Context
 
