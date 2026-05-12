@@ -102,6 +102,9 @@ resumed, and reviewed. Pick a short kebab-case `{slug}` that names the change.
 
 Write to `plan_interview.md` before asking the next question.
 
+After each persist, if any decision-changing information was dropped to meet the
+≤200-word limit, tell the user what was omitted.
+
 ### plan_interview.md format
 
 > Whole doc ≤200 words. Keep Q&A bodies terse — one or two lines each. Drop any

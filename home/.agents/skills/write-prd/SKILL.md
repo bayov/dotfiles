@@ -34,3 +34,7 @@ Before writing, read whichever of these exist:
 
 2. Copy [template.md](./template.md) to `$PLAN_DIR/{slug}/prd.md` and fill out
    each section.
+
+3. Report any decision-relevant information from the inputs (interview Q&A,
+   glossary) that was omitted to meet the word limit, so the user can decide
+   whether to expand the doc or capture it elsewhere.

@@ -120,6 +120,12 @@ Prefix each filename with a zero-padded number (`01-`, `02-`, ...) reflecting
 the natural execution order from the dependency table. Tasks that can run in
 parallel still get sequential numbers — pick an order that respects blockers.
 
+### 4. Report omissions
+
+After writing all task files, report any decision-relevant information from the
+design or PRD that was omitted from task files to meet the word limit, so the
+user can decide whether to expand a task or capture it elsewhere.
+
 ## Examples
 
 ### Good (Vertical Slice)

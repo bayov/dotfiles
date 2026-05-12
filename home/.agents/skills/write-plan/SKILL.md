@@ -43,6 +43,10 @@ Before writing, read whichever of these exist:
    / testing approach / rollout — add a bullet there only if it would surprise a
    reviewer or change the AC.
 
+3. Report any decision-relevant information from the inputs (interview Q&A,
+   glossary) that was omitted to meet the word limit, so the user can decide
+   whether to expand the doc or capture it elsewhere.
+
 ## After the plan is approved
 
 Run `decompose` against `plan.md` — usually one task file under
