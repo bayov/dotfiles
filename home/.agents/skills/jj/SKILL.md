@@ -65,10 +65,12 @@ Run from repo root, scoped to each service touched:
 
 If the change touches:
 
-- FastAPI routes or protos → `just generate-api-clients`
+- FastAPI routes or protos → `just generate-api-clients` (**expensive** — only
+  run if generated client files are missing or stale/broken)
 - `schema/` ORM → `just migrations "<message>"`
-- Go module deps changed → `just generate-api-clients` then `go mod tidy` in
-  each affected service directory
+- Go module deps changed → run `go mod tidy` in each affected service directory
+  first; only run `just generate-api-clients` if `go mod tidy` still fails or
+  generated client files are missing (**expensive**)
 
 Stop and surface failures to the user; do not push past a red pre-commit or
 failing tests.

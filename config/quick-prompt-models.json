@@ -40,6 +40,13 @@
         "cli": "claude",
         "model_id": "opus",
         "effort": "low",
+        "enabled_on_machine_profiles": []
+    },
+    {
+        "model": "claude/sonnet-low",
+        "cli": "claude",
+        "model_id": "sonnet",
+        "effort": "low",
         "enabled_on_machine_profiles": ["cato"]
     }
 ]
