@@ -109,6 +109,7 @@ if status is-interactive
         --bind="ctrl-page-down:preview-half-page-down"
         --bind="ctrl-alt-c:execute-silent(printf '%s' {+} | clip)"
         --bind="ctrl-y:execute-silent(printf '%s' {+} | clip)"
+        --bind="alt-q:abort"
     '
     # Differ in previews
     set -gx fzf_diff_highlighter delta --paging=never
