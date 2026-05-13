@@ -93,16 +93,20 @@ mkdir -p ~/fix-pr/$PR
 ## Checklist
 
 - [ ] All failing CI checks enumerated; logs read.
-- [ ] All unresolved review threads enumerated via GraphQL.
+- [ ] All unresolved review threads enumerated via GraphQL (all authors,
+      including bots).
 - [ ] Each action-item ticked with a one-line resolution note as it's handled.
 - [ ] Unrelated CI failures left untouched and surfaced in the final report.
 - [ ] Ambiguous comments paused for user input with concrete options offered.
+- [ ] Pre-commit ran on each service touched (`just <service>/ pre-commit`);
+      passing.
+- [ ] CI passing (`gh pr checks $PR`) confirmed before any reply is posted.
 - [ ] All review-comment replies posted as **pending** drafts (no `event`
       field); pending state verified.
 - [ ] Final report collapses items sharing a root cause.
 ```
 
-As you work through
+As you work through the next steps, update the `action_items.md` checklist.
 
 ## 2. Collect blockers
 
@@ -119,14 +123,16 @@ For each failing check, fetch the failure context
 enough to decide later whether it's related to this PR.
 
 **Unresolved review comments**: GitHub's REST API does not expose the "resolved"
-flag — use the GraphQL `reviewThreads` connection:
+flag — use the GraphQL `reviewThreads` connection. Include all authors (humans
+and bots alike). Add `--paginate` and `pageInfo` for PRs with >100 threads:
 
 ```
-gh api graphql -f query='
-  query($owner:String!, $repo:String!, $pr:Int!) {
+gh api graphql --paginate -f query='
+  query($owner:String!, $repo:String!, $pr:Int!, $endCursor:String) {
     repository(owner:$owner, name:$repo) {
       pullRequest(number:$pr) {
-        reviewThreads(first:100) {
+        reviewThreads(first:100, after:$endCursor) {
+          pageInfo { endCursor hasNextPage }
           nodes {
             id isResolved isOutdated
             comments(first:20) {
@@ -167,41 +173,26 @@ resolution.
 **For an unresolved review comment:**
 
 1. Read the comment and the surrounding code.
-2. If the fix is unambiguous → make the code change, then post a pending draft
-   reply on the thread (see _Drafting pending review comments_ below).
+2. If the fix is unambiguous → make the code change.
 3. If you're unsure how to address it → **stop and ask the user**. Offer 2–3
    concrete options with their tradeoffs. Do not guess. Do not silently pick.
 4. Never resolve the thread yourself. The user resolves threads after reviewing
    the draft.
 
-### 4. Final report
+### CI gate — before posting any reply
 
-When all items are ticked, print a summary to the user.
+After all code fixes are in the working copy:
 
-**Collapse items that share a root cause into one entry.** If three CI failures
-and a reviewer comment all stem from the same missing import, that's one entry
-listing all four sources — not four.
+1. Run pre-commit for each service touched: `just <service>/ pre-commit`. Stop
+   and surface failures; do not push past a red pre-commit.
+2. Push commits, then wait for CI: `gh pr checks $PR --watch`.
+3. **Only after all checks pass** → post pending draft replies (see _Drafting
+   pending review comments_ below).
 
-Format:
+If CI fails on something this PR caused → fix it and recheck. If unrelated →
+surface in the final report and proceed to replies.
 
-```
-PR #$PR — N items addressed (M root causes)
-
-[fixed] <root cause / what changed>
-  - CI: <check>
-  - comment: @<author> on <path>:<line>
-
-[deferred — unrelated CI] <check>
-  Cause: <one line>. Suggest: <separate PR | existing fix at #1234>.
-
-[pending user input] @<author> on <path>:<line>
-  <question you asked the user>
-```
-
-End with: "Pending draft review comments are queued. Review and submit in GitHub
-when ready."
-
-## 5. Drafting pending review comments
+## 4. Drafting pending review comments
 
 These instructions are exact — small deviations cause 422s or accidentally
 publish the review.
@@ -257,4 +248,31 @@ gh api repos/$OWNER/$REPO/pulls/$PR/reviews \
 Submitting the review is the user's job. Do not call
 `/reviews/$REVIEW_ID/events`. Do not pass `"event": "COMMENT"` / `"APPROVE"` /
 `"REQUEST_CHANGES"` anywhere.
+
+## 5. Final report
+
+When all items are ticked, print a summary to the user.
+
+**Collapse items that share a root cause into one entry.** If three CI failures
+and a reviewer comment all stem from the same missing import, that's one entry
+listing all four sources — not four.
+
+Format:
+
+```
+PR #$PR — N items addressed (M root causes)
+
+[fixed] <root cause / what changed>
+  - CI: <check>
+  - comment: @<author> on <path>:<line>
+
+[deferred — unrelated CI] <check>
+  Cause: <one line>. Suggest: <separate PR | existing fix at #1234>.
+
+[pending user input] @<author> on <path>:<line>
+  <question you asked the user>
+```
+
+End with: "Pending draft review comments are queued. Review and submit in GitHub
+when ready."
 </process>
