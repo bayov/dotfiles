@@ -16,6 +16,22 @@ submitted. The user reviews and submits the draft in GitHub themselves.
 <input>
 The argument is the PR number. Either specified explicitly by the user or
 inferred from the conversation context.
+
+If no PR number is available, detect it from the JJ repo:
+
+```bash
+# Walk trunk()::@ for any commit carrying a local bookmark; for each, check for an open PR.
+# This covers: @ is the PR branch, @ is empty/non-empty commits on top of it, or a chain.
+PR=$(jj log -r 'bookmarks() & (trunk()::@)' \
+  --no-graph -T 'local_bookmarks.map(|b| b.name()).join("\n") ++ "\n"' 2>/dev/null \
+  | grep -v '^$' \
+  | while read -r branch; do
+      num=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number' 2>/dev/null)
+      [ -n "$num" ] && echo "$num" && break
+    done)
+```
+
+If `$PR` is non-empty, use it. If still empty, ask the user for the PR number.
 </input>
 
 <process>
