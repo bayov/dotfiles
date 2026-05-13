@@ -51,7 +51,8 @@ if [ "$(uname)" = "Darwin" ]; then
 		btop \
 		bat \
 		shfmt \
-		glow
+		glow \
+		coreutils
 elif [ -f /etc/debian_version ] || [ -f /etc/lsb-release ]; then
 	echo "Detected Debian-based system. Installing packages via apt..."
 
