@@ -92,21 +92,6 @@ touch ~/fix-pr/$PR/action_items.md
 
 - [ ] @<author> on <path>:<line> — <quoted first line of the comment> thread-id:
       <databaseId of first comment>
-
-## Checklist
-
-- [ ] All failing CI checks enumerated; logs read.
-- [ ] All unresolved review threads enumerated via GraphQL (all authors,
-      including bots).
-- [ ] Each action-item ticked with a one-line resolution note as it's handled.
-- [ ] Unrelated CI failures left untouched and surfaced in the final report.
-- [ ] Ambiguous comments paused for user input with concrete options offered.
-- [ ] Pre-commit ran on each service touched (`just <service>/ pre-commit`);
-      passing.
-- [ ] CI passing (`gh pr checks $PR`) confirmed before any reply is posted.
-- [ ] All review-comment replies posted as **pending** drafts (no `event`
-      field); pending state verified.
-- [ ] Final report collapses items sharing a root cause.
 ```
 
 As you work through the next steps, update the `action_items.md` checklist.
@@ -284,3 +269,18 @@ PR #$PR — N items addressed (M root causes)
 
 End with: "Pending draft review comments are queued. Review and submit in GitHub
 when ready."
+
+# Checklist
+
+- [ ] All failing CI checks enumerated; logs read.
+- [ ] All unresolved review threads enumerated via GraphQL (all authors,
+      including bots).
+- [ ] Each action-item ticked with a one-line resolution note as it's handled.
+- [ ] Unrelated CI failures left untouched and surfaced in the final report.
+- [ ] Ambiguous comments paused for user input with concrete options offered.
+- [ ] Pre-commit ran on each service touched (`just <service>/ pre-commit`);
+      passing.
+- [ ] CI passing (`gh pr checks $PR`) confirmed before any reply is posted.
+- [ ] All review-comment replies posted as **pending** drafts (no `event`
+      field); pending state verified.
+- [ ] Final report collapses items sharing a root cause.
