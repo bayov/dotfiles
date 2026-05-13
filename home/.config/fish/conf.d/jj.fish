@@ -2,7 +2,11 @@
 command -q jj || return
 
 function s
-    jj log --no-pager || return
+    if set -q JJ_DEFAULT_LOG_REVSETS
+        jj log --no-pager -r $JJ_DEFAULT_LOG_REVSETS || return
+    else
+        jj log --no-pager || return
+    end
     and echo -e "\e[38;5;242m─────────────────────────────\e[0m"
 
     set -l diff_output (jj diff --summary --color always | string collect)
