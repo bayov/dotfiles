@@ -35,6 +35,42 @@ If `$PR` is non-empty, use it. If still empty, ask the user for the PR number.
 </input>
 
 <process>
+## 0. Validate repo checkout and position working copy
+
+Resolve the PR's head branch name:
+
+```bash
+BRANCH=$(gh pr view $PR --json headRefName --jq .headRefName)
+```
+
+**Check that a local bookmark exists for this branch:**
+
+```bash
+jj bookmark list | grep -q "^${BRANCH}:"
+```
+
+If the bookmark is absent → **STOP.** Tell the user:
+
+> Wrong repo checkout: no local bookmark `$BRANCH` found. Check out a repo that
+> has this PR's branch fetched, then retry.
+
+**Ensure the working copy sits on top of the PR commit:**
+
+```bash
+# Is @ a direct child of the PR bookmark?
+PARENT_IS_BRANCH=$(jj log -r "@- & $BRANCH" --no-graph -T '"yes"' 2>/dev/null)
+# Is the current commit empty (no changes)?
+CURR_DIFF=$(jj diff -r @ 2>/dev/null)
+```
+
+- If `$PARENT_IS_BRANCH == "yes"` and `$CURR_DIFF` is empty → correctly
+  positioned, continue.
+- Otherwise → `jj new "$BRANCH"` to create a fresh empty commit on top of the PR
+  bookmark.
+
+All code changes from here on go into the current working copy commit. **Do not
+push** — leave commits local for the user to review.
+
 ## 1. Write `action_items.md`
 
 ```
