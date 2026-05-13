@@ -272,15 +272,16 @@ when ready."
 
 # Checklist
 
-- [ ] All failing CI checks enumerated; logs read.
-- [ ] All unresolved review threads enumerated via GraphQL (all authors,
-      including bots).
-- [ ] Each action-item ticked with a one-line resolution note as it's handled.
+- [ ] PR number determined.
+- [ ] Repo checkout and working copy position validated.
+- [ ] ~/fix-pr/$PR/action_items.md created with empty template.
+- [ ] All failing CI checks enumerated and added to action_items.md.
+- [ ] All unresolved review threads enumerated and added to action_items.md.
+- [ ] Each item addressed in turn, with resolution noted in action_items.md.
 - [ ] Unrelated CI failures left untouched and surfaced in the final report.
 - [ ] Ambiguous comments paused for user input with concrete options offered.
 - [ ] Pre-commit ran on each service touched (`just <service>/ pre-commit`);
       passing.
 - [ ] CI passing (`gh pr checks $PR`) confirmed before any reply is posted.
-- [ ] All review-comment replies posted as **pending** drafts (no `event`
-      field); pending state verified.
+- [ ] All review-comment replies posted as **pending** drafts.
 - [ ] Final report collapses items sharing a root cause.
