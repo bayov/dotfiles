@@ -41,5 +41,5 @@ disabled = false
 
 [custom.jj]
 when = "jj-starship detect"
-command = "jj-starship --jj-symbol ''"
+command = "jj-starship --jj-symbol '' --no-jj-name"
 format = "$output "

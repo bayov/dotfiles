@@ -5,19 +5,22 @@ argument-hint: <pr-number>
 disable-model-invocation: true
 ---
 
-<goal>
+# Goal
+
 Fetch a GitHub PR, enumerate everything that's blocking it (failing CI checks +
 unresolved review comments), work through each item, and report what was done.
 
 Review-comment replies are posted as **pending draft comments** only — never
 submitted. The user reviews and submits the draft in GitHub themselves.
-</goal>
 
-<input>
-The argument is the PR number. Either specified explicitly by the user or
-inferred from the conversation context.
+# Process
 
-If no PR number is available, detect it from the JJ repo:
+## 1. Determine input PR number
+
+The PR number is either specified explicitly by the user or inferred from the
+conversation context.
+
+If no PR number is available, detect it from the current JJ repo:
 
 ```bash
 # Walk trunk()::@ for any commit carrying a local bookmark; for each, check for an open PR.
@@ -31,11 +34,10 @@ PR=$(jj log -r 'bookmarks() & (trunk()::@)' \
     done)
 ```
 
-If `$PR` is non-empty, use it. If still empty, ask the user for the PR number.
-</input>
+If `$PR` is non-empty, use it. If still empty, stop and ask the user for the PR
+number.
 
-<process>
-## 0. Validate repo checkout and position working copy
+## 2. Validate repo checkout and position working copy
 
 Resolve the PR's head branch name:
 
@@ -68,15 +70,16 @@ CURR_DIFF=$(jj diff -r @ 2>/dev/null)
 - Otherwise → `jj new "$BRANCH"` to create a fresh empty commit on top of the PR
   bookmark.
 
-All code changes from here on go into the current working copy commit. **Do not
-push** — leave commits local for the user to review.
+All code changes from here on go into the current working copy commit.
 
-## 1. Write `action_items.md`
+## 3. Write `action_items.md`
 
 ```
 mkdir -p ~/fix-pr/$PR
-# write ~/fix-pr/$PR/action_items.md with the template below (overwriting if it exists)
+touch ~/fix-pr/$PR/action_items.md
 ```
+
+**STOP — write `action_items.md` before doing anything else.**
 
 ```markdown
 # PR #$PR action items
@@ -108,7 +111,7 @@ mkdir -p ~/fix-pr/$PR
 
 As you work through the next steps, update the `action_items.md` checklist.
 
-## 2. Collect blockers
+## 4. Collect blockers
 
 **Failing CI checks**:
 
@@ -150,7 +153,7 @@ gh api graphql --paginate -f query='
 Each unresolved thread is one action item. Record the first comment's
 `databaseId` — that's the ID to reply to.
 
-## 3. Address items
+## 5. Address items
 
 Work through items one at a time. For each handled action-item, tick its
 checkbox in `action_items.md` and append a one-line note describing the
@@ -192,7 +195,7 @@ After all code fixes are in the working copy:
 If CI fails on something this PR caused → fix it and recheck. If unrelated →
 surface in the final report and proceed to replies.
 
-## 4. Drafting pending review comments
+## 6. Drafting pending review comments
 
 These instructions are exact — small deviations cause 422s or accidentally
 publish the review.
@@ -231,9 +234,15 @@ Look up the comment's `databaseId` (already captured in step 1), then:
 echo '{
   "commit_id": "'$HEAD_SHA'",
   "body": "",
-  "comments": [{"in_reply_to": 123456789, "body": "your reply"}]
+  "comments": [{"path": "<copy path from original comment>", "in_reply_to": 123456789, "body": "your reply"}]
 }' | gh api repos/$OWNER/$REPO/pulls/$PR/reviews --method POST --input -
 ```
+
+`path` is required even for replies. Copy it verbatim from the first comment's
+`path` field captured in step 4.
+
+**If this call fails for any reason, stop and surface the error. Do NOT fall
+back to `pulls/comments/{id}/replies` — that endpoint publishes immediately.**
 
 ### Verify pending state
 
@@ -249,7 +258,7 @@ Submitting the review is the user's job. Do not call
 `/reviews/$REVIEW_ID/events`. Do not pass `"event": "COMMENT"` / `"APPROVE"` /
 `"REQUEST_CHANGES"` anywhere.
 
-## 5. Final report
+## 7. Final report
 
 When all items are ticked, print a summary to the user.
 
@@ -275,4 +284,3 @@ PR #$PR — N items addressed (M root causes)
 
 End with: "Pending draft review comments are queued. Review and submit in GitHub
 when ready."
-</process>
