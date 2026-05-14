@@ -73,5 +73,6 @@ nothing else fits.
 4. `jj git push --bookmark <name>`. On `Non-tracking remote bookmark
    exists`,
    run `jj bookmark track <name>@origin` and retry.
-5. `gh pr create` with title and body per [naming](SKILL.md#naming-and-writing).
+5. `gh pr create --head <bookmark-name> --base main` with title and body per
+   [naming](SKILL.md#naming-and-writing).
 6. Output the PR URL.
