@@ -27,6 +27,9 @@
     "[beancount]": {
         "editor.defaultFormatter": "dongfg.vscode-beancount-formatter"
     },
+    "[go]": {
+        "editor.defaultFormatter": "golang.go"
+    },
     // --------------------------------------------------------------------------
     // Appearance
     // --------------------------------------------------------------------------
@@ -257,14 +260,8 @@
     "rust-analyzer.inlayHints.parameterHints.enable": false,
     "rust-analyzer.inlayHints.genericParameterHints.const.enable": false,
     "rust-analyzer.inlayHints.closingBraceHints.minLines": 35,
-    // --------------------------------------------------------------------------
-    // Misc
-    // --------------------------------------------------------------------------
-    "diffEditor.renderSideBySide": true,
-    // Rifler (project text search)
-    "rifler.panelLocation": "window",
-    "rifler.searchHistory.maxEntries": 20,
-    "telemetry.telemetryLevel": "off",
+    // Svelte
+    "svelte.enable-ts-plugin": true,
     // JSON schema validation
     "json.schemaDownload.trustedDomains": {
         "https://biomejs.dev": true,
@@ -280,22 +277,32 @@
         "https://schemastore.azurewebsites.net/": true,
         "https://www.schemastore.org/": true
     },
-    // Jujutsu VCS
-    "jjk.enableAnnotations": false, // hide blame annotations on current line
+    // --------------------------------------------------------------------------
+    // VCS
+    // --------------------------------------------------------------------------
     "git.enabled": false, // Hide Git changes (we use jj instead)
-    // Remote dev (e.g., WSL)
-    "remote.autoForwardPortsSource": "hybrid",
+    "jjk.enableAnnotations": false, // hide blame annotations on current line
+    // --------------------------------------------------------------------------
+    // Extensions
+    // --------------------------------------------------------------------------
+    // Rifler (project text search)
+    "rifler.panelLocation": "window",
+    "rifler.searchHistory.maxEntries": 20,
     // Dependi
     "dependi.decoration.compatible.template": "✓",
     "dependi.decoration.patchAvailable.template": "⇢ ${version}",
-    // Svelte
-    "svelte.enable-ts-plugin": true,
+    // --------------------------------------------------------------------------
+    // Misc
+    // --------------------------------------------------------------------------
+    "diffEditor.renderSideBySide": true,
+    "telemetry.telemetryLevel": "off",
+    // Remote dev (e.g., WSL)
+    "remote.autoForwardPortsSource": "hybrid",
     // --------------------------------------------------------------------------
     // Uncategorized
-    //  | VS Code appends new settings after the last setting so I'm keeping
-    //  | `editor.columnSelection` intentionally under this comment block so
-    //  | that all newly added settings are collected under it, allowing me to
-    //  | review and categorize each new setting.
+    //  | VS Code appends new settings after the last setting, so `editor.columnSelection`
+    //  | is kept here intentionally as an anchor — all newly added settings land
+    //  | below it and can be reviewed and categorized.
     // --------------------------------------------------------------------------
     "editor.columnSelection": false
 }
