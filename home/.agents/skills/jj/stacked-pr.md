@@ -13,8 +13,13 @@ wired, not in commit count.
 3. [Publish](new-pr.md#3-publish): describe, bookmark, push.
 4. `gh pr create --base <previous-bookmark>`. `<previous-bookmark>` is the
    bookmark of the PR directly below this one in the stack — not `main` and not
-   the bottom of the stack. The diffbase must form the chain: 1st PR → `main`,
-   2nd PR → 1st PR's bookmark, 3rd PR → 2nd PR's bookmark, etc.
+   the bottom of the stack. Every bookmark has a PR. To tell if that PR is
+   already merged (and the base should be `main` instead), check with jj: if the
+   bookmark is an ancestor of `main@origin`
+   (`jj log -r '<bookmark>..main@origin'` is empty), the PR merged — use `main`.
+   The diffbase must form the chain: 1st PR → `main`, 2nd PR → 1st PR's
+   bookmark, 3rd PR → 2nd PR's bookmark, etc.; skip any bookmark whose commits
+   are already in `main@origin`.
 
 ## 2. Update a PR inside the stack
 
