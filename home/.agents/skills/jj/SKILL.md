@@ -29,6 +29,10 @@ Pick exactly one entry point from the user's request:
 PRs are the unit. Whether a PR contains one commit or several is an
 implementation detail; never restructure commits unless the user asks.
 
+**Before any jj mutation**, capture the current op ID with
+`jj op log -n 1 --no-graph -T 'id.short()'` and hold onto it. Report it at
+end-of-turn so the user can `jj op restore <id>` if anything went wrong.
+
 Bookmark and PR text rules apply across all paths →
 [naming](#naming-and-writing). End-of-turn surfacing rules →
 [surface](#surface-to-the-user-at-end-of-turn).
@@ -79,7 +83,10 @@ failing tests.
 
 ## Surface to the user at end of turn
 
-Mention when you:
+Always report the pre-mutation op ID captured at the start (`jj op restore <id>`
+to roll back).
+
+Also mention when you:
 
 - Auto-tracked a bookmark
 - Auto-advanced a bookmark across multiple commits
