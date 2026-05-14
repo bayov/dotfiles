@@ -12,11 +12,7 @@
                                     "key_code": "tab",
                                     "modifiers": { "mandatory": ["command"] }
                                 },
-                                "to": [
-                                    {
-                                        "key_code": "f3"
-                                    }
-                                ],
+                                "to": [{ "key_code": "f3" }],
                                 "type": "basic"
                             }
                         ]
