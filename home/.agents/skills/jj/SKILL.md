@@ -21,6 +21,8 @@ Pick exactly one entry point from the user's request:
   [stacked-pr.md](stacked-pr.md)
 - **Rebase** — pull latest `main` and rebase the current PR (or stack) onto it →
   [rebase.md](rebase.md)
+- **Sync** — pull latest `main` and rebase every local PR bookmark in the
+  workspace onto it → [sync.md](sync.md)
 - **Recovery** — a command failed or the repo is in an unexpected state →
   [recovery.md](recovery.md)
 

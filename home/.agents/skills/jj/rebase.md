@@ -17,7 +17,8 @@ Rebase non-merged PRs only, preserving the diffbase chain (bottom on `main`,
 each next on the one below).
 
 1. `jj git fetch`. Any PR already merged into `main` will show as absorbed in
-   `jj log`; skip it.
+   `jj log`; skip it. If the merged PR was the bottom of the stack, the next
+   bookmark up becomes the new bottom — see §2.5 for its base retarget.
 2. Rebase the whole non-merged subtree in one shot:
    `jj rebase -s <lowest-non-merged-commit> -d main@origin`. jj carries
    descendants along, so the chain order (and each bookmark's diffbase
@@ -25,5 +26,13 @@ each next on the one below).
 3. Verify with `jj log` that bookmarks still chain bottom → top.
 4. Push each non-merged bookmark: `jj git push --bookmark <name>`. Same
    immutable-fallback rule as §1.
-5. Do not touch GitHub PR bases; they already point at the correct
-   `<previous-bookmark>` and stay valid once the bookmarks move.
+5. PR bases stay correct for every position **except** when the previous
+   bookmark was a merged PR. For the new bottom (the lowest non-merged bookmark,
+   now parented on `main@origin`):
+   1. `gh pr view <new-bottom> --json baseRefName -q .baseRefName`.
+   2. If the result is not `main`, `gh pr edit <new-bottom> --base main`.
+
+   GitHub auto-retargets when the merged bookmark's remote branch is deleted on
+   merge; this step catches repos where that setting is off. All other
+   bookmarks' bases keep pointing at the bookmark directly below and stay valid
+   because the chain moved together.
