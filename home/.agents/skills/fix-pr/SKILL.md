@@ -90,7 +90,8 @@ touch ~/fix-pr/$PR/action_items.md
 
 ## Comments
 
-- [ ] @<author> on <path>:<line> — <quoted first line of the comment> thread-id:
+- [ ] @<author> on <path>:<line> — <quoted first line of the comment>
+      thread-node-id: <thread `id`, e.g. PRRT_...> first-comment-databaseId:
       <databaseId of first comment>
 ```
 
@@ -135,8 +136,11 @@ gh api graphql --paginate -f query='
         | map(select(.isResolved == false))'
 ```
 
-Each unresolved thread is one action item. Record the first comment's
-`databaseId` — that's the ID to reply to.
+Each unresolved thread is one action item. Record both:
+
+- the thread's `id` (node id, e.g. `PRRT_...`) — needed for the GraphQL reply
+- the first comment's `databaseId` — useful for cross-referencing the thread in
+  the GitHub UI
 
 ## 5. Address items
 
@@ -213,21 +217,42 @@ echo '{
 
 ### Reply to an existing comment
 
-Look up the comment's `databaseId` (already captured in step 1), then:
+To post a reply that stays PENDING, use a two-step REST+GraphQL flow:
+
+**Step 1 — create an empty pending review and capture its node_id:**
 
 ```bash
-echo '{
-  "commit_id": "'$HEAD_SHA'",
-  "body": "",
-  "comments": [{"path": "<copy path from original comment>", "in_reply_to": 123456789, "body": "your reply"}]
-}' | gh api repos/$OWNER/$REPO/pulls/$PR/reviews --method POST --input -
+REVIEW_NODE_ID=$(gh api repos/$OWNER/$REPO/pulls/$PR/reviews \
+  --method POST -f body="" --jq .node_id)
 ```
 
-`path` is required even for replies. Copy it verbatim from the first comment's
-`path` field captured in step 4.
+Omitting `event` keeps the review PENDING. If you already created a pending
+review earlier this run, reuse its node_id instead of making another.
 
-**If this call fails for any reason, stop and surface the error. Do NOT fall
-back to `pulls/comments/{id}/replies` — that endpoint publishes immediately.**
+**Step 2 — attach the reply to the thread via GraphQL:**
+
+```bash
+gh api graphql -f query='
+  mutation($threadId: ID!, $reviewId: ID!, $body: String!) {
+    addPullRequestReviewThreadReply(input: {
+      pullRequestReviewThreadId: $threadId,
+      pullRequestReviewId: $reviewId,
+      body: $body
+    }) {
+      comment { id databaseId state }
+    }
+  }' \
+  -f threadId="$THREAD_NODE_ID" \
+  -f reviewId="$REVIEW_NODE_ID" \
+  -f body="your reply"
+```
+
+`$THREAD_NODE_ID` is the thread's `id` (e.g. `PRRT_...`) captured in step 4 —
+**not** the comment's `databaseId`. The mutation response's `state` should be
+`PENDING`.
+
+**If either call fails, stop and surface the error. Do NOT fall back to
+`pulls/comments/{id}/replies` — that endpoint publishes immediately.**
 
 ### Verify pending state
 
