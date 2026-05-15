@@ -21,13 +21,11 @@ clear_terminal = "ctrl-l"
 open_external_editor = "alt-e"
 open_transcript = "alt-v"
 toggle_raw_output = "alt-shift-v"
+toggle_fast_mode = "alt-shift-m"
 
 [tui.keymap.chat]
 increase_reasoning_effort = "alt-n"
 decrease_reasoning_effort = "alt-shift-n"
-
-[tui.keymap.composer]
-history_search_previous = "ctrl-r"
 
 [tui.keymap.editor]
 delete_backward_word = ["ctrl-backspace", "alt-backspace", "ctrl-w"]
@@ -37,6 +35,9 @@ yank = []
 
 [tui.model_availability_nux]
 "gpt-5.5" = 2
+
+[notice]
+fast_default_opt_out = true
 
 [projects."/Users/hagai.akibayov/dotfiles"]
 trust_level = "trusted"
