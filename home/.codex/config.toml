@@ -1,0 +1,70 @@
+# Managed by dotfiles. Runtime state, auth, history, logs, and caches are not tracked.
+
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+approvals_reviewer = "guardian_subagent"
+
+[tui]
+notification_condition = "always"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 1
+
+[projects."/Users/hagai.akibayov/dotfiles"]
+trust_level = "trusted"
+
+[plugins."slack@openai-curated"]
+enabled = true
+
+[plugins."sharepoint@openai-curated"]
+enabled = true
+
+[plugins."outlook-email@openai-curated"]
+enabled = true
+
+[plugins."outlook-calendar@openai-curated"]
+enabled = true
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."warp@claude-code-warp"]
+enabled = true
+
+[plugins."context7@claude-plugins-official"]
+enabled = true
+
+[plugins."skill-creator@claude-plugins-official"]
+enabled = true
+
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/Users/hagai.akibayov/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.openai-primary-runtime]
+source_type = "local"
+source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[marketplaces.claude-code-warp]
+last_updated = "2026-05-15T14:41:40Z"
+last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
+source_type = "git"
+source = "https://github.com/warpdotdev/claude-code-warp.git"
+
+[marketplaces.claude-plugins-official]
+last_updated = "2026-05-15T14:41:43Z"
+last_revision = "1a2f18b05cf5652fd25403e8d229fc884fb84103"
+source_type = "git"
+source = "https://github.com/anthropics/claude-plugins-official.git"

@@ -42,5 +42,5 @@ bayov-test     # alias: prepush --quiet --show-failures
 - **Multiplexer**: Zellij
 - **VCS**: Jujutsu (`jj`) as primary, Git with delta pager
 - **Editor**: Fresh (`$EDITOR`), VS Code
-- **AI tools**: Claude Code, Gemini CLI, OpenCode
+- **AI tools**: Codex, Claude Code, Gemini CLI, OpenCode
 - **Language toolchains**: Rust (nightly), Node.js (via fnm), Python (via uv)
