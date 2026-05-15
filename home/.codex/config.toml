@@ -28,13 +28,17 @@ increase_reasoning_effort = "alt-n"
 decrease_reasoning_effort = "alt-shift-n"
 
 [tui.keymap.editor]
-delete_backward_word = ["ctrl-backspace", "alt-backspace", "ctrl-w"]
-delete_forward_word = ["ctrl-delete", "alt-delete", "alt-d"]
 kill_whole_line = "ctrl-x"
 yank = []
 
+[tui.keymap.pager]
+page_up = []
+page_down = []
+half_page_up = "page-up"
+half_page_down = "page-down"
+
 [tui.model_availability_nux]
-"gpt-5.5" = 2
+"gpt-5.5" = 3
 
 [notice]
 fast_default_opt_out = true
@@ -87,13 +91,13 @@ source_type = "local"
 source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
 [marketplaces.claude-code-warp]
-last_updated = "2026-05-15T15:13:23Z"
+last_updated = "2026-05-15T15:29:28Z"
 last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
 source_type = "git"
 source = "https://github.com/warpdotdev/claude-code-warp.git"
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-05-15T15:13:25Z"
+last_updated = "2026-05-15T15:29:31Z"
 last_revision = "1a2f18b05cf5652fd25403e8d229fc884fb84103"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
