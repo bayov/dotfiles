@@ -338,6 +338,15 @@
     }
   ],
   "lsp": {
+    "toml": {
+      "enabled": true,
+      "auto_start": true,
+      "process_limits": {
+        "max_memory_percent": 50,
+        "max_cpu_percent": 90,
+        "enabled": false
+      }
+    },
     "json": {
       "enabled": true,
       "auto_start": true,
@@ -356,6 +365,15 @@
         "enabled": false
       }
     },
+    "jsonc": {
+      "enabled": true,
+      "auto_start": true,
+      "process_limits": {
+        "max_memory_percent": 50,
+        "max_cpu_percent": 90,
+        "enabled": false
+      }
+    },
     "css": {
       "enabled": true,
       "auto_start": true,
@@ -366,15 +384,6 @@
       }
     },
     "go": {
-      "enabled": true,
-      "auto_start": true,
-      "process_limits": {
-        "max_memory_percent": 50,
-        "max_cpu_percent": 90,
-        "enabled": false
-      }
-    },
-    "jsonc": {
       "enabled": true,
       "auto_start": true,
       "process_limits": {

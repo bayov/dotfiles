@@ -3,6 +3,10 @@
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 approvals_reviewer = "guardian_subagent"
+service_tier = "fast"
+
+[features]
+memories = true
 
 [tui]
 notification_condition = "always"
