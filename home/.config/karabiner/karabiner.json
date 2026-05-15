@@ -116,7 +116,9 @@
                             {
                                 "conditions": [
                                     {
-                                        "bundle_identifiers": ["^com\\.google\\.Chrome$"],
+                                        "bundle_identifiers": [
+                                            "^com\\.google\\.Chrome$"
+                                        ],
                                         "type": "frontmost_application_if"
                                     }
                                 ],
@@ -1039,7 +1041,7 @@
             ],
             "name": "Default profile",
             "selected": true,
-            "virtual_hid_keyboard": { "keyboard_type_v2": "iso" }
+            "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
         }
     ]
 }
