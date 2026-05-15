@@ -144,6 +144,24 @@
                         ]
                     },
                     {
+                        "description": "Ctrl+Alt+End -> Ctrl+Alt+End (passthrough, prevents End->Cmd+Right remap)",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "end",
+                                    "modifiers": { "mandatory": ["control", "option"] }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "end",
+                                        "modifiers": ["left_control", "left_option"]
+                                    }
+                                ],
+                                "type": "basic"
+                            }
+                        ]
+                    },
+                    {
                         "description": "End -> end of line (Cmd+Right)",
                         "manipulators": [
                             {

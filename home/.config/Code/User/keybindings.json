@@ -164,7 +164,12 @@
     },
     { "command": "-cursorUndo", "key": "ctrl+u" },
     { "command": "-cursorUndo", "key": "shift+alt+j" },
-    { "command": "cursorUndo", "key": "shift+alt+pageup", "when": "textInputFocus" },
+    {
+        "command": "-quickInput.pagePrevious",
+        "key": "ctrl+alt+pageup",
+        "when": "inQuickInput && quickInputType == 'quickPick' || inQuickInput && quickInputType == 'quickTree'"
+    },
+    { "command": "cursorUndo", "key": "ctrl+alt+pageup", "when": "textInputFocus" },
 
     //--------------------------------------------------------------------------
     // Scrolling
@@ -352,16 +357,39 @@
 
     { "command": "-editor.action.selectHighlights", "key": "ctrl+shift+l" },
     { "command": "-editor.action.selectHighlights", "key": "shift+ctrl+alt+j" },
-    { "command": "editor.action.selectHighlights", "key": "shift+alt+end", "when": "editorFocus" },
+    { "command": "-editor.action.selectHighlights", "key": "shift+cmd+l", "when": "editorFocus" },
+    {
+        "command": "-quickInput.last",
+        "key": "ctrl+alt+end",
+        "when": "inQuickInput && quickInputType == 'quickPick' || inQuickInput && quickInputType == 'quickTree'"
+    },
+    { "command": "editor.action.selectHighlights", "key": "ctrl+alt+end", "when": "editorFocus" },
+
+    // Notebook variant of selectHighlights — same chord, notebook context
+    {
+        "command": "-notebook.selectAllFindMatches",
+        "key": "shift+cmd+l",
+        "when": "config.notebook.multiCursor.enabled && notebookFindWidgetFocused || config.notebook.multiCursor.enabled && notebookCellEditorFocused && activeEditor == 'workbench.editor.notebook'"
+    },
+    {
+        "command": "notebook.selectAllFindMatches",
+        "key": "ctrl+alt+end",
+        "when": "config.notebook.multiCursor.enabled && notebookFindWidgetFocused || config.notebook.multiCursor.enabled && notebookCellEditorFocused && activeEditor == 'workbench.editor.notebook'"
+    },
 
     { "command": "-editor.action.addSelectionToNextFindMatch", "key": "ctrl+d" },
     { "command": "-editor.action.addSelectionToNextFindMatch", "key": "alt+j" },
-    { "command": "editor.action.addSelectionToNextFindMatch", "key": "shift+alt+pagedown", "when": "editorFocus" },
+    {
+        "command": "-quickInput.pageNext",
+        "key": "ctrl+alt+pagedown",
+        "when": "inQuickInput && quickInputType == 'quickPick' || inQuickInput && quickInputType == 'quickTree'"
+    },
+    { "command": "editor.action.addSelectionToNextFindMatch", "key": "ctrl+alt+pagedown", "when": "editorFocus" },
 
     { "command": "-editor.action.moveSelectionToNextFindMatch", "key": "ctrl+k ctrl+d", "when": "editorFocus" },
-    { "command": "editor.action.moveSelectionToNextFindMatch", "key": "ctrl+alt+pagedown", "when": "editorFocus" },
+    { "command": "editor.action.moveSelectionToNextFindMatch", "key": "ctrl+shift+alt+pagedown", "when": "editorFocus" },
 
-    { "command": "editor.action.moveSelectionToPreviousFindMatch", "key": "ctrl+alt+pageup", "when": "editorFocus" },
+    { "command": "editor.action.moveSelectionToPreviousFindMatch", "key": "ctrl+shift+alt+pageup", "when": "editorFocus" },
 
     // Free shift+alt+up/down from copy/notebook actions before using for insertCursor
     { "command": "-editor.action.copyLinesUpAction", "key": "shift+alt+up", "when": "editorTextFocus && !editorReadonly" },
@@ -375,6 +403,7 @@
 
     { "command": "-cursorColumnSelectPageDown", "key": "ctrl+shift+alt+pagedown", "when": "textInputFocus" },
     { "command": "-cursorColumnSelectPageUp", "key": "ctrl+shift+alt+pageup", "when": "textInputFocus" },
+    { "command": "-cursorColumnSelectRight", "key": "shift+alt+cmd+right", "when": "textInputFocus" },
 
     //--------------------------------------------------------------------------
     // Code Folding
@@ -960,5 +989,9 @@
     // "-editor.action.fontZoomIn" intentionally left in this section to ensure
     // new binds added through vscode UI are added under it.
     //--------------------------------------------------------------------------
-    {"command": "-editor.action.fontZoomIn", "key": "shift+alt+.", "when": "editorTextFocus"},
+    {
+        "command": "-editor.action.fontZoomIn",
+        "key": "shift+alt+.",
+        "when": "editorTextFocus"
+    },
 ]

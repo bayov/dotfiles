@@ -22,6 +22,7 @@ compact_subtitle = "working_directory"
 [appearance.window]
 override_opacity = 100
 override_blur_texture = false
+override_blur = 1
 
 [appearance.panes]
 should_dim_inactive_panes = false
@@ -31,9 +32,16 @@ show_block_dividers = true
 
 [appearance.tabs]
 show_indicators_button = true
+workspace_decoration_visibility = "hide_fullscreen"
 
 [appearance.full_screen_apps]
 alt_screen_padding = { custom = { uniform_padding = 0.0 } }
+
+[appearance.icon]
+app_icon = "default"
+
+[appearance.input]
+input_mode = "waterfall"
 
 [terminal]
 

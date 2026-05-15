@@ -66,7 +66,6 @@ fish_add_path $BUN_INSTALL/bin
 if status is-interactive
     abbr -a !! --position anywhere --function last_history_item
     abbr -a r reload
-    abbr -a v fresh
     abbr -a ll l
     abbr -a z zellij
     abbr -a zl zellij list-sessions
