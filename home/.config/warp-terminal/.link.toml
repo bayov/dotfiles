@@ -2,13 +2,24 @@
 tags = ["!mac"]
 linker = "spread"
 
-# macOS Warp reads themes from ~/.warp/themes/ and stores other
-# settings in defaults (not file-based), so only themes are linked.
+# macOS Warp reads config from ~/.warp/.
 [[link]]
 tags = ["mac"]
 src = "themes"
 linker = "symlink"
 dst = "~/.warp/themes"
+
+[[link]]
+tags = ["mac"]
+src = "settings.toml"
+linker = "symlink"
+dst = "~/.warp/settings.toml"
+
+[[link]]
+tags = ["mac"]
+src = "keybindings.yaml"
+linker = "symlink"
+dst = "~/.warp/keybindings.yaml"
 
 [[link]]
 tags = ["wsl"]
