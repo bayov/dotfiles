@@ -7,9 +7,13 @@ service_tier = "fast"
 
 [features]
 memories = true
+terminal_resize_reflow = true
+prevent_idle_sleep = true
 
 [tui]
 notification_condition = "always"
+status_line = ["current-dir", "model-with-reasoning", "used-tokens"]
+status_line_use_colors = true
 
 [tui.keymap.global]
 copy = "ctrl-y"
@@ -29,6 +33,10 @@ history_search_previous = "ctrl-r"
 delete_backward_word = ["ctrl-backspace", "alt-backspace", "ctrl-w"]
 delete_forward_word = ["ctrl-delete", "alt-delete", "alt-d"]
 kill_whole_line = "ctrl-x"
+yank = []
+
+[tui.model_availability_nux]
+"gpt-5.5" = 2
 
 [projects."/Users/hagai.akibayov/dotfiles"]
 trust_level = "trusted"
@@ -78,13 +86,13 @@ source_type = "local"
 source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
 [marketplaces.claude-code-warp]
-last_updated = "2026-05-15T15:08:17Z"
+last_updated = "2026-05-15T15:13:23Z"
 last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
 source_type = "git"
 source = "https://github.com/warpdotdev/claude-code-warp.git"
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-05-15T15:08:20Z"
+last_updated = "2026-05-15T15:13:25Z"
 last_revision = "1a2f18b05cf5652fd25403e8d229fc884fb84103"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
