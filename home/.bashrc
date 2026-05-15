@@ -44,6 +44,16 @@ alias generate-commit-description="uv run python -m pybayov.generate_commit_desc
 alias precommit=bayov-format
 alias prepush="bayov-test --quiet --show-failures"
 
+# Block `git` inside jj repos
+git() {
+	local jj_root
+	if jj_root=$(command jj root 2>/dev/null); then
+		printf '%s is a jj repository; avoid git commands\n' "$jj_root" >&2
+		return 1
+	fi
+	command git "$@"
+}
+
 # ── Interactive-only ───────────────────────────────────────────────────────────
 case $- in
 *i*) ;;
