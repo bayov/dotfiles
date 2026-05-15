@@ -304,5 +304,6 @@
     //  | is kept here intentionally as an anchor — all newly added settings land
     //  | below it and can be reviewed and categorized.
     // --------------------------------------------------------------------------
-    "editor.columnSelection": false
+    "editor.columnSelection": false,
+    "claudeCode.preferredLocation": "panel"
 }

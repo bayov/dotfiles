@@ -17,12 +17,12 @@
     "command": "python3 ~/.claude/statusline.py"
   },
   "enabledPlugins": {
-    "skill-creator@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "warp@claude-code-warp": true
+    "warp@claude-code-warp": true,
+    "gopls-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "claude-code-warp": {
