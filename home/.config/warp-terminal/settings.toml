@@ -23,6 +23,7 @@ compact_subtitle = "working_directory"
 override_opacity = 100
 override_blur_texture = false
 override_blur = 1
+zoom_level = 100
 
 [appearance.panes]
 should_dim_inactive_panes = false
@@ -41,9 +42,10 @@ alt_screen_padding = { custom = { uniform_padding = 0.0 } }
 app_icon = "default"
 
 [appearance.input]
-input_mode = "waterfall"
+input_mode = "pinned_to_bottom"
 
 [terminal]
+mouse_reporting_enabled = true
 
 [terminal.input]
 input_box_type_setting = "classic"
@@ -82,7 +84,7 @@ login_item = false
 show_code_review_button = true
 show_project_explorer = true
 show_global_search = true
-open_file_editor = "system_default"
+open_file_editor = "env_editor"
 
 [warp_drive]
 enabled = false
