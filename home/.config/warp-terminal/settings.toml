@@ -3,9 +3,7 @@ spacing = "compact"
 
 [appearance.themes]
 system_theme = false
-theme = {
-  custom = { name = "Bayov", path = 'C:\Users\hesos\AppData\Roaming\warp\Warp\data\themes\bayov.yaml' },
-}
+theme = { custom = { name = "Bayov", path = "/Users/hagai.akibayov/.warp/themes/bayov.yaml" } }
 
 [appearance.text]
 font_size = 13.0
