@@ -65,7 +65,8 @@ last_seen_version = "1.7.0"
 diff_file_list_width = 35
 has_seen_custom_instruction_warning = false
 has_acknowledged_agent_hooks = true
-group_by = "project"
+sort_order = "a_z"
+group_by = "manual"
 last_browse_dir = "/Users/hagai.akibayov/notes"
 
 [web]
