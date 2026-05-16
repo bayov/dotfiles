@@ -49,6 +49,16 @@ module.ClearSelectionOrCloseCopyMode = wezterm.action_callback(
     end
 )
 
+-- Clears any active selection, then moves the cursor in `direction`.
+-- Mirror of ExtendSelection for unshifted arrow keys.
+module.Move = function(direction)
+    return act.Multiple({
+        act.ClearSelection,
+        act.CopyMode("ClearSelectionMode"),
+        act.CopyMode("Move" .. direction),
+    })
+end
+
 -- Extends the copy-mode selection in `direction` ("Left"/"Right"/"Up"/"Down"
 -- / "ToStartOfLineContent" / "ToEndOfLineContent" / ...), starting a Cell
 -- selection first if none is active.

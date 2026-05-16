@@ -245,11 +245,11 @@ config.key_tables.copy_mode = {
     { mods = "SHIFT", key = "DownArrow",  action = copy_mode.ExtendSelection("Down") },
     { mods = "SHIFT", key = "Home",       action = copy_mode.ExtendSelection("ToStartOfLineContent") },
     { mods = "SHIFT", key = "End",        action = copy_mode.ExtendSelection("ToEndOfLineContent") },
-    -- Movement
-    { mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp") },
-    { mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown") },
-    { mods = "NONE", key = "LeftArrow", action = act.CopyMode("MoveLeft") },
-    { mods = "NONE", key = "RightArrow", action = act.CopyMode("MoveRight") },
+    -- Movement (unshifted arrows clear any active selection)
+    { mods = "NONE", key = "UpArrow",    action = copy_mode.Move("Up") },
+    { mods = "NONE", key = "DownArrow",  action = copy_mode.Move("Down") },
+    { mods = "NONE", key = "LeftArrow",  action = copy_mode.Move("Left") },
+    { mods = "NONE", key = "RightArrow", action = copy_mode.Move("Right") },
     {
         mods = "CTRL",
         key = "LeftArrow",
