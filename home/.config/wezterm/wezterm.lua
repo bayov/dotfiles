@@ -12,7 +12,7 @@ local config = wezterm.config_builder()
 --------------------------------------------------------------------------------
 -- Scrollback
 --------------------------------------------------------------------------------
-config.scrollback_lines = 50000
+config.scrollback_lines = 100000
 config.enable_scroll_bar = false
 
 --------------------------------------------------------------------------------
@@ -38,22 +38,11 @@ config.inactive_pane_hsb = {
 config.window_decorations = "TITLE|RESIZE"
 config.initial_cols = 120
 config.initial_rows = 28
--- Window padding disabled, to leave more screen space to Zellij TUI.
---
--- Recommended padding otherwise:
--- ```
--- config.window_padding = {
---     left = "1cell",
---     right = "1cell",
---     top = "0.5cell",
---     bottom = "0",
--- }
--- ```
 config.window_padding = {
-    left = 0,
-    right = 0,
-    top = 0,
-    bottom = 0,
+    left = "1cell",
+    right = "1cell",
+    top = "0.5cell",
+    bottom = "0",
 }
 
 -- Cursor
@@ -70,7 +59,7 @@ config.quick_select_patterns = {
     url_regex,
     -- Base16 IDs
     "[0-9a-f]{8,40}",
-    -- Jujustu change IDs
+    -- jj change IDs
     --
     -- Note:
     -- Technically, WezTerm docs say that capture groups should not be used as
@@ -95,69 +84,55 @@ wezterm.on("gui-attached", function(window, pane)
     end
 end)
 
--- Tabs (and panes) are disabled, using Zellij instead for multiplexing and
--- window management.
---
--- Here is the configuration I used to have if I ever want to go back to
--- WezTerm for this functionality:
--- ```
--- local tabline = require("tabline")
--- tabline.plugin.apply_to_config(config)
--- config.use_fancy_tab_bar = false
--- config.tab_bar_at_bottom = true
--- ```
-config.enable_tab_bar = false
+local tabline = require("tabline")
+tabline.plugin.apply_to_config(config)
+config.use_fancy_tab_bar = false
+config.tab_bar_at_bottom = true
 
 --------------------------------------------------------------------------------
 -- Keyboard bindings
 --------------------------------------------------------------------------------
--- Most keybinds are commented out as I've moved to Zellij.
 config.disable_default_key_bindings = true
 config.keys = {
-    -- Search/QuickSelect/Copy modes
-    -- {
-    --     mods = "CTRL|SHIFT",
-    --     key = "f",
-    --     action = wezterm.action_callback(function(window, pane)
-    --         window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
-    --         window:perform_action(act.Search("CurrentSelectionOrEmptyString"), pane)
-    --         window:perform_action(
-    --             act.Multiple({
-    --                 act.CopyMode("ClearPattern"),
-    --                 act.CopyMode("ClearSelectionMode"),
-    --                 act.CopyMode("MoveToScrollbackBottom"),
-    --             }),
-    --             pane
-    --         )
-    --     end)
-    -- },
-    -- {mods = "ALT", key = "c", action = act.ActivateCopyMode},
+    -- Search / Copy mode
+    {
+        mods = "CTRL|ALT",
+        key = "f",
+        action = wezterm.action_callback(function(window, pane)
+            window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
+            window:perform_action(act.Search("CurrentSelectionOrEmptyString"), pane)
+            window:perform_action(
+                act.Multiple({
+                    act.CopyMode("ClearPattern"),
+                    act.CopyMode("ClearSelectionMode"),
+                    act.CopyMode("MoveToScrollbackBottom"),
+                }),
+                pane
+            )
+        end),
+    },
+    { mods = "ALT", key = "c", action = act.ActivateCopyMode },
 
     -- Copy & Paste
     { mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt },
-    -- {mods = "CTRL|SHIFT", key = "c", action = act.CopyTo("Clipboard")},
     { mods = "CTRL", key = "v", action = act.PasteFrom("Clipboard") },
-    -- {mods = "CTRL|SHIFT", key = "v", action = act.PasteFrom("Clipboard")},
 
     -- Scrolling & Scrollback
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "PageUp", action = act.ScrollByPage(-0.5)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5)}),
-    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "UpArrow", action = act.ScrollToPrompt(-1)}),
-    -- helpers.KeyUnlessTui({mods = "CTRL|ALT", key = "DownArrow", action = act.ScrollToPrompt(1)}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "Home", action = act.ScrollToTop}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "End", action = act.ScrollToBottom}),
-    -- helpers.KeyUnlessTui({mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    -- helpers.KeyUnlessTui({mods = "ALT", key = "l", action = helpers.ClearPaneWhileKeepingScrollback}),
-    -- helpers.KeyUnlessTui({
-    --     mods = "CTRL|ALT",
-    --     key = "l",
-    --     action = act.Multiple({
-    --         act.ClearScrollback("ScrollbackAndViewport"),
-    --         act.SendKey({mods="CTRL", key="L"}),
-    --     }),
-    -- }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "UpArrow", action = act.ScrollByLine(-2) }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "DownArrow", action = act.ScrollByLine(2) }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "PageUp", action = act.ScrollByPage(-0.5) }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5) }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "Home", action = act.ScrollToTop }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "End", action = act.ScrollToBottom }),
+    helpers.KeyUnlessTui({ mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback }),
+    helpers.KeyUnlessTui({
+        mods = "CTRL|ALT",
+        key = "l",
+        action = act.Multiple({
+            act.ClearScrollback("ScrollbackAndViewport"),
+            act.SendKey({ mods = "CTRL", key = "L" }),
+        }),
+    }),
 
     -- Presentation
     { mods = "ALT", key = "\\", action = act.ToggleFullScreen },
@@ -166,38 +141,43 @@ config.keys = {
     { mods = "CTRL", key = "0", action = zoom.ResetZoom },
 
     -- Tab-management
-    -- {mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain")},
-    -- {mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1)},
-    -- {mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1)},
-    -- {mods = "ALT", key = "[", action = act.MoveTabRelative(-1)},
-    -- {mods = "ALT", key = "]", action = act.MoveTabRelative(1)},
-    -- {
-    --     mods = "NONE",
-    --     key = "F2",
-    --     action = act.PromptInputLine {
-    --         description = "Rename tab: ",
-    --         action = wezterm.action_callback(function(window, pane, line)
-    --             if line then
-    --                 window:active_tab():set_title(line)
-    --             end
-    --         end),
-    --     },
-    -- },
+    { mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain") },
+    { mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1) },
+    { mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1) },
+    { mods = "ALT", key = "[", action = act.MoveTabRelative(-1) },
+    { mods = "ALT", key = "]", action = act.MoveTabRelative(1) },
+    {
+        mods = "NONE",
+        key = "F2",
+        action = act.PromptInputLine({
+            description = "Rename tab: ",
+            action = wezterm.action_callback(function(window, pane, line)
+                if line then
+                    window:active_tab():set_title(line)
+                end
+            end),
+        }),
+    },
 
     -- Pane-management
-    -- {mods = "ALT", key = "s", action = act.ActivateKeyTable({name = "pane"})},
-    -- {mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up")},
-    -- {mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down")},
-    -- {mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left")},
-    -- {mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right")},
-    -- {mods = "CTRL|ALT", key = "Numpad8", action = act.AdjustPaneSize({"Up", 4})},
-    -- {mods = "CTRL|ALT", key = "Numpad2", action = act.AdjustPaneSize({"Down", 4})},
-    -- {mods = "CTRL|ALT", key = "Numpad4", action = act.AdjustPaneSize({"Left", 4})},
-    -- {mods = "CTRL|ALT", key = "Numpad6", action = act.AdjustPaneSize({"Right", 4})},
-    -- {mods = "ALT", key = "x", action = act.CloseCurrentPane({confirm = false})},
+    { mods = "ALT", key = "s", action = act.ActivateKeyTable({ name = "pane" }) },
+    { mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up") },
+    { mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down") },
+    { mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left") },
+    { mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right") },
+    { mods = "ALT|SHIFT", key = "8", action = act.SplitPane({ direction = "Up" }) },
+    { mods = "ALT|SHIFT", key = "2", action = act.SplitPane({ direction = "Down" }) },
+    { mods = "ALT|SHIFT", key = "4", action = act.SplitPane({ direction = "Left" }) },
+    { mods = "ALT|SHIFT", key = "6", action = act.SplitPane({ direction = "Right" }) },
+    { mods = "CTRL|ALT", key = "8", action = act.AdjustPaneSize({ "Up", 4 }) },
+    { mods = "CTRL|ALT", key = "2", action = act.AdjustPaneSize({ "Down", 4 }) },
+    { mods = "CTRL|ALT", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
+    { mods = "CTRL|ALT", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
+    { mods = "ALT|SHIFT", key = "{", action = act.RotatePanes("CounterClockwise") },
+    { mods = "ALT|SHIFT", key = "}", action = act.RotatePanes("Clockwise") },
+    { mods = "ALT", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 
     -- Misc
-    -- {mods = "ALT", key = "z", action = act.QuitApplication},
     { mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette },
     { mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration },
     { mods = "CTRL", key = "`", action = act.ShowDebugOverlay },
@@ -342,7 +322,7 @@ config.key_tables.copy_mode = {
 }
 config.key_tables.search_mode = {
     { mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection },
-    { mods = "CTRL|SHIFT", key = "f", action = helpers.CloseAndClearSelection },
+    { mods = "CTRL|ALT", key = "f", action = helpers.CloseAndClearSelection },
     { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
     { mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType") },
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
@@ -362,16 +342,32 @@ config.key_tables.search_mode = {
 }
 config.key_tables.pane = {
     { mods = "NONE", key = "Escape", action = act.PopKeyTable },
-    { mods = "ALT", key = "RightArrow", action = act.SplitHorizontal({}) },
-    { mods = "ALT", key = "DownArrow", action = act.SplitVertical({}) },
+    { mods = "ALT", key = "s", action = act.PopKeyTable },
+    -- Split in direction
+    { mods = "ALT", key = "LeftArrow", action = act.SplitPane({ direction = "Left" }) },
+    { mods = "ALT", key = "RightArrow", action = act.SplitPane({ direction = "Right" }) },
+    { mods = "ALT", key = "UpArrow", action = act.SplitPane({ direction = "Up" }) },
+    { mods = "ALT", key = "DownArrow", action = act.SplitPane({ direction = "Down" }) },
+    -- Focus
+    { mods = "NONE", key = "LeftArrow", action = act.ActivatePaneDirection("Left") },
+    { mods = "NONE", key = "RightArrow", action = act.ActivatePaneDirection("Right") },
+    { mods = "NONE", key = "UpArrow", action = act.ActivatePaneDirection("Up") },
+    { mods = "NONE", key = "DownArrow", action = act.ActivatePaneDirection("Down") },
+    -- Rotate (closest WezTerm has to Zellij's "move pane")
+    { mods = "SHIFT", key = "LeftArrow", action = act.RotatePanes("CounterClockwise") },
+    { mods = "SHIFT", key = "RightArrow", action = act.RotatePanes("Clockwise") },
+    { mods = "SHIFT", key = "UpArrow", action = act.RotatePanes("CounterClockwise") },
+    { mods = "SHIFT", key = "DownArrow", action = act.RotatePanes("Clockwise") },
+    -- Resize
+    { mods = "NONE", key = "8", action = act.AdjustPaneSize({ "Up", 4 }) },
+    { mods = "NONE", key = "2", action = act.AdjustPaneSize({ "Down", 4 }) },
+    { mods = "NONE", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
+    { mods = "NONE", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
+    -- Misc
     { mods = "NONE", key = "s", action = act.PaneSelect },
     { mods = "NONE", key = "f", action = act.TogglePaneZoomState },
     { mods = "NONE", key = "r", action = act.RotatePanes("Clockwise") },
-    {
-        mods = "NONE",
-        key = "x",
-        action = act.CloseCurrentTab({ confirm = false }),
-    },
+    { mods = "NONE", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 }
 
 --------------------------------------------------------------------------------
@@ -389,12 +385,11 @@ config.mouse_bindings = {
         action = wezterm.action.SelectTextAtMouseCursor("SemanticZone"),
     },
     -- Disable copy on selection
-    -- (disabled to match Zellij which doesn't support Copy action).
-    -- {
-    --     mods = "NONE",
-    --     event = { Up = { streak = 1, button = "Left" } },
-    --     action = wezterm.action.Nop,
-    -- },
+    {
+        mods = "NONE",
+        event = { Up = { streak = 1, button = "Left" } },
+        action = wezterm.action.Nop,
+    },
     -- Paste with right-click (or copy if text is selected):
     {
         mods = "NONE",

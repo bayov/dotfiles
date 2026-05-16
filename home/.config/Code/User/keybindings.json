@@ -91,6 +91,9 @@
 
     { "command": "workbench.action.openSettingsJson", "key": "shift+alt+'" },
 
+    { "command": "-keybindings.editor.recordSearchKeys", "key": "alt+cmd+k", "when": "inKeybindings && inKeybindingsSearch" },
+    { "command": "keybindings.editor.recordSearchKeys", "key": "alt+k", "when": "inKeybindings && inKeybindingsSearch" },
+
     //--------------------------------------------------------------------------
     // Cursor Movement & Navigation
     //--------------------------------------------------------------------------
@@ -237,17 +240,18 @@
     { "command": "-workbench.action.moveEditorLeftInGroup", "key": "ctrl+shift+pageup" },
     { "command": "-editor.action.inlineSuggest.showPrevious", "key": "alt+[", "when": "inlineSuggestionVisible && !editorReadonly" },
     { "command": "-editor.action.accessibleViewPrevious", "key": "alt+[", "when": "accessibleViewIsShown && accessibleViewSupportsNavigation" },
-    { "command": "workbench.action.moveEditorLeftInGroup", "key": "alt+[" },
+    { "command": "workbench.action.moveEditorLeftInGroup", "key": "alt+numpad4" },
 
     { "command": "-workbench.action.moveEditorRightInGroup", "key": "ctrl+shift+pagedown" },
     { "command": "-editor.action.accessibleViewNext", "key": "alt+]", "when": "accessibleViewIsShown && accessibleViewSupportsNavigation" },
     { "command": "-editor.action.inlineSuggest.showNext", "key": "alt+]", "when": "inlineSuggestionVisible && !editorReadonly" },
-    { "command": "workbench.action.moveEditorRightInGroup", "key": "alt+]" },
+    { "command": "workbench.action.moveEditorRightInGroup", "key": "alt+numpad6" },
 
-    { "command": "workbench.action.moveEditorToLeftGroup", "key": "shift+alt+[" },
-    { "command": "workbench.action.moveEditorToRightGroup", "key": "shift+alt+]" },
-
-    { "command": "-editor.action.smartSelect.expand", "key": "shift+alt+right", "when": "editorTextFocus" },
+    {
+        "command": "-editor.action.smartSelect.expand",
+        "key": "shift+alt+right",
+        "when": "editorTextFocus"
+    },
     { "command": "-workbench.action.focusRightGroup", "key": "ctrl+k ctrl+right" },
     { "command": "workbench.action.focusRightGroup", "key": "shift+alt+right" },
 
@@ -270,6 +274,22 @@
 
     { "command": "workbench.action.toggleEditorWidths", "key": "alt+s f" },
     { "command": "workbench.action.evenEditorWidths", "key": "alt+s s" },
+
+    // Split editor (numpad: 2=down, 4=left, 6=right, 8=up)
+    { "command": "-workbench.action.splitEditorDown", "key": "cmd+k cmd+\\" },
+    { "command": "workbench.action.splitEditorDown", "key": "ctrl+shift+alt+numpad2" },
+    { "command": "-workbench.action.splitEditorLeft", "key": "cmd+k cmd+\\" },
+    { "command": "workbench.action.splitEditorLeft", "key": "ctrl+shift+alt+numpad4" },
+    { "command": "-workbench.action.splitEditorRight", "key": "cmd+k cmd+\\" },
+    { "command": "workbench.action.splitEditorRight", "key": "ctrl+shift+alt+numpad6" },
+    { "command": "-workbench.action.splitEditorUp", "key": "cmd+k cmd+\\" },
+    { "command": "workbench.action.splitEditorUp", "key": "ctrl+shift+alt+numpad8" },
+
+    // Move editor to group (numpad: 2=below, 4=left, 6=right, 8=above)
+    { "command": "workbench.action.moveEditorToBelowGroup", "key": "shift+alt+numpad2" },
+    { "command": "workbench.action.moveEditorToAboveGroup", "key": "shift+alt+numpad8" },
+    { "command": "workbench.action.moveEditorToLeftGroup", "key": "shift+alt+numpad4" },
+    { "command": "workbench.action.moveEditorToRightGroup", "key": "shift+alt+numpad6" },
 
     //--------------------------------------------------------------------------
     // Text Editing
@@ -993,5 +1013,5 @@
         "command": "-editor.action.fontZoomIn",
         "key": "shift+alt+.",
         "when": "editorTextFocus"
-    },
+    }
 ]

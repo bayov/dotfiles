@@ -292,6 +292,14 @@
     "dependi.decoration.compatible.template": "✓",
     "dependi.decoration.patchAvailable.template": "⇢ ${version}",
     // --------------------------------------------------------------------------
+    // Dictionary
+    // --------------------------------------------------------------------------
+    "cSpell.userWords": [
+        "bayov",
+        "Keymap",
+        "wezterm"
+    ],
+    // --------------------------------------------------------------------------
     // Misc
     // --------------------------------------------------------------------------
     "diffEditor.renderSideBySide": true,
@@ -304,6 +312,5 @@
     //  | is kept here intentionally as an anchor — all newly added settings land
     //  | below it and can be reviewed and categorized.
     // --------------------------------------------------------------------------
-    "editor.columnSelection": false,
-    "claudeCode.preferredLocation": "panel"
+    "editor.columnSelection": false
 }

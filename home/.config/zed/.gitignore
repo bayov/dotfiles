@@ -1,0 +1,7 @@
+*
+
+!.gitignore
+!.link.toml
+!settings.json
+!keymap.json
+!themes

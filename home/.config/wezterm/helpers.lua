@@ -42,11 +42,9 @@ module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(
         -- get the current height of the viewport
         local height = pane:get_dimensions().viewport_rows
 
-        -- build a string of new lines equal to the viewport height
-        local blank_viewport = string.rep("\r\n", height)
-
-        -- inject those new lines to push the viewport contents into the scrollback
-        pane:inject_output(blank_viewport)
+        -- inject a string of new lines equal to the viewport height
+        -- local blank_viewport = string.rep("\r\n", height)
+        -- pane:inject_output(blank_viewport)
 
         -- send an escape sequence to clear the viewport (CTRL-L)
         pane:send_text("\x0c")
