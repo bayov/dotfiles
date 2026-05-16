@@ -1,7 +1,7 @@
 # Managed by dotfiles. Runtime state, auth, history, logs, and caches are not tracked.
 
 model = "gpt-5.5"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 approvals_reviewer = "guardian_subagent"
 service_tier = "fast"
 
@@ -50,16 +50,16 @@ trust_level = "trusted"
 enabled = true
 
 [plugins."sharepoint@openai-curated"]
-enabled = true
+enabled = false
 
 [plugins."outlook-email@openai-curated"]
-enabled = true
+enabled = false
 
 [plugins."outlook-calendar@openai-curated"]
-enabled = true
+enabled = false
 
 [plugins."github@openai-curated"]
-enabled = true
+enabled = false
 
 [plugins."browser@openai-bundled"]
 enabled = true
@@ -79,7 +79,7 @@ enabled = true
 [plugins."context7@claude-plugins-official"]
 enabled = true
 
-[plugins."skill-creator@claude-plugins-official"]
+[plugins."gopls-lsp@claude-plugins-official"]
 enabled = true
 
 [marketplaces.openai-bundled]
@@ -91,13 +91,13 @@ source_type = "local"
 source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
 [marketplaces.claude-code-warp]
-last_updated = "2026-05-16T14:24:13Z"
+last_updated = "2026-05-16T14:54:08Z"
 last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
 source_type = "git"
 source = "https://github.com/warpdotdev/claude-code-warp.git"
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-05-16T14:24:07Z"
+last_updated = "2026-05-16T14:54:10Z"
 last_revision = "b5a156b6ecd2f69c418184b7c093930ddabaf9c0"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
