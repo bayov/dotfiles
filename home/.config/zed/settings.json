@@ -7,6 +7,13 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+    "edit_predictions": {
+        "provider": "copilot"
+    },
+    "diff_view_style": "unified",
+    "terminal": {
+        "scroll_multiplier": 1.0
+    },
     "agent_servers": {
         "claude-acp": {
             "type": "registry",

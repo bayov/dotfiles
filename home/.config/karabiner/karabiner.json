@@ -153,7 +153,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -204,7 +205,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -237,7 +239,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -270,7 +273,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -303,7 +307,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -336,7 +341,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -369,7 +375,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -402,7 +409,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -436,7 +444,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -473,7 +482,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -510,7 +520,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -544,7 +555,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -577,7 +589,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -605,7 +618,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -632,7 +646,8 @@
                                             "^net\\.kovidgoyal\\.kitty$",
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -662,7 +677,8 @@
                                             "^net\\.kovidgoyal\\.kitty$",
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -694,7 +710,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -722,7 +739,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -750,7 +768,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -779,7 +798,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -808,7 +828,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -837,7 +858,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -866,7 +888,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -894,7 +917,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -923,7 +947,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -952,7 +977,8 @@
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
                                             "^org\\.gnu\\.Emacs$",
-                                            "^com\\.microsoft\\.VSCode$"
+                                            "^com\\.microsoft\\.VSCode$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -985,7 +1011,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
@@ -1021,7 +1048,8 @@
                                             "^io\\.alacritty$",
                                             "^com\\.github\\.wez\\.wezterm$",
                                             "^dev\\.warp\\.Warp-Stable$",
-                                            "^org\\.gnu\\.Emacs$"
+                                            "^org\\.gnu\\.Emacs$",
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
                                         ],
                                         "type": "frontmost_application_unless"
                                     }
