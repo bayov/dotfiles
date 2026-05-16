@@ -92,6 +92,38 @@ module.ExtendKeyTable = function(base, extras)
 end
 
 -- Wraps a WezTerm `key_bind` (provided as `{mods, key, action}`) and returns
+-- a new keybind where `action` is performed only when the foreground process
+-- in the current pane is not in `apps` (list of basenames, e.g. {"vim",
+-- "fresh"}). When the foreground process matches, sends the key as is so the
+-- app receives it.
+module.KeyUnlessApp = function(key_bind, apps)
+    local mods = key_bind.mods
+    local key = key_bind.key
+    local action = key_bind.action
+    local app_set = {}
+    for _, name in ipairs(apps) do
+        app_set[name] = true
+    end
+
+    return {
+        mods = mods,
+        key = key,
+        action = wezterm.action_callback(function(window, pane)
+            local proc = pane:get_foreground_process_name() or ""
+            local basename = proc:match("([^/\\]+)$") or proc
+            if app_set[basename] then
+                window:perform_action(
+                    act.SendKey({ key = key, mods = mods }),
+                    pane
+                )
+            else
+                window:perform_action(action, pane)
+            end
+        end),
+    }
+end
+
+-- Wraps a WezTerm `key_bind` (provided as `{mods, key, action}`) and returns
 -- a new keybind where `action` is performed only when the current pane is not
 -- a TUI. When the pane is a TUI, sends the key as is instead.
 module.KeyUnlessTui = function(key_bind)

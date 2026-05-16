@@ -40,13 +40,6 @@ config.inactive_pane_hsb = {
 config.window_decorations = "TITLE|RESIZE"
 config.initial_cols = 120
 config.initial_rows = 28
--- TODO: These don't work for some reason
-config.window_padding = {
-    left = "1cell",
-    right = "1cell",
-    top = "0.5cell",
-    bottom = "0",
-}
 
 -- Cursor
 config.default_cursor_style = "BlinkingBlock"
@@ -95,15 +88,22 @@ local tabline = require("tabline")
 tabline.plugin.apply_to_config(config)
 config.use_fancy_tab_bar = false
 config.tab_bar_at_bottom = true
+config.window_padding = {
+    left = 0,
+    right = 0,
+    top = "0.5cell",
+    bottom = 0,
+}
 
 --------------------------------------------------------------------------------
 -- Keyboard bindings
 --------------------------------------------------------------------------------
 config.disable_default_key_bindings = true
 config.keys = {
-    -- Search / Copy mode
-    {
-        mods = "CTRL|ALT",
+    -- Search / Copy mode. Pass Ctrl+F through to vim/fresh which bind it
+    -- themselves (page-down / next-record); otherwise enter search mode.
+    helpers.KeyUnlessApp({
+        mods = "CTRL",
         key = "f",
         action = wezterm.action_callback(function(window, pane)
             window:perform_action(act.Search({ CaseInSensitiveString = "" }), pane)
@@ -117,7 +117,7 @@ config.keys = {
                 pane
             )
         end),
-    },
+    }, { "fresh" }),
     { mods = "ALT", key = "c", action = act.ActivateCopyMode },
 
     -- Copy & Paste
