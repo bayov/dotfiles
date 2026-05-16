@@ -45,8 +45,8 @@ config.initial_rows = 28
 config.default_cursor_style = "BlinkingBlock"
 config.cursor_blink_rate = 500
 -- Misc
-config.max_fps = 120
-config.animation_fps = 120
+config.max_fps = 60
+config.animation_fps = 60
 -- Drives `update-status` cadence; lowered from 1000ms so copy/search-mode
 -- background tints react quickly when entering/leaving the modes.
 config.status_update_interval = 50
@@ -155,6 +155,7 @@ config.keys = {
     { mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1) },
     { mods = "ALT", key = "1", action = act.MoveTabRelative(-1) },
     { mods = "ALT", key = "3", action = act.MoveTabRelative(1) },
+    { mods = "ALT|SHIFT", key = "x", action = act.CloseCurrentTab({ confirm = false }) },
     {
         mods = "NONE",
         key = "F2",
