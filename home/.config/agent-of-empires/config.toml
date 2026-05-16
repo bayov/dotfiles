@@ -44,9 +44,11 @@ clipboard = "auto"
 
 [session]
 yolo_mode_default = false
-agent_status_hooks = false
+agent_status_hooks = true
 strict_hotkeys = false
-agent_extra_args = { claude = "--dangerously-skip-permissions" }
+
+[session.agent_extra_args]
+claude = "--dangerously-skip-permissions"
 
 [diff]
 context_lines = 3
@@ -60,10 +62,11 @@ mode = "random"
 [app_state]
 has_seen_welcome = true
 last_seen_version = "1.7.0"
-diff_file_list_width = 40
+diff_file_list_width = 35
 has_seen_custom_instruction_warning = false
-has_acknowledged_agent_hooks = false
+has_acknowledged_agent_hooks = true
 group_by = "project"
+last_browse_dir = "/Users/hagai.akibayov/notes"
 
 [web]
 notifications_enabled = true
