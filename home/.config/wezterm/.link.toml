@@ -1,12 +1,5 @@
 [[link]]
-tags = ["linux"]
 linker = "symlink"
-dst = "~/.config/wezterm"
-
-[[link]]
-tags = ["mac"]
-linker = "symlink"
-dst = "~/.config/wezterm"
 
 [[link]]
 tags = ["wsl"]

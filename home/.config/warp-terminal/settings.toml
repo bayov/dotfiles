@@ -47,6 +47,7 @@ input_mode = "pinned_to_bottom"
 
 [terminal]
 mouse_reporting_enabled = true
+osc52_clipboard_access = "write_only"
 
 [terminal.input]
 input_box_type_setting = "classic"
