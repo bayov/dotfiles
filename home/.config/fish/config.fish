@@ -8,6 +8,7 @@ set -gx SCCACHE_CACHE_SIZE 25GB
 set -gx SCCACHE_BASEDIRS "$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 set -gx PYTHONPATH "$DOTFILES_DIR/pybayov/src"
 set -gx BUN_INSTALL "$HOME/.bun"
+set -gx CLAUDE_CODE_TMUX_TRUECOLOR 1
 
 # Read .machine-profile file, and warn if it doesn't exist
 if test -f "$DOTFILES_DIR/.machine-profile"

@@ -1,0 +1,9 @@
+[[link]]
+tags = ["!mac"]
+linker = "symlink"
+dst = "~/.config/.agent-of-empires"
+
+[[link]]
+tags = ["mac"]
+linker = "symlink"
+dst = "~/.agent-of-empires"

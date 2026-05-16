@@ -9,6 +9,7 @@ export SCCACHE_DIR="$HOME/.cache/sccache"
 export SCCACHE_CACHE_SIZE=25GB
 export SCCACHE_BASEDIRS="$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 export PYTHONPATH="$DOTFILES_DIR/pybayov/src"
+export CLAUDE_CODE_TMUX_TRUECOLOR=1
 
 # ── PATH ───────────────────────────────────────────────────────────────────────
 _prepend_path() { [[ ":$PATH:" != *":$1:"* ]] && export PATH="$1:$PATH"; }
