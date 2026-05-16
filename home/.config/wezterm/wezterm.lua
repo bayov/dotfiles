@@ -5,6 +5,7 @@ local act = wezterm.action
 local bayov_color_scheme = require("bayov_color_scheme")
 local copy_mode = require("copy_mode")
 local helpers = require("helpers")
+require("search_mode")
 local zoom = require("zoom")
 
 -- This will hold the configuration we export.
@@ -274,7 +275,8 @@ config.key_tables.search_mode = {
     { mods = "NONE", key = "Escape", action = copy_mode.CloseAndClearSelection },
     { mods = "CTRL|ALT", key = "f", action = copy_mode.CloseAndClearSelection },
     { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
-    { mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT", key = "u", action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT", key = "y", action = act.CopyMode("CycleMatchType") },
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
     { mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch") },
     { mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch") },

@@ -3,10 +3,12 @@ local wezterm = require("wezterm")
 -- This will hold the module we export.
 local module = {}
 
--- Background tint applied while in copy/search mode. Subtly blue-shifted
+-- Background tints applied while in copy/search mode. Subtly shifted
 -- from the normal theme background (#1d1f21) so the mode is noticeable
--- without being jarring.
+-- without being jarring. Search mode is yellow-shifted to distinguish
+-- it from copy mode's blue shift.
 module.copy_mode_bg = "#1a1d26"
+module.search_mode_bg = "#2e2a10"
 
 function module.apply_to_config(config)
     -- Other themes to try (maybe)
