@@ -22,6 +22,24 @@ module.CloseAndClearSelection = act.Multiple({
     act.ClearSelection,
 })
 
+-- If a selection is active, clear it but stay in copy mode.
+-- Otherwise, close copy mode.
+module.ClearSelectionOrCloseCopyMode = wezterm.action_callback(
+    function(window, pane)
+        if window:get_selection_text_for_pane(pane) ~= "" then
+            window:perform_action(
+                act.Multiple({
+                    act.ClearSelection,
+                    act.CopyMode("ClearSelectionMode"),
+                }),
+                pane
+            )
+        else
+            window:perform_action(module.CloseAndClearSelection, pane)
+        end
+    end
+)
+
 -- Extends the copy-mode selection in `direction` ("Left"/"Right"/"Up"/"Down"),
 -- starting a Cell selection first if none is active.
 module.ExtendSelection = function(direction)

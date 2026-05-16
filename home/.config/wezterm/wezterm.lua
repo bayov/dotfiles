@@ -210,7 +210,7 @@ config.keys = {
 config.key_tables = {}
 config.key_tables.copy_mode = {
     -- Close
-    { mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection },
+    { mods = "NONE", key = "Escape", action = helpers.ClearSelectionOrCloseCopyMode },
     { mods = "ALT", key = "c", action = helpers.CloseAndClearSelection },
     -- Perform copy (and then close)
     {
