@@ -78,7 +78,11 @@ wezterm.on("gui-attached", function(window, pane)
         if w:get_workspace() == workspace then
             local gw = w:gui_window()
             gw:set_position(main_screen.x, main_screen.y)
-            gw:toggle_fullscreen()
+            -- Skip if already fullscreen (e.g. reattaching to a persisted
+            -- mux session); otherwise the toggle would un-fullscreen it.
+            if not gw:get_dimensions().is_full_screen then
+                gw:toggle_fullscreen()
+            end
         end
     end
 end)
@@ -316,12 +320,16 @@ config.mouse_bindings = {
 --------------------------------------------------------------------------------
 -- Multiplexing
 --------------------------------------------------------------------------------
--- Multiplexing disabled as I've moved to Zellij
--- config.unix_domains = {
---     { name = 'unix' },
--- }
--- config.default_prog = { 'wsl', '~' }
--- config.default_gui_startup_args = { 'connect', 'unix' }
+-- The GUI connects to a `wezterm-mux-server` over a unix socket. The mux
+-- server outlives the GUI, so closing/reopening WezTerm reattaches to the
+-- same tabs/panes. Skipped on Windows, where the default domain is WSL
+-- (see OS-specific settings below).
+if not wezterm.target_triple:find("windows") then
+    config.unix_domains = {
+        { name = "unix" },
+    }
+    config.default_gui_startup_args = { "connect", "unix" }
+end
 
 --------------------------------------------------------------------------------
 -- OS-specific settings
