@@ -144,8 +144,8 @@ config.keys = {
     { mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain") },
     { mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1) },
     { mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1) },
-    { mods = "ALT", key = "[", action = act.MoveTabRelative(-1) },
-    { mods = "ALT", key = "]", action = act.MoveTabRelative(1) },
+    { mods = "ALT", key = "4", action = act.MoveTabRelative(-1) },
+    { mods = "ALT", key = "6", action = act.MoveTabRelative(1) },
     {
         mods = "NONE",
         key = "F2",

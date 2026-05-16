@@ -994,10 +994,10 @@
         "when": "sideBarFocus && !inputFocus && !isAuxiliaryWindowFocusedContext && config.workbench.sideBar.location == 'right'"
     },
 
-    { "command": "workbench.action.increaseViewWidth", "key": "ctrl+alt+numpad3", "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus" },
-    { "command": "workbench.action.decreaseViewWidth", "key": "ctrl+alt+numpad1", "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus" },
-    { "command": "workbench.action.decreaseViewHeight", "key": "ctrl+alt+numpad7", "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus" },
-    { "command": "workbench.action.increaseViewHeight", "key": "ctrl+alt+numpad9", "when": "!sideBarFocus && !panelFocus && !auxiliaryBarFocus" },
+    { "command": "workbench.action.increaseViewWidth", "key": "ctrl+alt+numpad6", "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus" },
+    { "command": "workbench.action.decreaseViewWidth", "key": "ctrl+alt+numpad4", "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus" },
+    { "command": "workbench.action.decreaseViewHeight", "key": "ctrl+alt+numpad8", "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus" },
+    { "command": "workbench.action.increaseViewHeight", "key": "ctrl+alt+numpad2", "when": "!auxiliaryBarFocus && !panelFocus && !sideBarFocus" },
 
     // Font size / auto-fix unbinds (freeing shift+alt+.,)
     { "command": "-editor.action.fontZoomOut", "key": "shift+alt+,", "when": "editorTextFocus" },
