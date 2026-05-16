@@ -96,7 +96,7 @@ if status is-interactive
     # `fish_sequence_key_delay_ms` widens the wait between sequence keys only
     # (it does not affect Alt/Esc disambiguation, which uses fish_escape_delay_ms).
     set -g fish_sequence_key_delay_ms 300
-    bind escape,escape cancel-commandline
+    bind escape,escape 'commandline -r ""'
 
     # Silence fish shell greeting
     set -gx fish_greeting
