@@ -70,12 +70,13 @@ if status is-interactive
     abbr -a z zellij
     abbr -a zl zellij list-sessions
     abbr -a zka zellij kill-all-sessions
-    abbr -a c claude --dangerously-skip-permissions
+    abbr -a c claude
     abbr -a g gemini --yolo
     abbr -a oc opencode
     abbr -a lmd glow --width 160
 
     # Aliases
+    alias claude="claude --dangerously-skip-permissions"
     alias za="zellij attach default --create"
     alias hm="history merge"
     alias v="$EDITOR"

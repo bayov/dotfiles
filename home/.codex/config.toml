@@ -91,13 +91,13 @@ source_type = "local"
 source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
 [marketplaces.claude-code-warp]
-last_updated = "2026-05-15T19:09:03Z"
+last_updated = "2026-05-16T12:37:25Z"
 last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
 source_type = "git"
 source = "https://github.com/warpdotdev/claude-code-warp.git"
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-05-15T19:09:05Z"
-last_revision = "1a2f18b05cf5652fd25403e8d229fc884fb84103"
+last_updated = "2026-05-16T12:37:27Z"
+last_revision = "5dbfa0fade3058791bf8134b2bd441cb9d5f9a10"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
