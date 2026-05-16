@@ -425,6 +425,9 @@
     { "command": "-cursorColumnSelectPageUp", "key": "ctrl+shift+alt+pageup", "when": "textInputFocus" },
     { "command": "-cursorColumnSelectRight", "key": "shift+alt+cmd+right", "when": "textInputFocus" },
 
+    { "command": "-expandLineSelection", "key": "cmd+l", "when": "textInputFocus" },
+    { "command": "expandLineSelection", "key": "ctrl+l", "when": "textInputFocus" },
+
     //--------------------------------------------------------------------------
     // Code Folding
     //--------------------------------------------------------------------------
