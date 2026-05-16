@@ -153,8 +153,8 @@ config.keys = {
     { mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain") },
     { mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1) },
     { mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1) },
-    { mods = "ALT", key = "4", action = act.MoveTabRelative(-1) },
-    { mods = "ALT", key = "6", action = act.MoveTabRelative(1) },
+    { mods = "ALT", key = "1", action = act.MoveTabRelative(-1) },
+    { mods = "ALT", key = "3", action = act.MoveTabRelative(1) },
     {
         mods = "NONE",
         key = "F2",
@@ -182,8 +182,8 @@ config.keys = {
     { mods = "CTRL|ALT", key = "2", action = act.AdjustPaneSize({ "Down", 4 }) },
     { mods = "CTRL|ALT", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
     { mods = "CTRL|ALT", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
-    { mods = "ALT|SHIFT", key = "{", action = act.RotatePanes("CounterClockwise") },
-    { mods = "ALT|SHIFT", key = "}", action = act.RotatePanes("Clockwise") },
+    { mods = "ALT", key = "7", action = act.RotatePanes("CounterClockwise") },
+    { mods = "ALT", key = "9", action = act.RotatePanes("Clockwise") },
     -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
     { mods = "ALT", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 
@@ -286,30 +286,8 @@ config.key_tables.search_mode = helpers.ExtendKeyTable(config.key_tables.copy_mo
 config.key_tables.pane = {
     { mods = "NONE", key = "Escape", action = act.PopKeyTable },
     { mods = "ALT", key = "s", action = act.PopKeyTable },
-    -- Split in direction
-    { mods = "ALT", key = "LeftArrow", action = act.SplitPane({ direction = "Left" }) },
-    { mods = "ALT", key = "RightArrow", action = act.SplitPane({ direction = "Right" }) },
-    { mods = "ALT", key = "UpArrow", action = act.SplitPane({ direction = "Up" }) },
-    { mods = "ALT", key = "DownArrow", action = act.SplitPane({ direction = "Down" }) },
-    -- Focus
-    { mods = "NONE", key = "LeftArrow", action = act.ActivatePaneDirection("Left") },
-    { mods = "NONE", key = "RightArrow", action = act.ActivatePaneDirection("Right") },
-    { mods = "NONE", key = "UpArrow", action = act.ActivatePaneDirection("Up") },
-    { mods = "NONE", key = "DownArrow", action = act.ActivatePaneDirection("Down") },
-    -- Rotate (closest WezTerm has to Zellij's "move pane")
-    { mods = "SHIFT", key = "LeftArrow", action = act.RotatePanes("CounterClockwise") },
-    { mods = "SHIFT", key = "RightArrow", action = act.RotatePanes("Clockwise") },
-    { mods = "SHIFT", key = "UpArrow", action = act.RotatePanes("CounterClockwise") },
-    { mods = "SHIFT", key = "DownArrow", action = act.RotatePanes("Clockwise") },
-    -- Resize
-    { mods = "NONE", key = "8", action = act.AdjustPaneSize({ "Up", 4 }) },
-    { mods = "NONE", key = "2", action = act.AdjustPaneSize({ "Down", 4 }) },
-    { mods = "NONE", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
-    { mods = "NONE", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
     -- Misc
-    { mods = "NONE", key = "s", action = act.PaneSelect },
     { mods = "NONE", key = "f", action = act.TogglePaneZoomState },
-    { mods = "NONE", key = "r", action = act.RotatePanes("Clockwise") },
     { mods = "NONE", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 }
 
