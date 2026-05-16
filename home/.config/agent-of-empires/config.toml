@@ -38,7 +38,7 @@ mount_ssh = false
 container_runtime = "docker"
 
 [tmux]
-status_bar = "auto"
+status_bar = "disabled"
 mouse = "auto"
 clipboard = "auto"
 
