@@ -38,6 +38,7 @@ config.inactive_pane_hsb = {
 config.window_decorations = "TITLE|RESIZE"
 config.initial_cols = 120
 config.initial_rows = 28
+-- TODO: These don't work for some reason
 config.window_padding = {
     left = "1cell",
     right = "1cell",
@@ -84,6 +85,7 @@ wezterm.on("gui-attached", function(window, pane)
     end
 end)
 
+-- TODO: Better tabline
 local tabline = require("tabline")
 tabline.plugin.apply_to_config(config)
 config.use_fancy_tab_bar = false
@@ -175,6 +177,7 @@ config.keys = {
     { mods = "CTRL|ALT", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
     { mods = "ALT|SHIFT", key = "{", action = act.RotatePanes("CounterClockwise") },
     { mods = "ALT|SHIFT", key = "}", action = act.RotatePanes("Clockwise") },
+    -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
     { mods = "ALT", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 
     -- Misc
@@ -229,31 +232,11 @@ config.key_tables.copy_mode = {
         }),
     },
     -- Enter selection mode
-    {
-        mods = "NONE",
-        key = "v",
-        action = act.CopyMode({ SetSelectionMode = "Cell" }),
-    },
-    {
-        mods = "SHIFT",
-        key = "v",
-        action = act.CopyMode({ SetSelectionMode = "Line" }),
-    },
-    {
-        mods = "CTRL",
-        key = "v",
-        action = act.CopyMode({ SetSelectionMode = "SemanticZone" }),
-    },
-    {
-        mods = "CTRL",
-        key = "w",
-        action = act.CopyMode({ SetSelectionMode = "Word" }),
-    },
-    {
-        mods = "SHIFT",
-        key = "Insert",
-        action = act.CopyMode({ SetSelectionMode = "Block" }),
-    },
+    { mods = "NONE", key = "v", action = act.CopyMode({ SetSelectionMode = "Cell" }) },
+    { mods = "SHIFT", key = "v", action = act.CopyMode({ SetSelectionMode = "Line" }) },
+    { mods = "CTRL", key = "v", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
+    { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
+    { mods = "SHIFT", key = "Insert", action = act.CopyMode({ SetSelectionMode = "Block" }) },
     -- Movement
     { mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp") },
     { mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown") },
