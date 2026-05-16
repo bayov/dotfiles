@@ -5,6 +5,7 @@ local act = wezterm.action
 local bayov_color_scheme = require("bayov_color_scheme")
 local copy_mode = require("copy_mode")
 local helpers = require("helpers")
+local resurrect = require("resurrect")
 require("search_mode")
 local zoom = require("zoom")
 
@@ -197,6 +198,10 @@ config.keys = {
     { mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette },
     { mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration },
     { mods = "CTRL", key = "`", action = act.ShowDebugOverlay },
+
+    -- Session resurrection (save/restore workspace, window, or tab state to disk)
+    { mods = "ALT|SHIFT", key = "s", action = resurrect.save_workspace },
+    { mods = "ALT|SHIFT", key = "r", action = resurrect.restore_state },
 
     -- Support Shift+Enter for CLI tools
     { mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u") },
