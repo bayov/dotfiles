@@ -178,12 +178,14 @@ config.keys = {
     { mods = "ALT|SHIFT", key = "2", action = act.SplitPane({ direction = "Down" }) },
     { mods = "ALT|SHIFT", key = "4", action = act.SplitPane({ direction = "Left" }) },
     { mods = "ALT|SHIFT", key = "6", action = act.SplitPane({ direction = "Right" }) },
-    { mods = "CTRL|ALT", key = "8", action = act.AdjustPaneSize({ "Up", 4 }) },
-    { mods = "CTRL|ALT", key = "2", action = act.AdjustPaneSize({ "Down", 4 }) },
+    { mods = "CTRL|ALT", key = "8", action = act.AdjustPaneSize({ "Up", 2 }) },
+    { mods = "CTRL|ALT", key = "2", action = act.AdjustPaneSize({ "Down", 2 }) },
     { mods = "CTRL|ALT", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
     { mods = "CTRL|ALT", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
-    { mods = "ALT", key = "7", action = act.RotatePanes("CounterClockwise") },
-    { mods = "ALT", key = "9", action = act.RotatePanes("Clockwise") },
+    { mods = "ALT", key = "9", action = act.RotatePanes("CounterClockwise") },
+    { mods = "ALT", key = "7", action = act.RotatePanes("Clockwise") },
+    { mods = "ALT", key = "*", action = act.PaneSelect({ mode = "SwapWithActive" }) },
+    { mods = "ALT", key = "5", action = act.TogglePaneZoomState },
     -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
     { mods = "ALT", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
 
@@ -283,13 +285,6 @@ config.key_tables.search_mode = helpers.ExtendKeyTable(config.key_tables.copy_mo
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
     { mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch") },
 })
-config.key_tables.pane = {
-    { mods = "NONE", key = "Escape", action = act.PopKeyTable },
-    { mods = "ALT", key = "s", action = act.PopKeyTable },
-    -- Misc
-    { mods = "NONE", key = "f", action = act.TogglePaneZoomState },
-    { mods = "NONE", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
-}
 
 --------------------------------------------------------------------------------
 -- Mouse bindings

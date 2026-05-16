@@ -272,7 +272,7 @@
     { "command": "-workbench.action.closeEditorsInGroup", "key": "ctrl+k w" },
     { "command": "-workbench.action.closeAllGroups", "key": "ctrl+k ctrl+shift+w" },
 
-    { "command": "workbench.action.toggleEditorWidths", "key": "alt+s f" },
+    { "command": "workbench.action.toggleEditorWidths", "key": "alt+numpad5" },
     { "command": "workbench.action.evenEditorWidths", "key": "alt+s s" },
 
     // Split editor (numpad: 2=down, 4=left, 6=right, 8=up)
