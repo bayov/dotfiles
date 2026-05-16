@@ -152,6 +152,15 @@ config.keys = {
 
     -- Presentation
     { mods = "ALT", key = "\\", action = act.ToggleFullScreen },
+    {
+        mods = "ALT",
+        key = "-",
+        action = wezterm.action_callback(function(window)
+            local overrides = window:get_config_overrides() or {}
+            overrides.enable_tab_bar = not (overrides.enable_tab_bar == nil and true or overrides.enable_tab_bar)
+            window:set_config_overrides(overrides)
+        end),
+    },
     { mods = "CTRL", key = "-", action = zoom.ZoomOut },
     { mods = "CTRL", key = "=", action = zoom.ZoomIn },
     { mods = "CTRL", key = "0", action = zoom.ResetZoom },
