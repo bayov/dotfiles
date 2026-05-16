@@ -49,47 +49,47 @@ wezterm.on("gui-attached", function()
     pf:close()
     if kind ~= "workspace" or not name or name == "" then return end
 
-    -- gui-attached's arg is a Domain; resolve the just-attached GUI window
-    -- via wezterm.gui.gui_windows() instead.
-    local gw = wezterm.gui.gui_windows()[1]
-    if not gw then return end
-    local mux_win = gw:mux_window()
-
     local state = sm.load_state(name, "workspace")
     if not state.window_states or #state.window_states == 0 then return end
 
-    local restore_opts = {
-        relative = true,
-        restore_text = true,
-        close_open_tabs = true,
-        on_pane_restore = module.plugin.tab_state.default_on_pane_restore,
-    }
-    module.plugin.window_state.restore_window(
-        mux_win, state.window_states[1], restore_opts
-    )
+    -- Defer the actual restore so any later-registered gui-attached listeners
+    -- (e.g. the fullscreen toggle in wezterm.lua) run first. Splitting panes
+    -- against the post-fullscreen window size keeps proportional layouts
+    -- correct; otherwise panes get baked into the 120x28 starter dimensions.
+    wezterm.time.call_after(0.5, function()
+        local gw = wezterm.gui.gui_windows()[1]
+        if not gw then return end
+        local mux_win = gw:mux_window()
 
-    -- Spawn additional windows (if the saved workspace had >1) in the same
-    -- workspace. close_open_tabs=false here because each new window starts
-    -- with just its own default tab.
-    for i = 2, #state.window_states do
-        local ws = state.window_states[i]
-        local _, _, mux_win = wezterm.mux.spawn_window({
-            workspace = state.workspace,
-            cwd = ws.tabs[1].pane_tree.cwd,
-            width = ws.size.cols,
-            height = ws.size.rows,
-        })
-        local extra_opts = {
+        local restore_opts = {
             relative = true,
             restore_text = true,
             close_open_tabs = true,
             on_pane_restore = module.plugin.tab_state.default_on_pane_restore,
         }
-        module.plugin.window_state.restore_window(mux_win, ws, extra_opts)
-    end
+        module.plugin.window_state.restore_window(
+            mux_win, state.window_states[1], restore_opts
+        )
 
-    wezterm.mux.set_active_workspace(state.workspace)
-    wezterm.log_info("resurrect: auto-restored workspace " .. state.workspace)
+        for i = 2, #state.window_states do
+            local ws = state.window_states[i]
+            local _, _, extra_win = wezterm.mux.spawn_window({
+                workspace = state.workspace,
+                cwd = ws.tabs[1].pane_tree.cwd,
+                width = ws.size.cols,
+                height = ws.size.rows,
+            })
+            module.plugin.window_state.restore_window(extra_win, ws, {
+                relative = true,
+                restore_text = true,
+                close_open_tabs = true,
+                on_pane_restore = module.plugin.tab_state.default_on_pane_restore,
+            })
+        end
+
+        wezterm.mux.set_active_workspace(state.workspace)
+        wezterm.log_info("resurrect: auto-restored workspace " .. state.workspace)
+    end)
 end)
 
 -- Save the active workspace.
