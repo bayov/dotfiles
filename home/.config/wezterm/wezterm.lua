@@ -274,27 +274,15 @@ config.key_tables.copy_mode = {
     { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
     { mods = "CTRL", key = "b", action = act.CopyMode({ SetSelectionMode = "Block" }) },
 }
-config.key_tables.search_mode = {
-    { mods = "NONE", key = "Escape", action = copy_mode.CloseAndClearSelection },
-    { mods = "CTRL|ALT", key = "f", action = copy_mode.CloseAndClearSelection },
+-- Search mode reuses the copy mode bindings and only overrides/adds the
+-- match-navigation keys. Escape, Ctrl+c, y, movement, etc. are inherited.
+config.key_tables.search_mode = helpers.ExtendKeyTable(config.key_tables.copy_mode, {
     { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
     { mods = "ALT", key = "u", action = act.CopyMode("CycleMatchType") },
     { mods = "ALT", key = "y", action = act.CopyMode("CycleMatchType") },
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
     { mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch") },
-    { mods = "NONE", key = "UpArrow", action = act.CopyMode("PriorMatch") },
-    { mods = "NONE", key = "DownArrow", action = act.CopyMode("NextMatch") },
-    -- Perform copy (and then close)
-    {
-        mods = "CTRL",
-        key = "c",
-        action = act.Multiple({
-            act.CopyTo("Clipboard"),
-            act.ClearSelection,
-            act.CopyMode("Close"),
-        }),
-    },
-}
+})
 config.key_tables.pane = {
     { mods = "NONE", key = "Escape", action = act.PopKeyTable },
     { mods = "ALT", key = "s", action = act.PopKeyTable },

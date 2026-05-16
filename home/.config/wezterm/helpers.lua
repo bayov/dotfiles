@@ -68,6 +68,29 @@ module.TintWhileKeyTableActive = function(key_table_name, bg_color)
     end)
 end
 
+-- Returns a new key table built from `base` with `extras` appended.
+-- Bindings in `extras` override bindings in `base` that share the same
+-- mods+key combination.
+module.ExtendKeyTable = function(base, extras)
+    local function id(binding)
+        return (binding.mods or "NONE") .. ":" .. binding.key
+    end
+    local overridden = {}
+    for _, e in ipairs(extras) do
+        overridden[id(e)] = true
+    end
+    local result = {}
+    for _, e in ipairs(base) do
+        if not overridden[id(e)] then
+            table.insert(result, e)
+        end
+    end
+    for _, e in ipairs(extras) do
+        table.insert(result, e)
+    end
+    return result
+end
+
 -- Wraps a WezTerm `key_bind` (provided as `{mods, key, action}`) and returns
 -- a new keybind where `action` is performed only when the current pane is not
 -- a TUI. When the pane is a TUI, sends the key as is instead.
