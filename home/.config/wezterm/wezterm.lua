@@ -231,12 +231,19 @@ config.key_tables.copy_mode = {
             act.CopyMode("Close"),
         }),
     },
-    -- Enter selection mode
+    -- Enter selection mode (vim-style)
     { mods = "NONE", key = "v", action = act.CopyMode({ SetSelectionMode = "Cell" }) },
     { mods = "SHIFT", key = "v", action = act.CopyMode({ SetSelectionMode = "Line" }) },
     { mods = "CTRL", key = "v", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
     { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
     { mods = "SHIFT", key = "Insert", action = act.CopyMode({ SetSelectionMode = "Block" }) },
+    -- Extend selection (non-vim)
+    { mods = "SHIFT", key = "LeftArrow",  action = helpers.ExtendSelection("Left") },
+    { mods = "SHIFT", key = "RightArrow", action = helpers.ExtendSelection("Right") },
+    { mods = "SHIFT", key = "UpArrow",    action = helpers.ExtendSelection("Up") },
+    { mods = "SHIFT", key = "DownArrow",  action = helpers.ExtendSelection("Down") },
+    { mods = "SHIFT", key = "Home",       action = helpers.ExtendSelection("ToStartOfLineContent") },
+    { mods = "SHIFT", key = "End",        action = helpers.ExtendSelection("ToEndOfLineContent") },
     -- Movement
     { mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp") },
     { mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown") },
@@ -282,16 +289,8 @@ config.key_tables.copy_mode = {
         key = "PageDown",
         action = act.CopyMode({ MoveByPage = 0.5 }),
     },
-    {
-        mods = "SHIFT",
-        key = "UpArrow",
-        action = act.CopyMode("MoveBackwardSemanticZone"),
-    },
-    {
-        mods = "SHIFT",
-        key = "DownArrow",
-        action = act.CopyMode("MoveForwardSemanticZone"),
-    },
+    -- { mods = "SHIFT", key = "UpArrow",   action = act.CopyMode("MoveBackwardSemanticZone") },
+    -- { mods = "SHIFT", key = "DownArrow", action = act.CopyMode("MoveForwardSemanticZone") },
     -- Clear search and selection
     {
         mods = "ALT",

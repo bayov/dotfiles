@@ -22,6 +22,20 @@ module.CloseAndClearSelection = act.Multiple({
     act.ClearSelection,
 })
 
+-- Extends the copy-mode selection in `direction` ("Left"/"Right"/"Up"/"Down"),
+-- starting a Cell selection first if none is active.
+module.ExtendSelection = function(direction)
+    return wezterm.action_callback(function(window, pane)
+        if window:get_selection_text_for_pane(pane) == "" then
+            window:perform_action(
+                act.CopyMode({ SetSelectionMode = "Cell" }),
+                pane
+            )
+        end
+        window:perform_action(act.CopyMode("Move" .. direction), pane)
+    end)
+end
+
 -- Clears the current pane's viewport while preserving its content in
 -- scrollback buffer. This is useful when you want to clear the screen
 -- but keep the ability to scroll up to see previous output.
