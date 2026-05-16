@@ -170,7 +170,6 @@ config.keys = {
     },
 
     -- Pane-management
-    { mods = "ALT", key = "s", action = act.ActivateKeyTable({ name = "pane" }) },
     { mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up") },
     { mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down") },
     { mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left") },
