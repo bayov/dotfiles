@@ -3,6 +3,7 @@ local mux = wezterm.mux
 local act = wezterm.action
 
 local bayov_color_scheme = require("bayov_color_scheme")
+local copy_mode = require("copy_mode")
 local helpers = require("helpers")
 local zoom = require("zoom")
 
@@ -210,8 +211,8 @@ config.keys = {
 config.key_tables = {}
 config.key_tables.copy_mode = {
     -- Close
-    { mods = "NONE", key = "Escape", action = helpers.ClearSelectionOrCloseCopyMode },
-    { mods = "ALT", key = "c", action = helpers.CloseAndClearSelection },
+    { mods = "NONE", key = "Escape", action = copy_mode.ClearSelectionOrCloseCopyMode },
+    { mods = "ALT", key = "c", action = copy_mode.CloseAndClearSelection },
     -- Perform copy (and then close)
     {
         mods = "CTRL",
@@ -238,12 +239,12 @@ config.key_tables.copy_mode = {
     { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
     { mods = "SHIFT", key = "Insert", action = act.CopyMode({ SetSelectionMode = "Block" }) },
     -- Extend selection (non-vim)
-    { mods = "SHIFT", key = "LeftArrow",  action = helpers.ExtendSelection("Left") },
-    { mods = "SHIFT", key = "RightArrow", action = helpers.ExtendSelection("Right") },
-    { mods = "SHIFT", key = "UpArrow",    action = helpers.ExtendSelection("Up") },
-    { mods = "SHIFT", key = "DownArrow",  action = helpers.ExtendSelection("Down") },
-    { mods = "SHIFT", key = "Home",       action = helpers.ExtendSelection("ToStartOfLineContent") },
-    { mods = "SHIFT", key = "End",        action = helpers.ExtendSelection("ToEndOfLineContent") },
+    { mods = "SHIFT", key = "LeftArrow",  action = copy_mode.ExtendSelection("Left") },
+    { mods = "SHIFT", key = "RightArrow", action = copy_mode.ExtendSelection("Right") },
+    { mods = "SHIFT", key = "UpArrow",    action = copy_mode.ExtendSelection("Up") },
+    { mods = "SHIFT", key = "DownArrow",  action = copy_mode.ExtendSelection("Down") },
+    { mods = "SHIFT", key = "Home",       action = copy_mode.ExtendSelection("ToStartOfLineContent") },
+    { mods = "SHIFT", key = "End",        action = copy_mode.ExtendSelection("ToEndOfLineContent") },
     -- Movement
     { mods = "NONE", key = "UpArrow", action = act.CopyMode("MoveUp") },
     { mods = "NONE", key = "DownArrow", action = act.CopyMode("MoveDown") },
@@ -303,8 +304,8 @@ config.key_tables.copy_mode = {
     },
 }
 config.key_tables.search_mode = {
-    { mods = "NONE", key = "Escape", action = helpers.CloseAndClearSelection },
-    { mods = "CTRL|ALT", key = "f", action = helpers.CloseAndClearSelection },
+    { mods = "NONE", key = "Escape", action = copy_mode.CloseAndClearSelection },
+    { mods = "CTRL|ALT", key = "f", action = copy_mode.CloseAndClearSelection },
     { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
     { mods = "ALT", key = "w", action = act.CopyMode("CycleMatchType") },
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
