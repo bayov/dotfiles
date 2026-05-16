@@ -92,6 +92,11 @@ if status is-interactive
     bind ctrl-delete kill-word
     bind alt-backspace backward-kill-line
     bind alt-delete kill-line
+    # Double-Escape clears the current command line (like Ctrl+C).
+    # `fish_sequence_key_delay_ms` widens the wait between sequence keys only
+    # (it does not affect Alt/Esc disambiguation, which uses fish_escape_delay_ms).
+    set -g fish_sequence_key_delay_ms 300
+    bind escape,escape cancel-commandline
 
     # Silence fish shell greeting
     set -gx fish_greeting
