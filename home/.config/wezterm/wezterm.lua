@@ -269,16 +269,6 @@ config.key_tables.copy_mode = {
     { mods = "CTRL", key = "s", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
     { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
     { mods = "CTRL", key = "b", action = act.CopyMode({ SetSelectionMode = "Block" }) },
-    -- Clear search and selection
-    {
-        mods = "ALT",
-        key = "Delete",
-        action = act.Multiple({
-            act.CopyMode("ClearPattern"),
-            act.CopyMode("ClearSelectionMode"),
-            act.ClearSelection,
-        }),
-    },
 }
 config.key_tables.search_mode = {
     { mods = "NONE", key = "Escape", action = copy_mode.CloseAndClearSelection },
