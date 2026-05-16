@@ -127,6 +127,8 @@ config.keys = {
     helpers.KeyUnlessTui({ mods = "ALT", key = "PageDown", action = act.ScrollByPage(0.5) }),
     helpers.KeyUnlessTui({ mods = "ALT", key = "Home", action = act.ScrollToTop }),
     helpers.KeyUnlessTui({ mods = "ALT", key = "End", action = act.ScrollToBottom }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "[", action = act.ScrollToPrompt(-1) }),
+    helpers.KeyUnlessTui({ mods = "ALT", key = "]", action = act.ScrollToPrompt(1) }),
     helpers.KeyUnlessTui({ mods = "CTRL", key = "l", action = helpers.ClearPaneWhileKeepingScrollback }),
     helpers.KeyUnlessTui({
         mods = "CTRL|ALT",
@@ -245,6 +247,8 @@ config.key_tables.copy_mode = {
     { mods = "CTRL", key = "End",        action = copy_mode.Move("ToScrollbackBottom") },
     { mods = "NONE", key = "PageUp",   action = copy_mode.Move({ MoveByPage = -0.5 }) },
     { mods = "NONE", key = "PageDown", action = copy_mode.Move({ MoveByPage = 0.5 }) },
+    { mods = "CTRL", key = "[",        action = copy_mode.Move("BackwardSemanticZone") },
+    { mods = "CTRL", key = "]",        action = copy_mode.Move("ForwardSemanticZone") },
     -- Extend selection (non-vim)
     { mods = "SHIFT", key = "LeftArrow",  action = copy_mode.ExtendSelection("Left") },
     { mods = "SHIFT", key = "RightArrow", action = copy_mode.ExtendSelection("Right") },
@@ -258,13 +262,13 @@ config.key_tables.copy_mode = {
     { mods = "CTRL|SHIFT", key = "End",        action = copy_mode.ExtendSelection("ToScrollbackBottom") },
     { mods = "SHIFT", key = "PageUp",   action = copy_mode.ExtendSelection({ MoveByPage = -0.5 }) },
     { mods = "SHIFT", key = "PageDown", action = copy_mode.ExtendSelection({ MoveByPage = 0.5 }) },
+    { mods = "CTRL|SHIFT", key = "{",   action = copy_mode.ExtendSelection("BackwardSemanticZone") },
+    { mods = "CTRL|SHIFT", key = "}",   action = copy_mode.ExtendSelection("ForwardSemanticZone") },
     -- Quick selection
     { mods = "CTRL", key = "l", action = act.CopyMode({ SetSelectionMode = "Line" }) },
-    { mods = "CTRL", key = "v", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
+    { mods = "CTRL", key = "s", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
     { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
-    { mods = "SHIFT", key = "Insert", action = act.CopyMode({ SetSelectionMode = "Block" }) },
-    -- { mods = "SHIFT", key = "UpArrow",   action = act.CopyMode("MoveBackwardSemanticZone") },
-    -- { mods = "SHIFT", key = "DownArrow", action = act.CopyMode("MoveForwardSemanticZone") },
+    { mods = "CTRL", key = "b", action = act.CopyMode({ SetSelectionMode = "Block" }) },
     -- Clear search and selection
     {
         mods = "ALT",
