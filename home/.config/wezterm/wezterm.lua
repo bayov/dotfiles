@@ -69,9 +69,13 @@ config.quick_select_patterns = {
 }
 config.quick_select_alphabet = "qwerasdzxcv"
 
--- Start in full-screen on the primary display (the one with the menu bar).
--- Without set_position, macOS spawns the window on whichever display had
--- focus / the cursor — toggling fullscreen there pins it to the wrong space.
+-- Move the window to the primary display on attach. On non-macOS also
+-- auto-toggle fullscreen. On macOS the non-native fullscreen path picks the
+-- screen via AppKit focus rather than the window's frame, so the toggle can
+-- land on the wrong display in multi-monitor setups — leave fullscreen to
+-- a manual Alt+\ press there (which correctly uses the focused window's
+-- screen).
+local is_macos = wezterm.target_triple:find("darwin") ~= nil
 wezterm.on("gui-attached", function(window, pane)
     local main_screen = wezterm.gui.screens().main
     local workspace = mux.get_active_workspace()
@@ -79,9 +83,7 @@ wezterm.on("gui-attached", function(window, pane)
         if w:get_workspace() == workspace then
             local gw = w:gui_window()
             gw:set_position(main_screen.x, main_screen.y)
-            -- Skip if already fullscreen (e.g. reattaching to a persisted
-            -- mux session); otherwise the toggle would un-fullscreen it.
-            if not gw:get_dimensions().is_full_screen then
+            if not is_macos and not gw:get_dimensions().is_full_screen then
                 gw:toggle_fullscreen()
             end
         end

@@ -56,7 +56,7 @@ wezterm.on("gui-attached", function()
     -- (e.g. the fullscreen toggle in wezterm.lua) run first. Splitting panes
     -- against the post-fullscreen window size keeps proportional layouts
     -- correct; otherwise panes get baked into the 120x28 starter dimensions.
-    wezterm.time.call_after(0.5, function()
+    wezterm.time.call_after(0.3, function()
         local gw = wezterm.gui.gui_windows()[1]
         if not gw then return end
         local mux_win = gw:mux_window()
