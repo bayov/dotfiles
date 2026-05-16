@@ -377,18 +377,18 @@ config.mouse_bindings = {
     {
         mods = "NONE",
         event = { Down = { streak = 3, button = "Left" } },
-        action = wezterm.action.SelectTextAtMouseCursor("Line"),
+        action = act.SelectTextAtMouseCursor("Line"),
     },
     {
         mods = "CTRL",
         event = { Down = { streak = 1, button = "Left" } },
-        action = wezterm.action.SelectTextAtMouseCursor("SemanticZone"),
+        action = act.SelectTextAtMouseCursor("SemanticZone"),
     },
     -- Disable copy on selection
     {
         mods = "NONE",
         event = { Up = { streak = 1, button = "Left" } },
-        action = wezterm.action.Nop,
+        action = act.Nop,
     },
     -- Paste with right-click (or copy if text is selected):
     {
