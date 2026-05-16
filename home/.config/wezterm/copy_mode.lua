@@ -2,28 +2,12 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 
 local bayov_color_scheme = require("bayov_color_scheme")
+local helpers = require("helpers")
 
 -- Helpers specific to the copy mode key table.
 local module = {}
 
--- Tint the background and dim inactive panes while in copy mode so it's
--- obvious the keyboard is captured. Only mutates overrides on transitions
--- to avoid spamming reloads on every status tick.
-wezterm.on("update-status", function(window, _pane)
-    local in_copy = window:active_key_table() == "copy_mode"
-    local overrides = window:get_config_overrides() or {}
-    local currently_tinted = overrides.colors
-        and overrides.colors.background == bayov_color_scheme.copy_mode_bg
-    if in_copy and not currently_tinted then
-        overrides.colors = { background = bayov_color_scheme.copy_mode_bg }
-        overrides.inactive_pane_hsb = { saturation = 0.7, brightness = 0.5 }
-        window:set_config_overrides(overrides)
-    elseif not in_copy and currently_tinted then
-        overrides.colors = nil
-        overrides.inactive_pane_hsb = nil
-        window:set_config_overrides(overrides)
-    end
-end)
+helpers.TintWhileKeyTableActive("copy_mode", bayov_color_scheme.copy_mode_bg)
 
 module.CloseAndClearSelection = act.Multiple({
     act.CopyMode("Close"),

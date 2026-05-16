@@ -54,6 +54,9 @@ config.cursor_blink_rate = 500
 -- Misc
 config.max_fps = 120
 config.animation_fps = 120
+-- Drives `update-status` cadence; lowered from 1000ms so copy/search-mode
+-- background tints react quickly when entering/leaving the modes.
+config.status_update_interval = 50
 config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
 local url_regex =

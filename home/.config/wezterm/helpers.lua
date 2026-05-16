@@ -46,6 +46,28 @@ module.ClearPaneWhileKeepingScrollback = wezterm.action_callback(
     end
 )
 
+-- Registers an `update-status` handler that tints the window background to
+-- `bg_color` and dims inactive panes while the given `key_table_name` is the
+-- active key table. Only mutates overrides on transitions to avoid spamming
+-- reloads on every status tick.
+module.TintWhileKeyTableActive = function(key_table_name, bg_color)
+    wezterm.on("update-status", function(window, _pane)
+        local active = window:active_key_table() == key_table_name
+        local overrides = window:get_config_overrides() or {}
+        local currently_tinted = overrides.colors
+            and overrides.colors.background == bg_color
+        if active and not currently_tinted then
+            overrides.colors = { background = bg_color }
+            overrides.inactive_pane_hsb = { saturation = 0.7, brightness = 0.5 }
+            window:set_config_overrides(overrides)
+        elseif not active and currently_tinted then
+            overrides.colors = nil
+            overrides.inactive_pane_hsb = nil
+            window:set_config_overrides(overrides)
+        end
+    end)
+end
+
 -- Wraps a WezTerm `key_bind` (provided as `{mods, key, action}`) and returns
 -- a new keybind where `action` is performed only when the current pane is not
 -- a TUI. When the pane is a TUI, sends the key as is instead.
