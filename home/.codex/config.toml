@@ -49,6 +49,9 @@ trust_level = "trusted"
 [projects."/Users/hagai.akibayov/notes"]
 trust_level = "trusted"
 
+[projects."/Users/hagai.akibayov/workspaces/review-bot"]
+trust_level = "trusted"
+
 [plugins."slack@openai-curated"]
 enabled = true
 
@@ -94,13 +97,13 @@ source_type = "local"
 source = "/Users/hagai.akibayov/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
 [marketplaces.claude-code-warp]
-last_updated = "2026-05-16T21:22:11Z"
+last_updated = "2026-05-18T09:40:37Z"
 last_revision = "b8ad3cc6c1e40b2d2a944f900a4ae0904a54dd7f"
 source_type = "git"
 source = "https://github.com/warpdotdev/claude-code-warp.git"
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-05-16T21:22:13Z"
-last_revision = "b5a156b6ecd2f69c418184b7c093930ddabaf9c0"
+last_updated = "2026-05-18T09:40:41Z"
+last_revision = "f475d3ce5806c7edf9fc204ee276e7f45e24c798"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
