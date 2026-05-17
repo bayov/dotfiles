@@ -1223,7 +1223,6 @@
       "ctrl-shift-c": "terminal::Copy",
       "paste": "terminal::Paste",
       "shift-insert": "terminal::Paste",
-      "ctrl-shift-v": "terminal::Paste",
       "ctrl-enter": "assistant::InlineAssist",
       "ctrl-shift-a": "editor::SelectAll",
       "find": "buffer_search::Deploy",
@@ -1249,6 +1248,7 @@
       "ctrl-delete": ["terminal::SendText", "\u001b[3;5~"],
       "ctrl-b": ["terminal::SendKeystroke", "ctrl-b"],
       "ctrl-c": ["terminal::SendKeystroke", "ctrl-c"],
+      "ctrl-v": "terminal::Paste",
       "ctrl-e": ["terminal::SendKeystroke", "ctrl-e"],
       "ctrl-o": ["terminal::SendKeystroke", "ctrl-o"],
       "ctrl-w": ["terminal::SendKeystroke", "ctrl-w"],
@@ -1274,6 +1274,12 @@
       "pagedown": ["terminal::SendKeystroke", "pagedown"],
       "escape": ["terminal::SendKeystroke", "escape"],
       "enter": ["terminal::SendKeystroke", "enter"],
+    },
+  },
+  {
+    "context": "Terminal && selection",
+    "bindings": {
+      "ctrl-c": "terminal::Copy",
     },
   },
 
