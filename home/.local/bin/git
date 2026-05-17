@@ -1,0 +1,23 @@
+#!/bin/sh
+# Block `git` inside jj repos, but only for Claude Code (CLAUDECODE=1).
+# Interactive shells and scripts run by the user are unaffected.
+set -eu
+
+self_dir=$(cd "$(dirname "$0")" && pwd)
+strip_self() {
+	PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self_dir" | tr '\n' ':' | sed 's/:$//')
+	export PATH
+}
+
+if [ -z "${CLAUDECODE:-}" ]; then
+	strip_self
+	exec git "$@"
+fi
+
+if jj_root=$(command jj root 2>/dev/null); then
+	printf '%s is a jj repository; agents must use jj, not git\n' "$jj_root" >&2
+	exit 1
+fi
+
+strip_self
+exec git "$@"
