@@ -305,34 +305,27 @@
       "alt-p": "pane::TogglePinTab",
       "alt-s x": "workspace::CloseAllItemsAndPanes",
       "alt-s d": "pane::CloseOtherItems",
-      "alt-[": "pane::SwapItemLeft",
-      "alt-]": "pane::SwapItemRight",
-      "shift-alt-[": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "left" },
-      ],
-      "shift-alt-]": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "right" },
-      ],
-      "shift-alt-numpad_4": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "left" },
-      ],
-      "shift-alt-numpad_6": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "right" },
-      ],
-      "shift-alt-numpad_8": [
-        "workspace::MoveItemToPaneInDirection",
-        { "direction": "up" },
-      ],
-      "shift-alt-numpad_2": [
+      "ctrl-tab": "tab_switcher::Toggle",
+      "alt-y": "search::ToggleRegex",
+      // Numpad via Karabiner (Zed-only): keypad_N -> F(12+N)
+      "alt-f16": "pane::SwapItemLeft",
+      "alt-f18": "pane::SwapItemRight",
+      "alt-shift-f14": [
         "workspace::MoveItemToPaneInDirection",
         { "direction": "down" },
       ],
-      "ctrl-tab": "tab_switcher::Toggle",
-      "alt-y": "search::ToggleRegex",
+      "alt-shift-f16": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "left" },
+      ],
+      "alt-shift-f18": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "right" },
+      ],
+      "alt-shift-f20": [
+        "workspace::MoveItemToPaneInDirection",
+        { "direction": "up" },
+      ],
     },
   },
   {
@@ -346,6 +339,10 @@
       "ctrl-alt-2": "vim::ResizePaneDown",
       "ctrl-alt-4": "vim::ResizePaneLeft",
       "ctrl-alt-6": "vim::ResizePaneRight",
+      "ctrl-alt-f14": "vim::ResizePaneDown",
+      "ctrl-alt-f16": "vim::ResizePaneLeft",
+      "ctrl-alt-f18": "vim::ResizePaneRight",
+      "ctrl-alt-f20": "vim::ResizePaneUp",
     },
   },
   {
@@ -552,6 +549,13 @@
       "ctrl-k ctrl-9": "editor::FoldAtLevel_9",
       "ctrl-k ctrl-0": "editor::FoldAll",
       "ctrl-k ctrl-j": "editor::UnfoldAll",
+      // Numpad via Karabiner (Zed-only): keypad_hyphen -> F22, keypad_plus -> F23
+      "ctrl-f22": "editor::Fold",
+      "ctrl-shift-f22": "editor::FoldAll",
+      "ctrl-alt-f22": "editor::FoldRecursive",
+      "ctrl-f23": "editor::UnfoldLines",
+      "ctrl-shift-f23": "editor::UnfoldAll",
+      "ctrl-alt-f23": "editor::UnfoldRecursive",
       "ctrl-space": "editor::ShowCompletions",
       "ctrl-shift-space": "editor::ShowWordCompletions",
       "ctrl-.": ["editor::GoToDiagnostic", { "severity": "hint" }],
@@ -577,12 +581,6 @@
       "ctrl-g": "go_to_line::Toggle",
       "shift-ctrl-alt-n": "project_symbols::Toggle",
       "ctrl-b": "editor::MoveToEnclosingBracket",
-      "shift-ctrl-numpad_subtract": "editor::FoldAll",
-      "ctrl-numpad_subtract": "editor::Fold",
-      "ctrl-alt-numpad_subtract": "editor::FoldRecursive",
-      "shift-ctrl-numpad_add": "editor::UnfoldAll",
-      "ctrl-numpad_add": "editor::UnfoldLines",
-      "ctrl-alt-numpad_add": "editor::UnfoldRecursive",
       "ctrl-w": "editor::SelectLargerSyntaxNode",
       "shift-ctrl-w": "editor::SelectSmallerSyntaxNode",
       "ctrl-alt-up": "editor::AddSelectionAbove",
