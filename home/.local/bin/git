@@ -1,0 +1,35 @@
+#!/bin/sh
+# Block `git` inside jj repos when invoked by Claude Code, but allow it when
+# jj itself shells out to git (e.g. `jj git fetch`). Decision is based on the
+# nearest ancestor process: if it's `claude`, block; if it's `jj`, allow.
+# Interactive shells and scripts are unaffected.
+set -eu
+
+self_dir=$(cd "$(dirname "$0")" && pwd)
+strip_self() {
+	PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$self_dir" | tr '\n' ':' | sed 's/:$//')
+	export PATH
+}
+
+# Walk the parent chain; print the first relevant ancestor name or empty.
+nearest_relevant_ancestor() {
+	pid=$PPID
+	i=0
+	while [ "$i" -lt 20 ] && [ -n "$pid" ] && [ "$pid" != 0 ] && [ "$pid" != 1 ]; do
+		comm=$(ps -o comm= -p "$pid" 2>/dev/null || true)
+		case "${comm##*/}" in
+			claude) printf 'claude\n'; return ;;
+			jj) printf 'jj\n'; return ;;
+		esac
+		pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+		i=$((i + 1))
+	done
+}
+
+if [ "$(nearest_relevant_ancestor)" = claude ] && jj_root=$(command jj root 2>/dev/null); then
+	printf '%s is a jj repository; agents must use jj, not git\n' "$jj_root" >&2
+	exit 1
+fi
+
+strip_self
+exec git "$@"
