@@ -5,16 +5,16 @@ supported.
 
 ## Multi-caret and Rectangular Selection
 
-| Key                        | Action                                                          |
-| -------------------------- | --------------------------------------------------------------- |
-| Shift+Insert               | Toggle column selection mode                                    |
-| Alt+Click                  | Add Caret                                                       |
-| Alt+Click                  | Add Rectangular Selection (mouse drag)                          |
-| Alt+Ctrl+{Up,Down}         | Clone caret above/below                                         |
-| Ctrl+Alt+PgDn              | Multi-select current selection / word under cursor              |
-| Ctrl+Alt+PgUp              | Undo last multi-select                                          |
-| Ctrl+Alt+End               | Multi-select all matches                                        |
-| Ctrl+Alt+Shift+{PgUp,PgDn} | Previous/Next occurence (in multi-select / find / search modes) |
+| Key                        | Action                                                                |
+| -------------------------- | --------------------------------------------------------------------- |
+| Shift+Insert               | Toggle column selection mode                                          |
+| Alt+Click                  | Add Caret                                                             |
+| Alt+Click                  | Add Rectangular Selection (mouse drag)                                |
+| Alt+Ctrl+{Up,Down}         | Clone caret above/below                                               |
+| Ctrl+Alt+PgDn              | Multi-select current selection / word under cursor                    |
+| Ctrl+Alt+PgUp              | Undo last multi-select                                                |
+| Ctrl+Alt+End               | Multi-select all matches                                              |
+| Ctrl+Alt+Shift+{PgUp,PgDn} | Skip current selection (multi-select) / prev-next match (find/search) |
 
 ## Caret movement and selection
 
