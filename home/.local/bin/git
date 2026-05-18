@@ -18,8 +18,14 @@ nearest_relevant_ancestor() {
 	while [ "$i" -lt 20 ] && [ -n "$pid" ] && [ "$pid" != 0 ] && [ "$pid" != 1 ]; do
 		comm=$(ps -o comm= -p "$pid" 2>/dev/null || true)
 		case "${comm##*/}" in
-			claude) printf 'claude\n'; return ;;
-			jj) printf 'jj\n'; return ;;
+		claude)
+			printf 'claude\n'
+			return
+			;;
+		jj)
+			printf 'jj\n'
+			return
+			;;
 		esac
 		pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
 		i=$((i + 1))

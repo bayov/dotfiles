@@ -24,6 +24,7 @@ globs = [
 [[formatter]]
 name = "shfmt"
 exts = [".sh"]
+shebangs = ["sh", "bash"]
 globs = ["**/.bashrc"]
 cmd = ["shfmt", "--write"]
 max_files_per_format = 20
