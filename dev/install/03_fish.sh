@@ -34,10 +34,10 @@ if [ "$(uname)" = "Darwin" ]; then
 	fi
 
 	# Set fish as default shell for the current user
-	if [ "$(id -u)" -ne 0 ] && [ "$SHELL" != "$FISH_PATH" ] \
-		&& grep -qx "$FISH_PATH" /etc/shells; then
+	if [ "$(id -u)" -ne 0 ] && [ "$SHELL" != "$FISH_PATH" ] &&
+		grep -qx "$FISH_PATH" /etc/shells; then
 		echo "Setting fish as default shell for $(whoami)..."
-		chsh -s "$FISH_PATH" || \
+		chsh -s "$FISH_PATH" ||
 			echo "⚠️  chsh failed; run manually: chsh -s $FISH_PATH"
 	fi
 else

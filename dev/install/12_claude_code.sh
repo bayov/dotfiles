@@ -22,7 +22,7 @@ eval "$(fnm env --shell bash)"
 # Allow failure here: corporate TLS proxies often break the CDN download, but
 # the rest of the toolchain is still usable; the user can retry later.
 if [ "$(uname)" = "Darwin" ]; then
-	npx --yes playwright install chromium || \
+	npx --yes playwright install chromium ||
 		echo "⚠️  playwright install chromium failed; rerun manually after fixing TLS/proxy."
 else
 	npx --yes playwright install chrome
