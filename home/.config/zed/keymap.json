@@ -145,7 +145,7 @@
       "ctrl-shift-n": "workspace::NewWindow",
       "alt-`": "terminal_panel::Toggle",
       "f10": ["app_menu::OpenApplicationMenu", "Zed"],
-      "alt-1": "project_panel::Toggle",
+      "alt-1": "pane::RevealInProjectPanel",
       "alt-2": "git_panel::ToggleFocus",
       "alt-3": ["workspace::ActivatePane", 2],
       "alt-4": ["workspace::ActivatePane", 3],
@@ -258,7 +258,7 @@
   {
     "context": "Pane",
     "bindings": {
-      "alt-1": "project_panel::Toggle",
+      "alt-1": "pane::RevealInProjectPanel",
       "alt-2": "git_panel::ToggleFocus",
       "alt-3": ["pane::ActivateItem", 2],
       "alt-4": ["pane::ActivateItem", 3],
@@ -1421,6 +1421,7 @@
   {
     "context": "ProjectPanel",
     "bindings": {
+      "alt-1": "project_panel::Toggle",
       "left": "project_panel::CollapseSelectedEntry",
       "ctrl-left": "project_panel::CollapseAllEntries",
       "right": "project_panel::ExpandSelectedEntry",
