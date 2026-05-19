@@ -10,6 +10,7 @@
     "edit_predictions": {
         "provider": "copilot"
     },
+    "when_closing_with_no_tabs": "close_window",
     "diff_view_style": "unified",
     "terminal": {
         "scroll_multiplier": 1.0
