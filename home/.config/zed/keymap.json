@@ -1278,7 +1278,7 @@
       "ctrl->": "agent::AddSelectionToThread",
       // Forward keybinds to terminal
       "alt-b": ["terminal::SendText", "\u001bb"],
-      "alt-f": ["terminal::SendText", "\u001bf"],
+      // "alt-f": ["terminal::SendText", "\u001bf"],
       "alt-.": ["terminal::SendText", "\u001b."],
       "ctrl-delete": ["terminal::SendText", "\u001b[3;5~"],
       "shift-delete": ["terminal::SendText", "\u001b[3;2~"],
