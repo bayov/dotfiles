@@ -114,5 +114,12 @@
     "ui_font_size": 14.0,
     "buffer_font_size": 13.0,
     "semantic_tokens": "combined",
-    "theme": "One Dark"
+    "theme": "One Dark",
+    "lsp": {
+        "gopls": {
+            "initialization_options": {
+                "buildFlags": ["-tags=integration,benchmark,tools"]
+            }
+        }
+    }
 }

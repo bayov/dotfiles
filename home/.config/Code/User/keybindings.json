@@ -1536,7 +1536,7 @@
     "when": "searchViewletFocus"
   },
 
-  // Claude AI sidebar (alt+j)
+  // Claude AI sidebar (alt+j toggles visibility, alt+s focuses)
   {
     "command": "workbench.action.closeAuxiliaryBar",
     "key": "alt+j",
@@ -1547,6 +1547,7 @@
     "key": "alt+j",
     "when": "activeAuxiliary != 'workbench.view.extension.claude-sidebar-secondary'"
   },
+  { "command": "workbench.view.extension.claude-sidebar-secondary", "key": "alt+s" },
 
   // Extensions view (alt+/)
   {

@@ -245,11 +245,13 @@ physical position on the keypad).
 
 ## Tool windows
 
-| Key   | Action                                                               |
-| ----- | -------------------------------------------------------------------- |
-| Alt+` | Terminal                                                             |
-| Alt+1 | Project explorer (files / view / structure) - Highlights active file |
-| Alt+2 | VCS log window                                                       |
+| Key         | Action                                                               |
+| ----------- | -------------------------------------------------------------------- |
+| Alt+`       | Terminal                                                             |
+| Alt+1       | Project explorer (files / view / structure) - Highlights active file |
+| Alt+2       | VCS log window                                                       |
+| Alt+S       | Agents panel (AI / Workspaces)                                       |
+| Alt+Shift+S | Agent chat window                                                    |
 
 ## Run
 
