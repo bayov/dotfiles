@@ -1089,6 +1089,7 @@
     "use_key_equivalents": true,
     "bindings": {
       "ctrl-n": "agents_sidebar::NewThreadInGroup",
+      "shift-insert": "agents_sidebar::NewThreadInGroup",
       "left": "menu::SelectParent",
       "right": "menu::SelectChild",
       "enter": "menu::Confirm",
