@@ -121,19 +121,21 @@ supported.
 | Alt+Shift+P | Presentation mode       |
 | Alt+Shift+Z | Zen mode                |
 
-## Window management
+## Tab and pane management
+
+Theme: numpad is dedicated to spatial manipulation of tabs and panes. The
+modifier picks the operation; the numpad key picks the direction (matching its
+physical position on the keypad).
+
+- **N2, N4, N6, N8** — direction: down, left, right, up (their physical
+  position).
+- **N5** — "center".
+- **N-** — "remove"
 
 | Key                     | Action                                                 |
 | ----------------------- | ------------------------------------------------------ |
-| Alt+'                   | Settings                                               |
-| Alt+;                   | Keymapping                                             |
-| Alt+/                   | Extensions                                             |
-| Alt+E                   | Focus editor                                           |
-| Alt+Shift+E             | Hide all tool windows                                  |
-| Alt+0                   | Toggle toolbar icons (at the edges) visibility         |
-| Alt+-                   | Toggle status bar (bottom) visibility                  |
 | Alt+{Left,Right}        | Previous/next tab                                      |
-| Alt+{N4,N6}             | Move tab left/right within same editor                 |
+| Alt+Shift+{Left,Right}  | Previous/Next split                                    |
 | Ctrl+Tab                | Tab switcher                                           |
 | Alt+Down                | Show all tabs (context menu) - not available in editor |
 | Alt+P                   | Pin active tab                                         |
@@ -141,11 +143,23 @@ supported.
 | Alt+Shift+X             | Re-open last closed tab                                |
 | Alt+N-                  | Close other tabs                                       |
 | Alt+Shift+N-            | Close all tabs in group                                |
-| Ctrl+Alt+{N2,N4,N6,N8}  | Stretch/resize window                                  |
-| Ctrl+Alt+N5             | Normalize/Equalize editor widths                       |
+| Alt+{N4,N6}             | Move tab left/right within same editor                 |
 | Alt+Shift+{N2,N4,N6,N8} | Split and move down/left/right/up                      |
 | Alt+Shift+N5            | Toggle maximize editor/window                          |
-| Alt+Shift+{Left,Right}  | Previous/Next split                                    |
+| Ctrl+Alt+{N2,N4,N6,N8}  | Stretch/resize window                                  |
+| Ctrl+Alt+N5             | Normalize/Equalize editor widths                       |
+
+## Window management
+
+| Key         | Action                                         |
+| ----------- | ---------------------------------------------- |
+| Alt+'       | Settings                                       |
+| Alt+;       | Keymapping                                     |
+| Alt+/       | Extensions                                     |
+| Alt+E       | Focus editor                                   |
+| Alt+Shift+E | Hide all tool windows                          |
+| Alt+0       | Toggle toolbar icons (at the edges) visibility |
+| Alt+-       | Toggle status bar (bottom) visibility          |
 
 ## Copy-Paste
 

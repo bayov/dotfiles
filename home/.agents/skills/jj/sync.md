@@ -39,8 +39,9 @@ below and stay valid because the chain moved together.
 
 ## 5. Push
 
-For each bookmark from §2: `jj git push --bookmark <name>`. On non-fast-forward
-rejection the bookmark's commits became immutable — switch to
+Push the bookmarks from §2 in batches of at most 2 per `jj git push` invocation,
+passing each via its own `--bookmark <name>` flag. On non-fast-forward rejection
+the bookmark's commits became immutable — switch to
 [update-pr §3 follow-up](update-pr.md#3-follow-up-path) for that bookmark
 instead.
 
