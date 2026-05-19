@@ -182,13 +182,13 @@ supported.
 
 ## Refactor / Cleanup
 
-| Key        | Action                    |
-| ---------- | ------------------------- |
-| Alt+D      | Reformat selection / file |
-| Ctrl+Alt+O | Optimize imports          |
-| `<none>`   | Rearrange code            |
-| F2         | Rename                    |
-| Alt+Z      | Refactor (context menu)   |
+| Key        | Action                                   |
+| ---------- | ---------------------------------------- |
+| Alt+D      | Show git panel / diffs in current commit |
+| Ctrl+Alt+O | Optimize imports                         |
+| `<none>`   | Rearrange code                           |
+| F2         | Rename                                   |
+| Alt+Z      | Refactor (context menu)                  |
 
 ## Bookmark
 
