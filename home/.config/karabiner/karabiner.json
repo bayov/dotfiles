@@ -1072,7 +1072,7 @@
                         ]
                     },
                     {
-                        "description": "Keypad 1-9 -> F13-F21 in Zed (workaround: Zed doesn't support numpad keys)",
+                        "description": "Numpad -> Cmd+F1..F12,F13,F16,F17 in Zed (workaround: Zed doesn't bind numpad). 1..9->Cmd+F1..F9, 0->Cmd+F10, .->Cmd+F11, /->Cmd+F12, *->Cmd+F13, -->Cmd+F16, +->Cmd+F17. F14/F15 skipped (brightness).",
                         "manipulators": [
                             {
                                 "conditions": [
@@ -1087,7 +1087,7 @@
                                     "key_code": "keypad_1",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f13" }],
+                                "to": [{ "key_code": "f1", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1103,7 +1103,7 @@
                                     "key_code": "keypad_2",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f14" }],
+                                "to": [{ "key_code": "f2", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1119,7 +1119,7 @@
                                     "key_code": "keypad_3",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f15" }],
+                                "to": [{ "key_code": "f3", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1135,7 +1135,7 @@
                                     "key_code": "keypad_4",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f16" }],
+                                "to": [{ "key_code": "f4", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1151,7 +1151,7 @@
                                     "key_code": "keypad_5",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f17" }],
+                                "to": [{ "key_code": "f5", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1167,7 +1167,7 @@
                                     "key_code": "keypad_6",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f18" }],
+                                "to": [{ "key_code": "f6", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1183,7 +1183,7 @@
                                     "key_code": "keypad_7",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f19" }],
+                                "to": [{ "key_code": "f7", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1199,7 +1199,7 @@
                                     "key_code": "keypad_8",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f20" }],
+                                "to": [{ "key_code": "f8", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1215,7 +1215,71 @@
                                     "key_code": "keypad_9",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f21" }],
+                                "to": [{ "key_code": "f9", "modifiers": ["left_command"] }],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "bundle_identifiers": [
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
+                                        ],
+                                        "type": "frontmost_application_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "keypad_0",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "f10", "modifiers": ["left_command"] }],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "bundle_identifiers": [
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
+                                        ],
+                                        "type": "frontmost_application_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "keypad_period",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "f11", "modifiers": ["left_command"] }],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "bundle_identifiers": [
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
+                                        ],
+                                        "type": "frontmost_application_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "keypad_slash",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "f12", "modifiers": ["left_command"] }],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "bundle_identifiers": [
+                                            "^dev\\.zed\\.Zed(-Preview|-Nightly|-Dev)?$"
+                                        ],
+                                        "type": "frontmost_application_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "keypad_asterisk",
+                                    "modifiers": { "optional": ["any"] }
+                                },
+                                "to": [{ "key_code": "f13", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1231,7 +1295,7 @@
                                     "key_code": "keypad_hyphen",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f22" }],
+                                "to": [{ "key_code": "f16", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             },
                             {
@@ -1247,7 +1311,7 @@
                                     "key_code": "keypad_plus",
                                     "modifiers": { "optional": ["any"] }
                                 },
-                                "to": [{ "key_code": "f23" }],
+                                "to": [{ "key_code": "f17", "modifiers": ["left_command"] }],
                                 "type": "basic"
                             }
                         ]

@@ -4,11 +4,27 @@
 // Defined in ~/.config/karabiner/karabiner.json.
 //
 // Numpad workaround (Zed only): Zed does not bind numpad keys,
-// so Karabiner remaps them while Zed is frontmost:
-//   keypad_1..9    -> f13..f21
-//   keypad_hyphen  -> f22
-//   keypad_plus    -> f23
-// Bindings on f13-f23 in this file are numpad shortcuts in
+// so Karabiner remaps them while Zed is frontmost. Every
+// numpad key is emitted with Cmd held so macOS's brightness
+// (F14/F15) and screenshot (F13 bare) intercepts can't fire.
+// F14/F15 codes are skipped entirely (Apple keyboard layout
+// reserves them for brightness; Cmd+F14/F15 still opens
+// Displays preferences via a hardcoded Apple shortcut).
+//
+//   keypad_1..9   -> Cmd+F1..F9
+//   keypad_0      -> Cmd+F10
+//   keypad_.      -> Cmd+F11
+//   keypad_/      -> Cmd+F12
+//   keypad_*      -> Cmd+F13
+//   keypad_-      -> Cmd+F16
+//   keypad_+      -> Cmd+F17
+//
+// Modifiers stack: e.g. Shift+keypad_4 -> Shift+Cmd+F4.
+//
+// Caveat: Cmd+F1 toggles "Mirror displays" system-wide when
+// an external display is attached.
+//
+// Bindings on cmd-fN in this file are numpad shortcuts in
 // disguise (see pane swap/resize, fold/unfold blocks).
 // ============================================================
 [
@@ -244,8 +260,8 @@
       "alt-c u": "git::Push",
       "alt-c f": "git::Fetch",
       "alt-c z": "git::Restore",
-      // Numpad via Karabiner (Zed-only): keypad_5 -> F17
-      "shift-alt-f17": "workspace::ToggleZoom",
+      // Numpad via Karabiner (Zed-only): keypad_5 -> Cmd+F5
+      "shift-alt-cmd-f5": "workspace::ToggleZoom",
       "shift-alt-z": "workspace::ToggleZoom",
       "alt-c l": "git_panel::ToggleFocus",
       "alt-c s": "git::ViewStash",
@@ -315,27 +331,27 @@
       "alt-left": "pane::ActivatePreviousItem",
       "shift-alt-1": "pane::RevealInProjectPanel",
       "alt-p": "pane::TogglePinTab",
-      // Numpad via Karabiner (Zed-only): keypad_hyphen -> F22
-      "alt-f22": "pane::CloseOtherItems",
-      "shift-alt-f22": "pane::CloseAllItems",
+      // Numpad via Karabiner (Zed-only): keypad_hyphen -> Cmd+F16
+      "alt-cmd-f16": "pane::CloseOtherItems",
+      "shift-alt-cmd-f16": "pane::CloseAllItems",
       "ctrl-tab": "tab_switcher::Toggle",
       "alt-y": "search::ToggleRegex",
-      // Numpad via Karabiner (Zed-only): keypad_N -> F(12+N)
-      "alt-f16": "pane::SwapItemLeft",
-      "alt-f18": "pane::SwapItemRight",
-      "alt-shift-f14": [
+      // Numpad via Karabiner (Zed-only): kp_4=Cmd+F4, kp_6=Cmd+F6, kp_2=Cmd+F2, kp_8=Cmd+F8
+      "alt-cmd-f4": "pane::SwapItemLeft",
+      "alt-cmd-f6": "pane::SwapItemRight",
+      "alt-shift-cmd-f2": [
         "workspace::MoveItemToPaneInDirection",
         { "direction": "down" },
       ],
-      "alt-shift-f16": [
+      "alt-shift-cmd-f4": [
         "workspace::MoveItemToPaneInDirection",
         { "direction": "left" },
       ],
-      "alt-shift-f18": [
+      "alt-shift-cmd-f6": [
         "workspace::MoveItemToPaneInDirection",
         { "direction": "right" },
       ],
-      "alt-shift-f20": [
+      "alt-shift-cmd-f8": [
         "workspace::MoveItemToPaneInDirection",
         { "direction": "up" },
       ],
@@ -348,14 +364,10 @@
       "ctrl-k down": "pane::SplitDown",
       "ctrl-k left": "pane::SplitLeft",
       "ctrl-k right": "pane::SplitRight",
-      "ctrl-alt-8": "vim::ResizePaneUp",
-      "ctrl-alt-2": "vim::ResizePaneDown",
-      "ctrl-alt-4": "vim::ResizePaneLeft",
-      "ctrl-alt-6": "vim::ResizePaneRight",
-      "ctrl-alt-f14": "vim::ResizePaneDown",
-      "ctrl-alt-f16": "vim::ResizePaneLeft",
-      "ctrl-alt-f18": "vim::ResizePaneRight",
-      "ctrl-alt-f20": "vim::ResizePaneUp",
+      "ctrl-alt-cmd-f2": "vim::ResizePaneDown",
+      "ctrl-alt-cmd-f4": "vim::ResizePaneLeft",
+      "ctrl-alt-cmd-f6": "vim::ResizePaneRight",
+      "ctrl-alt-cmd-f8": "vim::ResizePaneUp",
     },
   },
   {
@@ -562,13 +574,13 @@
       "ctrl-k ctrl-9": "editor::FoldAtLevel_9",
       "ctrl-k ctrl-0": "editor::FoldAll",
       "ctrl-k ctrl-j": "editor::UnfoldAll",
-      // Numpad via Karabiner (Zed-only): keypad_hyphen -> F22, keypad_plus -> F23
-      "ctrl-f22": "editor::Fold",
-      "ctrl-shift-f22": "editor::FoldAll",
-      "ctrl-alt-f22": "editor::FoldRecursive",
-      "ctrl-f23": "editor::UnfoldLines",
-      "ctrl-shift-f23": "editor::UnfoldAll",
-      "ctrl-alt-f23": "editor::UnfoldRecursive",
+      // Numpad via Karabiner (Zed-only): keypad_hyphen -> Cmd+F16, keypad_plus -> Cmd+F17
+      "ctrl-cmd-f16": "editor::Fold",
+      "ctrl-shift-cmd-f16": "editor::FoldAll",
+      "ctrl-alt-cmd-f16": "editor::FoldRecursive",
+      "ctrl-cmd-f17": "editor::UnfoldLines",
+      "ctrl-shift-cmd-f17": "editor::UnfoldAll",
+      "ctrl-alt-cmd-f17": "editor::UnfoldRecursive",
       "ctrl-space": "editor::ShowCompletions",
       "ctrl-shift-space": "editor::ShowWordCompletions",
       "ctrl-.": ["editor::GoToDiagnostic", { "severity": "hint" }],
