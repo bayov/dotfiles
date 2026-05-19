@@ -1269,6 +1269,7 @@
       "alt-f": ["terminal::SendText", "\u001bf"],
       "alt-.": ["terminal::SendText", "\u001b."],
       "ctrl-delete": ["terminal::SendText", "\u001b[3;5~"],
+      "shift-delete": ["terminal::SendText", "\u001b[3;2~"],
       "ctrl-b": ["terminal::SendKeystroke", "ctrl-b"],
       "ctrl-c": ["terminal::SendKeystroke", "ctrl-c"],
       "ctrl-v": "terminal::Paste",
