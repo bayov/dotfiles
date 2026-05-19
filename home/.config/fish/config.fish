@@ -1,6 +1,10 @@
 # Environment Variables
 set -q DOTFILES_DIR || set -gx DOTFILES_DIR "$HOME/dotfiles"
-set -gx EDITOR fresh
+if test "$TERM_PROGRAM" = zed
+    set -gx EDITOR "zed --new --wait"
+else
+    set -gx EDITOR fresh
+end
 set -gx PNPM_HOME "$HOME/.local/share/pnpm"
 set -gx RUSTC_WRAPPER sccache
 set -gx SCCACHE_DIR "$HOME/.cache/sccache"

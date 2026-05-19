@@ -2,7 +2,11 @@
 
 # ── Environment Variables ──────────────────────────────────────────────────────
 [ -z "$DOTFILES_DIR" ] && export DOTFILES_DIR="$HOME/dotfiles"
-export EDITOR=fresh
+if [ "$TERM_PROGRAM" = "zed" ]; then
+	export EDITOR="zed --new --wait"
+else
+	export EDITOR=fresh
+fi
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export RUSTC_WRAPPER=sccache
 export SCCACHE_DIR="$HOME/.cache/sccache"

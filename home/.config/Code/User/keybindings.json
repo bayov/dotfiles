@@ -1536,6 +1536,25 @@
     "when": "searchViewletFocus"
   },
 
+  // Terminal panel (alt+` focuses/opens, alt+shift+` always creates new)
+  { "command": "-workbench.action.terminal.toggleTerminal", "key": "ctrl+`" },
+  {
+    "command": "workbench.action.terminal.focus",
+    "key": "alt+`",
+    "when": "!terminalFocus"
+  },
+  {
+    "command": "workbench.action.closePanel",
+    "key": "alt+`",
+    "when": "terminalFocus"
+  },
+  { "command": "workbench.action.terminal.new", "key": "alt+shift+`" },
+  {
+    "command": "workbench.action.terminal.new",
+    "key": "alt+t",
+    "when": "terminalFocus"
+  },
+
   // Claude AI sidebar (alt+j toggles visibility, alt+s focuses)
   {
     "command": "workbench.action.closeAuxiliaryBar",

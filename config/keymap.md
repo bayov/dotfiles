@@ -247,7 +247,9 @@ physical position on the keypad).
 
 | Key         | Action                                                               |
 | ----------- | -------------------------------------------------------------------- |
-| Alt+`       | Terminal                                                             |
+| Alt+`       | Terminal (focus existing, or open new if none)                       |
+| Alt+Shift+` | New terminal (always opens a new tab)                                |
+| Alt+T       | New terminal tab (in terminal context)                               |
 | Alt+1       | Project explorer (files / view / structure) - Highlights active file |
 | Alt+2       | VCS log window                                                       |
 | Alt+S       | Agents panel (AI / Workspaces)                                       |

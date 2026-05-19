@@ -157,6 +157,7 @@
       "shift-new": "workspace::NewWindow",
       "ctrl-shift-n": "workspace::NewWindow",
       "alt-`": "terminal_panel::Toggle",
+      "alt-~": "workspace::NewTerminal",
       "f10": ["app_menu::OpenApplicationMenu", "Zed"],
       "alt-1": "project_panel::ToggleFocus",
       "alt-d": "git_panel::ToggleFocus",
@@ -1272,7 +1273,7 @@
       "ctrl-shift-w": "pane::CloseActiveItem",
       "ctrl-shift-r": "terminal::RerunTask",
       "ctrl-alt-r": "terminal::RerunTask",
-      "alt-t": "terminal::RerunTask",
+      "alt-t": "workspace::NewTerminal",
       "ctrl-shift-5": "pane::SplitRight",
       "ctrl->": "agent::AddSelectionToThread",
       // Forward keybinds to terminal
