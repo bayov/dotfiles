@@ -123,34 +123,29 @@ supported.
 
 ## Window management
 
-| Key                           | Action                                                 |
-| ----------------------------- | ------------------------------------------------------ |
-| Alt+'                         | Settings                                               |
-| Alt+;                         | Keymapping                                             |
-| Alt+/                         | Extensions                                             |
-| Alt+E                         | Focus editor                                           |
-| Alt+Shift+E                   | Hide all tool windows                                  |
-| Alt+0                         | Toggle toolbar icons (at the edges) visibility         |
-| Alt+-                         | Toggle status bar (bottom) visibility                  |
-| Alt+{Left,Right}              | Previous/next tab                                      |
-| Alt+{N4,N6}                   | Move tab left/right within same editor                 |
-| Ctrl+Tab                      | Tab switcher                                           |
-| Alt+Down                      | Show all tabs (context menu) - not available in editor |
-| Alt+P                         | Pin active tab                                         |
-| Alt+X                         | Close active tab                                       |
-| Alt+Shift+X                   | Re-open last closed tab                                |
-| Alt+S, D                      | Close other tabs                                       |
-| Alt+S, X                      | Close all but pinned tabs                              |
-| Alt+S, Shift+X                | Close all tabs in group                                |
-| Alt+S, S                      | Normalize/Equalize editor widths                       |
-| Alt+S, F                      | Toggle maximize editor/window                          |
-| Ctrl+Alt+{N2,N4,N6,N8}        | Stretch/resize window                                  |
-| Alt+Shift+{N2,N4,N6,N8}       | Split and move down/left/right/up                      |
-| Alt+S, Alt+Shift+{Right,Down} | Split right/down (duplicate editor)                    |
-| Alt+S, C                      | Split with chooser (doesn't work in JetBrains)         |
-| Alt+S, Z                      | Unsplit                                                |
-| Alt+S, Shift+Z                | Unsplit all                                            |
-| Alt+Shift+{Left,Right}        | Previous/Next split                                    |
+| Key                     | Action                                                 |
+| ----------------------- | ------------------------------------------------------ |
+| Alt+'                   | Settings                                               |
+| Alt+;                   | Keymapping                                             |
+| Alt+/                   | Extensions                                             |
+| Alt+E                   | Focus editor                                           |
+| Alt+Shift+E             | Hide all tool windows                                  |
+| Alt+0                   | Toggle toolbar icons (at the edges) visibility         |
+| Alt+-                   | Toggle status bar (bottom) visibility                  |
+| Alt+{Left,Right}        | Previous/next tab                                      |
+| Alt+{N4,N6}             | Move tab left/right within same editor                 |
+| Ctrl+Tab                | Tab switcher                                           |
+| Alt+Down                | Show all tabs (context menu) - not available in editor |
+| Alt+P                   | Pin active tab                                         |
+| Alt+X                   | Close active tab                                       |
+| Alt+Shift+X             | Re-open last closed tab                                |
+| Alt+N-                  | Close other tabs                                       |
+| Alt+Shift+N-            | Close all tabs in group                                |
+| Ctrl+Alt+{N2,N4,N6,N8}  | Stretch/resize window                                  |
+| Ctrl+Alt+N5             | Normalize/Equalize editor widths                       |
+| Alt+Shift+{N2,N4,N6,N8} | Split and move down/left/right/up                      |
+| Alt+Shift+N5            | Toggle maximize editor/window                          |
+| Alt+Shift+{Left,Right}  | Previous/Next split                                    |
 
 ## Copy-Paste
 

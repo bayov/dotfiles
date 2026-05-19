@@ -242,11 +242,8 @@
       "alt-c u": "git::Push",
       "alt-c f": "git::Fetch",
       "alt-c z": "git::Restore",
-      "alt-s f": "workspace::ToggleZoom",
-      "alt-s alt-right": "pane::SplitRight",
-      "alt-s alt-down": "pane::SplitDown",
-      "alt-s z": "pane::JoinIntoNext",
-      "alt-s shift-z": "pane::JoinAll",
+      // Numpad via Karabiner (Zed-only): keypad_5 -> F17
+      "shift-alt-f17": "workspace::ToggleZoom",
       "shift-alt-z": "workspace::ToggleZoom",
       "alt-c l": "git_panel::ToggleFocus",
       "alt-c s": "git::ViewStash",
@@ -316,8 +313,9 @@
       "alt-left": "pane::ActivatePreviousItem",
       "shift-alt-1": "pane::RevealInProjectPanel",
       "alt-p": "pane::TogglePinTab",
-      "alt-s x": "workspace::CloseAllItemsAndPanes",
-      "alt-s d": "pane::CloseOtherItems",
+      // Numpad via Karabiner (Zed-only): keypad_hyphen -> F22
+      "alt-f22": "pane::CloseOtherItems",
+      "shift-alt-f22": "pane::CloseAllItems",
       "ctrl-tab": "tab_switcher::Toggle",
       "alt-y": "search::ToggleRegex",
       // Numpad via Karabiner (Zed-only): keypad_N -> F(12+N)
