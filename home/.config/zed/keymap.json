@@ -1343,7 +1343,7 @@
     // Inside TUIs (vim, less, htop, fresh, ...) alt+nav should pass through
     // to the app instead of scrolling Zed's terminal scrollback.
     //
-    // Disabled for now: Not working in fresh as intended.
+    // Disabled for now: Not working in fresh as intended. Might revisit later.
     "context": "Terminal && screen == alt",
     "bindings": {
       // "alt-up": ["terminal::SendText", "\u001b[1;3A"],
