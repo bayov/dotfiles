@@ -23,7 +23,7 @@ nearest_relevant_ancestor() {
 			printf 'claude\n'
 			return
 			;;
-		jj | go)
+		jj | go | gh)
 			printf '%s\n' "${comm##*/}"
 			return
 			;;
