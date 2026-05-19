@@ -1339,6 +1339,19 @@
       "ctrl-c": "terminal::Copy",
     },
   },
+  {
+    // Inside TUIs (vim, less, htop, fresh, ...) alt+nav should pass through
+    // to the app instead of scrolling Zed's terminal scrollback.
+    "context": "Terminal && screen == alt",
+    "bindings": {
+      "alt-up": ["terminal::SendText", "\u001b[1;3A"],
+      "alt-down": ["terminal::SendText", "\u001b[1;3B"],
+      "alt-pageup": ["terminal::SendText", "\u001b[5;3~"],
+      "alt-pagedown": ["terminal::SendText", "\u001b[6;3~"],
+      "alt-home": ["terminal::SendText", "\u001b[1;3H"],
+      "alt-end": ["terminal::SendText", "\u001b[1;3F"],
+    },
+  },
 
   // ============================================================
   // DEBUGGER
