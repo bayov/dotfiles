@@ -1,7 +1,8 @@
 #!/bin/sh
 # Block `git` inside jj repos when invoked by Claude Code, but allow it when
-# jj itself shells out to git (e.g. `jj git fetch`). Decision is based on the
-# nearest ancestor process: if it's `claude`, block; if it's `jj`, allow.
+# jj itself shells out to git (e.g. `jj git fetch`) or when `go` stamps VCS
+# info during build/test. Decision is based on the nearest ancestor process:
+# if it's `claude`, block; if it's `jj` or `go`, allow.
 # Interactive shells and scripts are unaffected.
 set -eu
 
@@ -22,8 +23,8 @@ nearest_relevant_ancestor() {
 			printf 'claude\n'
 			return
 			;;
-		jj)
-			printf 'jj\n'
+		jj | go)
+			printf '%s\n' "${comm##*/}"
 			return
 			;;
 		esac
