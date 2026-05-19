@@ -1,3 +1,16 @@
+// ============================================================
+// KARABINER MAPPINGS RELEVANT TO THIS KEYMAP
+// ------------------------------------------------------------
+// Defined in ~/.config/karabiner/karabiner.json.
+//
+// Numpad workaround (Zed only): Zed does not bind numpad keys,
+// so Karabiner remaps them while Zed is frontmost:
+//   keypad_1..9    -> f13..f21
+//   keypad_hyphen  -> f22
+//   keypad_plus    -> f23
+// Bindings on f13-f23 in this file are numpad shortcuts in
+// disguise (see pane swap/resize, fold/unfold blocks).
+// ============================================================
 [
   // ============================================================
   // GLOBAL
