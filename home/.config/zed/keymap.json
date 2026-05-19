@@ -481,7 +481,7 @@
     },
   },
   {
-    "context": "Editor && !Picker && !BufferSearchBar && !showing_completions",
+    "context": "Editor && mode == full && !showing_completions",
     "bindings": {
       "enter": "editor::Newline",
     },
