@@ -208,11 +208,11 @@ physical position on the keypad).
 
 ## Folding
 
-| Key                | Action                     |
-| ------------------ | -------------------------- |
-| Ctrl+{N+,N-}       | Expand/collapse            |
-| Ctrl+Alt+{N+,N-}   | Expand/collapse recusively |
-| Ctrl+Shift+{N+,N-} | Expand/collapse all        |
+| Key             | Action                      |
+| --------------- | --------------------------- |
+| Alt+{[,]}       | Collapse/expand             |
+| Alt+Shift+{[,]} | Collapse/expand recursively |
+| Alt+Ctrl+{[,]}  | Collapse/expand all         |
 
 ## Autocomplete / Code-gen
 

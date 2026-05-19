@@ -780,51 +780,45 @@
   // Code Folding
   //--------------------------------------------------------------------------
 
-  { "command": "-editor.foldAll", "key": "ctrl+k ctrl+0" },
-  { "command": "-editor.foldAll", "key": "shift+ctrl+-" },
-  {
-    "command": "editor.foldAll",
-    "key": "shift+ctrl+numpad_subtract",
-    "when": "editorTextFocus && foldingEnabled"
-  },
-
   { "command": "-editor.fold", "key": "ctrl+shift+[" },
-  { "command": "-editor.fold", "key": "ctrl+-" },
   {
     "command": "editor.fold",
-    "key": "ctrl+numpad_subtract",
-    "when": "editorTextFocus && foldingEnabled"
-  },
-
-  { "command": "-editor.foldRecursively", "key": "ctrl+k ctrl+[" },
-  { "command": "-editor.foldRecursively", "key": "ctrl+alt+-" },
-  {
-    "command": "editor.foldRecursively",
-    "key": "ctrl+alt+numpad_subtract",
-    "when": "editorTextFocus && foldingEnabled"
-  },
-
-  { "command": "-editor.unfoldAll", "key": "ctrl+k ctrl+j" },
-  { "command": "-editor.unfoldAll", "key": "shift+ctrl+=" },
-  {
-    "command": "editor.unfoldAll",
-    "key": "shift+ctrl+numpad_add",
+    "key": "alt+[",
     "when": "editorTextFocus && foldingEnabled"
   },
 
   { "command": "-editor.unfold", "key": "ctrl+shift+]" },
-  { "command": "-editor.unfold", "key": "ctrl+=" },
   {
     "command": "editor.unfold",
-    "key": "ctrl+numpad_add",
+    "key": "alt+]",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+
+  { "command": "-editor.foldRecursively", "key": "ctrl+k ctrl+[" },
+  {
+    "command": "editor.foldRecursively",
+    "key": "alt+shift+[",
     "when": "editorTextFocus && foldingEnabled"
   },
 
   { "command": "-editor.unfoldRecursively", "key": "ctrl+k ctrl+]" },
-  { "command": "-editor.unfoldRecursively", "key": "ctrl+alt+=" },
   {
     "command": "editor.unfoldRecursively",
-    "key": "ctrl+alt+numpad_add",
+    "key": "alt+shift+]",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+
+  { "command": "-editor.foldAll", "key": "ctrl+k ctrl+0" },
+  {
+    "command": "editor.foldAll",
+    "key": "alt+ctrl+[",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+
+  { "command": "-editor.unfoldAll", "key": "ctrl+k ctrl+j" },
+  {
+    "command": "editor.unfoldAll",
+    "key": "alt+ctrl+]",
     "when": "editorTextFocus && foldingEnabled"
   },
 
