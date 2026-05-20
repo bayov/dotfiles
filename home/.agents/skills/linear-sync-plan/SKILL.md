@@ -1,36 +1,32 @@
 ---
 name: linear-sync-plan
-description: Sync plan artifacts to Linear.
-argument-hint: [slug]
+description: Sync all plan artifacts under PLAN_DIR to Linear in one pass.
 disable-model-invocation: true
 model: sonnet
 effort: medium
 ---
 
-Sync `$PLAN_DIR/{slug}/` markdown artifacts into Linear so they persist beyond
-the local working directory.
+Sync every `$PLAN_DIR/{slug}/` markdown artifact into Linear so they persist
+beyond the local working directory.
 
 > **Plan root:** `$PLAN_DIR` env var (defaults to `plan` if unset).
 
-The repo's `$PLAN_DIR/` is intentionally uncommitted scratch. Linear is the
-system of record. This skill is the one-way bridge `$PLAN_DIR/{slug}/ → Linear`.
+Linear is the system of record. This skill is the one-way bridge
+`$PLAN_DIR/* → Linear`.
 
 ## Invocation
 
-- With argument: `/linear-sync-plan archive-notes` operates on
-  `$PLAN_DIR/archive-notes/`.
-- Without argument: must be run from inside a `$PLAN_DIR/{slug}/` directory;
-  infer slug from the directory name.
+No arguments. Run from anywhere; the skill enumerates every direct child
+directory of `$PLAN_DIR/` and treats each as a slug.
 
-If the slug doesn't resolve to an existing `$PLAN_DIR/{slug}/` directory, stop
-and ask the user.
+Skip entries that are not directories or whose name starts with `.` or `_`.
 
 ## Linear shape
 
 For a slug `archive-notes`:
 
 ```
-[archive-notes] Archive notes              ← parent issue (team FW)
+[archive-notes] Archive notes              ← parent issue
 ├── Documents (attached to parent)
 │     ├── PRD                              ← prd.md
 │     ├── Design                           ← design.md
@@ -42,11 +38,15 @@ For a slug `archive-notes`:
 
 Defaults baked in:
 
-- Team: `FW` (AI Security for Apps)
 - Assignee on every issue: `hagai.akibayov@catonetworks.com`
 - No Linear Project, no Linear labels, no cycle assignment
 - Parent and sub-issue states are managed by the skill — see "State derivation"
   below
+
+Team defaults to `FW` (AI Security for Apps) for new slugs. Existing slugs keep
+the team of their current parent issue. Fetches are **not** team-scoped — the
+skill discovers any plan parent issue regardless of team so manually moved
+issues stay tracked.
 
 ## What to push, what to skip
 
@@ -62,87 +62,108 @@ Defaults baked in:
 `prd.md`+`design.md` and `plan.md` are mutually exclusive in the workflow — if
 both somehow exist, push all three and warn the user.
 
-## Idempotency: `$PLAN_DIR/{slug}/.linear.json`
+## Idempotency: `$PLAN_DIR/.linear.json`
 
-The mapping file is the source of truth for "which Linear records belong to this
-slug." It is gitignored along with the rest of `$PLAN_DIR/`. Schema:
+A single mapping file at the root of `$PLAN_DIR/` is the source of truth for
+"which Linear records belong to which slug." Schema:
 
 ```json
 {
-    "team": "FW",
-    "parent_issue": "FW-100",
-    "documents": {
-        "prd": "<doc-uuid>",
-        "design": "<doc-uuid>",
-        "plan": "<doc-uuid>"
-    },
-    "tasks": { "archive_a_note.md": "FW-101", "unarchive_a_note.md": "FW-102" },
-    "hashes": {
-        "prd.md": "<sha256>",
-        "design.md": "<sha256>",
-        "plan.md": "<sha256>",
-        "tasks/archive_a_note.md": "<sha256>",
-        "tasks/unarchive_a_note.md": "<sha256>"
+    "slugs": {
+        "archive-notes": {
+            "team": "FW",
+            "parent_issue": "FW-100",
+            "documents": {
+                "prd": "<doc-uuid>",
+                "design": "<doc-uuid>",
+                "plan": "<doc-uuid>"
+            },
+            "tasks": {
+                "archive_a_note.md": "FW-101",
+                "unarchive_a_note.md": "FW-102"
+            },
+            "hashes": {
+                "prd.md": "<sha256>",
+                "design.md": "<sha256>",
+                "plan.md": "<sha256>",
+                "tasks/archive_a_note.md": "<sha256>",
+                "tasks/unarchive_a_note.md": "<sha256>"
+            }
+        }
     }
 }
 ```
 
-If the file is missing, this is a first-time push: create everything, write the
-file at the end.
+If the file is missing, every slug is treated as a first-time push.
 
 ## Steps
 
 ### 1. Load state
 
-Read `$PLAN_DIR/{slug}/.linear.json` if present. Compute `sha256` for every file
-in the "What to push" table that exists locally.
+Read `$PLAN_DIR/.linear.json` if present. Enumerate `$PLAN_DIR/*/` to find all
+local slugs. For each slug, compute `sha256` for every file in the "What to
+push" table that exists locally.
 
-### 2. Resolve the parent issue
+### 2. Fetch Linear state in one pass
 
-- **First push** (no `.linear.json`): the parent doesn't exist yet — create it
-  in step 4 after gathering content.
-- **Subsequent push**: call the Linear MCP to fetch the parent issue. If it
-  returns 404, the user deleted it manually. Stop and prompt:
-  - **Recreate**: clear all child IDs from `.linear.json` and treat as a
-    first-time push (will recreate every Document and sub-issue too).
-  - **Abort**: exit without changes. Don't pick on the user's behalf.
+To minimize API calls, do a **single** `list_issues` with `assignee` =
+`hagai.akibayov@catonetworks.com`, no team filter, including sub-issues and
+attachments. Build an in-memory index:
 
-### 3. Compute the diff
+- by Linear issue ID → issue
+- by `[<slug>]` title prefix → parent issue
+- by `[<slug>/<NN>]` title prefix → sub-issue
 
-For each tracked file, compare the current sha256 to the stored hash. Bucket
-each file into one of:
+Call `list_issue_statuses` lazily, **once per team** encountered in step 4, and
+cache each team's name → status-ID map. Status name → ID mapping is per-team in
+Linear.
+
+Reconcile against `.linear.json`:
+
+- For each slug in `.linear.json`, verify `parent_issue` still exists in the
+  fetched set. If a parent is missing (user deleted it manually), prompt:
+  - **Recreate**: clear that slug's entry from `.linear.json` and treat it as a
+    first-time push.
+  - **Skip**: leave the slug's local state alone and exclude it from this run.
+    Default to skip; never pick for the user silently.
+- For each sub-issue ID listed in `.linear.json` but missing from the fetch,
+  warn and drop the entry from `tasks`/`hashes` after user confirmation.
+
+Documents are not returned by `list_issues`; rely on the stored UUIDs in
+`.linear.json` and only call `get_document` lazily if a divergence check is
+warranted.
+
+### 3. Compute the diff per slug
+
+For each local slug, bucket every tracked file:
 
 - **new** — exists locally, not in `.linear.json`
-- **changed** — hash differs
+- **changed** — hash differs from `.linear.json`
 - **unchanged** — hash matches (skip, no Linear writes)
 - **gone** — listed in `.linear.json` but no longer present locally
 
-**new** files are pushed without prompting — they have no Linear counterpart
-yet, so there is nothing to overwrite.
+**new** and **changed** files are pushed without prompting. Report what was
+pushed after the fact (slug, file path, change summary).
 
-For `changed` files, push immediately without asking — Linear content is always
-overwritten with local file content. Report what was pushed after the fact (file
-path, change summary).
+For **gone** task files: the Linear sub-issue is **left in place** (it may have
+comments, PR links, etc. that must not be discarded). Warn and prompt to remove
+the entry from `.linear.json`. Default to keeping the entry until confirmed.
 
-For `gone` files (only relevant for tasks — docs are mandatory):
-
-- The Linear sub-issue is **left in place** (it may have comments, PR links,
-  etc. that must not be discarded).
-- Warn the user and prompt to remove the entry from `.linear.json`'s `tasks` and
-  `hashes` so it stops being tracked. Default to keeping the entry until the
-  user confirms removal.
+Slugs whose every file is unchanged are skipped entirely.
 
 ### 4. Write to Linear
 
-Use the `mcp__claude_ai_Linear__*` tools. Do writes in this order so child
-records always have a parent:
+Iterate slugs that have any new/changed file. Use the `mcp__claude_ai_Linear__*`
+tools. Order per slug so child records always have a parent:
 
 1. **Parent issue** (`save_issue`):
    - Title: `[<slug>] <H1 from prd.md or plan.md>`
    - Description: summary of the slug's purpose (from prd.md or plan.md intro).
      Documents and sub-issues appear automatically in the Linear UI — do not add
      `# Documents` or `# Sub-issues` index sections.
-   - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
+   - Team: existing slugs reuse their parent's team; new slugs default to `FW`.
+     Persist the resolved team in `slugs.<slug>.team`.
+   - Assignee: `hagai.akibayov@catonetworks.com`.
    - State: derived from sub-issue states (see "Parent state derivation" below).
      On first push, default to **Todo**.
 
@@ -155,7 +176,7 @@ records always have a parent:
      is the 1-based position of the task file in alphabetical sort order of
      `tasks/*.md`, zero-padded to two digits (e.g. `01`, `02`)
    - Parent: parent issue ID
-   - Team: `FW`. Assignee: `hagai.akibayov@catonetworks.com`.
+   - Team: same as parent. Assignee: `hagai.akibayov@catonetworks.com`.
    - Description: the task file body, with **path-style references rewritten to
      Linear Document URLs** (see "Reference rewriting" below).
    - State: see "State derivation" below — GitHub-linked tasks are left
@@ -164,16 +185,20 @@ records always have a parent:
      as native interactive checkboxes.
 
 4. **Blocked-by relations**: for each task file with a `Blocked by:` line,
-   resolve each named blocker to its Linear sub-issue ID via `.linear.json` and
-   create the corresponding `blocked-by` issue relation. If a blocker name
-   doesn't resolve (typo, slice not yet pushed), warn and skip — don't
-   fabricate.
+   resolve each named blocker to its Linear sub-issue ID via `.linear.json` (any
+   slug — cross-slug blockers are allowed) and create the corresponding
+   `blocked-by` issue relation. If a blocker name doesn't resolve (typo, slice
+   not yet pushed), warn and skip — don't fabricate. Defer blocked-by writes
+   until **all** slugs have been written in this run so cross-slug references
+   resolve.
 
 ### 5. Persist state
 
-Update `.linear.json` with new IDs and the fresh hashes for every file actually
-pushed. Don't update hashes for files that weren't pushed (e.g., user declined
-the prompt) — the next run should still see them as changed.
+Update `$PLAN_DIR/.linear.json` with new IDs and the fresh hashes for every file
+actually pushed. Don't update hashes for files that weren't pushed (e.g., user
+declined the prompt) — the next run should still see them as changed.
+
+Write the file once at the end of the run, not per slug.
 
 ## Reference rewriting
 
@@ -187,9 +212,10 @@ Task files commonly contain references like:
 
 Inside the Linear sub-issue description (only — leave the local file untouched),
 rewrite each `($PLAN_DIR/{slug}/<name>.md)` to a markdown link pointing at the
-corresponding Linear Document URL from `.linear.json`. The Linear Document URL
-format is `https://linear.app/hakasecurity/document/<slug-or-id>` — prefer
-fetching the URL from the `save_document` response when available.
+corresponding Linear Document URL from `.linear.json`. Cross-slug references are
+allowed; resolve via `slugs.<slug>.documents`. The Linear Document URL format is
+`https://linear.app/hakasecurity/document/<slug-or-id>` — prefer fetching the
+URL from the `save_document` response when available.
 
 If a reference points at a file the skill doesn't push (`*_interview.md`,
 `GLOSSARY.md`), strip the parenthetical entirely rather than leaving a dead
@@ -197,8 +223,8 @@ relative path.
 
 ## State derivation
 
-To resolve state names to IDs, call `list_issue_statuses` for team `FW` once per
-run and cache.
+Resolve status names through the per-team cache populated in step 4 (each team's
+statuses are fetched once on first use).
 
 ### Sub-issue state (tasks)
 
@@ -259,3 +285,4 @@ work, surface it before overwriting. But don't routinely diff — trust the hash
   decisions were made deliberately. If the user wants them, route them through a
   follow-up edit to this skill.
 - Don't read Linear-side checkbox/description edits back into local files.
+- Don't issue a per-slug `list_issues` — the run uses a single fetch in step 2.
