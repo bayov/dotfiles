@@ -5,122 +5,122 @@
 //
 // To see all of Zed's default settings without changing your
 // custom settings, run `zed: open default settings` from the
-// command palette (cmd-shift-p / ctrl-shift-p)
 {
-    "edit_predictions": {
-        "provider": "copilot"
+  "edit_predictions": {
+    "provider": "copilot",
+  },
+  "when_closing_with_no_tabs": "close_window",
+  "diff_view_style": "unified",
+  "terminal": {
+    "font_size": 12.5,
+    "scroll_multiplier": 1.0,
+  },
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry",
+      "env": {
+        "ACP_PERMISSION_MODE": "bypassPermissions",
+      },
     },
-    "when_closing_with_no_tabs": "close_window",
-    "diff_view_style": "unified",
-    "terminal": {
-        "scroll_multiplier": 1.0
+  },
+  "outline_panel": {
+    "dock": "right",
+  },
+  "collaboration_panel": {
+    "dock": "right",
+  },
+  "agent": {
+    "tool_permissions": {
+      "default": "allow",
+      "tools": {},
     },
-    "agent_servers": {
-        "claude-acp": {
-            "type": "registry",
-            "env": {
-                "ACP_PERMISSION_MODE": "bypassPermissions"
-            }
-        }
-    },
-    "outline_panel": {
-        "dock": "right"
-    },
-    "collaboration_panel": {
-        "dock": "right"
-    },
-    "agent": {
-        "tool_permissions": {
-            "default": "allow",
-            "tools": {}
-        },
-        "use_modifier_to_send": true,
-        "dock": "left",
-        "show_turn_stats": true,
-        "play_sound_when_agent_done": "always",
-        "favorite_models": [],
-        "single_file_review": true,
-        "model_parameters": []
-    },
-    "agent_buffer_font_size": 13.0,
-    "active_pane_modifiers": {
-        "border_size": 0.0,
-        "inactive_opacity": 1.0
-    },
-    "centered_layout": {
-        "left_padding": 0.2
-    },
-    "bottom_dock_layout": "contained",
-    "preview_tabs": {
-        "enabled": false
-    },
-    "tabs": {
-        "file_icons": false,
-        "git_status": true
-    },
-    "title_bar": {
-        "show_branch_status_icon": true,
-        "show_branch_name": true,
-        "show_project_items": true,
-        "show_onboarding_banner": true,
-        "show_user_picture": true,
-        "show_user_menu": true,
-        "show_sign_in": true,
-        "show_menus": false
-    },
-    "buffer_line_height": {
-        "custom": 1.4
-    },
-    "buffer_font_weight": 400.0,
-    "agent_ui_font_size": 15.0,
-    "buffer_font_family": "JetBrains Mono NL",
-    "wsl_connections": [
+    "use_modifier_to_send": true,
+    "dock": "left",
+    "show_turn_stats": true,
+    "play_sound_when_agent_done": "always",
+    "favorite_models": [],
+    "single_file_review": true,
+    "model_parameters": [],
+  },
+  "agent_buffer_font_size": 13.0,
+  "active_pane_modifiers": {
+    "border_size": 0.0,
+    "inactive_opacity": 1.0,
+  },
+  "centered_layout": {
+    "left_padding": 0.2,
+  },
+  "bottom_dock_layout": "contained",
+  "preview_tabs": {
+    "enabled": false,
+  },
+  "tabs": {
+    "file_icons": false,
+    "git_status": true,
+  },
+  "title_bar": {
+    "show_branch_status_icon": true,
+    "show_branch_name": true,
+    "show_project_items": true,
+    "show_onboarding_banner": true,
+    "show_user_picture": true,
+    "show_user_menu": true,
+    "show_sign_in": true,
+    "show_menus": false,
+  },
+  "buffer_line_height": {
+    "custom": 1.4,
+  },
+  "buffer_font_weight": 400.0,
+  "agent_ui_font_size": 15.0,
+  "buffer_font_family": "JetBrains Mono NL",
+  "wsl_connections": [
+    {
+      "distro_name": "Ubuntu",
+      "user": null,
+      "projects": [
         {
-            "distro_name": "Ubuntu",
-            "user": null,
-            "projects": [
-                {
-                    "paths": ["/home/bayov/projects/accounting"]
-                },
-                {
-                    "paths": ["/home/bayov/projects/dotfiles-second-brain"]
-                }
-            ]
-        }
-    ],
-    "icon_theme": "Zed (Default)",
-    "project_panel": {
-        "entry_spacing": "comfortable",
-        "dock": "right",
-        "button": true,
-        "hide_gitignore": true,
-        "auto_reveal_entries": false
+          "paths": ["/home/bayov/projects/accounting"],
+        },
+        {
+          "paths": ["/home/bayov/projects/dotfiles-second-brain"],
+        },
+      ],
     },
-    "status_bar": {
-        "cursor_position_button": true,
-        "active_language_button": true,
-        "experimental.show": true
+  ],
+  "icon_theme": "Zed (Default)",
+  "project_panel": {
+    "entry_spacing": "comfortable",
+    "dock": "right",
+    "button": true,
+    "hide_gitignore": true,
+    "auto_reveal_entries": false,
+  },
+  "status_bar": {
+    "cursor_position_button": true,
+    "active_language_button": true,
+    "experimental.show": true,
+  },
+  "git_panel": {
+    "dock": "right",
+    "button": true,
+  },
+  "minimap": {
+    "show": "never",
+  },
+  "autosave": "on_focus_change",
+  "colorize_brackets": false,
+  "wrap_guides": [80],
+  "base_keymap": "None",
+  "ui_font_size": 13.5,
+  "buffer_font_size": 13.0,
+  "semantic_tokens": "combined",
+  "theme": "One Dark",
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "buildFlags": ["-tags=integration,benchmark,tools"],
+      },
     },
-    "git_panel": {
-        "dock": "right",
-        "button": true
-    },
-    "minimap": {
-        "show": "never"
-    },
-    "autosave": "on_focus_change",
-    "colorize_brackets": false,
-    "wrap_guides": [80],
-    "base_keymap": "None",
-    "ui_font_size": 14.0,
-    "buffer_font_size": 13.0,
-    "semantic_tokens": "combined",
-    "theme": "One Dark",
-    "lsp": {
-        "gopls": {
-            "initialization_options": {
-                "buildFlags": ["-tags=integration,benchmark,tools"]
-            }
-        }
-    }
+  },
 }
