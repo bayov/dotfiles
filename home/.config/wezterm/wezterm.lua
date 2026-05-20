@@ -54,7 +54,7 @@ config.status_update_interval = 50
 config.window_close_confirmation = "NeverPrompt"
 config.disable_default_quick_select_patterns = true
 local url_regex =
-    "(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"
+"(https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*))"
 config.quick_select_patterns = {
     url_regex,
     -- Base16 IDs
@@ -125,7 +125,7 @@ config.keys = {
             )
         end),
     }, { "fresh" }),
-    { mods = "ALT", key = "c", action = act.ActivateCopyMode },
+    { mods = "ALT",  key = "c", action = act.ActivateCopyMode },
 
     -- Copy & Paste
     { mods = "CTRL", key = "c", action = helpers.CopyOrInterrupt },
@@ -151,7 +151,7 @@ config.keys = {
     }),
 
     -- Presentation
-    { mods = "ALT", key = "\\", action = act.ToggleFullScreen },
+    { mods = "ALT",       key = "\\",         action = act.ToggleFullScreen },
     {
         mods = "ALT",
         key = "-",
@@ -161,17 +161,17 @@ config.keys = {
             window:set_config_overrides(overrides)
         end),
     },
-    { mods = "CTRL", key = "-", action = zoom.ZoomOut },
-    { mods = "CTRL", key = "=", action = zoom.ZoomIn },
-    { mods = "CTRL", key = "0", action = zoom.ResetZoom },
+    { mods = "CTRL",      key = "-",          action = zoom.ZoomOut },
+    { mods = "CTRL",      key = "=",          action = zoom.ZoomIn },
+    { mods = "CTRL",      key = "0",          action = zoom.ResetZoom },
 
     -- Tab-management
-    { mods = "ALT", key = "t", action = act.SpawnTab("DefaultDomain") },
-    { mods = "ALT", key = "LeftArrow", action = act.ActivateTabRelative(-1) },
-    { mods = "ALT", key = "RightArrow", action = act.ActivateTabRelative(1) },
-    { mods = "ALT", key = "1", action = act.MoveTabRelative(-1) },
-    { mods = "ALT", key = "3", action = act.MoveTabRelative(1) },
-    { mods = "ALT|SHIFT", key = "x", action = act.CloseCurrentTab({ confirm = false }) },
+    { mods = "ALT",       key = "t",          action = act.SpawnTab("DefaultDomain") },
+    { mods = "ALT",       key = "LeftArrow",  action = act.ActivateTabRelative(-1) },
+    { mods = "ALT",       key = "RightArrow", action = act.ActivateTabRelative(1) },
+    { mods = "ALT",       key = "1",          action = act.MoveTabRelative(-1) },
+    { mods = "ALT",       key = "3",          action = act.MoveTabRelative(1) },
+    { mods = "ALT|SHIFT", key = "x",          action = act.CloseCurrentTab({ confirm = false }) },
     {
         mods = "NONE",
         key = "F2",
@@ -186,39 +186,39 @@ config.keys = {
     },
 
     -- Pane-management
-    { mods = "ALT|SHIFT", key = "UpArrow", action = act.ActivatePaneDirection("Up") },
-    { mods = "ALT|SHIFT", key = "DownArrow", action = act.ActivatePaneDirection("Down") },
-    { mods = "ALT|SHIFT", key = "LeftArrow", action = act.ActivatePaneDirection("Left") },
+    { mods = "ALT|SHIFT", key = "UpArrow",    action = act.ActivatePaneDirection("Up") },
+    { mods = "ALT|SHIFT", key = "DownArrow",  action = act.ActivatePaneDirection("Down") },
+    { mods = "ALT|SHIFT", key = "LeftArrow",  action = act.ActivatePaneDirection("Left") },
     { mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right") },
-    { mods = "ALT|SHIFT", key = "8", action = act.SplitPane({ direction = "Up" }) },
-    { mods = "ALT|SHIFT", key = "2", action = act.SplitPane({ direction = "Down" }) },
-    { mods = "ALT|SHIFT", key = "4", action = act.SplitPane({ direction = "Left" }) },
-    { mods = "ALT|SHIFT", key = "6", action = act.SplitPane({ direction = "Right" }) },
-    { mods = "CTRL|ALT", key = "8", action = act.AdjustPaneSize({ "Up", 2 }) },
-    { mods = "CTRL|ALT", key = "2", action = act.AdjustPaneSize({ "Down", 2 }) },
-    { mods = "CTRL|ALT", key = "4", action = act.AdjustPaneSize({ "Left", 4 }) },
-    { mods = "CTRL|ALT", key = "6", action = act.AdjustPaneSize({ "Right", 4 }) },
-    { mods = "ALT", key = "9", action = act.RotatePanes("CounterClockwise") },
-    { mods = "ALT", key = "7", action = act.RotatePanes("Clockwise") },
-    { mods = "ALT", key = "*", action = act.PaneSelect({ mode = "SwapWithActive" }) },
-    { mods = "ALT", key = "5", action = act.TogglePaneZoomState },
+    { mods = "ALT|SHIFT", key = "8",          action = act.SplitPane({ direction = "Up" }) },
+    { mods = "ALT|SHIFT", key = "2",          action = act.SplitPane({ direction = "Down" }) },
+    { mods = "ALT|SHIFT", key = "4",          action = act.SplitPane({ direction = "Left" }) },
+    { mods = "ALT|SHIFT", key = "6",          action = act.SplitPane({ direction = "Right" }) },
+    { mods = "CTRL|ALT",  key = "8",          action = act.AdjustPaneSize({ "Up", 2 }) },
+    { mods = "CTRL|ALT",  key = "2",          action = act.AdjustPaneSize({ "Down", 2 }) },
+    { mods = "CTRL|ALT",  key = "4",          action = act.AdjustPaneSize({ "Left", 4 }) },
+    { mods = "CTRL|ALT",  key = "6",          action = act.AdjustPaneSize({ "Right", 4 }) },
+    { mods = "ALT",       key = "9",          action = act.RotatePanes("CounterClockwise") },
+    { mods = "ALT",       key = "7",          action = act.RotatePanes("Clockwise") },
+    { mods = "ALT",       key = "*",          action = act.PaneSelect({ mode = "SwapWithActive" }) },
+    { mods = "ALT",       key = "5",          action = act.TogglePaneZoomState },
     -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
-    { mods = "ALT", key = "x", action = act.CloseCurrentPane({ confirm = false }) },
+    { mods = "ALT",       key = "x",          action = act.CloseCurrentPane({ confirm = false }) },
 
     -- Misc
-    { mods = "CTRL|ALT", key = "a", action = act.ActivateCommandPalette },
-    { mods = "CTRL|ALT", key = "r", action = act.ReloadConfiguration },
-    { mods = "CTRL", key = "`", action = act.ShowDebugOverlay },
+    { mods = "CTRL|ALT",  key = "a",          action = act.ActivateCommandPalette },
+    { mods = "CTRL|ALT",  key = "r",          action = act.ReloadConfiguration },
+    { mods = "CTRL",      key = "`",          action = act.ShowDebugOverlay },
 
     -- Session resurrection (save/restore workspace, window, or tab state to disk)
-    { mods = "ALT|SHIFT", key = "s", action = resurrect.save_workspace },
-    { mods = "ALT|SHIFT", key = "r", action = resurrect.restore_state },
+    { mods = "ALT|SHIFT", key = "s",          action = resurrect.save_workspace },
+    { mods = "ALT|SHIFT", key = "r",          action = resurrect.restore_state },
 
     -- Support Shift+Enter for CLI tools
-    { mods = "SHIFT", key = "Enter", action = act.SendString("\x1b[13;2u") },
+    { mods = "SHIFT",     key = "Enter",      action = act.SendString("\x1b[13;2u") },
 
     -- QuickSelect
-    { mods = "ALT", key = "k", action = act.QuickSelect },
+    { mods = "ALT",       key = "k",          action = act.QuickSelect },
     {
         mods = "ALT",
         key = "o",
@@ -240,7 +240,7 @@ config.key_tables = {}
 config.key_tables.copy_mode = {
     -- Close
     { mods = "NONE", key = "Escape", action = copy_mode.ClearSelectionOrCloseCopyMode },
-    { mods = "ALT", key = "c", action = copy_mode.CloseAndClearSelection },
+    { mods = "ALT",  key = "c",      action = copy_mode.CloseAndClearSelection },
     -- Perform copy (and then close)
     {
         mods = "CTRL",
@@ -261,49 +261,49 @@ config.key_tables.copy_mode = {
         }),
     },
     -- Movement
-    { mods = "NONE", key = "UpArrow",    action = copy_mode.Move("Up") },
-    { mods = "NONE", key = "DownArrow",  action = copy_mode.Move("Down") },
-    { mods = "NONE", key = "LeftArrow",  action = copy_mode.Move("Left") },
-    { mods = "NONE", key = "RightArrow", action = copy_mode.Move("Right") },
-    { mods = "CTRL", key = "LeftArrow",  action = copy_mode.Move("BackwardWord") },
-    { mods = "CTRL", key = "RightArrow", action = copy_mode.Move("ForwardWord") },
-    { mods = "NONE", key = "Home",       action = copy_mode.Move("ToStartOfLineContent") },
-    { mods = "NONE", key = "End",        action = copy_mode.Move("ToEndOfLineContent") },
-    { mods = "CTRL", key = "Home",       action = copy_mode.Move("ToScrollbackTop") },
-    { mods = "CTRL", key = "End",        action = copy_mode.Move("ToScrollbackBottom") },
-    { mods = "NONE", key = "PageUp",   action = copy_mode.Move({ MoveByPage = -0.5 }) },
-    { mods = "NONE", key = "PageDown", action = copy_mode.Move({ MoveByPage = 0.5 }) },
-    { mods = "CTRL", key = "[",        action = copy_mode.Move("BackwardSemanticZone") },
-    { mods = "CTRL", key = "]",        action = copy_mode.Move("ForwardSemanticZone") },
+    { mods = "NONE",       key = "UpArrow",    action = copy_mode.Move("Up") },
+    { mods = "NONE",       key = "DownArrow",  action = copy_mode.Move("Down") },
+    { mods = "NONE",       key = "LeftArrow",  action = copy_mode.Move("Left") },
+    { mods = "NONE",       key = "RightArrow", action = copy_mode.Move("Right") },
+    { mods = "CTRL",       key = "LeftArrow",  action = copy_mode.Move("BackwardWord") },
+    { mods = "CTRL",       key = "RightArrow", action = copy_mode.Move("ForwardWord") },
+    { mods = "NONE",       key = "Home",       action = copy_mode.Move("ToStartOfLineContent") },
+    { mods = "NONE",       key = "End",        action = copy_mode.Move("ToEndOfLineContent") },
+    { mods = "CTRL",       key = "Home",       action = copy_mode.Move("ToScrollbackTop") },
+    { mods = "CTRL",       key = "End",        action = copy_mode.Move("ToScrollbackBottom") },
+    { mods = "NONE",       key = "PageUp",     action = copy_mode.Move({ MoveByPage = -0.5 }) },
+    { mods = "NONE",       key = "PageDown",   action = copy_mode.Move({ MoveByPage = 0.5 }) },
+    { mods = "CTRL",       key = "[",          action = copy_mode.Move("BackwardSemanticZone") },
+    { mods = "CTRL",       key = "]",          action = copy_mode.Move("ForwardSemanticZone") },
     -- Extend selection (non-vim)
-    { mods = "SHIFT", key = "LeftArrow",  action = copy_mode.ExtendSelection("Left") },
-    { mods = "SHIFT", key = "RightArrow", action = copy_mode.ExtendSelection("Right") },
-    { mods = "SHIFT", key = "UpArrow",    action = copy_mode.ExtendSelection("Up") },
-    { mods = "SHIFT", key = "DownArrow",  action = copy_mode.ExtendSelection("Down") },
+    { mods = "SHIFT",      key = "LeftArrow",  action = copy_mode.ExtendSelection("Left") },
+    { mods = "SHIFT",      key = "RightArrow", action = copy_mode.ExtendSelection("Right") },
+    { mods = "SHIFT",      key = "UpArrow",    action = copy_mode.ExtendSelection("Up") },
+    { mods = "SHIFT",      key = "DownArrow",  action = copy_mode.ExtendSelection("Down") },
     { mods = "CTRL|SHIFT", key = "LeftArrow",  action = copy_mode.ExtendSelection("BackwardWord") },
     { mods = "CTRL|SHIFT", key = "RightArrow", action = copy_mode.ExtendSelection("ForwardWord") },
-    { mods = "SHIFT", key = "Home",       action = copy_mode.ExtendSelection("ToStartOfLineContent") },
-    { mods = "SHIFT", key = "End",        action = copy_mode.ExtendSelection("ToEndOfLineContent") },
+    { mods = "SHIFT",      key = "Home",       action = copy_mode.ExtendSelection("ToStartOfLineContent") },
+    { mods = "SHIFT",      key = "End",        action = copy_mode.ExtendSelection("ToEndOfLineContent") },
     { mods = "CTRL|SHIFT", key = "Home",       action = copy_mode.ExtendSelection("ToScrollbackTop") },
     { mods = "CTRL|SHIFT", key = "End",        action = copy_mode.ExtendSelection("ToScrollbackBottom") },
-    { mods = "SHIFT", key = "PageUp",   action = copy_mode.ExtendSelection({ MoveByPage = -0.5 }) },
-    { mods = "SHIFT", key = "PageDown", action = copy_mode.ExtendSelection({ MoveByPage = 0.5 }) },
-    { mods = "CTRL|SHIFT", key = "{",   action = copy_mode.ExtendSelection("BackwardSemanticZone") },
-    { mods = "CTRL|SHIFT", key = "}",   action = copy_mode.ExtendSelection("ForwardSemanticZone") },
+    { mods = "SHIFT",      key = "PageUp",     action = copy_mode.ExtendSelection({ MoveByPage = -0.5 }) },
+    { mods = "SHIFT",      key = "PageDown",   action = copy_mode.ExtendSelection({ MoveByPage = 0.5 }) },
+    { mods = "CTRL|SHIFT", key = "{",          action = copy_mode.ExtendSelection("BackwardSemanticZone") },
+    { mods = "CTRL|SHIFT", key = "}",          action = copy_mode.ExtendSelection("ForwardSemanticZone") },
     -- Quick selection
-    { mods = "CTRL", key = "l", action = act.CopyMode({ SetSelectionMode = "Line" }) },
-    { mods = "CTRL", key = "s", action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
-    { mods = "CTRL", key = "w", action = act.CopyMode({ SetSelectionMode = "Word" }) },
-    { mods = "CTRL", key = "b", action = act.CopyMode({ SetSelectionMode = "Block" }) },
+    { mods = "CTRL",       key = "l",          action = act.CopyMode({ SetSelectionMode = "Line" }) },
+    { mods = "CTRL",       key = "s",          action = act.CopyMode({ SetSelectionMode = "SemanticZone" }) },
+    { mods = "CTRL",       key = "w",          action = act.CopyMode({ SetSelectionMode = "Word" }) },
+    { mods = "CTRL",       key = "b",          action = act.CopyMode({ SetSelectionMode = "Block" }) },
 }
 -- Search mode reuses the copy mode bindings and only overrides/adds the
 -- match-navigation keys. Escape, Ctrl+c, y, movement, etc. are inherited.
 config.key_tables.search_mode = helpers.ExtendKeyTable(config.key_tables.copy_mode, {
-    { mods = "ALT", key = "i", action = act.CopyMode("CycleMatchType") },
-    { mods = "ALT", key = "u", action = act.CopyMode("CycleMatchType") },
-    { mods = "ALT", key = "y", action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT",   key = "i",     action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT",   key = "u",     action = act.CopyMode("CycleMatchType") },
+    { mods = "ALT",   key = "y",     action = act.CopyMode("CycleMatchType") },
     { mods = "SHIFT", key = "Enter", action = act.CopyMode("PriorMatch") },
-    { mods = "NONE", key = "Enter", action = act.CopyMode("NextMatch") },
+    { mods = "NONE",  key = "Enter", action = act.CopyMode("NextMatch") },
 })
 
 --------------------------------------------------------------------------------
@@ -313,7 +313,7 @@ config.mouse_bindings = {
     { mods = "NONE", event = { Down = { streak = 3, button = "Left" } }, action = act.SelectTextAtMouseCursor("Line") },
     { mods = "CTRL", event = { Down = { streak = 1, button = "Left" } }, action = act.SelectTextAtMouseCursor("SemanticZone") },
     -- Disable copy on selection
-    { mods = "NONE", event = { Up = { streak = 1, button = "Left" } }, action = act.Nop },
+    { mods = "NONE", event = { Up = { streak = 1, button = "Left" } },   action = act.Nop },
     -- Paste with right-click (or copy if text is selected):
     {
         mods = "NONE",
