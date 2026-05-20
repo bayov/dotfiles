@@ -209,6 +209,44 @@ def parse_transcript(path):
     return inp_tok, out_tok, cached, skills, duration_secs
 
 
+def find_project_root(start):
+    """Walk up from `start` looking for a `.jj` or `.git` dir. Returns path or None."""
+    if not start or not os.path.isdir(start):
+        return None
+    cur = os.path.abspath(start)
+    while True:
+        if os.path.isdir(os.path.join(cur, ".jj")) or os.path.isdir(
+            os.path.join(cur, ".git")
+        ):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return None
+        cur = parent
+
+
+def fishlike_path(path):
+    """Abbreviate all but the last path component to its leading char(s).
+
+    Hidden dirs keep the leading dot (".config" -> ".c"). The last component
+    is shown in full. "~" and "/" prefixes are preserved.
+    """
+    if not path:
+        return path
+    parts = path.split("/")
+    last = len(parts) - 1
+    out = []
+    for i, p in enumerate(parts):
+        if i == last or not p or p in ("~",):
+            out.append(p)
+            continue
+        if p.startswith("."):
+            out.append(p[:2])
+        else:
+            out.append(p[:1])
+    return "/".join(out)
+
+
 def get_status_line():
     try:
         data = json.load(sys.stdin)
@@ -229,10 +267,6 @@ def get_status_line():
     cwd = data.get("workspace", {}).get("current_dir", "")
     transcript_path = data.get("transcript_path") or ""
 
-    home = os.path.expanduser("~")
-    if cwd.startswith(home):
-        cwd = cwd.replace(home, "~", 1)
-
     # ANSI Colors
     BLUE = "\033[34m"
     ORANGE = "\033[38;5;180m"
@@ -241,6 +275,21 @@ def get_status_line():
     RED = "\033[31m"
     YELLOW = "\033[33m"
     RESET = "\033[0m"
+
+    project_root = find_project_root(cwd)
+    if project_root:
+        project_name = os.path.basename(project_root) or project_root
+        rel = os.path.relpath(cwd, project_root)
+        if rel == ".":
+            cwd_part = f"{BLUE}@{project_name}{RESET}"
+        else:
+            abbrev = fishlike_path(rel)
+            cwd_part = f"{BLUE}@{project_name}{GREY}/{abbrev}{RESET}"
+    else:
+        home = os.path.expanduser("~")
+        if cwd.startswith(home):
+            cwd = cwd.replace(home, "~", 1)
+        cwd_part = f"{BLUE}{fishlike_path(cwd)}{RESET}"
 
     # Color by input tokens in context
     ctx_color = GREY
@@ -272,7 +321,6 @@ def get_status_line():
     sess_total = sess_in + sess_out + sess_cached
 
     # Order: cwd | model | effort | bar | context tokens | session tokens
-    cwd_part = f"{BLUE}{cwd}{RESET}"
     model_part = f"{MAGENTA}{model_name}{RESET}"
     tokens_part = f"{ctx_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
     effort_part = f"[{effort_level}]" if effort_level else ""

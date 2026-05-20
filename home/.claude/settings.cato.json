@@ -12,6 +12,7 @@
       "AskUserQuestion"
     ]
   },
+  "model": "sonnet",
   "hooks": {
     "ElicitationResult": [
       {
@@ -107,6 +108,5 @@
   "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
-  "preferredNotifChannel": "notifications_disabled",
-  "model": "sonnet"
+  "preferredNotifChannel": "notifications_disabled"
 }
