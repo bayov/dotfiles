@@ -27,7 +27,7 @@ physical position on the keypad).
 | ---------------------- | ------------------------------------------ |
 | Alt+Arrows             | Move between tabs                          |
 | Alt+Shift+Arrows       | Move between panes                         |
-| Ctrl+Tab               | Tab switcher (menu)                        |
+| Alt+N5                 | Search open tabs/panes                     |
 | Alt+{N2,N4,N6,N8}      | Move pane (split if direction empty)       |
 | Ctrl+Alt+{N2,N4,N6,N8} | Stretch/resize pane                        |
 | Ctrl+N5                | Toggle maximize pane                       |

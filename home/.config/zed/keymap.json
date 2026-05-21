@@ -107,7 +107,7 @@
   {
     "context": "Workspace",
     "bindings": {
-      "ctrl-tab": "tab_switcher::Toggle",
+      "ctrl-tab": "tab_switcher::ToggleAll",
       "ctrl-shift-tab": ["tab_switcher::Toggle", { "select_last": true }],
     }
   },
@@ -118,7 +118,7 @@
       "ctrl-shift-tab": "menu::SelectPrevious",
       "ctrl-up": "menu::SelectPrevious",
       "ctrl-down": "menu::SelectNext",
-      "ctrl-backspace": "tab_switcher::CloseSelectedItem",
+      "shift-delete": "tab_switcher::CloseSelectedItem",
     },
   },
   // Move pane (split if direction empty)
@@ -410,7 +410,6 @@
         { "ignore_newlines": false, "ignore_brackets": false },
       ],
       "cut": "editor::Cut",
-      "shift-delete": "editor::Cut",
       "ctrl-x": "editor::Cut",
       "copy": "editor::Copy",
       "ctrl-insert": "editor::Copy",
