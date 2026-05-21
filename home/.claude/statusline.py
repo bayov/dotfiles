@@ -2,6 +2,7 @@
 import sys
 import json
 import os
+import re
 import time
 import subprocess
 import urllib.request
@@ -254,6 +255,11 @@ def get_status_line():
         return ""
 
     model_name = data.get("model", {}).get("display_name", "")
+    model_name = re.sub(
+        r"^(Haiku|Sonnet|Opus|Mythos) (.+)$",
+        lambda m: m.group(1)[0] + m.group(2),
+        model_name,
+    )
     cw = data.get("context_window") or {}
     cur = cw.get("current_usage") or {}
     # Input tokens currently in context (matches used_percentage formula)
@@ -306,6 +312,16 @@ def get_status_line():
             return f"{round(n / 1_000)}k"
         return str(n)
 
+    sess_in, sess_out, sess_cached, skills, sess_secs = parse_transcript(
+        transcript_path
+    )
+    sess_total = sess_in + sess_out + sess_cached
+
+    # Order: cwd | model | effort | bar | context tokens | session tokens
+    model_part = f"{MAGENTA}{model_name}{RESET}"
+    tokens_part = f"{ctx_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
+    effort_part = effort_level
+
     def fmt_duration(secs):
         h, rem = divmod(secs, 3600)
         m = rem // 60
@@ -315,26 +331,10 @@ def get_status_line():
             return f"{h}h"
         return f"{m}m"
 
-    sess_in, sess_out, sess_cached, skills, sess_secs = parse_transcript(
-        transcript_path
-    )
-    sess_total = sess_in + sess_out + sess_cached
-
-    # Order: cwd | model | effort | bar | context tokens | session tokens
-    model_part = f"{MAGENTA}{model_name}{RESET}"
-    tokens_part = f"{ctx_color}{fmt_tokens(in_tok + out_tok)} (+{fmt_tokens(out_tok)}){RESET}"
-    effort_part = f"[{effort_level}]" if effort_level else ""
-
     model_effort = f"{model_part} {effort_part}" if effort_part else model_part
     parts = [cwd_part, f"{GREY}|{RESET} {model_effort}"]
     if in_tok + out_tok > 0:
         parts.append(f"{GREY}|{RESET} {tokens_part}")
-    if sess_total > 0:
-        session_part = (
-            f"{GREY}| ⧗ {fmt_duration(sess_secs)} "
-            f"({fmt_tokens(sess_total)}, {fmt_tokens(sess_cached)} cached){RESET}"
-        )
-        parts.append(session_part)
 
     def remaining_secs(iso_str):
         if not iso_str:
@@ -359,23 +359,28 @@ def get_status_line():
     usage = read_usage_cache()
     if usage:
         bits = []
-        for label, pct_key, reset_key in (
-            ("S", "session_pct", "session_resets_at"),
-            ("W", "weekly_pct", "weekly_resets_at"),
+        for pct_key, reset_key in (
+            ("session_pct", "session_resets_at"),
+            ("weekly_pct", "weekly_resets_at"),
         ):
             pct = usage.get(pct_key)
             if not isinstance(pct, (int, float)):
                 continue
-            piece = f"{label}: {round(pct)}%"
+            piece = f"{round(pct)}%"
             left = remaining_secs(usage.get(reset_key))
             if left is not None:
                 piece += f" ({fmt_remaining(left)})"
-            if label == "S":
-                color = RED if pct >= 90 else YELLOW if pct >= 70 else GREY
-                piece = f"{color}{piece}{GREY}"
+            color = RED if pct >= 90 else YELLOW if pct >= 70 else GREY
+            piece = f"{color}{piece}{GREY}"
             bits.append(piece)
         if bits:
             parts.append(f"{GREY}| {', '.join(bits)}{RESET}")
+
+    if sess_total > 0:
+        parts.append(
+            f"{GREY}| ⧗ {fmt_duration(sess_secs)} "
+            f"({fmt_tokens(sess_total)}, {fmt_tokens(sess_cached)} cached){RESET}"
+        )
 
     line1 = " ".join(parts)
 
