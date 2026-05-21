@@ -215,7 +215,6 @@
     "bindings": {
       "alt-open": ["projects::OpenRecent", { "create_new_window": false }],
       "ctrl-alt-o": ["projects::OpenRecent", { "create_new_window": false }],
-      "ctrl-r": ["projects::OpenRecent", { "create_new_window": false }],
       "alt-shift-open": [
         "projects::OpenRemote",
         {
@@ -491,7 +490,7 @@
       "ctrl-k z": "editor::ToggleSoftWrap",
       "find": "buffer_search::Deploy",
       "ctrl-f": "buffer_search::Deploy",
-      "ctrl-h": "buffer_search::DeployReplace",
+      "ctrl-r": "buffer_search::DeployReplace",
       "ctrl->": "agent::AddSelectionToThread",
       "ctrl-alt-e": "editor::SelectEnclosingSymbol",
       "ctrl-shift-backspace": "editor::GoToPreviousChange",
