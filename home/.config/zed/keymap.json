@@ -839,15 +839,7 @@
       "ctrl-shift-enter": "project_search::ToggleAllSearchResults",
       "ctrl-shift-f": "search::FocusSearch",
       "ctrl-shift-h": "search::ToggleReplace",
-      "ctrl-alt-g": "search::ToggleRegex",
-      "ctrl-alt-x": "search::ToggleRegex",
       "alt-y": "search::ToggleRegex",
-    },
-  },
-  {
-    "context": "ProjectSearchBar",
-    "unbind": {
-      "alt-r": "search::ToggleRegex",
     },
   },
   {
@@ -880,31 +872,13 @@
     "context": "ProjectSearchView",
     "bindings": {
       "escape": "project_search::ToggleFocus",
-      "ctrl-shift-h": "search::ToggleReplace",
-      "ctrl-alt-g": "search::ToggleRegex",
-      "ctrl-alt-x": "search::ToggleRegex",
       "alt-y": "search::ToggleRegex",
-    },
-  },
-  {
-    "context": "ProjectSearchView",
-    "unbind": {
-      "alt-r": "search::ToggleRegex",
     },
   },
 
   //============================================================================
   // AI / AGENT
   //============================================================================
-  {
-    "context": "Editor && !agent_diff",
-    "bindings": {
-      "ctrl-k ctrl-r": "git::Restore",
-      "ctrl-alt-y": "git::ToggleStaged",
-      "alt-y": "git::StageAndNext",
-      "alt-shift-y": "git::UnstageAndNext",
-    },
-  },
   {
     "context": "Editor && editor_agent_diff",
     "bindings": {
