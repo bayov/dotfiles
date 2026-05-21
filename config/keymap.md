@@ -3,6 +3,17 @@
 My preferred keyboard bindings to use in apps, where it makes sense and when
 supported.
 
+## Open/focus specific tools
+
+| Key         | Action          |
+| ----------- | --------------- |
+| Alt+'       | Settings window |
+| Alt+Shift+' | Settings file   |
+| Alt+;       | Keymap window   |
+| Alt+shift+; | Keymap file     |
+| Alt+/       | Extensions      |
+| Alt+E       | Focus editor    |
+
 ## Tab and pane management
 
 > Note: Terminology in various apps: Pane == Split == Editor
@@ -152,22 +163,13 @@ physical position on the keypad).
 
 ## Presentation
 
-| Key         | Action                  |
-| ----------- | ----------------------- |
-| Ctrl+{-,=}  | Zoom in and out         |
-| Ctrl+0      | Reset zoom              |
-| Alt+\       | Toggle full screen mode |
-| Alt+Shift+P | Presentation mode       |
-| Alt+Shift+Z | Zen mode                |
-
-## Window management
-
 | Key         | Action                                         |
 | ----------- | ---------------------------------------------- |
-| Alt+'       | Settings                                       |
-| Alt+;       | Keymapping                                     |
-| Alt+/       | Extensions                                     |
-| Alt+E       | Focus editor                                   |
+| Ctrl+{-,=}  | Zoom in and out                                |
+| Ctrl+0      | Reset zoom                                     |
+| Alt+\       | Toggle full screen mode                        |
+| Alt+Shift+P | Presentation mode                              |
+| Alt+Shift+Z | Zen mode                                       |
 | Alt+Shift+E | Hide all tool windows                          |
 | Alt+0       | Toggle toolbar icons (at the edges) visibility |
 | Alt+-       | Toggle status bar (bottom) visibility          |

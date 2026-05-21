@@ -7,7 +7,7 @@
             "bindings": {
                 "alt+q": "app:exit",
                 "alt+j": "app:toggleTodos",
-                "alt+v": "app:toggleTranscript",
+                "alt+d": "app:toggleTranscript",
                 "ctrl+o": null,
                 "ctrl+shift+b": "app:toggleBrief",
                 "ctrl+shift+o": "app:toggleTeammatePreview",
@@ -31,7 +31,7 @@
                 "down": "history:next",
                 "ctrl+_": "chat:undo",
                 "ctrl+shift+-": "chat:undo",
-                "alt+e": "chat:externalEditor",
+                "alt+v": "chat:externalEditor",
                 "ctrl+g": null,
                 "ctrl+s": "chat:stash",
                 "ctrl+v": "chat:imagePaste",

@@ -93,6 +93,20 @@
   },
 
   //============================================================================
+  // Open/focus specific tools
+  //============================================================================
+  {
+    "bindings": {
+      "alt-'": "zed::OpenSettings",
+      "shift-alt-'": "zed::OpenSettingsFile",
+      "alt-;": "zed::OpenKeymap",
+      "shift-alt-;": "zed::OpenKeymapFile",
+      "alt-/": "zed::Extensions",
+      "alt-e": "editor::ToggleFocus",
+    }
+  },
+
+  //============================================================================
   // Tab and pane management
   //============================================================================
 
@@ -319,11 +333,6 @@
       "shift shift": "command_palette::Toggle",
       "alt-f": "file_finder::Toggle",
       "alt-w": "projects::OpenRecent",
-      "alt-/": "zed::Extensions",
-      "alt-'": "zed::OpenSettings",
-      "shift-alt-'": "zed::OpenSettingsFile",
-      "shift-alt-;": "zed::OpenKeymapFile",
-      "alt-;": "zed::OpenKeymap",
       "shift-alt-e": "workspace::ToggleAllDocks",
       "alt-r r": "task::Rerun",
       "alt-r shift-r": "task::Spawn",
@@ -1262,7 +1271,6 @@
       "alt-v": ["terminal::SendText", "\u001bv"],
       "alt-m": ["terminal::SendText", "\u001bm"],
       "alt-n": ["terminal::SendText", "\u001bn"],
-      "alt-e": ["terminal::SendText", "\u001be"],
       "alt-,": ["terminal::SendText", "\u001b,"],
       "cmd-o": ["terminal::SendKeystroke", "cmd-o"],
       "cmd-t": ["terminal::SendKeystroke", "cmd-t"],
