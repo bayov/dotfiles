@@ -25,7 +25,7 @@ converted to a Numpad press with NumLock toggled on/off.
 | Alt+Arrows             | Move between tabs                          |
 | Alt+Shift+Arrows       | Move between panes                         |
 | Ctrl+Tab               | Tab switcher (menu)                        |
-| Alt+{N2,N4,N6,N8}      | Move (and split) pane                      |
+| Alt+{N2,N4,N6,N8}      | Move pane (split if direction empty)       |
 | Ctrl+Alt+{N2,N4,N6,N8} | Stretch/resize pane                        |
 | Ctrl+N5                | Toggle maximize pane                       |
 | Alt+{N1,N3}            | Move tab left/right (within pane)          |
