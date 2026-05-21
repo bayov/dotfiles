@@ -106,6 +106,7 @@ config.window_padding = {
 -- Keyboard bindings
 --------------------------------------------------------------------------------
 config.disable_default_key_bindings = true
+config.debug_key_events = false
 config.keys = {
     -- Search / Copy mode. Pass Ctrl+F through to vim/fresh which bind it
     -- themselves (page-down / next-record); otherwise enter search mode.
@@ -165,45 +166,32 @@ config.keys = {
     { mods = "CTRL",      key = "=",          action = zoom.ZoomIn },
     { mods = "CTRL",      key = "0",          action = zoom.ResetZoom },
 
-    -- Tab-management
-    { mods = "ALT",       key = "t",          action = act.SpawnTab("DefaultDomain") },
-    { mods = "ALT",       key = "LeftArrow",  action = act.ActivateTabRelative(-1) },
-    { mods = "ALT",       key = "RightArrow", action = act.ActivateTabRelative(1) },
-    { mods = "ALT",       key = "1",          action = act.MoveTabRelative(-1) },
-    { mods = "ALT",       key = "3",          action = act.MoveTabRelative(1) },
-    { mods = "ALT|SHIFT", key = "x",          action = act.CloseCurrentTab({ confirm = false }) },
-    {
-        mods = "NONE",
-        key = "F2",
-        action = act.PromptInputLine({
-            description = "Rename tab: ",
-            action = wezterm.action_callback(function(window, pane, line)
-                if line then
-                    window:active_tab():set_title(line)
-                end
-            end),
-        }),
-    },
-
-    -- Pane-management
-    { mods = "ALT|SHIFT", key = "UpArrow",    action = act.ActivatePaneDirection("Up") },
-    { mods = "ALT|SHIFT", key = "DownArrow",  action = act.ActivatePaneDirection("Down") },
-    { mods = "ALT|SHIFT", key = "LeftArrow",  action = act.ActivatePaneDirection("Left") },
-    { mods = "ALT|SHIFT", key = "RightArrow", action = act.ActivatePaneDirection("Right") },
-    { mods = "ALT|SHIFT", key = "8",          action = act.SplitPane({ direction = "Up" }) },
-    { mods = "ALT|SHIFT", key = "2",          action = act.SplitPane({ direction = "Down" }) },
-    { mods = "ALT|SHIFT", key = "4",          action = act.SplitPane({ direction = "Left" }) },
-    { mods = "ALT|SHIFT", key = "6",          action = act.SplitPane({ direction = "Right" }) },
-    { mods = "CTRL|ALT",  key = "8",          action = act.AdjustPaneSize({ "Up", 2 }) },
-    { mods = "CTRL|ALT",  key = "2",          action = act.AdjustPaneSize({ "Down", 2 }) },
-    { mods = "CTRL|ALT",  key = "4",          action = act.AdjustPaneSize({ "Left", 4 }) },
-    { mods = "CTRL|ALT",  key = "6",          action = act.AdjustPaneSize({ "Right", 4 }) },
-    { mods = "ALT",       key = "9",          action = act.RotatePanes("CounterClockwise") },
-    { mods = "ALT",       key = "7",          action = act.RotatePanes("Clockwise") },
-    { mods = "ALT",       key = "*",          action = act.PaneSelect({ mode = "SwapWithActive" }) },
-    { mods = "ALT",       key = "5",          action = act.TogglePaneZoomState },
+    -- Tab and pane management
+    { mods = "ALT",       key = "LeftArrow",            action = act.ActivateTabRelative(-1) },
+    { mods = "ALT",       key = "RightArrow",           action = act.ActivateTabRelative(1) },
+    { mods = "ALT|SHIFT", key = "DownArrow",            action = act.ActivatePaneDirection("Down") },
+    { mods = "ALT|SHIFT", key = "LeftArrow",            action = act.ActivatePaneDirection("Left") },
+    { mods = "ALT|SHIFT", key = "RightArrow",           action = act.ActivatePaneDirection("Right") },
+    { mods = "ALT|SHIFT", key = "UpArrow",              action = act.ActivatePaneDirection("Up") },
+    { mods = "ALT",       key = "phys:Keypad2",         action = act.SplitPane({ direction = "Down" }) },
+    { mods = "ALT",       key = "phys:Keypad4",         action = act.SplitPane({ direction = "Left" }) },
+    { mods = "ALT",       key = "phys:Keypad6",         action = act.SplitPane({ direction = "Right" }) },
+    { mods = "ALT",       key = "phys:Keypad8",         action = act.SplitPane({ direction = "Up" }) },
+    { mods = "CTRL|ALT",  key = "phys:Keypad2",         action = act.AdjustPaneSize({ "Down", 2 }) },
+    { mods = "CTRL|ALT",  key = "phys:Keypad4",         action = act.AdjustPaneSize({ "Left", 4 }) },
+    { mods = "CTRL|ALT",  key = "phys:Keypad6",         action = act.AdjustPaneSize({ "Right", 4 }) },
+    { mods = "CTRL|ALT",  key = "phys:Keypad8",         action = act.AdjustPaneSize({ "Up", 2 }) },
+    { mods = "CTRL",      key = "phys:Keypad5",         action = act.TogglePaneZoomState },
+    { mods = "ALT",       key = "phys:Keypad1",         action = act.MoveTabRelative(-1) },
+    { mods = "ALT",       key = "phys:Keypad3",         action = act.MoveTabRelative(1) },
+    { mods = "ALT",       key = "phys:Keypad9",         action = act.RotatePanes("CounterClockwise") },
+    { mods = "ALT",       key = "phys:Keypad7",         action = act.RotatePanes("Clockwise") },
+    { mods = "NONE",      key = "F2",                   action = helpers.RenameTab },
+    { mods = "ALT",       key = "t",                    action = act.SpawnTab("DefaultDomain") },
     -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
-    { mods = "ALT",       key = "x",          action = act.CloseCurrentPane({ confirm = false }) },
+    { mods = "ALT",       key = "x",                    action = act.CloseCurrentPane({ confirm = false }) },
+    { mods = "CTRL|ALT",  key = "phys:KeypadSubtract",  action = act.CloseCurrentTab({ confirm = false }) },
+    { mods = "ALT",       key = "phys:KeypadMultiply",  action = act.PaneSelect({ mode = "SwapWithActive" }) },
 
     -- Misc
     { mods = "CTRL|ALT",  key = "a",          action = act.ActivateCommandPalette },

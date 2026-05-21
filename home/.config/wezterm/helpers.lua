@@ -147,5 +147,14 @@ module.KeyUnlessTui = function(key_bind)
     }
 end
 
+module.RenameTab = act.PromptInputLine({
+    description = "Rename tab: ",
+    action = wezterm.action_callback(function(window, pane, line)
+        if line then
+            window:active_tab():set_title(line)
+        end
+    end),
+})
+
 -- Export the module
 return module

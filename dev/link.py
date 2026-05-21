@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pybayov"]
+#
+# [tool.uv.sources]
+# pybayov = { path = "../pybayov", editable = true }
+# ///
 """
 Symlinks files from home/ to $HOME, mirroring the directory structure.
 

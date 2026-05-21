@@ -3,6 +3,42 @@
 My preferred keyboard bindings to use in apps, where it makes sense and when
 supported.
 
+## Tab and pane management
+
+> Note: Terminology in various apps: Pane == Split == Editor
+
+Theme: Numpad is dedicated to spatial manipulation of tabs and panes. The
+modifier picks the operation; the numpad key picks the direction (matching its
+physical position on the keypad).
+
+- `N2`, `N4`, `N6`, `N8` — direction: down, left, right, up (their physical
+  position).
+- `N5` — "center".
+- `N1`, `N3` - secondary left and right
+- `N-` — "remove"
+
+**Important**: Avoid Shift modifier, as in Windows, a Shift+Numpad press is
+converted to a Numpad press with NumLock toggled on/off.
+
+| Key                    | Action                                     |
+| ---------------------- | ------------------------------------------ |
+| Alt+Arrows             | Move between tabs                          |
+| Alt+Shift+Arrows       | Move between panes                         |
+| Ctrl+Tab               | Tab switcher (menu)                        |
+| Alt+{N2,N4,N6,N8}      | Move (and split) pane                      |
+| Ctrl+Alt+{N2,N4,N6,N8} | Stretch/resize pane                        |
+| Ctrl+N5                | Toggle maximize pane                       |
+| Alt+{N1,N3}            | Move tab left/right (within pane)          |
+| Alt+{N7,N9}            | Rotate panes (clockwise/counter-clockwise) |
+| Ctrl+Alt+N5            | Normalize/Equalize pane widths             |
+| F2                     | Rename tab                                 |
+| Alt+T                  | New tab                                    |
+| Alt+P                  | Pin active tab                             |
+| Alt+X                  | Close active tab                           |
+| Alt+Shift+X            | Re-open last closed tab                    |
+| Alt+N-                 | Close other tabs                           |
+| Ctrl-Alt+N-            | Close all tabs in group                    |
+
 ## Multi-caret and Rectangular Selection
 
 | Key                        | Action                                                                |
@@ -121,34 +157,6 @@ supported.
 | Alt+Shift+P | Presentation mode       |
 | Alt+Shift+Z | Zen mode                |
 
-## Tab and pane management
-
-Theme: numpad is dedicated to spatial manipulation of tabs and panes. The
-modifier picks the operation; the numpad key picks the direction (matching its
-physical position on the keypad).
-
-- **N2, N4, N6, N8** — direction: down, left, right, up (their physical
-  position).
-- **N5** — "center".
-- **N-** — "remove"
-
-| Key                     | Action                                                 |
-| ----------------------- | ------------------------------------------------------ |
-| Alt+{Left,Right}        | Previous/next tab                                      |
-| Alt+Shift+{Left,Right}  | Previous/Next split                                    |
-| Ctrl+Tab                | Tab switcher                                           |
-| Alt+Down                | Show all tabs (context menu) - not available in editor |
-| Alt+P                   | Pin active tab                                         |
-| Alt+X                   | Close active tab                                       |
-| Alt+Shift+X             | Re-open last closed tab                                |
-| Alt+N-                  | Close other tabs                                       |
-| Alt+Shift+N-            | Close all tabs in group                                |
-| Alt+{N4,N6}             | Move tab left/right within same editor                 |
-| Alt+Shift+{N2,N4,N6,N8} | Split and move down/left/right/up                      |
-| Alt+Shift+N5            | Toggle maximize editor/window                          |
-| Ctrl+Alt+{N2,N4,N6,N8}  | Stretch/resize window                                  |
-| Ctrl+Alt+N5             | Normalize/Equalize editor widths                       |
-
 ## Window management
 
 | Key         | Action                                         |
@@ -249,7 +257,6 @@ physical position on the keypad).
 | ----------- | -------------------------------------------------------------------- |
 | Alt+`       | Terminal (focus existing, or open new if none)                       |
 | Alt+Shift+` | New terminal (always opens a new tab)                                |
-| Alt+T       | New terminal tab (in terminal context)                               |
 | Alt+1       | Project explorer (files / view / structure) - Highlights active file |
 | Alt+2       | VCS log window                                                       |
 | Alt+S       | Agents panel (AI / Workspaces)                                       |
