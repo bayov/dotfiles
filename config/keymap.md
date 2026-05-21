@@ -17,8 +17,11 @@ physical position on the keypad).
 - `N1`, `N3` - secondary left and right
 - `N-` — "remove"
 
-**Important**: Avoid Shift modifier, as in Windows, a Shift+Numpad press is
-converted to a Numpad press with NumLock toggled on/off.
+**Important**:
+
+- Avoid Shift modifier, as in Windows, a Shift+Numpad press is converted to a
+  Numpad press with NumLock toggled on/off.
+- Avoid `Ctrl+Alt+Numpad.` as it is equivalent to `Ctrl+Alt+Del` in Windows.
 
 | Key                    | Action                                     |
 | ---------------------- | ------------------------------------------ |
