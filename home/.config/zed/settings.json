@@ -31,7 +31,13 @@
         "model_parameters": []
     },
     "agent_buffer_font_size": 13.0,
-    "active_pane_modifiers": { "border_size": 0.0, "inactive_opacity": 1.0 },
+    "active_pane_modifiers": {
+      "border_size": 0.0,
+      "inactive_opacity": 1.0
+    },
+    "experimental.theme_overrides": {
+      "border.selected": "#f00"
+    },
     "centered_layout": { "left_padding": 0.2 },
     "bottom_dock_layout": "contained",
     "preview_tabs": { "enabled": false },

@@ -35,7 +35,7 @@ physical position on the keypad).
 | Alt+{N7,N9}            | Rotate panes (clockwise/counter-clockwise) |
 | Ctrl+Alt+N5            | Normalize/Equalize pane widths             |
 | F2                     | Rename tab                                 |
-| Alt+N0                 | New tab                                    |
+| Alt+N0                 | Duplicate tab or editor / New terminal tab |
 | Alt+P                  | Pin active tab                             |
 | Alt+X                  | Close active tab                           |
 | Alt+Shift+X            | Re-open last closed tab                    |
