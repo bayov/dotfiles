@@ -149,6 +149,13 @@
       "ctrl-f5": "workspace::ToggleZoom",
     }
   },
+  {
+    "bindings": {
+      // [ctrl-]alt-f16 -> [ctrl-]alt-numpad-
+      "alt-f16": "pane::CloseOtherItems",
+      "ctrl-alt-f16": "pane::CloseAllItems",
+    }
+  },
 
   //============================================================================
   // MENU & PICKER
@@ -369,9 +376,6 @@
       "alt-shift-x": "pane::ReopenClosedItem",
       "shift-alt-1": "pane::RevealInProjectPanel",
       "alt-p": "pane::TogglePinTab",
-      // Numpad via Karabiner (Zed-only): keypad_hyphen -> Cmd+F16
-      "alt-cmd-f16": "pane::CloseOtherItems",
-      "shift-alt-cmd-f16": "pane::CloseAllItems",
       "alt-y": "search::ToggleRegex",
       // Numpad via Karabiner (Zed-only): kp_4=Cmd+F4, kp_6=Cmd+F6, kp_2=Cmd+F2, kp_8=Cmd+F8
       "alt-cmd-f4": "pane::SwapItemLeft",
