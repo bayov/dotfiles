@@ -187,7 +187,7 @@ config.keys = {
     { mods = "ALT",       key = "phys:Keypad9",         action = act.RotatePanes("CounterClockwise") },
     { mods = "ALT",       key = "phys:Keypad7",         action = act.RotatePanes("Clockwise") },
     { mods = "NONE",      key = "F2",                   action = helpers.RenameTab },
-    { mods = "ALT",       key = "t",                    action = act.SpawnTab("DefaultDomain") },
+    { mods = "ALT",       key = "phys:Keypad0",         action = act.SpawnTab("DefaultDomain") },
     -- TODO: Support re-opening closed pane (with grace period of 30 seconds).
     { mods = "ALT",       key = "x",                    action = act.CloseCurrentPane({ confirm = false }) },
     { mods = "CTRL|ALT",  key = "phys:KeypadSubtract",  action = act.CloseCurrentTab({ confirm = false }) },

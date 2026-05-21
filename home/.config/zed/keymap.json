@@ -1235,6 +1235,8 @@
   {
     "context": "Terminal",
     "bindings": {
+      // alt-f10 -> alt-numpad0
+      "alt-f10": "workspace::NewTerminal",
       "ctrl-alt-space": "terminal::ShowCharacterPalette",
       "copy": "terminal::Copy",
       "ctrl-insert": "terminal::Copy",
@@ -1249,7 +1251,6 @@
       "ctrl-shift-w": "pane::CloseActiveItem",
       "ctrl-shift-r": "terminal::RerunTask",
       "ctrl-alt-r": "terminal::RerunTask",
-      "alt-t": "workspace::NewTerminal",
       "ctrl-shift-5": "pane::SplitRight",
       "ctrl->": "agent::AddSelectionToThread",
       // Forward keybinds to terminal
