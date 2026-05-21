@@ -47,8 +47,8 @@ physical position on the keypad).
 | Ctrl+Alt+N5            | Normalize/Equalize pane widths             |
 | Alt+R                  | Rename tab                                 |
 | Alt+N0                 | Duplicate tab or editor / New terminal tab |
-| Alt+P                  | Pin active tab                             |
-| Alt+X                  | Close active tab                           |
+| Alt+N*                 | Pin tab                                    |
+| Alt+X                  | Close tab                                  |
 | Alt+Shift+X            | Re-open last closed tab                    |
 | Alt+N-                 | Close other tabs                           |
 | Ctrl-Alt+N-            | Close all tabs in group                    |

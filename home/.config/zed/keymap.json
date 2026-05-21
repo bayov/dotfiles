@@ -125,7 +125,7 @@
       "alt-shift-left": "workspace::ActivatePaneLeft",
     }
   },
-  // Tab switcher (menu)
+  // Search open editors (Tab Switcher)
   {
     "context": "Workspace",
     "bindings": {
@@ -171,13 +171,7 @@
       "ctrl-f5": "workspace::ToggleZoom",
     }
   },
-  {
-    "bindings": {
-      // [ctrl-]alt-f16 -> [ctrl-]alt-numpad-
-      "alt-f16": "pane::CloseOtherItems",
-      "ctrl-alt-f16": "pane::CloseAllItems",
-    }
-  },
+  // Move tab left/right (within pane)
   {
     "bindings": {
       // alt+f{x} -> alt+numpad{x}
@@ -185,9 +179,27 @@
       "alt-f3": "pane::SwapItemRight",
     }
   },
+  // Split (duplicate) tab (downwards)
   {
     "bindings": {
       "alt-f10": "pane::SplitDown",
+    }
+  },
+  // Pin tab
+  {
+    "bindings": {
+      // alt-f13 -> alt-numpad*
+      "alt-f13": "pane::TogglePinTab",
+    }
+  },
+  // Closing tabs
+  {
+    "bindings": {
+      "alt-x": "pane::CloseActiveItem",
+      "alt-shift-x": "pane::ReopenClosedItem",
+      // [ctrl-]alt-f16 -> [ctrl-]alt-numpad-
+      "alt-f16": "pane::CloseOtherItems",
+      "ctrl-alt-f16": "pane::CloseAllItems",
     }
   },
 
@@ -400,10 +412,7 @@
       "ctrl-alt-shift-r": "search::ToggleRegex",
       "ctrl-alt-shift-x": "search::ToggleRegex",
       "ctrl-k shift-enter": "pane::TogglePinTab",
-      "alt-x": "pane::CloseActiveItem",
-      "alt-shift-x": "pane::ReopenClosedItem",
       "shift-alt-1": "pane::RevealInProjectPanel",
-      "alt-p": "pane::TogglePinTab",
       "alt-y": "search::ToggleRegex",
     },
   },
