@@ -100,6 +100,24 @@
       "alt-left": "pane::ActivatePreviousItem",
     }
   },
+  // Tab switcher
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-tab": "tab_switcher::Toggle",
+      "ctrl-shift-tab": ["tab_switcher::Toggle", { "select_last": true }],
+    }
+  },
+  {
+    "context": "TabSwitcher",
+    "bindings": {
+      "ctrl-tab": "menu::SelectNext",
+      "ctrl-shift-tab": "menu::SelectPrevious",
+      "ctrl-up": "menu::SelectPrevious",
+      "ctrl-down": "menu::SelectNext",
+      "ctrl-backspace": "tab_switcher::CloseSelectedItem",
+    },
+  },
   // Move between panes
   {
     "bindings": {
@@ -234,8 +252,6 @@
       "ctrl-k ctrl-shift-t": "theme::ToggleMode",
       "ctrl-alt-super-p": "settings_profile_selector::Toggle",
       "ctrl-t": "project_symbols::Toggle",
-      "ctrl-shift-tab": ["tab_switcher::Toggle", { "select_last": true }],
-      "ctrl-tab": "tab_switcher::Toggle",
       "ctrl-e": "file_finder::Toggle",
       "f1": "command_palette::Toggle",
       "ctrl-shift-p": "command_palette::Toggle",
@@ -354,7 +370,6 @@
       // Numpad via Karabiner (Zed-only): keypad_hyphen -> Cmd+F16
       "alt-cmd-f16": "pane::CloseOtherItems",
       "shift-alt-cmd-f16": "pane::CloseAllItems",
-      "ctrl-tab": "tab_switcher::Toggle",
       "alt-y": "search::ToggleRegex",
       "alt-2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
       "alt-4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
@@ -367,15 +382,6 @@
       "alt-shift-cmd-f4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
       "alt-shift-cmd-f6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
       "alt-shift-cmd-f8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
-    },
-  },
-  {
-    "context": "TabSwitcher",
-    "bindings": {
-      "ctrl-shift-tab": "menu::SelectPrevious",
-      "ctrl-up": "menu::SelectPrevious",
-      "ctrl-down": "menu::SelectNext",
-      "ctrl-backspace": "tab_switcher::CloseSelectedItem",
     },
   },
 
@@ -928,11 +934,6 @@
       "shift-alt-a": "agent::AllowOnce",
       "ctrl-alt-a": "agent::OpenPermissionDropdown",
       "shift-alt-x": "agent::RejectOnce",
-      "ctrl-tab": "agents_sidebar::ToggleThreadSwitcher",
-      "ctrl-shift-tab": [
-        "agents_sidebar::ToggleThreadSwitcher",
-        { "select_last": true },
-      ],
     },
   },
   {
@@ -1093,11 +1094,6 @@
       "ctrl-g": "agents_sidebar::ToggleThreadHistory",
       "shift-backspace": "agent::ArchiveSelectedThread",
       "ctrl-backspace": "agent::RemoveSelectedThread",
-      "ctrl-tab": "agents_sidebar::ToggleThreadSwitcher",
-      "ctrl-shift-tab": [
-        "agents_sidebar::ToggleThreadSwitcher",
-        { "select_last": true },
-      ],
     },
   },
   {
@@ -1105,16 +1101,6 @@
     "use_key_equivalents": true,
     "bindings": {
       "space": "menu::Confirm",
-    },
-  },
-  {
-    "context": "ThreadSwitcher",
-    "bindings": {
-      "ctrl-tab": "agents_sidebar::ToggleThreadSwitcher",
-      "ctrl-shift-tab": [
-        "agents_sidebar::ToggleThreadSwitcher",
-        { "select_last": true },
-      ],
     },
   },
   {
@@ -1403,11 +1389,6 @@
     "bindings": {
       "ctrl-tab": "pane::ActivateNextItem",
       "ctrl-shift-tab": "pane::ActivatePreviousItem",
-    },
-  },
-  {
-    "context": "RunModal",
-    "bindings": {
       "alt-1": "project_panel::Toggle",
       "alt-2": "new_process_modal::ActivateDebugTab",
       "alt-3": "new_process_modal::ActivateAttachTab",
