@@ -158,6 +158,14 @@
       "ctrl-alt-cmd-f8": "vim::ResizePaneUp",
     }
   },
+  // Toggle pane zoom
+  {
+    "bindings": {
+      "ctrl-5": "workspace::ToggleZoom",
+      // In Mac: Karabiner maps Numpad 5 -> Cmd+F5
+      "ctrl-cmd-f5": "workspace::ToggleZoom",
+    }
+  },
 
   // ============================================================
   // MENU & PICKER
@@ -319,9 +327,6 @@
       "alt-c u": "git::Push",
       "alt-c f": "git::Fetch",
       "alt-c z": "git::Restore",
-      // Numpad via Karabiner (Zed-only): keypad_5 -> Cmd+F5
-      "shift-alt-cmd-f5": "workspace::ToggleZoom",
-      "shift-alt-z": "workspace::ToggleZoom",
       "alt-c l": "git_panel::ToggleFocus",
       "alt-c s": "git::ViewStash",
       "alt-r s": "debugger::Stop",
