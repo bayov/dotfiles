@@ -104,7 +104,14 @@
       "alt-left": "pane::ActivatePreviousItem",
     }
   },
-  // Tab switcher
+  // Move between panes
+  {
+    "bindings": {
+      "alt-shift-right": "workspace::ActivatePaneRight",
+      "alt-shift-left": "workspace::ActivatePaneLeft",
+    }
+  },
+  // Tab switcher (menu)
   {
     "context": "Workspace",
     "bindings": {
@@ -122,20 +129,29 @@
       "ctrl-backspace": "tab_switcher::CloseSelectedItem",
     },
   },
-  // Move between panes
+  // Move pane (split if direction empty)
   {
+    "context": "Pane",
     "bindings": {
-      "alt-shift-right": "workspace::ActivatePaneRight",
-      "alt-shift-left": "workspace::ActivatePaneLeft",
+      "alt-2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
+      "alt-4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
+      "alt-6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
+      "alt-8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
+      // In Mac: Karabiner maps Numpad @2/4/6/8 -> Cmd+F2/F4/F6/F8
+      "alt-cmd-f2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
+      "alt-cmd-f4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
+      "alt-cmd-f6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
+      "alt-cmd-f8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
     }
   },
-  // Resize (In Mac: Karabiner maps Numpad 2/4/6/8 -> Cmd+F2/F4/F6/F8)
+  // Resize pane/dock
   {
     "bindings": {
       "ctrl-alt-2": "vim::ResizePaneDown",
       "ctrl-alt-4": "vim::ResizePaneLeft",
       "ctrl-alt-6": "vim::ResizePaneRight",
       "ctrl-alt-8": "vim::ResizePaneUp",
+      // In Mac: Karabiner maps Numpad 2/4/6/8 -> Cmd+F2/F4/F6/F8
       "ctrl-alt-cmd-f2": "vim::ResizePaneDown",
       "ctrl-alt-cmd-f4": "vim::ResizePaneLeft",
       "ctrl-alt-cmd-f6": "vim::ResizePaneRight",
@@ -230,13 +246,7 @@
       "alt-d": "git_panel::ToggleFocus",
       "alt-s": "multi_workspace::FocusWorkspaceSidebar",
       "alt-shift-s": "agent::ToggleFocus",
-      "alt-3": ["workspace::ActivatePane", 2],
-      "alt-4": ["workspace::ActivatePane", 3],
       "alt-5": "debug_panel::ToggleFocus",
-      "alt-6": ["workspace::ActivatePane", 5],
-      "alt-7": ["workspace::ActivatePane", 6],
-      "alt-8": ["workspace::ActivatePane", 7],
-      "alt-9": ["workspace::ActivatePane", 8],
       "ctrl-alt-b": "workspace::ToggleRightDock",
       "ctrl-b": "workspace::ToggleLeftDock",
       "ctrl-j": "workspace::ToggleBottomDock",
@@ -375,17 +385,9 @@
       "alt-cmd-f16": "pane::CloseOtherItems",
       "shift-alt-cmd-f16": "pane::CloseAllItems",
       "alt-y": "search::ToggleRegex",
-      "alt-2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
-      "alt-4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
-      "alt-6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
-      "alt-8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
       // Numpad via Karabiner (Zed-only): kp_4=Cmd+F4, kp_6=Cmd+F6, kp_2=Cmd+F2, kp_8=Cmd+F8
       "alt-cmd-f4": "pane::SwapItemLeft",
       "alt-cmd-f6": "pane::SwapItemRight",
-      "alt-shift-cmd-f2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
-      "alt-shift-cmd-f4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
-      "alt-shift-cmd-f6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
-      "alt-shift-cmd-f8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
     },
   },
 
@@ -1230,13 +1232,6 @@
       "ctrl-shift-backspace": "git::DropCurrentStash",
     },
   },
-  {
-    "context": "GitPicker",
-    "bindings": {
-      "alt-1": "project_panel::Toggle",
-      "alt-2": "git_picker::ActivateStashTab",
-    },
-  },
 
   // ============================================================
   // TERMINAL
@@ -1393,10 +1388,6 @@
     "bindings": {
       "ctrl-tab": "pane::ActivateNextItem",
       "ctrl-shift-tab": "pane::ActivatePreviousItem",
-      "alt-1": "project_panel::Toggle",
-      "alt-2": "new_process_modal::ActivateDebugTab",
-      "alt-3": "new_process_modal::ActivateAttachTab",
-      "alt-4": "new_process_modal::ActivateLaunchTab",
     },
   },
 
