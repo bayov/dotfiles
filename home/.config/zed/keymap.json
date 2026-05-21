@@ -84,6 +84,14 @@
     },
   },
 
+  // alt-f4 bound to something random to prevent it from closing Zed
+  {
+    "context": "Workspace",
+    "bindings": {
+      "alt-f4": "workspace::ToggleWorktreeSecurity",
+    }
+  },
+
   //============================================================================
   // Tab and pane management
   //============================================================================
