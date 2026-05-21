@@ -137,7 +137,7 @@
       "alt-4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
       "alt-6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
       "alt-8": [ "workspace::MoveItemToPaneInDirection", { "direction": "up" } ],
-      // In Mac: Karabiner maps Numpad @2/4/6/8 -> Cmd+F2/F4/F6/F8
+      // In Mac: Karabiner maps Numpad 2/4/6/8 -> Cmd+F2/F4/F6/F8
       "alt-cmd-f2": [ "workspace::MoveItemToPaneInDirection", { "direction": "down" } ],
       "alt-cmd-f4": [ "workspace::MoveItemToPaneInDirection", { "direction": "left" } ],
       "alt-cmd-f6": [ "workspace::MoveItemToPaneInDirection", { "direction": "right" } ],
