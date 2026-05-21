@@ -34,7 +34,7 @@ physical position on the keypad).
 | Alt+{N1,N3}            | Move tab left/right (within pane)          |
 | Alt+{N7,N9}            | Rotate panes (clockwise/counter-clockwise) |
 | Ctrl+Alt+N5            | Normalize/Equalize pane widths             |
-| F2                     | Rename tab                                 |
+| Alt+R                  | Rename tab                                 |
 | Alt+N0                 | Duplicate tab or editor / New terminal tab |
 | Alt+P                  | Pin active tab                             |
 | Alt+X                  | Close active tab                           |
@@ -266,6 +266,8 @@ physical position on the keypad).
 | Alt+Shift+S | Agent chat window                                                    |
 
 ## Run
+
+> TODO: Replace Alt+R with something else (Alt+R now reserved for rename)
 
 | Key            | Action                             |
 | -------------- | ---------------------------------- |
