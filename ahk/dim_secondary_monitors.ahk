@@ -109,7 +109,7 @@ on_click_close(gui_control, _info) {
 #]:: toggle_monitor_dimming(primary_monitor_index)
 
 ; Toggle OpenRGB Profile
-#\:: {
+F24:: {
     global rgb_enabled
     rgb_enabled := !rgb_enabled
 
