@@ -14,9 +14,8 @@ Produce a plan doc: `$PLAN_DIR/{slug}/plan.md`.
 A plan doc bundles **what** is being built, **why**, and **how** — plus the
 acceptance criteria `implement` will work against, in a single document.
 
-If product scope is contested, or the design has many independent decisions, or
-the change splits into more than ~3 independently-shippable slices, stop and
-route the user to `prd-interview` → `write-prd` → `design-interview` →
+If product scope is contested, or the design has many independent decisions,
+stop and route the user to `prd-interview` → `write-prd` → `design-interview` →
 `write-design` → `decompose` → `implement` instead — separate product and design
 contracts pay off at that scale.
 
@@ -49,15 +48,10 @@ Before writing, read whichever of these exist:
 
 ## After the plan is approved
 
-Run `decompose` against `plan.md` — usually one task file under
-`$PLAN_DIR/{slug}/tasks/`, occasionally 2–3 if the change benefits from
-independently-mergeable pieces. Then run `implement` per task, passing the task
-file path as the argument. The plan doc serves as the design reference each task
+Run `decompose` against `plan.md` to produce task files under
+`$PLAN_DIR/{slug}/tasks/`. Then run `implement` per task, passing the task file
+path as the argument. The plan doc serves as the design reference each task
 points back to.
-
-If decomposition would produce more than ~3 slices, that's a signal the change
-has outgrown a single combined doc — route to `write-prd` + `write-design`
-instead.
 
 ## Principles
 

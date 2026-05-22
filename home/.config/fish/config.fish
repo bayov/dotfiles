@@ -1,7 +1,11 @@
 # Environment Variables
 set -q DOTFILES_DIR || set -gx DOTFILES_DIR "$HOME/dotfiles"
 if test "$TERM_PROGRAM" = zed
-    set -gx EDITOR "zed --new --wait"
+    if set -q WSL_DISTRO_NAME
+        set -gx EDITOR "zed.exe --new --wait"
+    else
+        set -gx EDITOR "zed --new --wait"
+    end
 else
     set -gx EDITOR fresh
 end
