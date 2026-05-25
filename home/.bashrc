@@ -23,7 +23,7 @@ fi
 
 if [ "$MACHINE_PROFILE" = "cato" ]; then
 	export PLAN_DIR=~/notes/60-plan
-	export GLOSSARY_DIR=~/notes/60-plan/00_glossary
+	export GLOSSARY_DIR=~/notes/61-glossary
 fi
 
 # ── PATH ───────────────────────────────────────────────────────────────────────
