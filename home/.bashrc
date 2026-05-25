@@ -15,6 +15,17 @@ export SCCACHE_BASEDIRS="$HOME/projects:$HOME/workspaces:$HOME/dotfiles"
 export PYTHONPATH="$DOTFILES_DIR/pybayov/src"
 export CLAUDE_CODE_TMUX_TRUECOLOR=1
 
+# Read .machine-profile file
+if [ -f "$DOTFILES_DIR/.machine-profile" ]; then
+	MACHINE_PROFILE="$(tr -d '[:space:]' <"$DOTFILES_DIR/.machine-profile")"
+	export MACHINE_PROFILE
+fi
+
+if [ "$MACHINE_PROFILE" = "cato" ]; then
+	export PLAN_DIR=~/notes/60-plan
+	export GLOSSARY_DIR=~/notes/60-plan/00_glossary
+fi
+
 # ── PATH ───────────────────────────────────────────────────────────────────────
 _prepend_path() { [[ ":$PATH:" != *":$1:"* ]] && export PATH="$1:$PATH"; }
 _prepend_path "$HOME/.local/bin"

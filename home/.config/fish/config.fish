@@ -28,8 +28,8 @@ else if status is-interactive
 end
 
 if test "$MACHINE_PROFILE" = cato
-    set -gx PLAN_DIR ~/plan
-    set -gx GLOSSARY_DIR ~/plan/00_glossary
+    set -gx PLAN_DIR ~/notes/60-plan
+    set -gx GLOSSARY_DIR ~/notes/60-plan/00_glossary
 end
 
 if test "$TERM_PROGRAM" = WarpTerminal

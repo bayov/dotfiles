@@ -17,11 +17,13 @@ Pick the first branch that applies:
 
 1. **User supplied an issue key** (e.g. `HS-10349`) → use it. Skip the rest of
    this section.
-2. **`.task-reference` exists at repo root** → read the task file path from it,
-   derive `$PLAN_DIR/{slug}/` from that path, and look up the sub-issue ID for
-   this task in `.linear.json` (`tasks["<task-basename>.md"]`). Use that issue
-   key. If `.linear.json` is missing or the task isn't synced, stop and ask the
-   user — the user likely needs to run `/linear-sync-plan {slug}` first.
+2. **`.task-reference` exists at repo root** → read the task file path from it.
+   The path looks like `$PLAN_DIR/<slug>/tasks/<task-basename>.md`; extract the
+   `<slug>` segment. Then read `$PLAN_DIR/.linear.json` and look up
+   `slugs["<slug>"].tasks["<task-basename>.md"]` — that's the sub-issue key. If
+   `$PLAN_DIR/.linear.json` is missing, the slug entry is missing, or the task
+   key is missing, stop and ask the user — the user likely needs to run the
+   `linear-sync` skill first.
 3. **Otherwise** → create a new issue:
    `just create-issue --title "<title>" --non-interactive --skip-branch --team "<team>"`.
    Always pass `--skip-branch`. Pick `<team>` per §2.1. Re-state the chosen team
