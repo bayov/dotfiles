@@ -168,4 +168,7 @@ if status is-interactive
         # Disable slow completion features (like descriptions via apropos)
         set -gx FISH_COMPLETION_NO_DESCRIPTIONS 1
     end
+
+    # Mise - polyglot runtime manager (https://mise.jdx.dev)
+    mise activate fish | source
 end

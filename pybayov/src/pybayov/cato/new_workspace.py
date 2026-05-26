@@ -24,7 +24,7 @@ from pathlib import Path
 
 PROJECTS_DIR = Path.home() / "projects"
 WORKSPACES_DIR = Path.home() / "workspaces"
-SUPPORTED_PROJECTS: list[str] = ["haka"]
+SUPPORTED_PROJECTS: list[str] = ["haka", "frontend"]
 COPY_ALLOWLIST: list[str] = [".env"]
 
 # Ensure Go-installed binaries (protoc-gen-go, air, etc.) are on PATH for all
@@ -39,6 +39,32 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
     """Print and execute a shell command, raising on failure."""
     print(f"$ {' '.join(cmd)}" + (f"  (cwd={cwd})" if cwd else ""))
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def setup_haka(dest: Path) -> None:
+    """Bootstrap a haka workspace: generate Go protos and install engine deps."""
+    engine_dir = dest / "engine" / "engine_service"
+    if not engine_dir.is_dir():
+        print(
+            f"warning: {engine_dir} not found; skipping engine setup",
+            file=sys.stderr,
+        )
+        return
+    # Generated Go proto/Triton-stub packages are imported by engine_service;
+    # without them `go mod tidy` fails. Pass `true` to force regeneration —
+    # the recipe's existence check looks at `go-shared-protos/` (which is
+    # committed) instead of the `generated/` subdir (which is gitignored),
+    # so the default branch silently skips on a fresh clone.
+    run(["just", "generate-proto", "true"], cwd=engine_dir)
+    # detection_labels.go is generated from shared_consts and is gitignored;
+    # engine_service won't compile without it.
+    run(["just", "clients", "generate-detection-labels"], cwd=dest)
+    run(["just", "install"], cwd=engine_dir)
+
+
+def setup_frontend(dest: Path) -> None:
+    """Bootstrap a frontend workspace: install pnpm deps."""
+    run(["pnpm", "bootstrap"], cwd=dest)
 
 
 def main() -> int:
@@ -88,24 +114,10 @@ def main() -> int:
         print(f"copied: {item}")
 
     if not args.no_setup:
-        engine_dir = dest / "engine" / "engine_service"
-        if not engine_dir.is_dir():
-            print(
-                f"warning: {engine_dir} not found; skipping engine setup",
-                file=sys.stderr,
-            )
-        else:
-            # Generated Go proto/Triton-stub packages are imported by
-            # engine_service; without them `go mod tidy` fails. Pass `true`
-            # to force regeneration — the recipe's existence check looks at
-            # `go-shared-protos/` (which is committed) instead of the
-            # `generated/` subdir (which is gitignored), so the default
-            # branch silently skips on a fresh clone.
-            run(["just", "generate-proto", "true"], cwd=engine_dir)
-            # detection_labels.go is generated from shared_consts and is
-            # gitignored; engine_service won't compile without it.
-            run(["just", "clients", "generate-detection-labels"], cwd=dest)
-            run(["just", "install"], cwd=engine_dir)
+        if args.project == "haka":
+            setup_haka(dest)
+        elif args.project == "frontend":
+            setup_frontend(dest)
 
     print(f"\nworkspace ready: {dest}")
     return 0

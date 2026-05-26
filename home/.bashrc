@@ -112,6 +112,9 @@ alias v="$EDITOR"
 alias fd=fdfind
 alias lmd="glow --width 160"
 
+# Mise - polyglot runtime manager (https://mise.jdx.dev)
+eval "$(mise activate bash)"
+
 # Starship prompt
 type -P starship &>/dev/null && eval "$(starship init bash)"
 
