@@ -64,7 +64,7 @@ def setup_haka(dest: Path) -> None:
 
 def setup_frontend(dest: Path) -> None:
     """Bootstrap a frontend workspace: install pnpm deps."""
-    run(["pnpm", "bootstrap"], cwd=dest)
+    run(["pnpm", "run", "refresh:env"], cwd=dest)
 
 
 def main() -> int:
