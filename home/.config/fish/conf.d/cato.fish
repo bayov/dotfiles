@@ -5,7 +5,7 @@ test "$MACHINE_PROFILE" = cato || return
 # This won't be added again if you remove it.
 source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 
-set -gx JJ_DEFAULT_LOG_REVSETS 'main | bookmarks() & trunk().. | mine() & trunk().. & ~(::(bookmarks() | remote_bookmarks()))'
+set -gx JJ_DEFAULT_LOG_REVSETS 'trunk() | bookmarks() & trunk().. | mine() & trunk().. & ~(::(bookmarks() | remote_bookmarks()))'
 
 # For `frontend` devcontainers
 set -gx DOCKER_HUB_USER hagaiakibayov26971
