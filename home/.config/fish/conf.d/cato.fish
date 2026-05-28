@@ -8,6 +8,7 @@ source ~/.orbstack/shell/init2.fish 2>/dev/null || :
 set -gx JJ_DEFAULT_LOG_REVSETS 'trunk() | bookmarks() & trunk().. | mine() & trunk().. & ~(::(bookmarks() | remote_bookmarks()))'
 
 # For `frontend` devcontainers
+set -gx CMA_FRONTEND_REPO_PATH /Users/hagai.akibayov/projects/frontend
 set -gx DOCKER_HUB_USER hagaiakibayov26971
 set -gx DOCKER_HUB_TOKEN dckr_pat_G2ixPMN1zfzqzukGRLOT2a7wIIc
 set -gx GIT_USER hagai-akibayov_catonian
