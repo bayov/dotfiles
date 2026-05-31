@@ -4,16 +4,40 @@ import json
 import os
 import re
 import time
+import ssl
 import subprocess
 import urllib.request
+import urllib.error
 from datetime import datetime, timezone
+
+
+def _ssl_context():
+    """SSL context trusting the system store plus any corporate CA bundle.
+
+    urllib ignores NODE_EXTRA_CA_CERTS (Node-only), so behind a TLS-intercepting
+    proxy (e.g. Cato) the default store fails verification. Layer the corporate
+    CA on top of the system store when present.
+    """
+    ctx = ssl.create_default_context()
+    for var in ("NODE_EXTRA_CA_CERTS", "REQUESTS_CA_BUNDLE", "SSL_CERT_FILE"):
+        path = os.environ.get(var)
+        if path and os.path.isfile(path):
+            try:
+                ctx.load_verify_locations(path)
+            except Exception:
+                pass
+    return ctx
 
 
 CACHE_DIR = os.path.expanduser("~/.cache/claude-statusline")
 USAGE_CACHE = os.path.join(CACHE_DIR, "usage.json")
 USAGE_LOCK = os.path.join(CACHE_DIR, "usage.lock")
-USAGE_TTL = 120  # seconds
-USAGE_LOCK_TTL = 30  # seconds — minimum gap between refresh attempts
+USAGE_BACKOFF = os.path.join(CACHE_DIR, "usage.backoff")
+USAGE_TTL = (
+    600  # seconds — refresh interval (usage data barely moves minute-to-minute)
+)
+USAGE_LOCK_TTL = 60  # seconds — minimum gap between refresh attempts
+DEFAULT_BACKOFF = 900  # seconds — backoff when a failure carries no Retry-After
 
 
 def _mtime(path):
@@ -32,9 +56,33 @@ def read_usage_cache():
         return None
 
 
+def _read_backoff_until():
+    """Epoch until which refreshes should be suppressed, or 0 if none."""
+    try:
+        with open(USAGE_BACKOFF) as f:
+            return float(f.read().strip())
+    except Exception:
+        return 0.0
+
+
+def _write_backoff(seconds):
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(USAGE_BACKOFF, "w") as f:
+            f.write(str(time.time() + seconds))
+    except Exception:
+        pass
+
+
 def trigger_usage_refresh_if_stale():
-    """Spawn a detached refresh if cache is older than TTL and no in-flight lock."""
+    """Spawn a detached refresh if cache is older than TTL and no in-flight lock.
+
+    Respects a backoff window written after failures (esp. HTTP 429 Retry-After)
+    so transient errors don't turn every statusline render into a retry storm.
+    """
     now = time.time()
+    if now < _read_backoff_until():
+        return
     cache_mt = _mtime(USAGE_CACHE)
     if cache_mt is not None and now - cache_mt < USAGE_TTL:
         return
@@ -99,7 +147,9 @@ def refresh_usage_cache():
                 "anthropic-beta": "oauth-2025-04-20",
             },
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(
+            req, timeout=5, context=_ssl_context()
+        ) as resp:
             body = json.loads(resp.read())
         five = body.get("five_hour") or {}
         seven = body.get("seven_day") or {}
@@ -115,8 +165,21 @@ def refresh_usage_cache():
         with open(tmp, "w") as f:
             json.dump(out, f)
         os.replace(tmp, USAGE_CACHE)
+        # Success: clear any prior backoff.
+        try:
+            os.remove(USAGE_BACKOFF)
+        except OSError:
+            pass
+    except urllib.error.HTTPError as e:
+        # Honor server-provided Retry-After (esp. 429); else back off a default.
+        try:
+            retry_after = int(e.headers.get("Retry-After") or 0)
+        except (TypeError, ValueError):
+            retry_after = 0
+        _write_backoff(retry_after if retry_after > 0 else DEFAULT_BACKOFF)
     except Exception:
-        pass
+        # Network/SSL/parse errors: back off so renders don't retry-storm.
+        _write_backoff(DEFAULT_BACKOFF)
     finally:
         try:
             os.remove(USAGE_LOCK)
