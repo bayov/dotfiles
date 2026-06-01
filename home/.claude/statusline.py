@@ -113,24 +113,27 @@ def _read_oauth_token():
     except Exception:
         pass
     if sys.platform == "darwin":
-        try:
-            out = subprocess.run(
-                [
-                    "security",
-                    "find-generic-password",
-                    "-s",
-                    "Claude Code-credentials",
-                    "-w",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if out.returncode == 0:
-                data = json.loads(out.stdout.strip())
-                return (data.get("claudeAiOauth") or {}).get("accessToken")
-        except Exception:
-            pass
+        # Two entries can share service "Claude Code-credentials"; the live token
+        # is under account "claude-code-user", while a stale per-user entry may
+        # shadow it in a bare -s lookup. Prefer the named account, then fall back.
+        for args in (
+            ["-s", "Claude Code-credentials", "-a", "claude-code-user"],
+            ["-s", "Claude Code-credentials"],
+        ):
+            try:
+                out = subprocess.run(
+                    ["security", "find-generic-password", *args, "-w"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if out.returncode == 0:
+                    data = json.loads(out.stdout.strip())
+                    token = (data.get("claudeAiOauth") or {}).get("accessToken")
+                    if token:
+                        return token
+            except Exception:
+                pass
     return None
 
 
