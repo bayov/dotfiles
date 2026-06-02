@@ -42,7 +42,8 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
 
 
 def setup_haka(dest: Path) -> None:
-    """Bootstrap a haka workspace: generate protos and install engine deps."""
+    """Bootstrap a haka workspace: generate protos, install engine deps, and
+    install all components (Python venvs + generated clients)."""
     engine_dir = dest / "engine" / "engine_service"
     if not engine_dir.is_dir():
         print(
@@ -60,6 +61,13 @@ def setup_haka(dest: Path) -> None:
     # engine_service won't compile without it.
     run(["just", "clients", "generate-detection-labels"], cwd=dest)
     run(["just", "install"], cwd=engine_dir)
+    # The engine `install` above only handles Go deps. The root `install`
+    # module (justfiles/install.just -> `all`) creates the Python venvs every
+    # service expects (uv sync for schema/libraries/api_server/...) and
+    # generates the editable API-client packages they depend on. Without it no
+    # `.venv` exists, and the IDE (pyrightconfig.json points at each service's
+    # .venv site-packages) can't resolve imports.
+    run(["just", "install"], cwd=dest)
 
 
 def setup_frontend(dest: Path) -> None:
