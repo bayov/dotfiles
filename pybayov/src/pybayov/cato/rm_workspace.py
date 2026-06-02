@@ -99,8 +99,11 @@ def main() -> int:
     TRASH_DIR.mkdir(parents=True, exist_ok=True)
     dest = TRASH_DIR / workspace.name
     if dest.exists():
-        print(f"error: already exists in trash: {dest}", file=sys.stderr)
-        return 1
+        n = 2
+        while (alt := TRASH_DIR / f"{workspace.name}.{n}").exists():
+            n += 1
+        print(f"note: {dest} already exists; using {alt} instead")
+        dest = alt
     shutil.move(str(workspace), dest)
     print(f"moved: {workspace} → {dest}")
     return 0

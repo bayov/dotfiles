@@ -42,8 +42,12 @@ def run(cmd: list[str], cwd: Path | None = None) -> None:
 
 
 def setup_haka(dest: Path) -> None:
-    """Bootstrap a haka workspace: generate protos, install engine deps, and
-    install all components (Python venvs + generated clients)."""
+    """
+    Bootstrap a haka workspace.
+
+    Generate protos, install engine deps, and install all components
+    (Python venvs + generated clients).
+    """
     engine_dir = dest / "engine" / "engine_service"
     if not engine_dir.is_dir():
         print(
