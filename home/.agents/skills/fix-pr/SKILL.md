@@ -204,6 +204,12 @@ HEAD_SHA=$(gh api repos/$OWNER/$REPO/pulls/$PR --jq '.head.sha')
 
 ### New comment on a diff line
 
+**Use this ONLY to raise a brand-new comment of your own.** It opens a new
+standalone thread. **Never use it to respond to an existing review thread**
+(e.g. a reviewer/bot comment) — that creates a duplicate thread sitting next to
+theirs instead of a reply. To answer an existing thread, use _Reply to an
+existing comment_ below.
+
 Use `line` (actual file line number) + `side` (`"RIGHT"` for added/unchanged,
 `"LEFT"` for removed). Avoids calculating unified diff position.
 
@@ -219,15 +225,25 @@ echo '{
 
 To post a reply that stays PENDING, use a two-step REST+GraphQL flow:
 
-**Step 1 — create an empty pending review and capture its node_id:**
+**Step 1 — reuse the existing pending review, or create one, and capture its
+node_id:**
+
+GitHub allows only **one pending review per user per PR**. Always look for an
+existing one first and reuse it — creating a second pending review orphans the
+drafts already attached to the first (they silently disappear). This matters
+across rounds and sessions, not just within a single run.
 
 ```bash
+# Reuse an existing pending review if present; create one only if none exists.
 REVIEW_NODE_ID=$(gh api repos/$OWNER/$REPO/pulls/$PR/reviews \
-  --method POST -f body="" --jq .node_id)
+  --jq '.[] | select(.state=="PENDING") | .node_id' | head -n1)
+if [ -z "$REVIEW_NODE_ID" ]; then
+  REVIEW_NODE_ID=$(gh api repos/$OWNER/$REPO/pulls/$PR/reviews \
+    --method POST -f body="" --jq .node_id)
+fi
 ```
 
-Omitting `event` keeps the review PENDING. If you already created a pending
-review earlier this run, reuse its node_id instead of making another.
+Omitting `event` keeps the review PENDING.
 
 **Step 2 — attach the reply to the thread via GraphQL:**
 
