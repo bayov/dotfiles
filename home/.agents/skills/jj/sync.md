@@ -47,10 +47,19 @@ instead.
 
 ## 6. Update the working copy
 
-Rebase the current working copy onto fresh `main` so `@` isn't left on a stale
-base: `jj rebase -s @ -d main@origin`. Skip if `@` is already a descendant of
-`main@origin` (e.g. it rode along on a stack rebased in §3). This applies even
-when `@` is empty or has no bookmark — its parent should be the latest `main`.
+Rebase the current working copy onto fresh `main` only when `@` is left stranded
+on a stale base: `jj rebase -s @ -d main@origin`. Apply even when `@` is empty
+or has no bookmark — its parent should be the latest `main`.
+
+**Skip** when `@` already sits on current work:
+
+- `@` is already a descendant of `main@origin` (nothing to do), or
+- `@` is a descendant of a commit rebased in §3 (a PR bookmark / stack). It rode
+  along with that rebase and belongs on top of its stack, not on `main` —
+  re-pointing it at `main` would tear it off its base.
+
+Only rebase onto `main@origin` when `@`'s ancestry traces to the _old_ main and
+not through any in-scope bookmark.
 
 ## 7. Conflicts
 
