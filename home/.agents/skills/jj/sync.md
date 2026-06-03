@@ -45,6 +45,13 @@ the bookmark's commits became immutable — switch to
 [update-pr §3 follow-up](update-pr.md#3-follow-up-path) for that bookmark
 instead.
 
-## 6. Conflicts
+## 6. Update the working copy
+
+Rebase the current working copy onto fresh `main` so `@` isn't left on a stale
+base: `jj rebase -s @ -d main@origin`. Skip if `@` is already a descendant of
+`main@origin` (e.g. it rode along on a stack rebased in §3). This applies even
+when `@` is empty or has no bookmark — its parent should be the latest `main`.
+
+## 7. Conflicts
 
 Stop and ask on any rebase conflict; do not resolve.
