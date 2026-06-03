@@ -19,9 +19,9 @@ Pick exactly one entry point from the user's request:
   [update-pr.md](update-pr.md)
 - **Stacked PR** — open a new PR on top of an existing one →
   [stacked-pr.md](stacked-pr.md)
-- **Rebase** — pull latest `main` and rebase the current PR (or stack) onto it →
+- **Rebase** — pull latest trunk and rebase the current PR (or stack) onto it →
   [rebase.md](rebase.md)
-- **Sync** — pull latest `main` and rebase every local PR bookmark in the
+- **Sync** — pull latest trunk and rebase every local PR bookmark in the
   workspace onto it → [sync.md](sync.md)
 - **Recovery** — a command failed or the repo is in an unexpected state →
   [recovery.md](recovery.md)
@@ -36,6 +36,19 @@ end-of-turn so the user can `jj op restore <id>` if anything went wrong.
 Bookmark and PR text rules apply across all paths →
 [naming](#naming-and-writing). End-of-turn surfacing rules →
 [surface](#surface-to-the-user-at-end-of-turn).
+
+## Trunk
+
+The trunk branch differs by repo (`main`, `master`, …). Never hardcode it:
+
+- In jj revsets use the built-in `trunk()` alias — it auto-resolves to the
+  repo's trunk bookmark (`main@origin`, `master@origin`, …). All commands below
+  use `trunk()`.
+- For `gh` commands (`--base`, base comparisons), use the repo default branch.
+  Capture it once per turn:
+  `TRUNK=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)` and
+  pass `--base "$TRUNK"`. Equivalently, omit `--base` on `gh pr create` to let
+  GitHub default to it.
 
 ## Naming and writing
 

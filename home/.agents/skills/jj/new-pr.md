@@ -6,7 +6,7 @@ Edits exist locally, no PR yet.
 
 The edits to publish are already on `@` or its ancestors above the base.
 
-- Edits sit cleanly above `main@origin` (or the intended base) → §2.
+- Edits sit cleanly above `trunk()` (or the intended base) → §2.
 - `@` has unrelated dirty changes mixed with the intended edits → split via
   [recovery](recovery.md) before continuing. Push only the intended changes.
 - `@` is detached or in an unexpected place → [recovery](recovery.md) first.
@@ -75,6 +75,7 @@ nothing else fits.
 4. `jj git push --bookmark <name>`. On `Non-tracking remote bookmark
    exists`,
    run `jj bookmark track <name>@origin` and retry.
-5. `gh pr create --head <bookmark-name> --base main` with title and body per
-   [naming](SKILL.md#naming-and-writing).
+5. `gh pr create --head <bookmark-name> --base "$TRUNK"` with title and body per
+   [naming](SKILL.md#naming-and-writing). `$TRUNK` = repo default branch
+   ([trunk](SKILL.md#trunk)); or omit `--base` to let GitHub default to it.
 6. Output the PR URL.
