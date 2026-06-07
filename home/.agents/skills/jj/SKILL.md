@@ -11,6 +11,8 @@ may apply.
 
 - [new-pr.md](new-pr.md) → Create new PR
 - [update-pr.md](update-pr.md) → Update existing
+- [fix-pr.md](fix-pr.md) → Address a PR's failing CI + unresolved review
+  comments
 - [rebase.md](rebase.md) → Rebase PRs and/or local commits
 - [sync.md](sync.md) → Fetch latest trunk and rebase all PRs and commits onto it
 
