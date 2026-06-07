@@ -105,10 +105,24 @@ def main() -> int:
         print(f"error: source repo not found: {source_repo}", file=sys.stderr)
         return 1
 
-    url = subprocess.check_output(
-        ["git", "-C", str(source_repo), "remote", "get-url", "origin"],
+    # Use jj (not raw git) to read the origin URL: the source repo is a
+    # colocated jj repo, and a `git` wrapper on PATH rejects raw git when
+    # invoked under an agent, which would kill this script before cloning.
+    remotes = subprocess.check_output(
+        ["jj", "--repository", str(source_repo), "git", "remote", "list"],
         text=True,
+    )
+    url = next(
+        (
+            line.split(maxsplit=1)[1]
+            for line in remotes.splitlines()
+            if line.split(maxsplit=1)[:1] == ["origin"]
+        ),
+        "",
     ).strip()
+    if not url:
+        print(f"error: no 'origin' remote in {source_repo}", file=sys.stderr)
+        return 1
 
     WORKSPACES_DIR.mkdir(parents=True, exist_ok=True)
     run(["jj", "git", "clone", "--colocate", url, str(dest)])
