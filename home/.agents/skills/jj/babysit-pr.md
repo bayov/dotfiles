@@ -5,9 +5,8 @@ blockers (failing CI, merge conflicts, bot + human review comments) until it's
 mergeable, then stop. This is the autonomous-watch wrapper around fix-pr; it
 adds no new mechanics, only the loop and its exit/pause rules.
 
-Prefix every `gh` call with the remote's account token
-([GitHub account](SKILL.md#github-account)). Resolve repo + account and the PR
-number once via [fix-pr.md](fix-pr.md) §1–§2, then loop.
+Resolve repo + account and the PR number once via [fix-pr.md](fix-pr.md) §1–§2,
+then loop.
 
 ## Done condition
 

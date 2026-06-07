@@ -2,12 +2,10 @@
 
 Fetch latest trunk and rebase every local commit ahead of it onto new trunk — PR
 bookmarks and unpushed bookmarkless work. Bookmarkless commits rebase but aren't
-pushed/retargeted (no PR). Rebasing rewrites pushed commits; the push
-force-updates with lease (sanctioned rebase force-push). Resolve conflicts by
-default (§7).
+pushed/retargeted (no PR). Rebasing rewrites pushed commits, so the push
+force-updates ([Pushing](SKILL.md#pushing)). Resolve conflicts by default (§7).
 
-`trunk()` resolves the trunk bookmark. Prefix every `gh` call with the remote's
-account token ([GitHub account](SKILL.md#github-account)).
+`trunk()` resolves the trunk bookmark.
 
 ## 1. Fetch
 

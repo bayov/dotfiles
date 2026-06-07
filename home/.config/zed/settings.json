@@ -72,7 +72,7 @@
         "entry_spacing": "comfortable",
         "dock": "right",
         "button": true,
-        "hide_gitignore": true,
+        "hide_gitignore": false,
         "auto_reveal_entries": false
     },
     "status_bar": {

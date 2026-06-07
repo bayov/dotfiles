@@ -1,9 +1,8 @@
 # Rebase
 
-Pull latest trunk and rebase a PR (or non-merged stack) onto it. The push
-force-updates with lease (sanctioned rebase force-push). Resolve conflicts by
-default (§3). `trunk()` resolves the trunk bookmark. Prefix every `gh` call with
-the remote's account token ([GitHub account](SKILL.md#github-account)).
+Pull latest trunk and rebase a PR (or non-merged stack) onto it; rewrites
+history, so the push force-updates ([Pushing](SKILL.md#pushing)). Resolve
+conflicts by default (§3). `trunk()` resolves the trunk bookmark.
 
 ## 1. Single PR
 

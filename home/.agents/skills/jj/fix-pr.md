@@ -7,21 +7,11 @@ unresolved review comments), work through each, and report. Takes a PR number
 Review-comment replies are posted as **pending draft comments** only — never
 submitted. The user reviews and submits the draft in GitHub.
 
-Prefix every `gh` call with the remote's account token
-([GitHub account](SKILL.md#github-account)); §1 sets it up.
-
 ## 1. Resolve repo + account
 
-From `origin`, derive owner/repo and the matching account token. Keep
-`$GH_TOKEN` in scope for every `gh`/`gh api` call below (re-export per shell if
-it doesn't persist):
-
-```bash
-url=$(jj git remote list | awk '$1=="origin"{print $2}')
-OWNER=$(printf '%s' "$url" | sed -E 's#\.git$##; s#^.*[:/]([^/]+)/[^/]+$#\1#')
-REPO=$(printf  '%s' "$url" | sed -E 's#\.git$##; s#^.*/([^/]+)$#\1#')
-export GH_TOKEN=$(gh auth token --user {account})   # {account} per the SKILL.md table; unknown owner → stop and ask
-```
+Resolve owner/repo/account per [GitHub account](SKILL.md#github-account); prefix
+every `gh` below with `GH_TOKEN=$(gh auth token --user {account})`.
+`$OWNER`/`$REPO`/`$GH_TOKEN` in the snippets are placeholders.
 
 ## 2. Determine PR number
 

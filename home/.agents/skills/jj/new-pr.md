@@ -1,7 +1,6 @@
 # New PR
 
-Create new PR from local edits/commits. Prefix every `gh` call with the remote's
-account token ([GitHub account](SKILL.md#github-account)).
+Create new PR from local edits/commits.
 
 ## 1. Prepare working-copy state
 

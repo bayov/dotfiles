@@ -21,12 +21,14 @@ may apply.
 
 Several gh accounts are authed; the right one is fixed by the repo's remote
 owner, not by which clone you're in. `GH_TOKEN` overrides the active account
-per-command without a global `gh auth switch`. Resolve the owner from origin,
-then prefix **every** `gh` command with the matching token.
+per-command without a global `gh auth switch`. Resolve owner + repo + account
+once:
 
-```
-owner=$(jj git remote list | awk '$1=="origin"{print $2}' \
-  | sed -E 's#\.git$##; s#^.*[:/]([^/]+)/[^/]+$#\1#')
+```bash
+url=$(jj git remote list | awk '$1=="origin"{print $2}')
+OWNER=$(printf '%s' "$url" | sed -E 's#\.git$##; s#^.*[:/]([^/]+)/[^/]+$#\1#')
+REPO=$(printf  '%s' "$url" | sed -E 's#\.git$##; s#^.*/([^/]+)$#\1#')
+echo "$OWNER/$REPO"
 ```
 
 | owner         | gh account                |
@@ -34,9 +36,23 @@ owner=$(jj git remote list | awk '$1=="origin"{print $2}' \
 | hakasecurity  | `hxhagai`                 |
 | cato-networks | `hagai-akibayov_catonian` |
 
-Then: `GH_TOKEN=$(gh auth token --user {account}) gh pr ...`. Unknown owner →
-stop and ask. (Scopes `gh` only; jj/git push auth — SSH or https credential
-helper — is separate.)
+Apply the token inline on every `gh`/`gh api` call, substituting the resolved
+account:
+
+```bash
+GH_TOKEN=$(gh auth token --user {account}) gh pr view ...
+```
+
+`$OWNER`/`$REPO`/`$GH_TOKEN` in the workflow snippets are placeholders. Unknown
+owner → stop and ask. (Scopes `gh` only; jj/git push auth — SSH or https
+credential helper — is separate.)
+
+## Pushing
+
+Pushes must be fast-forward: never amend or rewrite an already-pushed commit —
+new edits go in commits on top (update-pr, fix-pr). The exception is
+rebase/sync, which rewrite history by design and force-update the push. A
+non-fast-forward rejection outside a rebase → stop and ask.
 
 ## Conventions
 
