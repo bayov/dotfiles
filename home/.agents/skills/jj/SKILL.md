@@ -83,6 +83,9 @@ PR is about in one read.
 - Avoid "Summary"/"Changes"/"Risk"/"Verification"/"Test" headers unless
   requested by the user.
 - Reference related PRs inline (e.g., "uses API introduced in #15053").
+- For PRs/commits/files in **other** repos, link with `[...](full_url)`, not
+  `owner/repo#123`: repos are private under different accounts, so the shorthand
+  doesn't render.
 - Omit the body entirely when the title already says it all.
 - Wrap code/identifiers in backticks.
 - Wrap paths in links (e.g.,
