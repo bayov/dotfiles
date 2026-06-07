@@ -59,7 +59,7 @@ def workspace_file(cwd: str) -> Path:
         rel = "~" + cwd[len(home) :]
     else:
         rel = cwd.lstrip("/")
-    return BASE / rel
+    return BASE / f"{rel}.toml"
 
 
 def load_prompts(path: Path) -> list[dict[str, str]]:
