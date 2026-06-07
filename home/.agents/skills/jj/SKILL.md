@@ -54,6 +54,18 @@ new edits go in commits on top (update-pr, fix-pr). The exception is
 rebase/sync, which rewrite history by design and force-update the push. A
 non-fast-forward rejection outside a rebase → stop and ask.
 
+**Before editing files, check whether `@` is already pushed.** In jj the working
+copy is itself a commit, so file edits land in `@` automatically. If `@` is a
+pushed commit, those edits silently rewrite pushed history and you must later
+split them into a separate commit to keep the push fast-forward. Avoid this:
+when `@` is pushed, run `jj new` first so edits land in a fresh commit on top.
+Check with:
+
+```bash
+jj log -r '@ & ::remote_bookmarks()' --no-graph -T commit_id | grep -q . \
+  && echo "@ is pushed — run 'jj new' before editing" || echo "@ is unpushed — safe to edit"
+```
+
 ## Conventions
 
 **No LLMisms in any generated text** (PR titles, bodies, commit descriptions,
