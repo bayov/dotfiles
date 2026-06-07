@@ -1,30 +1,34 @@
 # Update PR
 
-Edits exist locally, a PR already covers this work. The new edits are already on
-`@` or its ancestors. Apply them to the PR.
+Edits exist locally and a PR already covers this work.
 
-## 1. Decide the path
+**Rule:** the new edits go in commit(s) **on top of** the PR's bookmark tip;
+never modify an already-pushed commit. Leaving pushed commits untouched keeps
+the push fast-forward — no history rewrite, no force-push — and the appended
+commits collapse on merge anyway since PRs are squash-merged. Rewriting pushed
+history (and the force-push it needs) happens only during rebases
+([rebase.md](rebase.md), [sync.md](sync.md)).
 
-Inspect the PR's bookmark range (commits between its base bookmark and the
-bookmark tip):
+## Steps
 
-- **Mutable** (no commit in the range is in the immutable set) → §2.
-- **Immutable** (any commit in the range is immutable, e.g. already pushed) →
-  §3.
+1. Put the new edits in their own commit(s) on top of the bookmark tip, each
+   described per [Commit description](SKILL.md#commit-description).
 
-Never pass `--ignore-immutable`. If §2 errors with `Commit X is
-immutable`,
-switch to §3.
+   If the edits instead landed **inside an already-pushed commit** (e.g. `@` is
+   that commit and got dirtied), split them out onto a fresh commit built on the
+   pristine remote commit, so the pushed commit is left exactly as reviewed and
+   the push still fast-forwards:
 
-## 2. Mutable path
+   ```
+   jj new {bookmark}@origin             # empty commit on the pristine pushed tip
+   jj restore --from {bookmark} --into @  # @ := dirtied tree; diff vs parent = just the new edits
+   jj describe -m "..."                 # per Commit description
+   ```
 
-Fold the new edits into the PR however is cleanest (e.g. `jj squash` into the
-relevant commit). Then advance the bookmark to the new tip and
-`jj git push --bookmark <name>`. Force push is forbidden — on non-fast-forward
-rejection, [recovery](recovery.md).
+2. Advance the bookmark to the new tip: `jj bookmark set {bookmark} -r @`.
+3. `jj git push --bookmark {bookmark}`. On non-fast-forward rejection — the
+   remote bookmark moved, or a pushed commit was rewritten — stop and ask the
+   user; never force-push.
 
-## 3. Follow-up path
-
-Add the edits as one or more new commits on top of the PR's bookmark, described
-per [naming](SKILL.md#naming-and-writing). Advance the bookmark to the new tip
-and `jj git push --bookmark <name>`.
+> Squash or otherwise rewrite a PR's already-pushed commits only when the user
+> explicitly asks. That rewrite forces the push, same as a rebase.

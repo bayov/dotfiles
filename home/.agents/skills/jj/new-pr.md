@@ -1,39 +1,28 @@
 # New PR
 
-Edits exist locally, no PR yet.
+Create new PR from local edits/commits. Prefix every `gh` call with the remote's
+account token ([GitHub account](SKILL.md#github-account)).
 
-## 1. Check working-copy state
+## 1. Prepare working-copy state
 
-The edits to publish are already on `@` or its ancestors above the base.
-
-- Edits sit cleanly above `trunk()` (or the intended base) → §2.
-- `@` has unrelated dirty changes mixed with the intended edits → split via
-  [recovery](recovery.md) before continuing. Push only the intended changes.
-- `@` is detached or in an unexpected place → [recovery](recovery.md) first.
+The edits to publish should already be on `@` and/or its ancestors up to the
+base.
 
 ## 2. Resolve the Linear issue
 
-Pick the first branch that applies:
+The new PR must be tied to a Linear issue. Identify the issue ID:
 
-1. **User supplied an issue key** (e.g. `HS-10349`) → use it. Skip the rest of
-   this section.
-2. **`.task-reference` exists at repo root** → read the task file path from it.
-   The path looks like `$PLAN_DIR/<slug>/tasks/<task-basename>.md`; extract the
-   `<slug>` segment. Then read `$PLAN_DIR/.linear.json` and look up
-   `slugs["<slug>"].tasks["<task-basename>.md"]` — that's the sub-issue key. If
-   `$PLAN_DIR/.linear.json` is missing, the slug entry is missing, or the task
-   key is missing, stop and ask the user — the user likely needs to run the
-   `linear-sync` skill first.
-3. **Otherwise** → create a new issue:
-   `just create-issue --title "<title>" --non-interactive --skip-branch --team "<team>"`.
-   Always pass `--skip-branch`. Pick `<team>` per §2.1. Re-state the chosen team
-   and the one-line reason to the user before running.
+1. **User supplied an issue ID** (e.g. `HS-10349`) → use it.
+2. **`.task-reference` exists at repo root** → resolve the Linear issue ID by
+   running
+   `~/dotfiles/home/.agents/skills/jj/scripts/resolve-task-reference.sh`. If
+   `.task-reference` exists but resolving fails, stop and ask the user to
+   `/linear-sync` first.
+3. **Otherwise** → create a new Linear issue:
+   `just create-issue --title "{title}" --non-interactive --skip-branch --team "{team}"`.
+   Pick `{team}` per [Team routing](#team-routing).
 
-   On `Default team 'X' not found` or `Team 'X' not found`, retry once with
-   `--team "R&D"` and tell the user team selection failed. Ask the user to
-   confirm the team only if both attempts fail.
-
-### 2.1 Team routing
+### Team routing
 
 Pick the team that owns the **code being changed**, not the team of the person
 reporting the bug or asking for the feature. Match against the top-level
@@ -64,18 +53,37 @@ nothing else fits.
   another team.
 - Genuine ambiguity → R&D, and surface the call to the user.
 
-## 3. Publish
+On `Default team 'X' not found` or `Team 'X' not found`, retry once with
+`--team "R&D"` and tell the user team selection failed. Ask the user to confirm
+the team only if both attempts fail.
 
-1. If `.task-reference` exists at repo root, `rm .task-reference` now — before
-   any describe/snapshot — so the marker doesn't land in the published commit.
-2. Ensure every commit in the PR has a meaningful message
-   ([naming](SKILL.md#naming-and-writing)). `jj describe` any that don't.
-3. Create bookmark `<issue-key-lower>-<kebab-title>` at the tip
-   ([naming](SKILL.md#naming-and-writing)).
-4. `jj git push --bookmark <name>`. On `Non-tracking remote bookmark
-   exists`,
-   run `jj bookmark track <name>@origin` and retry.
-5. `gh pr create --head <bookmark-name> --base "$TRUNK"` with title and body per
-   [naming](SKILL.md#naming-and-writing). `$TRUNK` = repo default branch
-   ([trunk](SKILL.md#trunk)); or omit `--base` to let GitHub default to it.
-6. Output the PR URL.
+## 3. Resolve the base
+
+If the relevant local changes/commits sit cleanly on top of `trunk()`, then the
+base is `trunk()`. If they sit on top of another PR bookmark, the base is the
+bookmarked PR, which will make the new PR a **stacked PR**. Follow
+[Stacked PR Guidelines](stacked-pr-guidelines.md).
+
+## 4. Publish
+
+1. If `.task-reference` exists at repo root, `rm .task-reference` now (before
+   any describe/snapshot, so the marker doesn't land in the published commit).
+2. Ensure every commit in the PR has a meaningful description
+   ([Commit description](SKILL.md#commit-description)). `jj describe -m "..."`
+   any that don't.
+3. Create new bookmark `{linear-issue-id-lowercase}-{kebab-title}`. ≤80 chars;
+   trim the title, never the key. Example:
+   `eng-10333-move-unique-count-gauge-emission-to-a-cron`.
+4. `jj git push --bookmark {bookmark}`. On "Non-tracking remote bookmark
+   exists", run `jj bookmark track {bookmark}@origin` and retry.
+5. `gh pr create --head {bookmark} --title "..." --body "..."` with title and
+   body per [Conventions](SKILL.md#conventions).
+   - For a new stacked PR:
+     - Use `gh pr create ... --base {base-bookmark}` to stack on the parent PR.
+     - Include the `### PR Stack` section per
+       [Stacked PR Guidelines](stacked-pr-guidelines.md).
+
+## 5. Output
+
+- The PR URL.
+- Single sentence summary about the created/resolved Linear issue.

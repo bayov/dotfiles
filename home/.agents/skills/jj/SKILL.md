@@ -1,124 +1,108 @@
 ---
 name: jj
-description: Open Linear issues and GitHub PRs.
+description: Manage jj repos and PRs in Cato.
 disable-model-invocation: true
 ---
 
-# jj workflow
+## jj workflows
 
-Use jj for repo operations. The skill captures _already-made_ edits into Linear
-issues and PRs — it does not write code. Work the decision tree top-down:
-identify the task, check state, take the matching action.
+Identify the relevant workflows based on the user's request. Multiple workflows
+may apply.
 
-## Identify the task
+- [new-pr.md](new-pr.md) → Create new PR
+- [update-pr.md](update-pr.md) → Update existing
+- [rebase.md](rebase.md) → Rebase PRs and/or local commits
+- [sync.md](sync.md) → Fetch latest trunk and rebase all PRs and commits onto it
 
-Pick exactly one entry point from the user's request:
+## GitHub account
 
-- **New PR** — edits exist locally, no PR yet → [new-pr.md](new-pr.md)
-- **Update PR** — edits exist locally, a PR already covers this work →
-  [update-pr.md](update-pr.md)
-- **Stacked PR** — open a new PR on top of an existing one →
-  [stacked-pr.md](stacked-pr.md)
-- **Rebase** — pull latest trunk and rebase the current PR (or stack) onto it →
-  [rebase.md](rebase.md)
-- **Sync** — pull latest trunk and rebase every local PR bookmark in the
-  workspace onto it → [sync.md](sync.md)
-- **Recovery** — a command failed or the repo is in an unexpected state →
-  [recovery.md](recovery.md)
+Several gh accounts are authed; the right one is fixed by the repo's remote
+owner, not by which clone you're in. `GH_TOKEN` overrides the active account
+per-command without a global `gh auth switch`. Resolve the owner from origin,
+then prefix **every** `gh` command with the matching token.
 
-PRs are the unit. Whether a PR contains one commit or several is an
-implementation detail; never restructure commits unless the user asks.
+```
+owner=$(jj git remote list | awk '$1=="origin"{print $2}' \
+  | sed -E 's#\.git$##; s#^.*[:/]([^/]+)/[^/]+$#\1#')
+```
 
-**Before any jj mutation**, capture the current op ID with
-`jj op log -n 1 --no-graph -T 'id.short()'` and hold onto it. Report it at
-end-of-turn so the user can `jj op restore <id>` if anything went wrong.
+| owner         | gh account                |
+| ------------- | ------------------------- |
+| hakasecurity  | `hxhagai`                 |
+| cato-networks | `hagai-akibayov_catonian` |
 
-Bookmark and PR text rules apply across all paths →
-[naming](#naming-and-writing). End-of-turn surfacing rules →
-[surface](#surface-to-the-user-at-end-of-turn).
+Then: `GH_TOKEN=$(gh auth token --user {account}) gh pr ...`. Unknown owner →
+stop and ask. (Scopes `gh` only; jj/git push auth — SSH or https credential
+helper — is separate.)
 
-## Trunk
+## Conventions
 
-The trunk branch differs by repo (`main`, `master`, …). Never hardcode it:
+### PR title & body
 
-- In jj revsets use the built-in `trunk()` alias — it auto-resolves to the
-  repo's trunk bookmark (`main@origin`, `master@origin`, …). All commands below
-  use `trunk()`.
-- For `gh` commands (`--base`, base comparisons), use the repo default branch.
-  Capture it once per turn:
-  `TRUNK=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)` and
-  pass `--base "$TRUNK"`. Equivalently, omit `--base` on `gh pr create` to let
-  GitHub default to it.
+Each PR is tied to a Linear issue ID (`{team_id}-{number}`, e.g. `ENG-10333`).
 
-## Naming and writing
+**PR title**: `{linear_issue_id} {pr_title}`. Sentence case. ≤80 chars.
 
-**Bookmark**: `<issue-key-lower>-<kebab-title>`. Cap at 80 chars; trim the
-title, never the key. Example:
-`hs-10349-remove-foo-reference-from-monorepo-map`.
+Examples:
 
-**Commit title**: imperative mood, ≤72 chars, no issue key.
+- `ENG-10333 Move unique-count gauge emission to a cron`
+- `HS-10346 Cache shared proto generation to improve CI performance`
+
+**PR body**: As short as possible. The goal is that a reviewer grasps what the
+PR is about in one read.
+
+- Open with ONE sentence capturing the essence (e.g. "Move CD Docker layer cache
+  from `type=gha` to AWS ECR.").
+- Add a second sentence ONLY for a genuinely non-obvious caveat, risk, or
+  backward-compat note. Stop there. Most PRs need just the one sentence.
+- Never restate the diff. If a reviewer can learn it by reading the code, leave
+  it out.
+- Avoid "Summary"/"Changes"/"Risk"/"Verification"/"Test" headers unless
+  requested by the user.
+- Reference related PRs inline (e.g., "uses API introduced in #15053").
+- Omit the body entirely when the title already says it all.
+- Wrap code/identifiers in backticks.
+- Wrap paths in links (e.g.,
+  [`foo/bar.py`](https://github.com/{owner}/{repo}/blob/{commit_sha}/foo/bar.py)).
+- When highlighting a code snippet, don't wrap link to ensure widget renders
+  natively in GitHub:
+  https://github.com/{owner}/{repo}/blob/{commit_sha}/foo/bar.py#L42-L56
+  (without backticks).
+
+Examples:
+
+```
+Bumps ruff 0.14.7 -> 0.15.15. All `*.py` changes are automatic ruff fixes.
+```
+
+```
+Move CD Docker layer cache from GH storage to AWS ECR (`ci-build-cache` repo).
+```
+
+### Commit description
+
+Short, imperative mood, ≤72 chars, no Linear issue key.
 
 - Good: `Remove foo reference from MONOREPO-MAP`
 - Bad: `HS-10349 - removed foo reference from monorepo map`
 
-**Commit body**: optional, one short paragraph on _why_. Omit when the title
-suffices.
-
-**PR title**: `HS-NNNN <Sentence-case title>`. Examples:
-
-- `HS-10333 Move unique-count gauge emission to a cron`
-- `HS-10346 Cache shared proto generation to improve CI performance`
-
-**PR body**:
-
-- Description of the change, if not obvious from the title or commit messages.
+No need for an extended description; a one-line title suffices. Commits are
+squash-merged anyway, so only PR descriptions are durable.
 
 ## Before opening or updating a PR
 
 Run from repo root, scoped to each service touched:
 
-- `just <service-path>/ pre-commit` — lint, type-check, format
-- `just <service-path>/ <test-recipe>` — recipe name varies by service (e.g.
-  `unit-test`, `unit-tests`); check the service's justfile. Cached, so re-runs
-  are cheap.
+- `just pre-commit` - Global pre-commit hooks (format, lint).
+- `just {service_path}/ pre-commit` - Per-service pre-commit. Run after global.
+- `just {service_path}/ {test_recipe}` - Relevant per-service tests. Varies by
+  service.
 
 If the change touches:
 
-- FastAPI routes or protos → `just generate-api-clients` (**expensive** — only
-  run if generated client files are missing or stale/broken)
-- `schema/` ORM → `just migrations "<message>"`
+- FastAPI routes or protos → `just generate-api-clients` (**expensive**: Only
+  run if generated client files are missing or stale/broken).
+- `schema/` ORM → `just migrations "{message}"`.
 - Go module deps changed → run `go mod tidy` in each affected service directory
   first; only run `just generate-api-clients` if `go mod tidy` still fails or
-  generated client files are missing (**expensive**)
-
-Stop and surface failures to the user; do not push past a red pre-commit or
-failing tests.
-
-## Surface to the user at end of turn
-
-Always report the pre-mutation op ID captured at the start (`jj op restore <id>`
-to roll back).
-
-Also mention when you:
-
-- Auto-tracked a bookmark
-- Auto-advanced a bookmark across multiple commits
-- Used `--team` override
-- Split a commit to exclude unrelated changes
-- Rescued from detached-HEAD or stale working copy
-- Skipped a path that would have required force-push or `--ignore-immutable`
-- Stopped before rebasing upper PRs in a stack
-- Resolved the Linear issue from a `.task-reference` marker (state which task
-  and which Linear issue) instead of creating a new one
-
-## IMPORTANT: AVOID
-
-- Do not write or modify code as part of this skill.
-- Do not run `jj rebase` to reorganize a stack (exception:
-  [stacked-pr §3](stacked-pr.md#3-after-the-bottom-pr-merges)).
-- Do not resolve conflicts — stop and ask the user.
-- Do not call the Linear API directly; go through `just create-issue`.
-- Do not auto-rebase upper PRs in a stack after updating one below.
-- Do not restructure existing commits (squash/split/reorder) unless the user
-  asks.
-- Do not move a bookmark backward or to a non-fast-forward target.
+  generated client files are missing (**expensive**).
