@@ -13,6 +13,7 @@ may apply.
 - [update-pr.md](update-pr.md) → Update existing
 - [fix-pr.md](fix-pr.md) → Address a PR's failing CI + unresolved review
   comments
+- [babysit-pr.md](babysit-pr.md) → Loop fix-pr, watching a PR until mergeable
 - [rebase.md](rebase.md) → Rebase PRs and/or local commits
 - [sync.md](sync.md) → Fetch latest trunk and rebase all PRs and commits onto it
 
@@ -38,6 +39,10 @@ stop and ask. (Scopes `gh` only; jj/git push auth — SSH or https credential
 helper — is separate.)
 
 ## Conventions
+
+**No LLMisms in any generated text** (PR titles, bodies, commit descriptions,
+review replies): no em-dashes (`—`) — use a period, colon, comma, or parens
+instead; no greetings, praise, filler, or sign-offs. Plain ASCII punctuation.
 
 ### PR title & body
 

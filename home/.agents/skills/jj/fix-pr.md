@@ -151,6 +151,12 @@ cross-referencing in the UI).
 One at a time. Tick each handled item in `action_items.md` with a one-line
 resolution note.
 
+**Scope gate (applies to every item):** if addressing it means a large or
+non-trivial change — a broad refactor, a behavior/API change, a design decision,
+or edits sprawling across many files — **stop and ask the user** before doing
+it. Outline what it would take and the options. Only small, mechanical, locally
+obvious fixes proceed without asking.
+
 **Failing CI check:**
 
 1. Decide if this PR caused it: read the log, then `gh pr diff $PR` for anything
@@ -185,6 +191,31 @@ CI red from this PR → fix and recheck. Unrelated → surface in the report and
 proceed to replies.
 
 ## 7. Drafting pending review comments
+
+### Reply conventions
+
+Follows the shared [Conventions](SKILL.md#conventions) (no LLMisms, no
+em-dashes) and the [PR body](SKILL.md#pr-title--body) spirit. A reply states
+what changed (and where) or answers the question. One read, done.
+
+- No greetings, sign-offs, thanks, apologies, or praise ("Good catch", "You're
+  right", "Great point").
+- Don't restate the reviewer's comment back at them.
+- Usually one sentence. Point at the fix: commit, file, or symbol.
+- Pushing back: give the reason, not deference.
+- Backticks for code/identifiers; link paths per the body conventions.
+
+Examples:
+
+- Good: `Fixed in {commit}: moved the nil check above the deref.`
+- Good:
+  `Kept as-is. {func} is only called post-validation, so the input can't
+  be empty here.`
+- Bad:
+  `Great catch! 🙏 You're absolutely right, I've gone ahead and fixed this
+  by adding a nil check. Let me know if there's anything else!`
+
+### Posting mechanics
 
 Exact — small deviations cause 422s or accidentally publish the review.
 
