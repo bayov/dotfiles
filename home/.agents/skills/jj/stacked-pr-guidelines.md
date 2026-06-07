@@ -14,21 +14,21 @@ Example:
 
 ### PR Stack
 
-- #15052
-- #15071
-- #13571
-- **Current** (`#14573`)
-- #14566
-- #14569
+- ↑ #15052
+- ↑ #15071
+- ↑ #13571
+- ↑ **Current** (`#14573`)
+- ↑ #14566
+- ↑ #14569
+- ○ `main`
 ```
 
-Stack order: Top to bottom
+Top entry is the tip (furthest from trunk). Each `↑` means that PR is stacked on
+the entry below it. The last line is the repo's trunk, not a PR: mark it with ○
+and use the actual trunk name (`main`/`master`/etc.), without the `↑`.
 
-- top = furthest from trunk
-- bottom = closest to trunk
-
-It's important that the current PR is wrapped in backticks to prevent GitHub
-from auto-linking it (redundant self-link).
+The current PR is wrapped in backticks to prevent GitHub from auto-linking it
+(redundant self-link).
 
 Whenever a new PR is added to the stack, or the stack is modified in a way that
 changes the ancestry, each PR's `### PR Stack` section must be updated to

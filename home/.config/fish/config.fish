@@ -85,7 +85,7 @@ if status is-interactive
     abbr -a lmd glow --width 160
 
     # Aliases
-    alias claude="claude --dangerously-skip-permissions"
+    alias claude="claude --permission-mode auto"
     alias za="zellij attach default --create"
     alias hm="history merge"
     alias v="$EDITOR"
