@@ -33,11 +33,14 @@ CACHE_DIR = os.path.expanduser("~/.cache/claude-statusline")
 USAGE_CACHE = os.path.join(CACHE_DIR, "usage.json")
 USAGE_LOCK = os.path.join(CACHE_DIR, "usage.lock")
 USAGE_BACKOFF = os.path.join(CACHE_DIR, "usage.backoff")
+AUTH_ERR = os.path.join(CACHE_DIR, "usage.autherr")
 USAGE_TTL = (
     600  # seconds — refresh interval (usage data barely moves minute-to-minute)
 )
 USAGE_LOCK_TTL = 60  # seconds — minimum gap between refresh attempts
 DEFAULT_BACKOFF = 900  # seconds — backoff when a failure carries no Retry-After
+AUTH_BACKOFF = 60  # seconds — short backoff on auth failure so a re-login is
+# picked up quickly (only a local token read, no API call, gates the retry)
 
 
 def _mtime(path):
@@ -74,11 +77,43 @@ def _write_backoff(seconds):
         pass
 
 
+def _try_acquire_lock(now):
+    """Atomically claim the refresh lock. Returns True iff this process won.
+
+    O_CREAT|O_EXCL makes creation atomic across processes, so exactly one of N
+    concurrent statusline renders (across all CC sessions on this machine) wins
+    and spawns a single refresh — no thundering herd of parallel API requests.
+    A lock older than USAGE_LOCK_TTL is treated as stale (its refresh crashed)
+    and reclaimed.
+    """
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+    except OSError:
+        return False
+    lock_mt = _mtime(USAGE_LOCK)
+    if lock_mt is not None and now - lock_mt >= USAGE_LOCK_TTL:
+        try:
+            os.remove(USAGE_LOCK)
+        except OSError:
+            pass  # Another render reclaimed it first; the O_EXCL below decides.
+    try:
+        fd = os.open(USAGE_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except OSError:
+        return False  # Lock exists and is fresh, or we lost the create race.
+    try:
+        os.write(fd, str(now).encode())
+    finally:
+        os.close(fd)
+    return True
+
+
 def trigger_usage_refresh_if_stale():
     """Spawn a detached refresh if cache is older than TTL and no in-flight lock.
 
     Respects a backoff window written after failures (esp. HTTP 429 Retry-After)
     so transient errors don't turn every statusline render into a retry storm.
+    The lock is claimed atomically so parallel CC sessions issue at most one
+    in-flight request, not one per session.
     """
     now = time.time()
     if now < _read_backoff_until():
@@ -86,13 +121,9 @@ def trigger_usage_refresh_if_stale():
     cache_mt = _mtime(USAGE_CACHE)
     if cache_mt is not None and now - cache_mt < USAGE_TTL:
         return
-    lock_mt = _mtime(USAGE_LOCK)
-    if lock_mt is not None and now - lock_mt < USAGE_LOCK_TTL:
+    if not _try_acquire_lock(now):
         return
     try:
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(USAGE_LOCK, "w") as f:
-            f.write(str(now))
         subprocess.Popen(
             [sys.executable, os.path.realpath(__file__), "--refresh-usage"],
             stdin=subprocess.DEVNULL,
@@ -101,15 +132,21 @@ def trigger_usage_refresh_if_stale():
             start_new_session=True,
         )
     except Exception:
-        pass
+        # Spawn failed; release the lock so a later render can retry.
+        try:
+            os.remove(USAGE_LOCK)
+        except OSError:
+            pass
 
 
-def _read_oauth_token():
+def _read_oauth():
+    """Return the claudeAiOauth dict (accessToken, expiresAt, ...) or None."""
     path = os.path.expanduser("~/.claude/.credentials.json")
     try:
         with open(path) as f:
-            data = json.load(f)
-        return (data.get("claudeAiOauth") or {}).get("accessToken")
+            oauth = json.load(f).get("claudeAiOauth") or {}
+        if oauth.get("accessToken"):
+            return oauth
     except Exception:
         pass
     if sys.platform == "darwin":
@@ -128,20 +165,50 @@ def _read_oauth_token():
                     timeout=5,
                 )
                 if out.returncode == 0:
-                    data = json.loads(out.stdout.strip())
-                    token = (data.get("claudeAiOauth") or {}).get("accessToken")
-                    if token:
-                        return token
+                    oauth = (
+                        json.loads(out.stdout.strip()).get("claudeAiOauth")
+                        or {}
+                    )
+                    if oauth.get("accessToken"):
+                        return oauth
             except Exception:
                 pass
     return None
 
 
+def _token_is_expired(oauth):
+    """True if the OAuth dict carries an expiresAt (epoch ms) already past."""
+    exp = oauth.get("expiresAt")
+    return isinstance(exp, (int, float)) and exp / 1000 <= time.time()
+
+
+def _set_auth_error(flag):
+    """Mark (flag=True) or clear (flag=False) the 'needs re-login' state."""
+    try:
+        if flag:
+            os.makedirs(CACHE_DIR, exist_ok=True)
+            open(AUTH_ERR, "w").close()
+        else:
+            os.remove(AUTH_ERR)
+    except OSError:
+        pass
+
+
+def auth_error():
+    """True if the last refresh hit an expired/rejected token (needs /login)."""
+    return os.path.exists(AUTH_ERR)
+
+
 def refresh_usage_cache():
     """Fetch usage from Anthropic API and atomically write cache file."""
     try:
-        token = _read_oauth_token()
-        if not token:
+        oauth = _read_oauth()
+        token = oauth.get("accessToken") if oauth else None
+        if not token or _token_is_expired(oauth):
+            # No usable token: flag for the "/login" hint and skip the doomed
+            # request (avoids a guaranteed 401 and any rate-limit contribution).
+            _set_auth_error(True)
+            _write_backoff(AUTH_BACKOFF)
             return
         req = urllib.request.Request(
             "https://api.anthropic.com/api/oauth/usage",
@@ -168,12 +235,18 @@ def refresh_usage_cache():
         with open(tmp, "w") as f:
             json.dump(out, f)
         os.replace(tmp, USAGE_CACHE)
-        # Success: clear any prior backoff.
+        # Success: clear any prior backoff and auth-error state.
+        _set_auth_error(False)
         try:
             os.remove(USAGE_BACKOFF)
         except OSError:
             pass
     except urllib.error.HTTPError as e:
+        # 401/403: token rejected server-side (expired/revoked) -> needs /login.
+        if e.code in (401, 403):
+            _set_auth_error(True)
+            _write_backoff(AUTH_BACKOFF)
+            return
         # Honor server-provided Retry-After (esp. 429); else back off a default.
         try:
             retry_after = int(e.headers.get("Retry-After") or 0)
@@ -421,26 +494,33 @@ def get_status_line():
             return f"{hours}h{mins}m" if mins else f"{hours}h"
         return f"{mins}m"
 
-    trigger_usage_refresh_if_stale()
-    usage = read_usage_cache()
-    if usage:
-        bits = []
-        for pct_key, reset_key in (
-            ("session_pct", "session_resets_at"),
-            ("weekly_pct", "weekly_resets_at"),
-        ):
-            pct = usage.get(pct_key)
-            if not isinstance(pct, (int, float)):
-                continue
-            piece = f"{round(pct)}%"
-            left = remaining_secs(usage.get(reset_key))
-            if left is not None:
-                piece += f" ({fmt_remaining(left)})"
-            color = RED if pct >= 90 else YELLOW if pct >= 70 else GREY
-            piece = f"{color}{piece}{GREY}"
-            bits.append(piece)
-        if bits:
-            parts.append(f"{GREY}| {', '.join(bits)}{RESET}")
+    # Usage section disabled on the cato profile (corporate API has no usage
+    # endpoint; the fetch only ever errors).
+    if os.environ.get("MACHINE_PROFILE") != "cato":
+        trigger_usage_refresh_if_stale()
+        usage = read_usage_cache()
+        if auth_error():
+            # Token expired/revoked: cached pcts are stale and misleading. Prompt
+            # re-login instead. Cleared automatically on the next successful fetch.
+            parts.append(f"{GREY}| {YELLOW}/login for usage info{RESET}")
+        elif usage:
+            bits = []
+            for pct_key, reset_key in (
+                ("session_pct", "session_resets_at"),
+                ("weekly_pct", "weekly_resets_at"),
+            ):
+                pct = usage.get(pct_key)
+                if not isinstance(pct, (int, float)):
+                    continue
+                piece = f"{round(pct)}%"
+                left = remaining_secs(usage.get(reset_key))
+                if left is not None:
+                    piece += f" ({fmt_remaining(left)})"
+                color = RED if pct >= 90 else YELLOW if pct >= 70 else GREY
+                piece = f"{color}{piece}{GREY}"
+                bits.append(piece)
+            if bits:
+                parts.append(f"{GREY}| {', '.join(bits)}{RESET}")
 
     if sess_total > 0:
         parts.append(
