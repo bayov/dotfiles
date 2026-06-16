@@ -114,7 +114,9 @@ Iterate until the user approves the breakdown.
 ### 3. Writing tasks
 
 For each user-approved task, copy [template.md](./template.md) to
-`$PLAN_DIR/{slug}/tasks/{NN}-{task_name}.md` and fill out each section.
+`$PLAN_DIR/{slug}/tasks/{NN}-{task_name}.md` and fill out each section. Keep the
+`linear` frontmatter field untouched — `/linear-sync` fills it with the created
+issue's link.
 
 Prefix each filename with a zero-padded number (`01-`, `02-`, ...) reflecting
 the natural execution order from the dependency table. Tasks that can run in

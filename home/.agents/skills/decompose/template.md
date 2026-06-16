@@ -1,5 +1,10 @@
+---
+linear: not synced - run /linear-sync
+---
+
 <!-- Writing rules: Whole doc ≤150 words. Bullets only. ≤15 words per bullet.
-Omit optional sections entirely — do not leave empty headings. -->
+Omit optional sections entirely — do not leave empty headings.
+Leave the `linear` frontmatter as-is — `/linear-sync` fills it in. -->
 
 A concise description of this vertical slice. Describe the end-to-end behavior,
 not layer-by-layer implementation. Use `$GLOSSARY_DIR/GLOSSARY.md` terms
