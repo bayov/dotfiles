@@ -5,6 +5,7 @@ A PR stack is a chain of PRs where PR N's GitHub base is PR N-1's bookmark.
 ## Stacked PR descriptions
 
 Each PR in a PR stack must contain a `### PR Stack` section in its description.
+
 Example:
 
 ```md
@@ -22,6 +23,10 @@ Example:
 - ↑ #14569
 - ○ `main`
 ```
+
+Separate the description body from the `### PR Stack` section with a `---`
+horizontal rule that has a **blank line both above and below it** (emit
+`{body}\n\n---\n\n### PR Stack`).
 
 Top entry is the tip (furthest from trunk). Each `↑` means that PR is stacked on
 the entry below it. The last line is the repo's trunk, not a PR: mark it with ○
