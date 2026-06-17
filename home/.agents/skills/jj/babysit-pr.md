@@ -2,24 +2,30 @@
 
 Loop [fix-pr.md](fix-pr.md) over a single PR: keep monitoring it and addressing
 blockers (failing CI, merge conflicts, bot + human review comments) until it's
-mergeable, then stop. This is the autonomous-watch wrapper around fix-pr; it
-adds no new mechanics, only the loop and its exit/pause rules.
+mergeable **and codex is clean**, then stop. This is the autonomous-watch
+wrapper around fix-pr; it adds no new mechanics, only the loop and its
+exit/pause rules.
+
+Codex re-reviews on **every push** ([Codex reviews](codex-reviews.md)), so each
+cycle can draw a fresh review. The loop must catch those: ping-pong (fix → push
+→ re-review → fix …) until codex reacts 👍, not just until the first review is
+handled.
 
 Resolve repo + account and the PR number once via [fix-pr.md](fix-pr.md) §1–§2,
 then loop.
 
 ## Done condition
 
-Stop the loop when the PR is **mergeable**:
+Stop only when **both** hold: the PR is mergeable
+(`gh pr view $PR --json mergeable,mergeStateStatus,reviewDecision` →
+`mergeStateStatus == "CLEAN"`) and codex-clean on the current HEAD
+([Codex reviews](codex-reviews.md)).
 
-```bash
-gh pr view $PR --json mergeable,mergeStateStatus,reviewDecision
-```
-
-- `mergeStateStatus == "CLEAN"` → mergeable; done.
-- `BLOCKED` with `reviewDecision != "APPROVED"` and no failing checks /
-  conflicts → only a human's approval is missing. Nothing to fix; surface and
-  stop.
+- Codex mid-review (👀, or latest review on an older commit) → **not done**;
+  wait and re-poll, like CI in flight. Never declare done off a stale 👍.
+- Open codex findings on HEAD → actionable; continue.
+- `BLOCKED`, `reviewDecision != "APPROVED"`, no failing checks / conflicts, and
+  codex-clean → only a human approval is missing; surface and stop.
 
 Otherwise there's actionable work — continue the loop.
 
@@ -27,27 +33,32 @@ Otherwise there's actionable work — continue the loop.
 
 Each cycle:
 
-1. **Poll** state: the `gh pr view` above, plus failing checks and unresolved
-   threads ([fix-pr.md](fix-pr.md) §5).
+1. **Poll** state: the `gh pr view` above; failing checks and unresolved threads
+   ([fix-pr.md](fix-pr.md) §5); and codex's stance on HEAD
+   ([Codex reviews](codex-reviews.md)).
 2. **Classify and act:**
-   - Conflicts (`mergeable == "CONFLICTING"` / `mergeStateStatus == "DIRTY"`) or
-     out-of-date (`BEHIND`) → rebase onto base and resolve, then push. This is
-     fix-pr §3's rebase path; for a plain `BEHIND` (no conflict) it's just
-     [rebase.md](rebase.md) §1.
+   - Conflicts (`CONFLICTING` / `DIRTY`) or out-of-date (`BEHIND`) → rebase onto
+     base and resolve, then push (fix-pr §3's path; plain `BEHIND` is just
+     [rebase.md](rebase.md) §1).
    - Failing CI **caused by this PR** and/or unresolved threads → run
-     [fix-pr.md](fix-pr.md) end to end for this `$PR` (it addresses both, runs
-     the CI gate, drafts pending replies).
+     [fix-pr.md](fix-pr.md) end to end (it closes both, runs the CI gate, and
+     settles codex's re-review on the pushed HEAD).
    - Failing CI **unrelated to this PR** (infra/flake — see
      [Unrelated / flaky CI](#unrelated--flaky-ci)) → try to overcome it
      automatically before surfacing.
-   - Nothing actionable, only a human approval pending → **done condition**;
-     stop.
+   - Codex 👀 with nothing else actionable → fall through to wait.
+   - Nothing actionable, codex-clean, only a human approval pending → **done**.
 3. **Wait for the next signal:**
    - CI in flight → `gh pr checks $PR --watch` blocks until it settles.
-   - Idle, waiting on reviewers → re-poll threads + `mergeable` on an interval
-     (a few minutes); don't busy-spin. After a long idle with no change, stop
-     and report that you're waiting on the reviewer.
+   - Codex 👀 → re-poll on an interval until it settles. Push landed but no
+     reaction/review after a long idle → nudge once with `@codex review`.
+   - Idle on human reviewers → re-poll threads + `mergeable` on an interval;
+     don't busy-spin. After a long idle, stop and report you're waiting.
 4. Repeat.
+
+Every push (fix, rebase, or the empty re-push in
+[Unrelated / flaky CI](#unrelated--flaky-ci)) restarts codex — re-confirm its
+stance is on the **current** HEAD before declaring done.
 
 ## Unrelated / flaky CI
 
@@ -79,8 +90,9 @@ attempt per check — never loop re-runs.
 - **Large / non-trivial fix** — any item that trips fix-pr §6's scope gate
   (broad refactor, behavior/API change, design call, sprawling edits). Pause,
   outline options, wait for the user.
-- **Ambiguous review comment** — fix-pr already stops and asks; relay its
-  question and resume once answered.
+- **Ambiguous review comment** (human, or a codex comment needing a human
+  decision) — fix-pr stops and escalates; relay its question and resume once
+  answered.
 - **Thrash** — the same check keeps failing after two fix attempts. Stop;
   surface the log. Don't loop on it.
 - **Unrelated CI failure that survives one recovery pass** — after the rebase or
@@ -88,15 +100,17 @@ attempt per check — never loop re-runs.
   fix-pr leaves it untouched; note it and keep going on the rest, but it may
   block "mergeable". If it does, surface and stop. Don't re-run it again.
 
-## Pending replies
+## Replies and codex threads
 
-Replies stay **pending drafts** every cycle — babysit never submits, same as
-fix-pr. The user submits in GitHub. Note: code pushes re-trigger bot/CI review,
-but unsubmitted reply drafts won't notify human reviewers, so human
-re-engagement generally waits on the user submitting.
+Same closings as fix-pr every cycle: **codex** threads resolved directly (no
+user wait — this is what lets the ping-pong run autonomously to 👍); **human**
+replies stay **pending drafts** that babysit never submits. Pushes re-trigger
+bot/CI, but unsubmitted drafts don't notify humans, so human re-engagement waits
+on the user.
 
 ## Output
 
-On exit, one status line: mergeable (done) | waiting on reviewer/approval |
-paused for user input (with the question) | stopped on thrash (with the check).
-Then the fix-pr final report ([fix-pr.md](fix-pr.md) §8) for the work done.
+On exit, one status line: mergeable + codex 👍 (done) | waiting on codex (👀) |
+waiting on reviewer/approval | paused for user input (with the question) |
+stopped on thrash (with the check). Then the fix-pr final report
+([fix-pr.md](fix-pr.md) §8) for the work done, including codex's final stance.

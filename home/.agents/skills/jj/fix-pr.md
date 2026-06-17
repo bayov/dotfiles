@@ -4,8 +4,10 @@ Fetch a GitHub PR, enumerate everything blocking it (failing CI checks +
 unresolved review comments), work through each, and report. Takes a PR number
 (explicit, inferred from context, or detected — §2).
 
-Review-comment replies are posted as **pending draft comments** only — never
-submitted. The user reviews and submits the draft in GitHub.
+**Human** review-comment replies are posted as **pending draft comments** only,
+never submitted — the user reviews and submits the draft in GitHub. **Codex**
+comments are closed directly (no draft) and its re-review on each push is
+awaited: see [Codex reviews](codex-reviews.md).
 
 ## 1. Resolve repo + account
 
@@ -132,9 +134,12 @@ gh api graphql --paginate -f query='
         | map(select(.isResolved == false))'
 ```
 
-Each unresolved thread is one action item. Record both the thread `id` (node id,
-`PRRT_...`) — needed for the reply — and the first comment's `databaseId` (for
-cross-referencing in the UI).
+Each unresolved thread is one action item. Record the thread `id` (node id,
+`PRRT_...`) and the first comment's `databaseId` — both needed to reply /
+resolve (and 👍 a codex comment). **Tag each thread codex vs human** by
+first-comment `author.login` (codex closing differs, §6/§7). Also note codex's
+current stance ([Codex reviews](codex-reviews.md)) — a 👀 means more threads may
+still land.
 
 ## 6. Address items
 
@@ -162,7 +167,10 @@ obvious fixes proceed without asking.
 2. Unambiguous fix → make the change.
 3. Unsure → **stop and ask**, offering 2–3 concrete options with tradeoffs.
    Don't guess, don't silently pick.
-4. Never resolve the thread yourself — the user does that after reviewing.
+4. **Closing depends on the author** (tagged in §5): **human** → never resolve
+   yourself, reply as a pending draft (§7); **codex** → close per
+   [Closing a codex comment](codex-reviews.md#closing-a-codex-comment) (resolve
+   actions wait for green CI, § CI gate).
 
 ### CI gate — before posting any reply
 
@@ -175,12 +183,25 @@ After all code fixes are in the working copy:
    then push — fast-forward per [update-pr.md](update-pr.md) (or the
    already-done force-push if §3 rebased). Wait for CI:
    `gh pr checks $PR --watch`.
-3. **Only after all checks pass** → post pending draft replies (§7).
+3. **Only after all checks pass:** resolve fixed/dismissed **codex** threads (§6
+   step 4) and post pending draft replies for **human** threads (§7).
 
 CI red from this PR → fix and recheck. Unrelated → surface in the report and
 proceed to replies.
 
+### Codex re-review gate (ping-pong)
+
+The push re-triggers codex. Before reporting, settle codex on the pushed HEAD
+([Codex reviews](codex-reviews.md)): wait out 👀; 👍 → done. **New** findings →
+add to `action_items.md` and loop back through §6 (fix → CI gate → re-review),
+ping-ponging until 👍 or the only thing left is a thread escalated to the user.
+A standalone run does this loop itself; under [babysit-pr.md](babysit-pr.md) the
+outer loop drives it.
+
 ## 7. Drafting pending review comments
+
+Applies to **human** review threads only — codex threads are closed per §6 step
+4, never drafted.
 
 ### Reply conventions
 
@@ -315,8 +336,10 @@ PR #$PR — N items addressed (M root causes)
   <question you asked the user>
 ```
 
-End with: "Pending draft review comments are queued. Review and submit in GitHub
-when ready."
+State codex's final stance: `👍 (clean)`, `still reviewing (👀)`, or
+`N comments
+open` (noting any escalated to the user). End with: "Pending draft
+review comments are queued. Review and submit in GitHub when ready."
 
 ## Checklist
 
@@ -330,6 +353,9 @@ when ready."
 - [ ] Unrelated CI failures left untouched and surfaced in the report.
 - [ ] Ambiguous comments paused for user input with concrete options.
 - [ ] Pre-PR checks ran on each service touched; passing.
-- [ ] CI passing confirmed before any reply posted.
-- [ ] All replies posted as **pending** drafts.
-- [ ] Final report collapses items sharing a root cause.
+- [ ] CI passing confirmed before any reply posted / thread resolved.
+- [ ] Codex threads closed per §6 step 4; human replies posted as **pending**
+      drafts.
+- [ ] Codex re-review settled on HEAD (👍, looped to 👍, or escalated).
+- [ ] Final report collapses items sharing a root cause and states codex's
+      stance.
