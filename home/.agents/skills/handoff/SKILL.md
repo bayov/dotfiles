@@ -3,6 +3,8 @@ name: handoff
 description: Handoff session to a fresh agent
 argument-hint: "What will the next session be used for?"
 disable-model-invocation: true
+model: sonnet
+effort: high
 ---
 
 <task>

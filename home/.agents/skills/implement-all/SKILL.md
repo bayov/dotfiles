@@ -3,6 +3,8 @@ name: implement-all
 description: Implement every task in a decomposed plan, building and babysitting a PR stack, orchestrating via subagents
 argument-hint: <plan-slug-or-tasks-dir>
 disable-model-invocation: true
+model: sonnet
+effort: high
 ---
 
 Implement an entire decomposed plan end-to-end: walk its tasks in dependency

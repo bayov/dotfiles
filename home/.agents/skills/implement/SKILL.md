@@ -3,7 +3,7 @@ name: implement
 description: Implement a task via TDD
 argument-hint: <path-to-task-file>
 disable-model-invocation: true
-model: opus
+model: sonnet
 effort: high
 ---
 

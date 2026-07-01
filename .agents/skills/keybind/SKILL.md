@@ -2,7 +2,7 @@
 name: keybind
 description: Manages keyboard shortcuts across all apps in this dotfiles setup.
 disable-model-invocation: true
-model: haiku
+model: sonnet
 ---
 
 # Keybind Manager

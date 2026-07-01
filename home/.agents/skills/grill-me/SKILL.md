@@ -2,6 +2,8 @@
 name: grill-me
 description: Interview the user relentlessly to reach shared understanding
 disable-model-invocation: true
+model: opus
+effort: high
 ---
 
 Interview the user relentlessly about every aspect of their plan until you reach

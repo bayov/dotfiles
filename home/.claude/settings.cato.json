@@ -12,6 +12,7 @@
       "AskUserQuestion"
     ]
   },
+  "model": "sonnet",
   "hooks": {
     "ElicitationResult": [
       {
