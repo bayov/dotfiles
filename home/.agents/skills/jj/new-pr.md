@@ -28,10 +28,14 @@ reporting the bug or asking for the feature. Match against the top-level
 directories first; fall through to the topic rules; default to `R&D` only if
 nothing else fits.
 
+The **team name** below (leftmost column, minus the prefix) is what
+`just create-issue --team "{name}"` expects. It must match a Linear team name
+exactly as it appears in your workspace (the script matches `viewer.teams`),
+
 | Team (issue prefix)              | Owns                                                                                                                                              | Typical changes                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Aim Engine** (`ENG-`)          | `engine/`, `classifiers_monitoring/`                                                                                                              | Detectors, classifiers, PII/secrets/PHI/TSI logic, model serving, regex/perf, detection metrics                                 |
-| **AI Security for Apps** (`FW-`) | `firewall/`, `ai_security_graphql/`, Outpost, Guards/FirewallKey                                                                                  | Firewall gateway, GraphQL, Outpost deployment, Guard/Key migrations, CRDs, MFE↔FE alignment                                     |
+| **AI Security Platform** (`FW-`) | `firewall/`, `ai_security_graphql/`, Outpost, Guards/FirewallKey, config-sync                                                                     | Firewall gateway, GraphQL, Outpost deployment, Guard/Key migrations, CRDs, MFE↔FE alignment                                     |
 | **Aim for End-Users** (`AEU-`)   | `end-users/`, `interceptors/`, `event_logs_consumers/`, `web/browser_extension_workspace/`                                                        | Browser extension, MITM proxy, Zscaler/Cato NSS consumers, extension deployment, reverse-proxy routing                          |
 | **AgenTeam** (`AGNT-`)           | `endpoints/ai-scout/`, `discovery/api_server/api_server/apps/ai_scout_be`, agent tracing                                                          | AI Scout (CLI + backend), Scout hooks, agent sessions/traces, agent UI views                                                    |
 | **R&D** (`HS-`)                  | `libraries/`, `schema/`, `protos/`, `openapi/`, `deployment/`, `justfiles/`, `.github/`, monorepo root, generated-client tooling, repo-wide CI/CD | Shared infra, CI/CD, monorepo tooling, deploys, cross-cutting refactors, anything that doesn't clearly belong to a product team |
