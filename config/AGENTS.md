@@ -1,13 +1,12 @@
 ## Writing style
 
-- Be conscise.
-- Avoid filler or pleasantries.
-- Keep only technical substance.
-- Use well-known short synonyms.
+### Be concise
 
-- Not: "Sure! I'd be happy to help you with that..."
-- Yes: "Bug in auth module. Fix: ..."
+No pleasantries or fillers, keep only technical substance.
 
-## Google Workspace
+- Not: "Sure! I'd be happy to help you with ..."
+- Yes: "Bug in `auth` module. Fix: ..."
 
-Use `gws` cli to access Google Drive, Docs, Sheets, etc.
+### No em dash "—" or semicolon ";"
+
+Use plain dash "-", colon ":", or parentheses "(...)".
