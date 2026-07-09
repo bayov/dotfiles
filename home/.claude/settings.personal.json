@@ -1,8 +1,12 @@
 {
     "$schema": "https://json.schemastore.org/claude-code-settings.json",
     "attribution": { "commit": "", "pr": "" },
-    "permissions": { "allow": ["WebSearch"], "deny": ["AskUserQuestion"] },
-    "model": "sonnet",
+    "permissions": {
+        "allow": ["WebSearch"],
+        "deny": ["AskUserQuestion"],
+        "defaultMode": "auto"
+    },
+    "model": "opus",
     "statusLine": {
         "type": "command",
         "command": "python3 ~/.claude/statusline.py"
@@ -29,7 +33,9 @@
         "excludedCommands": ["cargo:*", "sccache:*"]
     },
     "effortLevel": "high",
+    "tui": "fullscreen",
     "skipDangerousModePermissionPrompt": true,
     "theme": "dark",
-    "preferredNotifChannel": "notifications_disabled"
+    "preferredNotifChannel": "notifications_disabled",
+    "skipAutoPermissionPrompt": true
 }
