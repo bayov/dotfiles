@@ -169,10 +169,13 @@ obvious fixes proceed without asking.
    Don't guess, don't silently pick.
 4. **Closing depends on the author** (tagged in §5): **human** → never resolve
    yourself, reply as a pending draft (§7); **codex** → close per
-   [Closing a codex comment](codex-reviews.md#closing-a-codex-comment) (resolve
-   actions wait for green CI, § CI gate).
+   [Closing a codex comment](codex-reviews.md#closing-a-codex-comment) (after
+   the push, § Push fixes, then close threads).
 
-### CI gate — before posting any reply
+### Push fixes, then close threads
+
+Comments **do not** wait for CI. Once the fix is pushed, close the threads; CI
+is its own blocker, handled independently (below).
 
 After all code fixes are in the working copy:
 
@@ -181,19 +184,20 @@ After all code fixes are in the working copy:
    Stop and surface failures; don't push past a red pre-commit.
 2. Describe the fix commit ([Commit description](SKILL.md#commit-description)),
    then push — fast-forward per [update-pr.md](update-pr.md) (or the
-   already-done force-push if §3 rebased). Wait for CI:
-   `gh pr checks $PR --watch`.
-3. **Only after all checks pass:** resolve fixed/dismissed **codex** threads (§6
-   step 4) and post pending draft replies for **human** threads (§7).
+   already-done force-push if §3 rebased).
+3. **Once pushed** (no CI wait): resolve fixed/dismissed **codex** threads (§6
+   step 4) and post pending draft replies for **human** threads (§7). Replies
+   reference the pushed commit.
 
-CI red from this PR → fix and recheck. Unrelated → surface in the report and
-proceed to replies.
+CI runs on the push as its own action item (§6), addressed independently of the
+review threads: related failure → fix and re-push; unrelated → surface in the
+report. Never hold up replies for it.
 
 ### Codex re-review gate (ping-pong)
 
 The push re-triggers codex. Before reporting, settle codex on the pushed HEAD
 ([Codex reviews](codex-reviews.md)): wait out 👀; 👍 → done. **New** findings →
-add to `action_items.md` and loop back through §6 (fix → CI gate → re-review),
+add to `action_items.md` and loop back through §6 (fix → push → re-review),
 ping-ponging until 👍 or the only thing left is a thread escalated to the user.
 A standalone run does this loop itself; under [babysit-pr.md](babysit-pr.md) the
 outer loop drives it.
@@ -353,7 +357,8 @@ review comments are queued. Review and submit in GitHub when ready."
 - [ ] Unrelated CI failures left untouched and surfaced in the report.
 - [ ] Ambiguous comments paused for user input with concrete options.
 - [ ] Pre-PR checks ran on each service touched; passing.
-- [ ] CI passing confirmed before any reply posted / thread resolved.
+- [ ] Fixes pushed before threads closed; replies reference the pushed commit
+      (no CI wait).
 - [ ] Codex threads closed per §6 step 4; human replies posted as **pending**
       drafts.
 - [ ] Codex re-review settled on HEAD (👍, looped to 👍, or escalated).

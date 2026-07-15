@@ -16,16 +16,21 @@ then loop.
 
 ## Done condition
 
-Stop only when **both** hold: the PR is mergeable
+Every cycle, always fetch the full unresolved-thread list
+([fix-pr.md](fix-pr.md) §5, all authors) - the done check reads that list, never
+a separate codex-scoped query. Stop only when **all** hold: the PR is mergeable
 (`gh pr view $PR --json mergeable,mergeStateStatus,reviewDecision` →
-`mergeStateStatus == "CLEAN"`) and codex-clean on the current HEAD
-([Codex reviews](codex-reviews.md)).
+`mergeStateStatus == "CLEAN"`), codex is not mid-review, and the §5 list has no
+unresolved **bot** thread ([Codex reviews](codex-reviews.md)).
 
 - Codex mid-review (👀, or latest review on an older commit) → **not done**;
-  wait and re-poll, like CI in flight. Never declare done off a stale 👍.
-- Open codex findings on HEAD → actionable; continue.
-- `BLOCKED`, `reviewDecision != "APPROVED"`, no failing checks / conflicts, and
-  codex-clean → only a human approval is missing; surface and stop.
+  wait and re-poll, like CI in flight. Never declare done off a stale reaction.
+- Any unresolved **bot** thread in the §5 list → actionable; continue. A
+  `COMMENTED` review on HEAD is a findings signal - go read its threads, don't
+  read it as done.
+- `BLOCKED`, `reviewDecision != "APPROVED"`, no failing checks / conflicts, no
+  unresolved bot threads → only a human approval (or an unresolved human thread)
+  is missing; surface and stop.
 
 Otherwise there's actionable work — continue the loop.
 
@@ -41,7 +46,7 @@ Each cycle:
      base and resolve, then push (fix-pr §3's path; plain `BEHIND` is just
      [rebase.md](rebase.md) §1).
    - Failing CI **caused by this PR** and/or unresolved threads → run
-     [fix-pr.md](fix-pr.md) end to end (it closes both, runs the CI gate, and
+     [fix-pr.md](fix-pr.md) end to end (it closes both, pushes the fixes, and
      settles codex's re-review on the pushed HEAD).
    - Failing CI **unrelated to this PR** (infra/flake — see
      [Unrelated / flaky CI](#unrelated--flaky-ci)) → try to overcome it
@@ -49,7 +54,11 @@ Each cycle:
    - Codex 👀 with nothing else actionable → fall through to wait.
    - Nothing actionable, codex-clean, only a human approval pending → **done**.
 3. **Wait for the next signal:**
-   - CI in flight → `gh pr checks $PR --watch` blocks until it settles.
+   - CI in flight → `gh pr checks $PR --watch --fail-fast` blocks but returns on
+     the **first** failure - don't wait for the whole suite to settle. Act on
+     that failure right away (loop back to step 2 / [fix-pr.md](fix-pr.md) §6);
+     the fix's push re-triggers CI anyway, so there's no value in waiting for
+     the remaining checks first. Clean settle (all green) → continue.
    - Codex 👀 → re-poll on an interval until it settles. Push landed but no
      reaction/review after a long idle → nudge once with `@codex review`.
    - Idle on human reviewers → re-poll threads + `mergeable` on an interval;
@@ -79,11 +88,11 @@ just surface it — **attempt one recovery pass**, then re-poll:
    check that only re-runs on push (e.g. semgrep), an empty re-push or the
    rebase in (1) re-triggers it.
 
-Then wait for the re-triggered checks (`gh pr checks $PR --watch`) and re-poll.
-Recovered → continue toward the done condition. **Still failing after this one
-recovery pass → it's now in scope for
-[Stop and surface](#stop-and-surface-dont-keep-looping): note it and stop.** One
-attempt per check — never loop re-runs.
+Then watch the re-triggered checks (`gh pr checks $PR --watch --fail-fast`,
+returning on the first failure) and re-poll. Recovered → continue toward the
+done condition. **Still failing after this one recovery pass → it's now in scope
+for [Stop and surface](#stop-and-surface-dont-keep-looping): note it and stop.**
+One attempt per check — never loop re-runs.
 
 ## Stop and surface (don't keep looping)
 

@@ -6,6 +6,9 @@
 // To see all of Zed's default settings without changing your
 // custom settings, run `zed: open default settings` from the
 {
+    "drag_and_drop_selection": {
+        "delay": 0
+    },
     "line_ending": "detect",
     "format_on_save": "off",
     "edit_predictions": { "provider": "copilot" },

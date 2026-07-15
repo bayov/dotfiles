@@ -11,9 +11,22 @@ push** (no manual trigger). Two verdict signals per commit:
   `### 💡 Codex Review`, names a **Reviewed commit:** `<sha>`). Findings come as
   inline threads, each tagged with a priority badge (`P1`/`P2`/`P3`).
 
-**Codex-clean for HEAD** (`$HEAD_SHA`): 👍 on the issue, OR its latest review's
-`commit_id == $HEAD_SHA` with no unresolved threads. Still 👀, or latest review
-on an **older** commit → not finished; wait and re-poll. Read its stance:
+**Codex-clean for HEAD** (`$HEAD_SHA`) needs **both**:
+
+1. **Not mid-review** — reaction is 👍, or a review with
+   `commit_id == $HEAD_SHA` exists. Still 👀, or the latest review sits on an
+   **older** commit → not finished; wait and re-poll. Never declare clean off a
+   stale reaction.
+2. **No unresolved bot threads** — in the always-fetched unresolved-thread list
+   ([fix-pr.md](fix-pr.md) §5), no unresolved thread is authored by codex/a bot.
+
+The reaction is the _mid-review_ gate only, never the cleanliness verdict. A 👍
+means codex found nothing (no threads land). A **`COMMENTED` review is a
+findings signal, not a done signal**: its findings are inline threads that
+appear in the §5 list like any other author's. `commit_id == $HEAD_SHA` alone is
+**not** clean. There is no separate codex-only thread query — thread state
+always comes from the one unfiltered §5 fetch, routed by author. Read the
+reaction gate:
 
 ```bash
 HEAD_SHA=$(gh api repos/$OWNER/$REPO/pulls/$PR --jq .head.sha)
