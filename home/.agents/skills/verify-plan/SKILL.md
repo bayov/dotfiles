@@ -27,7 +27,7 @@ The plan slug is the first argument. Read everything under `$PLAN_DIR/{slug}/`:
 
 ### Task completion
 
-- Every file under `tasks/` has every acceptance criterion marked `- [x]`.
+- Every file under `tasks` has every acceptance criterion marked `- [x]`.
 - Any task with unticked ACs → gap.
 
 ### Story coverage (when prd.md or plan.md exists)
