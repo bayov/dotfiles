@@ -40,6 +40,20 @@ Example:
 > Drop the docs criterion if the slice introduces no domain terms and touches no
 > doc surface.
 
+## Rollout
+
+<!-- Subtasks that track each attached PR through to merge, plus post-merge
+verification when it matters. `decompose` seeds this; `implement` fills in PR
+links and ticks items. Every PR must at least be merged. Add verification
+subtasks only when the change is important enough to confirm after merge (prod
+behavior, logs/metrics, feature-flag flip) - omit them otherwise. -->
+
+- [ ] PR opened, reviewed, and merged (`owner/repo#NN` once opened)
+- [ ] Verify in prod: <behavior / logs / metrics / flag to check>
+
+> Keep the merge subtask always. Keep, edit, or drop the verification subtask(s)
+> based on the slice's importance.
+
 ## Out of scope
 
 - Behavior a reader might reasonably expect in this slice but that lives in

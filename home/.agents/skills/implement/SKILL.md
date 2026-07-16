@@ -136,10 +136,18 @@ Update the task file in place: tick checkboxes, append notes only when they
 record a non-obvious decision (a constraint discovered during implementation, a
 deviation from the design with the user's approval).
 
-Record every PR opened to address this task in the task file. Maintain a **PRs**
-section near the top of the file; append a link for each PR as it's opened,
-qualified with owner/repo since tasks may span multiple repos
-(`- [owner/repo#123](https://github.com/owner/repo/pull/123) — short description`).
+Record every PR opened to address this task in the task file's **Rollout**
+section. For each PR, keep a subtask qualified with owner/repo since tasks may
+span multiple repos, and tick it only once the PR is merged
+(`- [x] [owner/repo#123](https://github.com/owner/repo/pull/123) merged — short description`).
+A task is not done while any of its PRs is unmerged.
+
+Honor the verification subtasks the task was seeded with: after merge, check the
+prod behavior / logs / metrics / flag they name and tick them, or note what
+blocks them. If implementation surfaced a post-merge risk the task didn't
+anticipate (a critical flow to confirm in prod, a metric to watch), add a
+verification subtask for it. Don't add verification busywork for low-risk
+slices.
 
 ## Tests: what good looks like
 
@@ -204,7 +212,10 @@ lives in the sections above.
 - [ ] **No planning artifact leakage**: no references to task files, design
       docs, PRDs, or plan files in code, tests, comments, or identifiers. Code
       reads as if written without planning artifacts.
-- [ ] **PRs recorded**: every PR opened for this task is linked in the task
-      file's **PRs** section.
+- [ ] **PRs recorded**: every PR opened for this task is linked as a subtask in
+      the task file's **Rollout** section, ticked only once merged.
+- [ ] **Rollout verification**: post-merge verification subtasks are ticked (or
+      noted as blocked); any newly discovered post-merge risk is captured as a
+      subtask.
 - [ ] **Gaps surfaced**: anything undone is in the task file's Out of scope or
       raised to the user — no silent omissions.

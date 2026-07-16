@@ -122,6 +122,13 @@ Prefix each filename with a zero-padded number (`01-`, `02-`, ...) reflecting
 the natural execution order from the dependency table. Tasks that can run in
 parallel still get sequential numbers — pick an order that respects blockers.
 
+Seed each task's **Rollout** section with subtasks for the PRs it will produce.
+Every task keeps the "PR merged" subtask - a slice isn't done until its PR
+lands. Add post-merge verification subtasks only when the slice is important
+enough to confirm in prod (user-visible behavior on a critical path, a
+feature-flag flip, new logs/metrics to watch, a risky migration). For low-risk
+slices, drop the verification subtask - don't manufacture busywork.
+
 ### 4. Report omissions
 
 After writing all task files, report any decision-relevant information from the
