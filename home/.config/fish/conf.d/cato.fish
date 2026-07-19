@@ -17,3 +17,6 @@ set -gx DOCKER_HUB_TOKEN dckr_pat_G2ixPMN1zfzqzukGRLOT2a7wIIc
 set -gx GIT_USER hagai-akibayov_catonian
 set -gx GIT_EMAIL hagai.akibayov@catonetworks.com
 set -gx NODE_EXTRA_CA_CERTS $HOME/CatoNetworksTrustedRootCA.pem
+
+# Mise - polyglot runtime manager (https://mise.jdx.dev)
+status is-interactive && mise activate fish | source
