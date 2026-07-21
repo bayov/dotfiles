@@ -11,8 +11,7 @@ cycle can draw a fresh review. The loop must catch those: ping-pong (fix → pus
 → re-review → fix …) until codex reacts 👍, not just until the first review is
 handled.
 
-Resolve repo + account and the PR number once via [fix-pr.md](fix-pr.md) §1–§2,
-then loop.
+Resolve repo and the PR number once via [fix-pr.md](fix-pr.md) §1–§2, then loop.
 
 ## Done condition
 

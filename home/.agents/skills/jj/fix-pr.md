@@ -9,11 +9,10 @@ never submitted — the user reviews and submits the draft in GitHub. **Codex**
 comments are closed directly (no draft) and its re-review on each push is
 awaited: see [Codex reviews](codex-reviews.md).
 
-## 1. Resolve repo + account
+## 1. Resolve repo
 
-Resolve owner/repo/account per [GitHub account](SKILL.md#github-account); prefix
-every `gh` below with `GH_TOKEN=$(gh auth token --user {account})`.
-`$OWNER`/`$REPO`/`$GH_TOKEN` in the snippets are placeholders.
+Resolve owner/repo per [Repo owner and name](SKILL.md#repo-owner-and-name).
+`$OWNER`/`$REPO` in the snippets are placeholders.
 
 ## 2. Determine PR number
 
@@ -347,7 +346,7 @@ review comments are queued. Review and submit in GitHub when ready."
 
 ## Checklist
 
-- [ ] Repo owner/repo + gh account resolved.
+- [ ] Repo owner/repo resolved.
 - [ ] PR number determined.
 - [ ] Checkout and working-copy position validated.
 - [ ] Mergeability checked; rebased+resolved if CONFLICTING, else fast-forward.

@@ -8,7 +8,7 @@ for them, not by them re-reading this file.
 These workflows produce large volumes of `jj`, `gh`, test, and CI output that
 bloat your context. Keep your context clean by **delegating the heavy execution
 to subagents** (Agent tool, `general-purpose`). Every delegation prompt must
-tell the subagent to first read [`SKILL.md`](SKILL.md) (for the gh-account,
+tell the subagent to first read [`SKILL.md`](SKILL.md) (for the repo-resolution,
 pushing, and convention rules) **and** the specific workflow file(s), then carry
 out the task with all specifics passed in (PR number, branch, Linear ID, user
 instructions). State plainly in the prompt that the subagent is the executor of

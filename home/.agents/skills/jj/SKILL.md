@@ -27,14 +27,13 @@ execution to subagents and keep your context clean.
 
 **If you are a subagent that was handed a workflow, skip that file.** You are
 the executor: run the workflow inline yourself. Read this `SKILL.md` only for
-the gh-account, pushing, and convention rules below, plus your workflow file(s).
+the repo-resolution, pushing, and convention rules below, plus your workflow
+file(s).
 
-## GitHub account
+## Repo owner and name
 
-Several gh accounts are authed; the right one is fixed by the repo's remote
-owner, not by which clone you're in. `GH_TOKEN` overrides the active account
-per-command without a global `gh auth switch`. Resolve owner + repo + account
-once:
+Workflow `gh api` snippets reference `$OWNER`/`$REPO`. Resolve them once from
+the origin remote:
 
 ```bash
 url=$(jj git remote list | awk '$1=="origin"{print $2}')
@@ -43,21 +42,7 @@ REPO=$(printf  '%s' "$url" | sed -E 's#\.git$##; s#^.*/([^/]+)$#\1#')
 echo "$OWNER/$REPO"
 ```
 
-| owner         | gh account                |
-| ------------- | ------------------------- |
-| hakasecurity  | `hxhagai`                 |
-| cato-networks | `hagai-akibayov_catonian` |
-
-Apply the token inline on every `gh`/`gh api` call, substituting the resolved
-account:
-
-```bash
-GH_TOKEN=$(gh auth token --user {account}) gh pr view ...
-```
-
-`$OWNER`/`$REPO`/`$GH_TOKEN` in the workflow snippets are placeholders. Unknown
-owner → stop and ask. (Scopes `gh` only; jj/git push auth — SSH or https
-credential helper — is separate.)
+`$OWNER`/`$REPO` in the workflow snippets are placeholders.
 
 ## Pushing
 
@@ -108,7 +93,7 @@ PR is about in one read.
   requested by the user.
 - Reference related PRs inline (e.g., "uses API introduced in #15053").
 - For PRs/commits/files in **other** repos, link with `[...](full_url)`, not
-  `owner/repo#123`: repos are private under different accounts, so the shorthand
+  `owner/repo#123`: repos are private in different orgs, so the shorthand
   doesn't render.
 - Omit the body entirely when the title already says it all.
 - Wrap code/identifiers in backticks.
