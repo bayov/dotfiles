@@ -1,0 +1,58 @@
+#!/bin/sh
+# lq - run a Linear GraphQL query/mutation against the Linear API.
+#
+# Usage:
+#   lq '{ viewer { name email } }'     # query as argument(s)
+#   echo '{ viewer { id } }' | lq      # query from stdin
+#   lq < query.graphql                 # query from a file
+#
+# Reads the API token from ~/.config/linear (JSON: {"token": "..."}).
+# Output is the pretty-printed JSON response. Exits non-zero on transport
+# failure or when the response contains GraphQL "errors".
+#
+# Requires: curl, jq.
+set -eu
+
+CONFIG="${LINEAR_CONFIG:-$HOME/.config/linear}"
+ENDPOINT="${LINEAR_ENDPOINT:-https://api.linear.app/graphql}"
+
+if [ ! -r "$CONFIG" ]; then
+	echo "lq: cannot read Linear config at $CONFIG" >&2
+	exit 1
+fi
+
+token=$(jq -r '.token // empty' "$CONFIG")
+if [ -z "$token" ]; then
+	echo "lq: no \"token\" field in $CONFIG" >&2
+	exit 1
+fi
+
+if [ "$#" -gt 0 ]; then
+	query=$*
+else
+	query=$(cat)
+fi
+
+if [ -z "$query" ]; then
+	echo "lq: empty query (pass as argument or on stdin)" >&2
+	exit 1
+fi
+
+# Personal API keys authenticate with the raw token as the Authorization value
+# (no "Bearer" prefix). OAuth access tokens would need "Bearer <token>".
+body=$(jq -nc --arg q "$query" '{query: $q}')
+response=$(curl -sS "$ENDPOINT" \
+	-H "Authorization: $token" \
+	-H "Content-Type: application/json" \
+	-d "$body")
+
+if ! printf '%s' "$response" | jq -e . >/dev/null 2>&1; then
+	# Not JSON: surface the raw response (e.g. an HTML error page).
+	printf '%s\n' "$response" >&2
+	exit 1
+fi
+
+printf '%s\n' "$response" | jq .
+if printf '%s' "$response" | jq -e '.errors' >/dev/null 2>&1; then
+	exit 1
+fi
