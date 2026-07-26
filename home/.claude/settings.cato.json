@@ -6,7 +6,8 @@
   },
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(lq:*)"
     ],
     "deny": [
       "AskUserQuestion"
