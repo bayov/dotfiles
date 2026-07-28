@@ -1,7 +1,6 @@
 ---
 name: jj
 description: Manage jj repos and PRs in Cato.
-disable-model-invocation: true
 model: sonnet
 effort: high
 ---
