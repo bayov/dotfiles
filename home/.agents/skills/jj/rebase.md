@@ -32,6 +32,12 @@ next on the one below).
 
    Other bookmarks keep their bases (the chain moved together).
 
+   On a **native GitHub stack** (haka) GitHub retargeted the new bottom at trunk
+   itself when the PR below it merged, so skip this step. Its server-side rebase
+   also moved the remote bookmarks: after §2.1's fetch, adopt the remote heads
+   instead of re-pushing local ones
+   ([Stacked PR Guidelines](stacked-pr-guidelines.md) §5).
+
 ## 3. Conflicts
 
 jj records conflicts in-commit and doesn't halt. Resolve bottom-up:

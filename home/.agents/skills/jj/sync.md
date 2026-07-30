@@ -41,6 +41,11 @@ bookmark:
 
 Non-root bookmarks keep their bases (the chain moved together).
 
+On a **native GitHub stack** (haka) GitHub retargets the new bottom itself as
+PRs land, so there is nothing to retarget here. Its server-side rebase moves the
+remote bookmarks, so after §1's fetch adopt the remote heads rather than
+re-pushing local ones ([Stacked PR Guidelines](stacked-pr-guidelines.md) §5).
+
 ## 5. Push
 
 Push §2's bookmarks, ≤2 per `jj git push`, each via `--bookmark {name}`.

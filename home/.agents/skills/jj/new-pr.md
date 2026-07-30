@@ -87,8 +87,11 @@ bookmarked PR, which will make the new PR a **stacked PR**. Follow
    body per [Conventions](SKILL.md#conventions).
    - For a new stacked PR:
      - Use `gh pr create ... --base {base-bookmark}` to stack on the parent PR.
-     - Include the `### PR Stack` section per
-       [Stacked PR Guidelines](stacked-pr-guidelines.md).
+     - Register the chain with GitHub:
+       `gh stack link {bottom-pr} ... {new-pr} --base "$TRUNK"` (PR numbers,
+       bottom to top), then verify, per
+       [Stacked PR Guidelines](stacked-pr-guidelines.md) §2. On a repo without
+       native stacks, add the `### PR Stack` section instead (§6).
 
 ## 5. Output
 
