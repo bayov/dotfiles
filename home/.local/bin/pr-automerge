@@ -1,0 +1,546 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""
+pr-automerge - watch a PR until it is mergeable, then merge it.
+
+Stand-in for GitHub's auto-merge on `gh stack` PRs, which cannot use it:
+
+    pr-automerge              # PR of the current jj bookmark or git branch
+    pr-automerge 16387        # by number, URL, or branch name
+    pr-automerge --dry-run    # report the plan, change nothing
+
+Three things about stacked PRs, all learned the hard way from the API:
+
+  - `gh stack merge` does not merge. It prints "Merging stacked PRs from the
+    CLI is not yet supported" and opens the PR in a browser.
+  - `enablePullRequestAutoMerge` refuses them ("Auto-merge is not supported for
+    stacked pull requests") even though `viewerCanEnableAutoMerge` says true,
+    so there is nothing to arm and this process has to stay alive.
+  - `mergePullRequest` refuses them too: they merge only through the async REST
+    endpoint, PUT /repos/{owner}/{repo}/pulls/{n}/merge-async.
+
+So: poll, then merge via merge-async for a stacked PR. For a non-stacked PR it
+arms GitHub's native auto-merge and exits, since that needs no babysitting.
+
+A stacked PR can only merge once every PR below it has merged, since until then
+its base is the branch below, not the trunk. This refuses in that case and names
+the PRs to merge first. The merge is pinned to the head commit it vetted, so a
+push mid-wait aborts the merge instead of merging unreviewed code.
+
+Exits 0 once merged (or auto-merge armed), non-zero if the PR cannot merge
+as-is. Requires: gh.
+"""
+
+import argparse
+import json
+import platform
+import shutil
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from urllib.parse import urlsplit
+
+# mergeStateStatus values the merge button is live for. UNSTABLE means only
+# non-required checks are failing, HAS_HOOKS means clean plus pre-receive hooks.
+READY_STATES = {"CLEAN", "HAS_HOOKS", "UNSTABLE"}
+
+# Wait states worth explaining, since they can persist until the user acts.
+HINTS = {
+    "BEHIND": "head branch is out of date with its base",
+    "BLOCKED": "branch protection unsatisfied: review or check missing",
+}
+
+QUERY = """
+query($owner:String!,$name:String!,$number:Int!){
+  repository(owner:$owner,name:$name){
+    mergeCommitAllowed squashMergeAllowed rebaseMergeAllowed autoMergeAllowed
+    pullRequest(number:$number){
+      number title url state isDraft mergeable mergeStateStatus reviewDecision
+      baseRefName headRefOid viewerCanEnableAutoMerge
+      autoMergeRequest{ enabledAt mergeMethod }
+      stack{
+        baseRefName
+        entries(first:50){
+          nodes{ position pullRequest{ number state baseRefName } }
+        }
+      }
+    }
+  }
+}
+"""
+
+# Ordered by preference when the user does not pass --method.
+METHODS = {
+    "squash": "squashMergeAllowed",
+    "merge": "mergeCommitAllowed",
+    "rebase": "rebaseMergeAllowed",
+}
+
+
+class Fatal(Exception):
+    """The PR cannot merge without the user doing something first."""
+
+
+@dataclass
+class Checks:
+    passed: int
+    pending: int
+    failed: list[str]
+
+    def __str__(self) -> str:
+        parts = [f"{self.passed} passed"]
+        if self.pending:
+            parts.append(f"{self.pending} pending")
+        if self.failed:
+            parts.append(f"{len(self.failed)} failed")
+        return ", ".join(parts)
+
+
+def gh(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    """Run gh with no stdin, capturing output. Raises Fatal on failure."""
+    proc = subprocess.run(
+        ["gh", *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+    )
+    if check and proc.returncode != 0:
+        cmd = " ".join(["gh", *args[:2]])
+        raise Fatal(f"{cmd}: {proc.stderr.strip() or 'failed'}")
+    return proc
+
+
+def jj(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["jj", *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        stdin=subprocess.DEVNULL,
+    )
+
+
+def jj_pr_number(scope: list[str]) -> int | None:
+    """Find the current PR in a jj repo, or None if this is not one.
+
+    gh infers the PR from the checked-out git branch, but jj leaves HEAD
+    detached, so `gh pr view` with no argument fails with "not on any branch".
+    Resolve it the way the jj skill does instead: walk the bookmarks between
+    trunk() and @, nearest first, and take the first one with an open PR.
+    """
+    if not shutil.which("jj") or jj("root").returncode != 0:
+        return None
+    log = jj(
+        "log",
+        "-r",
+        "bookmarks() & (trunk()::@)",
+        "--no-graph",
+        "-T",
+        r'local_bookmarks.map(|b| b.name()).join("\n") ++ "\n"',
+    )
+    bookmarks = [
+        line.strip() for line in log.stdout.splitlines() if line.strip()
+    ]
+    for bookmark in bookmarks:
+        found = gh(
+            "pr",
+            "list",
+            "--head",
+            bookmark,
+            "--state",
+            "open",
+            "--json",
+            "number",
+            *scope,
+            check=False,
+        )
+        try:
+            rows = json.loads(found.stdout)
+        except json.JSONDecodeError:
+            continue
+        if rows:
+            return rows[0]["number"]
+    listed = ", ".join(bookmarks) or "none"
+    raise Fatal(
+        "no open PR found for the bookmarks between trunk() and @"
+        f" (checked: {listed}). jj leaves HEAD detached, so gh cannot infer the"
+        " PR: pass a PR number, URL, or bookmark name."
+    )
+
+
+def resolve(target: str | None, repo: str | None) -> tuple[str, str, int]:
+    """Resolve a PR reference to (owner, name, number).
+
+    The reference can be a number, URL, or branch/bookmark name, or None for
+    the PR of the current checkout. The base repo comes from the PR's own URL,
+    so a PR URL works from any directory, with or without --repo.
+    """
+    scope = ["--repo", repo] if repo else []
+    ref = [target] if target else []
+    if not target:
+        number = jj_pr_number(scope)
+        if number:
+            ref = [str(number)]
+    view = gh("pr", "view", *ref, *scope, "--json", "number,url")
+    pr = json.loads(view.stdout)
+    owner, name = urlsplit(pr["url"]).path.lstrip("/").split("/")[:2]
+    return owner, name, pr["number"]
+
+
+def fetch(owner: str, name: str, number: int) -> tuple[dict, dict]:
+    """Return (repo settings, pull request) from one GraphQL round trip."""
+    proc = gh(
+        "api",
+        "graphql",
+        "-f",
+        f"query={QUERY}",
+        "-F",
+        f"owner={owner}",
+        "-F",
+        f"name={name}",
+        "-F",
+        f"number={number}",
+    )
+    repo = json.loads(proc.stdout)["data"]["repository"]
+    return repo, repo.pop("pullRequest")
+
+
+def merge_method(repo: dict, wanted: str | None) -> str:
+    """Pick a merge method the repo allows, preferring the requested one."""
+    if wanted:
+        if not repo[METHODS[wanted]]:
+            raise Fatal(f"repo does not allow {wanted} merges")
+        return wanted
+    for method, allowed in METHODS.items():
+        if repo[allowed]:
+            return method
+    raise Fatal("repo allows no merge method")
+
+
+def open_prs_below(pr: dict) -> list[int]:
+    """Open PRs the target sits on top of, which have to merge first."""
+    stack = pr.get("stack")
+    if not stack:
+        return []
+    nodes = stack["entries"]["nodes"]
+    position = next(
+        (
+            n["position"]
+            for n in nodes
+            if n["pullRequest"]["number"] == pr["number"]
+        ),
+        None,
+    )
+    if position is None:
+        return []
+    return [
+        n["pullRequest"]["number"]
+        for n in sorted(nodes, key=lambda n: n["position"])
+        if n["position"] < position and n["pullRequest"]["state"] == "OPEN"
+    ]
+
+
+def checks(slug: str, number: int) -> Checks:
+    """Summarize check runs. A PR with no checks reports all-zero."""
+    # Exit 8 means "some checks are still pending" and 1 can mean "failing" or
+    # "no checks at all", so the JSON payload decides, not the exit code.
+    proc = gh(
+        "pr",
+        "checks",
+        str(number),
+        "--repo",
+        slug,
+        "--json",
+        "name,bucket",
+        check=False,
+    )
+    try:
+        runs = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        if proc.returncode not in (0, 1, 8):
+            raise Fatal(
+                f"gh pr checks: {proc.stderr.strip() or 'failed'}"
+            ) from None
+        return Checks(0, 0, [])
+    return Checks(
+        passed=sum(1 for r in runs if r["bucket"] in ("pass", "skipping")),
+        pending=sum(1 for r in runs if r["bucket"] == "pending"),
+        failed=[r["name"] for r in runs if r["bucket"] in ("fail", "cancel")],
+    )
+
+
+def check_mergeable(pr: dict) -> None:
+    """Raise Fatal if the PR can never merge in its current shape."""
+    if pr["state"] == "CLOSED":
+        raise Fatal(f"PR #{pr['number']} is closed")
+    if pr["isDraft"]:
+        raise Fatal(f"PR #{pr['number']} is a draft: mark it ready first")
+    if pr["mergeable"] == "CONFLICTING":
+        raise Fatal(f"PR #{pr['number']} has conflicts with its base branch")
+    if pr["reviewDecision"] == "CHANGES_REQUESTED":
+        raise Fatal(f"PR #{pr['number']} has requested changes")
+    below = open_prs_below(pr)
+    if below:
+        listed = ", ".join(f"#{n}" for n in below)
+        raise Fatal(
+            f"PR #{pr['number']} sits above open stack PRs ({listed}): its"
+            f" base is {pr['baseRefName']!r}, not the trunk. Merge those first."
+        )
+
+
+def readiness(pr: dict, runs: Checks) -> tuple[bool, str]:
+    """Return (ready, status text). Raises Fatal if it can never merge."""
+    check_mergeable(pr)
+    if runs.failed:
+        raise Fatal("failing checks: " + ", ".join(sorted(runs.failed)))
+    state = pr["mergeStateStatus"]
+    status = f"{state.lower()}, checks: {runs}"
+    if pr["mergeable"] == "UNKNOWN":
+        return False, f"mergeability unknown, checks: {runs}"
+    if runs.pending:
+        return False, status
+    if state in READY_STATES:
+        return True, status
+    if state in HINTS:
+        status += f" ({HINTS[state]})"
+    return False, status
+
+
+def notify(message: str) -> None:
+    """Best-effort macOS notification plus a terminal bell."""
+    print("\a", end="", flush=True)
+    if platform.system() != "Darwin" or not shutil.which("osascript"):
+        return
+    title = json.dumps("pr-automerge")
+    script = f"display notification {json.dumps(message)} with title {title}"
+    subprocess.run(["osascript", "-e", script], capture_output=True)
+
+
+def stamp(message: str) -> None:
+    print(f"[{time.strftime('%H:%M:%S')}] {message}", flush=True)
+
+
+def poll(
+    args, owner: str, name: str, slug: str, until_merged: bool
+) -> tuple[bool, dict]:
+    """Poll the PR, printing each status change.
+
+    Returns (merged, pull request), stopping either once merged or, when
+    until_merged is false, as soon as it is mergeable. A timeout raises Fatal.
+    """
+    deadline = time.monotonic() + args.timeout * 60 if args.timeout else None
+    last = None
+    while True:
+        _, pr = fetch(owner, name, args.number)
+        if pr["state"] == "MERGED":
+            return True, pr
+        ready, status = readiness(pr, checks(slug, args.number))
+        if status != last:
+            stamp(status)
+            last = status
+        if ready and not until_merged:
+            return False, pr
+        if deadline and time.monotonic() > deadline:
+            raise Fatal(
+                f"timed out after {args.timeout} min waiting on: {status}"
+            )
+        time.sleep(args.interval)
+
+
+def merge_async(args, slug: str, number: int, method: str, sha: str) -> None:
+    """Merge through the async REST endpoint, the only one stacks accept."""
+    proc = gh(
+        "api",
+        "--method",
+        "PUT",
+        f"repos/{slug}/pulls/{number}/merge-async",
+        "-f",
+        f"merge_method={method}",
+        "-f",
+        f"sha={sha}",
+    )
+    result = json.loads(proc.stdout)
+    uuid = (result.get("details") or {}).get("uuid")
+    deadline = time.monotonic() + args.timeout * 60 if args.timeout else None
+    while True:
+        status = result.get("status")
+        if status == "merged":
+            return
+        if status == "failed":
+            detail = (result.get("details") or {}).get("message", "no detail")
+            raise Fatal(f"merge failed: {detail}")
+        if status == "enqueued":
+            stamp("queued in the merge queue, GitHub takes it from here")
+            return
+        if not uuid:
+            raise Fatal(f"merge-async returned {status!r} with no uuid to poll")
+        if deadline and time.monotonic() > deadline:
+            raise Fatal(f"merge still {status} after {args.timeout} min")
+        time.sleep(min(args.interval, 10))
+        proc = gh("api", f"repos/{slug}/pulls/{number}/merge-async/{uuid}")
+        result = json.loads(proc.stdout)
+
+
+def poll_and_merge(
+    args, owner: str, name: str, slug: str, method: str, stacked: bool
+) -> None:
+    """Wait for mergeability, then merge from here."""
+    merged, pr = poll(args, owner, name, slug, until_merged=False)
+    if merged:
+        print(f"#{args.number} is already merged")
+        return
+    stamp(f"merging #{args.number} ({method})")
+    if stacked:
+        # Stacked PRs reject mergePullRequest, so gh pr merge cannot do this.
+        merge_async(args, slug, args.number, method, pr["headRefOid"])
+    else:
+        gh("pr", "merge", str(args.number), "--repo", slug, f"--{method}")
+    notify(f"Merged #{args.number}")
+    print(f"merged #{args.number}")
+
+
+def hand_off(args, owner: str, name: str, slug: str, label: str) -> int:
+    """GitHub owns the merge now, so leave unless asked to watch it land."""
+    if not args.wait:
+        return 0
+    poll(args, owner, name, slug, until_merged=True)
+    notify(f"Merged {label}")
+    print(f"merged {label}")
+    return 0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Auto-merge a PR the GitHub UI won't offer auto-merge for.",
+        epilog="Stacked PRs merge only once every PR below them has merged.",
+    )
+    parser.add_argument(
+        "pr",
+        nargs="?",
+        help="PR number, URL, or branch (default: current bookmark/branch)",
+    )
+    parser.add_argument("-R", "--repo", help="target repo as OWNER/REPO")
+    parser.add_argument(
+        "-m",
+        "--method",
+        choices=sorted(METHODS),
+        help="merge method (default: first one the repo allows)",
+    )
+    parser.add_argument(
+        "-w",
+        "--wait",
+        action="store_true",
+        help="keep polling until the PR actually merges",
+    )
+    parser.add_argument(
+        "-p",
+        "--poll",
+        action="store_true",
+        help="skip GitHub auto-merge, poll and merge from here instead",
+    )
+    parser.add_argument(
+        "-i",
+        "--interval",
+        type=int,
+        default=30,
+        help="seconds between polls (30)",
+    )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        default=0,
+        help="give up waiting after N minutes (0 = wait forever)",
+    )
+    parser.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="report the plan without changing anything",
+    )
+    return parser.parse_args()
+
+
+def run(args: argparse.Namespace) -> int:
+    owner, name, args.number = resolve(args.pr, args.repo)
+    slug = f"{owner}/{name}"
+    repo, pr = fetch(owner, name, args.number)
+    label = f"#{pr['number']} {pr['title']}"
+    method = merge_method(repo, args.method)
+
+    if pr["state"] == "MERGED":
+        print(f"{label} is already merged")
+        return 0
+    check_mergeable(pr)
+
+    armed = pr["autoMergeRequest"]
+    stacked = pr["stack"] is not None
+    # GitHub rejects enablePullRequestAutoMerge on stacked PRs regardless of
+    # what viewerCanEnableAutoMerge claims, so do not bother asking.
+    use_auto = (
+        not stacked
+        and not args.poll
+        and pr["viewerCanEnableAutoMerge"]
+        and repo["autoMergeAllowed"]
+    )
+
+    if args.dry_run:
+        if armed and not args.poll:
+            how = armed["mergeMethod"].lower()
+            plan = f"nothing: auto-merge already armed ({how})"
+        elif use_auto:
+            plan = f"arm GitHub auto-merge ({method})"
+        else:
+            how = "merge-async" if stacked else "gh pr merge"
+            plan = f"poll every {args.interval}s, then {how} ({method})"
+        _, status = readiness(pr, checks(slug, args.number))
+        print(f"{label}\n  now:  {status}\n  plan: {plan} (dry run)")
+        return 0
+
+    if armed and not args.poll:
+        how = armed["mergeMethod"].lower()
+        print(f"auto-merge already armed on {label} ({how})")
+        return hand_off(args, owner, name, slug, label)
+
+    if use_auto:
+        proc = gh(
+            "pr",
+            "merge",
+            str(args.number),
+            "--repo",
+            slug,
+            "--auto",
+            f"--{method}",
+            check=False,
+        )
+        if proc.returncode == 0:
+            print(f"auto-merge armed on {label} ({method})")
+            print(f"  GitHub merges it once checks pass: {pr['url']}")
+            print(
+                f"  cancel: gh pr merge {args.number} -R {slug} --disable-auto"
+            )
+            return hand_off(args, owner, name, slug, label)
+        stamp(f"auto-merge refused: {proc.stderr.strip()}")
+
+    poll_and_merge(args, owner, name, slug, method, stacked)
+    return 0
+
+
+def main() -> int:
+    try:
+        return run(parse_args())
+    except Fatal as e:
+        print(f"pr-automerge: {e}", file=sys.stderr)
+        notify(f"Cannot merge: {e}")
+        return 1
+    except KeyboardInterrupt:
+        print("\npr-automerge: interrupted", file=sys.stderr)
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main())
