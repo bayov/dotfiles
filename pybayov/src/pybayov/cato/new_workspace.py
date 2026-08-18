@@ -61,9 +61,12 @@ def setup_haka(dest: Path) -> None:
     # committed) instead of the `generated/` subdir (which is gitignored),
     # so the default branch silently skips on a fresh clone.
     run(["just", "generate-proto", "true"], cwd=engine_dir)
-    # detection_labels.go is generated from shared_consts and is gitignored;
-    # engine_service won't compile without it.
-    run(["just", "clients", "generate-detection-labels"], cwd=dest)
+    # The Go/Python const packages under */generated/ are built from
+    # shared_consts/*.yaml and are gitignored, so a fresh clone has none of
+    # them and `go mod tidy` fails on the missing imports (detection_labels,
+    # classifier_log_types, config_sync_types, fw_origin_domain, ...). Use the
+    # umbrella recipe so newly added const sets are picked up automatically.
+    run(["just", "clients", "generate-consts"], cwd=dest)
     run(["just", "install"], cwd=engine_dir)
     # The engine `install` above only handles Go deps. The root `install`
     # module (justfiles/install.just -> `all`) creates the Python venvs every
