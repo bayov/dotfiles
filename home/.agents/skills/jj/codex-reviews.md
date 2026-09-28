@@ -46,9 +46,12 @@ human thread this way.
 - **Cleanly fixed** (mechanical, scope gate not tripped) → 👍 the comment and
   resolve. No draft reply.
 - **Wrong or not worth fixing** (known/intended gap) → reply **very short and
-  concise** with the reason, then resolve. One line, no hedging or restating.
-  E.g. `Intended: $func runs only post-validation, input can't be empty.` /
-  `Incorrect: $x is already bounded by the caller.`
+  concise** with the reason, then resolve. One line, no hedging or restating,
+  and prefixed with `**[Written by Claude]** ` like every other AI reply
+  ([Reply conventions](fix-pr.md#reply-conventions)). E.g.
+  `**[Written by Claude]** Intended: $func runs only post-validation, input
+  can't be empty.` / `**[Written by Claude]** Incorrect: $x is already bounded
+  by the caller.`
 - **Needs a human decision** (not a wrong-vs-right call you can make) or trips
   the scope gate → do **not** resolve; stop and ask the user.
 
@@ -60,7 +63,8 @@ unlike human replies, codex dismissals publish immediately), then resolve:
 # fixed: react 👍
 gh api repos/$OWNER/$REPO/pulls/comments/$COMMENT_DB_ID/reactions -f content='+1'
 # dismiss: publish the one-line reason
-gh api repos/$OWNER/$REPO/pulls/$PR/comments/$COMMENT_DB_ID/replies -f body='<reason>'
+gh api repos/$OWNER/$REPO/pulls/$PR/comments/$COMMENT_DB_ID/replies \
+  -f body='**[Written by Claude]** <reason>'
 # both: resolve the thread
 gh api graphql -f query='
   mutation($t:ID!){ resolveReviewThread(input:{threadId:$t}){ thread{ isResolved } } }' \

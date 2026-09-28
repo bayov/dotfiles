@@ -68,6 +68,10 @@ jj log -r '@ & ::remote_bookmarks()' --no-graph -T commit_id | grep -q . \
 review replies): no em-dashes (`—`) — use a period, colon, comma, or parens
 instead; no greetings, praise, filler, or sign-offs. Plain ASCII punctuation.
 
+**Every PR review reply you write starts with `**[Written by Claude]** `** so
+the reader can tell it came from Claude. See
+[Reply conventions](fix-pr.md#reply-conventions).
+
 ### PR title & body
 
 Each PR is tied to a Linear issue ID (`{team_id}-{number}`, e.g. `ENG-10333`).

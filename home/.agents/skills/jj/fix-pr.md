@@ -212,6 +212,10 @@ Follows the shared [Conventions](SKILL.md#conventions) (no LLMisms, no
 em-dashes) and the [PR body](SKILL.md#pr-title--body) spirit. A reply states
 what changed (and where) or answers the question. One read, done.
 
+- **Every reply you write starts with the literal prefix `**[Written by
+  Claude]** `** (trailing space, then the reply text). This applies to all AI
+  replies, on human and codex threads alike, so the reader knows the reply came
+  from Claude and not from a person.
 - No greetings, sign-offs, thanks, apologies, or praise ("Good catch", "You're
   right", "Great point").
 - Don't restate the reviewer's comment back at them.
@@ -221,10 +225,14 @@ what changed (and where) or answers the question. One read, done.
 
 Examples:
 
-- Good: `Fixed in {commit}: moved the nil check above the deref.`
 - Good:
-  `Kept as-is. {func} is only called post-validation, so the input can't
-  be empty here.`
+  `**[Written by Claude]** Fixed in {commit}: moved the nil check above the
+  deref.`
+- Good:
+  `**[Written by Claude]** Kept as-is. {func} is only called post-validation,
+  so the input can't be empty here.`
+- Bad: `Fixed in {commit}: moved the nil check above the deref.` (missing the
+  prefix)
 - Bad:
   `Great catch! 🙏 You're absolutely right, I've gone ahead and fixed this
   by adding a nil check. Let me know if there's anything else!`
@@ -297,7 +305,7 @@ gh api graphql -f query='
   }' \
   -f threadId="$THREAD_NODE_ID" \
   -f reviewId="$REVIEW_NODE_ID" \
-  -f body="your reply"
+  -f body="**[Written by Claude]** your reply"
 ```
 
 `$THREAD_NODE_ID` is the thread's `id` (`PRRT_...`) from §5 — **not** the
@@ -360,6 +368,7 @@ review comments are queued. Review and submit in GitHub when ready."
       (no CI wait).
 - [ ] Codex threads closed per §6 step 4; human replies posted as **pending**
       drafts.
+- [ ] Every reply body starts with the `**[Written by Claude]** ` prefix.
 - [ ] Codex re-review settled on HEAD (👍, looped to 👍, or escalated).
 - [ ] Final report collapses items sharing a root cause and states codex's
       stance.
