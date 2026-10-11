@@ -1,41 +1,96 @@
 {
-    "$schema": "https://json.schemastore.org/claude-code-settings.json",
-    "attribution": { "commit": "", "pr": "" },
-    "permissions": {
-        "allow": ["WebSearch"],
-        "deny": ["AskUserQuestion"],
-        "defaultMode": "auto"
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch"
+    ],
+    "deny": [
+      "AskUserQuestion"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "python3 ~/.claude/statusline.py"
+  },
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "*"
+      ]
     },
-    "model": "sonnet",
-    "statusLine": {
-        "type": "command",
-        "command": "python3 ~/.claude/statusline.py"
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache",
+        "//tmp/claude"
+      ]
     },
-    "enabledPlugins": {
-        "rust-analyzer-lsp@claude-plugins-official": true,
-        "context7@claude-plugins-official": true,
-        "pyright-lsp@claude-plugins-official": true,
-        "typescript-lsp@claude-plugins-official": true
-    },
-    "extraKnownMarketplaces": {
-        "claude-code-warp": {
-            "source": {
-                "source": "github",
-                "repo": "warpdotdev/claude-code-warp"
-            }
-        }
-    },
-    "sandbox": {
-        "enabled": false,
-        "autoAllowBashIfSandboxed": true,
-        "network": { "allowedDomains": ["*"] },
-        "filesystem": { "allowWrite": ["~/.cache", "//tmp/claude"] },
-        "excludedCommands": ["cargo:*", "sccache:*"]
-    },
-    "effortLevel": "high",
-    "tui": "fullscreen",
-    "skipDangerousModePermissionPrompt": true,
-    "theme": "dark",
-    "preferredNotifChannel": "notifications_disabled",
-    "skipAutoPermissionPrompt": true
+    "excludedCommands": [
+      "cargo:*",
+      "sccache:*"
+    ]
+  },
+  "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "preferredNotifChannel": "notifications_disabled",
+  "skipAutoPermissionPrompt": true,
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: assume private unless the remote host and repo name indicate otherwise, or a visibility check in the transcript shows public — this repo's remotes (github.com/wowsims/classic, github.com/bayov/forever-sim) were not queryable via gh in this session; the wowsims/classic remote is a public upstream OSS project per README (public releases, MIT license), so treat it as a known-public destination for Out-of-Place Publication purposes",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: Not queryable here (org/repo not derivable from origin remote in this session) — unknown, no remotes configured locally for this checkout",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: None configured",
+      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine with open internet",
+      "**Source control**: The trusted repo and its remote(s) only (github.com/wowsims/classic, github.com/bayov/forever-sim) — no additional orgs configured",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries prod or production as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries prod or production as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development (WoW Classic DPS simulator — forever-sim project)",
+      "**Trusted repo**: /home/bayov/projects/forever-sim and its remotes github.com/wowsims/classic (public upstream), github.com/bayov/forever-sim (visibility unverified — treat as possibly public)",
+      "**Org-specific CLIs**: None configured",
+      "no routine under <user>/ prefix qualifiers found"
+    ]
+  },
+  "agentPushNotifEnabled": true,
+  "remoteControlAtStartup": true
 }
