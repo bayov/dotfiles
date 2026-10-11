@@ -438,9 +438,9 @@ def get_status_line():
 
     # Color by input tokens in context
     ctx_color = GREY
-    if in_tok >= 200_000:
+    if in_tok >= 300_000:
         ctx_color = RED
-    elif in_tok >= 100_000:
+    elif in_tok >= 150_000:
         ctx_color = ORANGE
 
     # Format token counts: no decimals for k, one decimal for M (e.g. 55k, 1.1M)
