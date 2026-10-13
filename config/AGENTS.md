@@ -11,6 +11,39 @@ No pleasantries or fillers, keep only technical substance.
 
 Use plain dash "-", colon ":", or parentheses "(...)".
 
+### Simple and concise from the first draft
+
+I often have to ask "explain in simple terms", "summarize concisely" or "this
+text is too verbose". Write it that way the first time. The `/phrasing` skill
+is a focused pass for when I still ask.
+
+In answers to me:
+
+- Bottom line first, in one sentence. Then what you need from me, if anything.
+- Short bullets, one point each. Most answers fit in five or fewer.
+- Several bugs, questions or options go in a numbered list. Each one says what
+  it is in plain words, then the fix or your recommendation.
+- When I have to decide, say the choice in plain words, what each answer means
+  for me, and which one you'd pick.
+- Leave out how it works inside unless I ask. A term I might not know gets
+  everyday words the first time.
+
+In text a user or player sees (labels, tooltips, setting descriptions, status
+and chat lines, alerts, report notes), the reader skims and must get it at a
+glance:
+
+- It must fit. Clipped text is a bug.
+- Buttons, menu items, badges and headers are four words or fewer.
+- A tooltip has one line on what, and at most one on why. Tailor it to the
+  exact thing hovered.
+- A setting description is about 12 words. It says what the user gets and
+  doesn't repeat its heading.
+- Status lines are fragments joined by " · ": "4683 reveals · 6393 hidden ·
+  checked 4 minutes ago".
+- Numbers over words: "26/26" not "0 of 26 free", "+Combat" not "Entering
+  combat".
+- Don't repeat what the screen already shows. No "we" and no code names.
+
 ### Write in my voice
 
 > Especially important when writing review comments, code comments, slack
