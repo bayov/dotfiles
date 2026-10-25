@@ -73,3 +73,7 @@ vite.config.ts.timestamp-*
 
 # Playwright MCP output
 .playwright-mcp/
+
+# Claude skills synced from claude.ai, and skills it deleted (machine-local)
+home/.agents/skills/synced/
+home/.agents/skills/.trash/
