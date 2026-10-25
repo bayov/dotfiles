@@ -13,7 +13,6 @@ set -gx CMA_FRONTEND_REPO_PATH /Users/hagai.akibayov/projects/frontend
 
 # For frontend local API gateway devcontainer
 set -gx DOCKER_HUB_USER hagaiakibayov26971
-set -gx DOCKER_HUB_TOKEN dckr_pat_G2ixPMN1zfzqzukGRLOT2a7wIIc
 set -gx GIT_USER hagai-akibayov_catonian
 set -gx GIT_EMAIL hagai.akibayov@catonetworks.com
 set -gx NODE_EXTRA_CA_CERTS $HOME/CatoNetworksTrustedRootCA.pem
